@@ -10,7 +10,7 @@ import type { Operator } from './operator.ts';
  * CallExpression's own removal of the statement comes back.
  */
 export const assertStatement: Operator = {
-  name: 'AssertStatement',
+  name: 'LzAssertStatement',
   sample: "import assert from 'node:assert/strict';\n\nassert.fail('unreachable');\n",
   *mutate(path, t) {
     if (!path.isExpressionStatement()) {

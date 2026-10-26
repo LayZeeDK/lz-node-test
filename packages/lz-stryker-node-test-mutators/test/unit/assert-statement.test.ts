@@ -9,7 +9,7 @@ import { isOwn, toNodeMutator } from '../../src/operator.ts';
 
 const STRICT = "import assert from 'node:assert/strict';\n";
 
-describe('AssertStatement', () => {
+describe('LzAssertStatement', () => {
   lzTestEach([
     ['a default import', `${STRICT}assert.equal(state, 'ready');`],
     ['a default import called itself', "import assert from 'node:assert';\nassert(ready);"],
@@ -59,7 +59,7 @@ describe('AssertStatement', () => {
 
     assert.deepEqual(
       [await removals(builtIns), await removals([...builtIns, toNodeMutator(assertStatement, instrumenter.types)])],
-      [alone, ['AssertStatement']],
+      [alone, ['LzAssertStatement']],
     );
   });
 });

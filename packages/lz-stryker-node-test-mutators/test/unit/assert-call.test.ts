@@ -49,7 +49,7 @@ function typeErrors(source: string): string[] {
     .map(({ messageText }) => ts.flattenDiagnosticMessageText(messageText, '\n'));
 }
 
-describe('AssertCall', () => {
+describe('LzAssertCall', () => {
   lzTestEach([
     ['a default import', `${STRICT}assert.equal(1, 1);`],
     ['a default import called itself', "import assert from 'node:assert';\nassert(true);"],

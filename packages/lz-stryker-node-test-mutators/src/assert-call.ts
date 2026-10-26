@@ -16,7 +16,7 @@ const ASYNC_METHODS: ReadonlySet<string> = new Set(['rejects', 'doesNotReject'])
  * type and never runs.
  */
 export const assertCall: Operator = {
-  name: 'AssertCall',
+  name: 'LzAssertCall',
   sample: 'export function check(t: any) {\n  t.assert.ok(true);\n}\n',
   *mutate(path, t) {
     if (path.isExpressionStatement() && assertion(path, awaited(path.node.expression)) !== undefined) {

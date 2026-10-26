@@ -20,7 +20,7 @@ export interface NodeMutatorLike {
   mutate(path: NodePath, context: { isExpressionContext: boolean }): Iterable<types.Node>;
 }
 
-export const OWN = Symbol.for('stryker-node-mutators');
+export const OWN = Symbol.for('lz-stryker-node-test-mutators');
 
 export interface OwnMutator extends NodeMutatorLike {
   readonly [OWN]: true;

@@ -5,7 +5,7 @@ import { lzTestEach } from '@layzee/lz-node-test';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 import { nodeEventName } from '../../src/node-event-name.ts';
 
-describe('NodeEventName', () => {
+describe('LzNodeEventName', () => {
   lzTestEach([
     ["the process's exit", "process.on('exit', f);", ['"beforeExit"']],
     ["the process's beforeExit", "process.once('beforeExit', f);", ['"exit"']],

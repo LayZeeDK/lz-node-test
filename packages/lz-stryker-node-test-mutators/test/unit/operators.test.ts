@@ -6,8 +6,8 @@ import { operatorsFor, productionOperators, testOperators } from '../../src/oper
 
 describe('the catalogues', () => {
   lzTestEach([
-    ['production', productionOperators, ['NodeTimerDelay', 'NodeEventName', 'AssertStatement']],
-    ['test', testOperators, ['AssertCall', 'AssertValidator']],
+    ['production', productionOperators, ['LzNodeTimerDelay', 'LzNodeEventName', 'LzAssertStatement']],
+    ['test', testOperators, ['LzAssertCall', 'LzAssertValidator']],
   ])('name the %s operators', (_title, operators, names) => {
     assert.deepEqual(
       operators.map(({ name }) => name),

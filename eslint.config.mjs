@@ -92,7 +92,7 @@ export default [
         'error',
         {
           selector: 'CallExpression[callee.name=/^set(Timeout|Interval)$/][arguments.length<2]',
-          message: 'Pass the delay explicitly, so NodeTimerDelay can mutate it.',
+          message: 'Pass the delay explicitly, so LzNodeTimerDelay can mutate it.',
         },
         {
           selector:

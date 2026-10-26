@@ -22,7 +22,7 @@ const STREAM_SWAPS: ReadonlyMap<string, readonly string[]> = new Map([
  * `exit`, which can fire while its output is still open, and its `close`.
  */
 export const nodeEventName: Operator = {
-  name: 'NodeEventName',
+  name: 'LzNodeEventName',
   sample: "child.on('exit', () => {});\n",
   *mutate(path, t) {
     if (!path.isStringLiteral()) {

@@ -7,7 +7,7 @@ import { nodeTimerDelay } from '../../src/node-timer-delay.ts';
 
 const PROMISES = "import { setTimeout as sleep } from 'node:timers/promises';\n";
 
-describe('NodeTimerDelay', () => {
+describe('LzNodeTimerDelay', () => {
   lzTestEach([
     ['the global setTimeout', 'setTimeout(() => {}, graceMs);', 'graceMs'],
     ['the global setInterval', 'setInterval(tick, 100);', '100'],

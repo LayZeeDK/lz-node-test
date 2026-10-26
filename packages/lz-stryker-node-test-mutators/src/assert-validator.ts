@@ -8,7 +8,7 @@ const MESSAGE = 'Stryker';
  * validator that accepts any error.
  */
 export const assertValidator: Operator = {
-  name: 'AssertValidator',
+  name: 'LzAssertValidator',
   sample: "import assert from 'node:assert/strict';\n\nassert.throws(() => {}, /x/);\n",
   *mutate(path, t) {
     const call = path.parent;

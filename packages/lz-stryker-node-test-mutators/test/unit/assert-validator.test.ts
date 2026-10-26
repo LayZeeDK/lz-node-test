@@ -9,7 +9,7 @@ const THROWS = '() => { throw new Error("Stryker"); }';
 const REJECTS = 'Promise.reject(new Error("Stryker"))';
 const STRICT = "import assert from 'node:assert/strict';\n";
 
-describe('AssertValidator', () => {
+describe('LzAssertValidator', () => {
   lzTestEach([
     ['assert.throws', `${STRICT}assert.throws(() => parse(''), /empty/);`, [THROWS]],
     ['assert.throws without a validator', `${STRICT}assert.throws(() => parse(''));`, [THROWS]],

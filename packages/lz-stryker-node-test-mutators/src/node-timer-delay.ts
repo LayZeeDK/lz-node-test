@@ -12,7 +12,7 @@ const NODE_TIMERS_PROMISES: ReadonlySet<string> = new Set(['node:timers/promises
  * 0 or 1 at that are left out.
  */
 export const nodeTimerDelay: Operator = {
-  name: 'NodeTimerDelay',
+  name: 'LzNodeTimerDelay',
   sample: 'setTimeout(() => {}, 10);\n',
   *mutate(path, t) {
     if (!path.isExpression() || path.isIdentifier({ name: 'undefined' }) || !isDelay(path)) {

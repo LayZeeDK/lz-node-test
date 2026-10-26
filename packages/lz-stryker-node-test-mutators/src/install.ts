@@ -63,7 +63,7 @@ export async function install(
 
   if (!TESTED_VERSION.test(instrumenter.version)) {
     warn(
-      `stryker-node-mutators was written for @stryker-mutator/instrumenter 10.1, not ${instrumenter.version}; ` +
+      `lz-stryker-node-test-mutators was written for @stryker-mutator/instrumenter 10.1, not ${instrumenter.version}; ` +
         'its install check passed.',
     );
   }
@@ -75,7 +75,7 @@ function checkNames(operators: readonly Operator[], present: readonly NodeMutato
 
   if (invalid.length > 0) {
     throw new Error(
-      `stryker-node-mutators: a mutator name has letters only, as Stryker's directives match no other character: ` +
+      `lz-stryker-node-test-mutators: a mutator name has letters only, as Stryker's directives match no other character: ` +
         invalid.map((name) => JSON.stringify(name)).join(', '),
     );
   }
@@ -89,7 +89,7 @@ function checkNames(operators: readonly Operator[], present: readonly NodeMutato
   );
 
   if (taken.length > 0) {
-    throw new Error(`stryker-node-mutators: another mutator already has the name ${taken.join(', ')}.`);
+    throw new Error(`lz-stryker-node-test-mutators: another mutator already has the name ${taken.join(', ')}.`);
   }
 }
 
@@ -102,7 +102,7 @@ async function selfCheck(instrumenter: Instrumenter, operators: readonly Operato
 
   if (missing.length > 0) {
     throw new Error(
-      `stryker-node-mutators: the instrumenter in ${instrumenter.dir} made no mutants of ${missing.join(', ')} from ` +
+      `lz-stryker-node-test-mutators: the instrumenter in ${instrumenter.dir} made no mutants of ${missing.join(', ')} from ` +
         'their samples, so it does not read the mutator list this module added to. A bundled instrumenter does that.',
     );
   }
