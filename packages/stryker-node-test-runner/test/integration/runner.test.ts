@@ -58,7 +58,12 @@ describe('NodeTestRunner', () => {
   });
 
   it('can be disposed without being initialized', async () => {
-    await new NodeTestRunner(strykerOptions(), logger()).dispose();
+    const debug: string[] = [];
+    const warnings: string[] = [];
+
+    await new NodeTestRunner(strykerOptions(), logger(debug, true, warnings)).dispose();
+
+    assert.deepEqual([debug, warnings], [[], []]);
   });
 
   it('fails to initialize without test files', async (t) => {
