@@ -3,7 +3,7 @@
 //
 //   npm run bench
 //   npm run bench -- --runs 9 --mutate-runs 0
-//   npm run bench -- --runner path/to/baseline/index.ts --runner tools/stryker-node-test-runner/index.ts
+//   npm run bench -- --runner path/to/baseline/index.ts --runner packages/lz-stryker-node-test-runner/src/index.ts
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';

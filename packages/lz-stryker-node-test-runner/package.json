@@ -1,5 +1,5 @@
 {
-  "name": "@layzee/stryker-node-test-mutators",
+  "name": "@layzee/lz-stryker-node-test-runner",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -12,28 +12,21 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./test-code": {
-      "@lz-node-test/source": "./src/test-code.ts",
-      "types": "./dist/test-code.d.ts",
-      "default": "./dist/test-code.js"
-    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "!dist/**/*.tsbuildinfo",
-    "!dist/corpus-diff.*",
-    "!dist/mutant-diff.*"
+    "!dist/**/*.tsbuildinfo"
   ],
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
-    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\"",
-    "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\""
+    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\"",
+    "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\"",
+    "bench": "node --conditions=@lz-node-test/source test/runner.bench.ts"
   },
   "peerDependencies": {
-    "@babel/core": "~8.0.0",
     "@stryker-mutator/api": "~10.1.1",
     "@stryker-mutator/core": "~10.1.1"
   },
@@ -41,12 +34,17 @@
     "@layzee/lz-node-test": "*"
   },
   "nx": {
-    "name": "stryker-node-test-mutators",
+    "name": "lz-stryker-node-test-runner",
     "tags": [
       "type:lib"
     ],
     "targets": {
-      "mutate": {}
+      "mutate": {},
+      "test-integration": {
+        "dependsOn": [
+          "build"
+        ]
+      }
     }
   }
 }

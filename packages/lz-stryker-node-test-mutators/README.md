@@ -1,4 +1,4 @@
-# @layzee/stryker-node-test-mutators
+# @layzee/lz-stryker-node-test-mutators
 
 StrykerJS mutators for Node.js APIs. It is ESM only and needs Node.js 22.18 or later.
 

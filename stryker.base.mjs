@@ -1,6 +1,6 @@
 // What each package's Stryker configs share. Stryker runs from the workspace root, so that the sandbox keeps the
 // packages' tsconfig extends and the workspace's links.
-import '@layzee/stryker-node-test-mutators';
+import '@layzee/lz-stryker-node-test-mutators';
 
 // The packages import each other and load the runner and the operators from their TypeScript source.
 export const SOURCE = '--conditions=@lz-node-test/source';
@@ -13,14 +13,14 @@ export const SOURCE = '--conditions=@lz-node-test/source';
  * @param {import('@stryker-mutator/api/core').PartialStrykerOptions} config
  */
 export async function testCode(config) {
-  await import('@layzee/stryker-node-test-mutators/test-code');
+  await import('@layzee/lz-stryker-node-test-mutators/test-code');
 
   return config;
 }
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
-  plugins: ['@stryker-mutator/*', '@layzee/stryker-node-test-runner'],
+  plugins: ['@stryker-mutator/*', '@layzee/lz-stryker-node-test-runner'],
   testRunner: 'lz-stryker-node-test',
   testRunnerNodeArgs: [SOURCE],
   checkers: ['typescript'],

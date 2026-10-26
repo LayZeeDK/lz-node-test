@@ -1,4 +1,4 @@
-# @layzee/stryker-node-test-runner
+# @layzee/lz-stryker-node-test-runner
 
 A StrykerJS test runner for `node:test`. It is ESM only and needs Node.js 22.18 or later.
 

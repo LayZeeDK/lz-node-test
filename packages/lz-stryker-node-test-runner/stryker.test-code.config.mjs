@@ -3,5 +3,5 @@ import base from './stryker.config.mjs';
 
 export default await testCode({
   ...base,
-  mutate: ['packages/stryker-node-test-mutators/test/**/*.test.ts'],
+  mutate: ['packages/lz-stryker-node-test-runner/test/**/*.test.ts'],
 });

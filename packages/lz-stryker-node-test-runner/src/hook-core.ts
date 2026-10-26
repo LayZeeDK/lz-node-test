@@ -202,13 +202,13 @@ export interface HookDependencies {
  */
 const CALL_SITE_FRAMES = 64;
 
-export const installed = Symbol.for('thermos.stryker-node-test-runner.hook');
+export const installed = Symbol.for('lz-stryker-node-test-runner.hook');
 
-export const reporting = Symbol.for('thermos.stryker-node-test-runner.reporting');
+export const reporting = Symbol.for('lz-stryker-node-test-runner.reporting');
 
-export const wrappedNodeTest = Symbol.for('thermos.stryker-node-test-runner.node-test');
+export const wrappedNodeTest = Symbol.for('lz-stryker-node-test-runner.node-test');
 
-export const watchdog = Symbol.for('thermos.stryker-node-test-runner.watchdog');
+export const watchdog = Symbol.for('lz-stryker-node-test-runner.watchdog');
 
 export function writesAllowed(
   permission: { has(scope: string, reference?: string): boolean } | undefined,
