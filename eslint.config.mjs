@@ -130,6 +130,8 @@ export default [
       'node-test/no-commented-tests': 'error',
       'node-test/no-snapshot-in-loop': 'error',
       'node-test/no-assert-in-hook': 'error',
+      // The tests' empty functions are no-op test doubles.
+      '@typescript-eslint/no-empty-function': 'off',
       '@nx/workspace-no-assertion-in-iteration': 'error',
       'no-restricted-syntax': [
         'error',

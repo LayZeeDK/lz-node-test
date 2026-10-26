@@ -13,7 +13,7 @@ const TESTED_VERSION = /^10\.1\./;
 const CORE_BIN = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
 const NAME = /^[A-Za-z]+$/;
-const nothing = () => {};
+const nothing = () => undefined;
 const SILENT = { debug: nothing, info: nothing, warn: nothing, isDebugEnabled: nothing };
 
 export interface SourceFile {

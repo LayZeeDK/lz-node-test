@@ -49,7 +49,9 @@ install({
   canWatchMemory: isMainThread && workersAllowed(process.permission),
   watchMemory: (options) => {
     const worker = new Worker(WATCHDOG, { eval: true, ...options });
-    worker.on('error', () => {});
+    worker.on('error', () => {
+      // Listening keeps a watchdog error from ending the process.
+    });
     worker.unref();
 
     return worker;

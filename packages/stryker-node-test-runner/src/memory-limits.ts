@@ -36,7 +36,7 @@ export function memoryLimits(maxMemoryMB: number | undefined, dir: string, log: 
     return new DryRunPeaks(dir, log);
   }
 
-  return { startDryRun: () => maxMemoryMB, record: () => {}, forMutantRun: () => maxMemoryMB };
+  return { startDryRun: () => maxMemoryMB, record: () => undefined, forMutantRun: () => maxMemoryMB };
 }
 
 class DryRunPeaks implements MemoryLimits {
