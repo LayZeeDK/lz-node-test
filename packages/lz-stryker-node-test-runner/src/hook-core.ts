@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { LoadHookSync, ResolveHookSync } from 'node:module';
 import { join } from 'node:path';
+import type { HookFn, TestContext as NodeTestContext, TestFn } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import type { InstrumenterContext, MutantCoverage, Position } from '@stryker-mutator/api/core';
@@ -70,8 +71,8 @@ export interface ProcessRecord {
   heldOpen?: string[];
 }
 
-type Body = (this: unknown, ...args: unknown[]) => unknown;
-type DoneBody = (this: unknown, context: unknown, done: (error?: unknown) => void) => unknown;
+/** A function node:test calls, which every function is assignable to; the wrappers call it through `Reflect.apply`. */
+type Body = (this: unknown, ...args: never[]) => unknown;
 type Registrar = (this: unknown, name: string, ...rest: unknown[]) => unknown;
 type HookRegistrar = (this: unknown, hook?: Body, ...rest: unknown[]) => unknown;
 /**
@@ -458,31 +459,33 @@ export function ending(
     },
     track: (hook) => {
       pending++;
-      const callback = hook.length >= 2;
-      const wrapped = function (this: unknown, ...args: unknown[]) {
+      const run = (self: unknown, args: unknown[]): unknown => {
         try {
-          if (!callback) {
-            return Promise.resolve(hook.apply(this, args)).then(
-              () => settle(false),
-              (error: unknown) => {
-                settle(true);
-                throw error;
-              },
-            );
-          }
-
-          const done = args[1] as (error?: unknown) => void;
-          args[1] = (error?: unknown) => {
-            settle(Boolean(error));
-            done(error);
-          };
-
-          return hook.apply(this, args);
+          return Reflect.apply(hook, self, args);
         } catch (error) {
           settle(true);
           throw error;
         }
       };
+      const callingBack: HookFn = function (this: unknown, context, done) {
+        return run(this, [
+          context,
+          (error?: unknown) => {
+            settle(Boolean(error));
+            done(error);
+          },
+        ]);
+      };
+      const promising = function (this: unknown, ...args: unknown[]) {
+        return Promise.resolve(run(this, args)).then(
+          () => settle(false),
+          (error: unknown) => {
+            settle(true);
+            throw error;
+          },
+        );
+      };
+      const wrapped = hook.length >= 2 ? callingBack : promising;
       Object.defineProperty(wrapped, 'length', { value: hook.length });
 
       return wrapped;
@@ -662,46 +665,71 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
    * a name that several share. node:test passes a hook the context of the test it runs for, or of its suite.
    */
   const fullNames = new Map<string, string>();
-  const testsByFullName = new Map<string | undefined, string | undefined>();
-  const testOf = (context: unknown) => testsByFullName.get((context as { fullName: string } | undefined)?.fullName);
+  const testsByFullName = new Map<string, string | undefined>();
+  const testOf = (context: unknown) =>
+    typeof context === 'object' && context !== null && 'fullName' in context && typeof context.fullName === 'string'
+      ? testsByFullName.get(context.fullName)
+      : undefined;
   /** Makes the test that `find` names current while the hook runs, unless that test is running already. */
   const attributing = (hook: Body | undefined, find: (context: unknown) => string | undefined): Body | undefined => {
     if (typeof hook !== 'function') {
       return hook;
     }
 
-    const callback = hook.length >= 2;
-    const wrapped = function (this: unknown, ...args: unknown[]) {
-      const id = find(args[0]);
+    const call = (self: unknown, args: unknown[]): unknown => Reflect.apply(hook, self, args);
+    /** Makes the test current and returns what ends that, or nothing when the hook runs as it is. */
+    const attribute = (context: unknown) => {
+      const id = find(context);
 
       if (id === undefined || active.has(id)) {
-        return hook.apply(this, args);
+        return undefined;
       }
 
       active.add(id);
       setCurrent();
-      const end = () => {
+
+      return () => {
         active.delete(id);
         setCurrent();
       };
-
-      if (callback) {
-        const done = args[1] as (error?: unknown) => void;
-        args[1] = (error?: unknown) => {
-          end();
-          done(error);
-        };
-      }
-
+    };
+    const callAttributed = (self: unknown, args: unknown[], end: () => void) => {
       try {
-        const result = hook.apply(this, args);
-
-        return callback ? result : Promise.resolve(result).finally(end);
+        return call(self, args);
       } catch (error) {
         end();
         throw error;
       }
     };
+    const callingBack: HookFn = function (this: unknown, context, done) {
+      const end = attribute(context);
+
+      if (end === undefined) {
+        return call(this, [context, done]);
+      }
+
+      return callAttributed(
+        this,
+        [
+          context,
+          (error?: unknown) => {
+            end();
+            done(error);
+          },
+        ],
+        end,
+      );
+    };
+    const promising = function (this: unknown, ...args: unknown[]) {
+      const end = attribute(args[0]);
+
+      if (end === undefined) {
+        return call(this, args);
+      }
+
+      return Promise.resolve(callAttributed(this, args, end)).finally(end);
+    };
+    const wrapped = hook.length >= 2 ? callingBack : promising;
     Object.defineProperty(wrapped, 'length', { value: hook.length });
 
     return wrapped;
@@ -712,10 +740,10 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       return hook;
     }
 
-    const wrapped = function (this: unknown, ...args: unknown[]) {
+    const wrapped = function (this: unknown, ...args: unknown[]): unknown {
       activate();
 
-      return hook.apply(this, args);
+      return Reflect.apply(hook, this, args);
     };
     // node:test passes a `done` callback to a hook that declares a parameter for it.
     Object.defineProperty(wrapped, 'length', { value: hook.length });
@@ -762,7 +790,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const registerWith = (
     register: Target,
     self: unknown,
-    { name, options, body }: { name: string; options: object | null | undefined; body: Body | DoneBody | undefined },
+    { name, options, body }: { name: string; options: object | null | undefined; body: Body | undefined },
   ): unknown => Reflect.apply(register, self, [name, { ...options, concurrency: false }, ...(body ? [body] : [])]);
 
   const wrapSuite = (register: Target): Registrar =>
@@ -771,7 +799,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       const id = named(parentId(), parsed.name, false);
       const wrap = (suiteBody: Body) =>
         function (this: unknown, ...bodyArgs: unknown[]) {
-          return running.run(id, () => suiteBody.apply(this, bodyArgs));
+          return running.run(id, (): unknown => Reflect.apply(suiteBody, this, bodyArgs));
         };
 
       return registerWith(register, this, { ...parsed, body: parsed.body && wrap(parsed.body) });
@@ -811,41 +839,46 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       const wrap = (body: Body) => {
         // node:test passes a `done` callback only to a function that declares a second parameter.
         if (body.length >= 2) {
-          return function (this: unknown, context: unknown, done: (error?: unknown) => void) {
+          const callingBack: TestFn = function (this: unknown, context, done) {
             if (bailed()) {
-              (context as TestContext).skip();
+              context.skip();
               done();
 
               return;
             }
 
-            const leave = enter(context as TestContext);
+            const leave = enter(context);
 
             try {
-              running.run(id, () =>
-                body.call(this, context, (error?: unknown) => {
-                  leave();
-                  done(error);
-                }),
+              running.run(id, (): unknown =>
+                Reflect.apply(body, this, [
+                  context,
+                  (error?: unknown) => {
+                    leave();
+                    done(error);
+                  },
+                ]),
               );
             } catch (error) {
               leave();
               throw error;
             }
           };
+
+          return callingBack;
         }
 
-        return async function (this: unknown, ...args: unknown[]) {
+        return async function (this: unknown, context: NodeTestContext, ...rest: unknown[]) {
           if (bailed()) {
-            (args[0] as TestContext).skip();
+            context.skip();
 
             return;
           }
 
-          const leave = enter(args[0] as TestContext);
+          const leave = enter(context);
 
           try {
-            return await running.run(id, () => body.apply(this, args));
+            return await running.run(id, (): unknown => Reflect.apply(body, this, [context, ...rest]));
           } finally {
             leave();
           }

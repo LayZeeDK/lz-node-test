@@ -1097,9 +1097,9 @@ describe('install', () => {
       install(h.deps);
       const passed: unknown[] = [];
       let callBack = () => {};
-      h.wrapped().after(((_context: unknown, done: (error?: unknown) => void) => {
+      h.wrapped().after((_context: unknown, done: (error?: unknown) => void) => {
         callBack = () => done(error);
-      }) as Fn);
+      });
       h.wrapped().after(() => {});
       const [finished, callbackHook] = afterHooks(h.fake);
 

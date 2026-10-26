@@ -34,7 +34,7 @@ function wrapped(filter?: string[], bail = false, activeMutant?: string) {
   const sites: CallSite[] = [];
   /** Each call of `registering`: whether top-level, and how many registrations node:test had then. */
   const registering: [boolean, number][] = [];
-  const rootAfters: Fn[] = [];
+  const rootAfters: unknown[] = [];
   const module = wrapNodeTest({
     ns,
     testFile: TEST_FILE,
