@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import type { LoadHookContext, ResolveHookContext } from 'node:module';
 import { join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
@@ -295,14 +296,27 @@ describe('recordEvents', () => {
   });
 });
 
+function resolveContext(conditions: string[]): ResolveHookContext {
+  return { conditions, importAttributes: {}, parentURL: undefined };
+}
+
+function loadContext(conditions: string[]): LoadHookContext {
+  return { conditions, format: undefined, importAttributes: {} };
+}
+
 async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
   const global = globalThis as HookDependencies['global'];
   const previous = global[wrappedNodeTest];
   const passOn = () => assert.fail('passed node:test on');
   const sourceFor = (conditions: string[]) => {
-    const { url } = hooks.resolve('node:test', { conditions }, passOn) as { url: string };
+    const { url } = hooks.resolve('node:test', resolveContext(conditions), passOn);
+    const { source } = hooks.load(url, loadContext(conditions), passOn);
 
-    return (hooks.load(url, {}, passOn) as { source: string }).source;
+    if (typeof source !== 'string') {
+      assert.fail(`loaded no source text: ${String(source)}`);
+    }
+
+    return source;
   };
 
   try {
@@ -322,12 +336,11 @@ async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
 describe('redirectNodeTest', () => {
   it('resolves node:test to a module of its own for import and for require, and leaves other modules alone', () => {
     const hooks = redirectNodeTest(['it']);
-    const passOn = (...args: unknown[]) => ({ passedOn: args });
-    const context = { conditions: ['node', 'import'] };
-    type Resolved = { url: string; format: string; shortCircuit?: true };
-    const imported = hooks.resolve('node:test', context, passOn) as Resolved;
-    const required = hooks.resolve('node:test', { conditions: ['node', 'require'] }, passOn) as typeof imported;
-    const loaded = [imported, required].map(({ url }) => hooks.load(url, {}, passOn) as typeof imported);
+    const passOn = (...args: unknown[]) => ({ url: 'passed-on', format: undefined, passedOn: args });
+    const context = resolveContext(['node', 'import']);
+    const imported = hooks.resolve('node:test', context, passOn);
+    const required = hooks.resolve('node:test', resolveContext(['node', 'require']), passOn);
+    const loaded = [imported, required].map(({ url }) => hooks.load(url, loadContext(['node']), passOn));
 
     assert.deepEqual([imported.format, required.format, imported.url === required.url], ['module', 'commonjs', false]);
     assert.deepEqual(
@@ -344,9 +357,10 @@ describe('redirectNodeTest', () => {
         ['commonjs', true],
       ],
     );
-    assert.deepEqual(hooks.resolve('node:assert', context, passOn), { passedOn: ['node:assert', context] });
-    assert.deepEqual(hooks.load('node:assert', context, passOn), { passedOn: ['node:assert', context] });
-    assert.deepEqual(hooks.load(`x${imported.url}`, context, passOn), { passedOn: [`x${imported.url}`, context] });
+    const loading = loadContext(['node', 'import']);
+    assert.deepEqual(hooks.resolve('node:assert', context, passOn), passOn('node:assert', context));
+    assert.deepEqual(hooks.load('node:assert', loading, passOn), passOn('node:assert', loading));
+    assert.deepEqual(hooks.load(`x${imported.url}`, loading, passOn), passOn(`x${imported.url}`, loading));
   });
 
   it('gives the wrapped module as default export and require result, and its properties as named exports', async () => {

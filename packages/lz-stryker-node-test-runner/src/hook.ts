@@ -37,7 +37,7 @@ install({
   threadId,
   global: globalThis as HookDependencies['global'],
   nodeTest: () => process.getBuiltinModule('node:test'),
-  registerHooks: registerHooks as HookDependencies['registerHooks'],
+  registerHooks,
   onExit: (listener) => process.on('exit', listener),
   offExit: (listener) => process.off('exit', listener),
   onBeforeExit: (listener) => process.on('beforeExit', listener),

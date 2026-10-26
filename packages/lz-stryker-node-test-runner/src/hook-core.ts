@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import type { LoadHookSync, ResolveHookSync } from 'node:module';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -900,12 +901,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 }
 
 export interface ModuleHooks {
-  resolve: (
-    specifier: string,
-    context: { conditions: string[] },
-    nextResolve: (specifier: string, context: { conditions: string[] }) => unknown,
-  ) => unknown;
-  load: (url: string, context: object, nextLoad: (url: string, context: object) => unknown) => unknown;
+  resolve: ResolveHookSync;
+  load: LoadHookSync;
 }
 
 const WRAPPED_URL = 'thermos-stryker-node-test:node-test/';
