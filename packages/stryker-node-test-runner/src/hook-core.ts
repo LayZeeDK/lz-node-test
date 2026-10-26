@@ -629,8 +629,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
    * a name that several share. node:test passes a hook the context of the test it runs for, or of its suite.
    */
   const fullNames = new Map<string, string>();
-  const testsByFullName = new Map<string, string | undefined>();
-  const testOf = (context: unknown) => testsByFullName.get((context as { fullName: string } | undefined)?.fullName!);
+  const testsByFullName = new Map<string | undefined, string | undefined>();
+  const testOf = (context: unknown) => testsByFullName.get((context as { fullName: string } | undefined)?.fullName);
   /** Makes the test that `find` names current while the hook runs, unless that test is running already. */
   const attributing = (hook: Body | undefined, find: (context: unknown) => string | undefined): Body | undefined => {
     if (typeof hook !== 'function') {
