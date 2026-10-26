@@ -1,4 +1,4 @@
-/* eslint-disable thermos/require-windows-hide -- the cases are code that the rule must report */
+/* eslint-disable @nx/workspace-require-windows-hide -- the cases are code that the rule must report */
 import parser from '@typescript-eslint/parser';
 import { RuleTester } from 'eslint';
 import { describe } from 'node:test';

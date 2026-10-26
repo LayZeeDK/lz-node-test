@@ -1,0 +1,12 @@
+{
+  "name": "eslint-rules",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "tags": ["type:tool"],
+  "targets": {
+    "test": {
+      "command": "node --conditions=@lz-node-test/source --test \"*.test.ts\"",
+      "options": { "cwd": "{projectRoot}" }
+    }
+  }
+}

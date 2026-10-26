@@ -31,10 +31,18 @@ export default [
               sourceTag: 'type:lib',
               onlyDependOnLibsWithTags: ['type:lib'],
             },
+            {
+              sourceTag: 'type:tool',
+              onlyDependOnLibsWithTags: ['type:lib'],
+            },
           ],
         },
       ],
     },
+  },
+  {
+    files: ['**/*.ts', '**/*.mjs'],
+    rules: { '@nx/workspace-require-windows-hide': 'error' },
   },
   {
     files: [...SRC, ...TEST],
