@@ -856,6 +856,15 @@ describe('install', () => {
     );
   });
 
+  testEach(['null', '{"0":"id"}', '["id",1]'])(
+    'fails to install with the filter %s, which is no list of test ids',
+    (filter) => {
+      const { deps } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE, [ENV.filter]: filter });
+
+      assert.throws(() => install(deps), { message: `${ENV.filter} is no JSON array of test ids: ${filter}` });
+    },
+  );
+
   const bails = ['true', 'false', undefined].map((bail) => ({ bail, verb: bail === 'true' ? 'skips' : 'runs' }));
 
   testEach(bails)('$verb later tests with bail $bail; children never bail', async ({ bail }) => {

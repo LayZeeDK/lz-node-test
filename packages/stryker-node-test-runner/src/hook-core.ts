@@ -207,6 +207,16 @@ export function recordName(pid: number, threadId: number): string {
   return `${pid}.${threadId}.json`;
 }
 
+function testIds(json: string): Set<string> {
+  const ids: unknown = JSON.parse(json);
+
+  if (!Array.isArray(ids) || !ids.every((id): id is string => typeof id === 'string')) {
+    throw new Error(`${ENV.filter} is no JSON array of test ids: ${json}`);
+  }
+
+  return new Set(ids);
+}
+
 export function install(deps: HookDependencies): boolean {
   const outDir = deps.env[ENV.out];
 
@@ -272,7 +282,7 @@ export function install(deps: HookDependencies): boolean {
       ends.reported(event);
     };
     const filterJson = deps.env[ENV.filter];
-    const filter = filterJson ? new Set<string>(JSON.parse(filterJson) as string[]) : undefined;
+    const filter = filterJson ? testIds(filterJson) : undefined;
     const wrapped = wrapNodeTest({
       ns,
       testFile,
