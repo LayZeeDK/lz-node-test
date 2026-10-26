@@ -752,7 +752,7 @@ describe('wrapNodeTest', () => {
       module.beforeEach(async (...args: unknown[]) => {
         received.push(args);
         see();
-        await null;
+        await Promise.resolve();
         see();
 
         return 'promised';
@@ -875,7 +875,7 @@ describe('wrapNodeTest', () => {
         context = t;
         t.after(async () => {
           see();
-          await null;
+          await Promise.resolve();
           see();
         });
         module.after(see);
