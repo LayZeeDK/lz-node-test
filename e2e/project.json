@@ -1,0 +1,34 @@
+{
+  "name": "e2e",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "tags": ["type:tool"],
+  "implicitDependencies": ["lz-node-test", "lz-stryker-node-test-runner", "lz-stryker-node-test-mutators"],
+  "targets": {
+    "test": {
+      "command": "node --test \"e2e/test/unit/*.test.ts\"",
+      "options": { "cwd": "{workspaceRoot}" }
+    },
+    "e2e": {
+      "command": "node --test --test-concurrency=1 \"e2e/test/*.e2e.ts\"",
+      "options": { "cwd": "{workspaceRoot}" },
+      "cache": true,
+      "parallelism": false,
+      "dependsOn": ["^build"],
+      "inputs": [
+        "default",
+        "^production",
+        "nodeVersion",
+        "{workspaceRoot}/package.json",
+        {
+          "externalDependencies": [
+            "@stryker-mutator/core",
+            "@stryker-mutator/typescript-checker",
+            "typescript",
+            "@types/node"
+          ]
+        }
+      ]
+    }
+  }
+}
