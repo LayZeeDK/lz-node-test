@@ -72,8 +72,6 @@ export default [
       '@typescript-eslint/return-await': ['error', 'in-try-catch'],
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-      '@typescript-eslint/non-nullable-type-assertion-style': 'error',
-      '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       // Augmenting node:test's types takes a namespace inside `declare module`.
       '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
@@ -86,9 +84,6 @@ export default [
       'n/no-extraneous-import': 'error',
       '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],
       '@typescript-eslint/only-throw-error': ['error', { allowThrowingUnknown: true }],
-      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
-      '@typescript-eslint/no-non-null-assertion': 'error',
-      '@typescript-eslint/non-nullable-type-assertion-style': 'off',
       // It asks for `as const`, which the `as` ban below reports in src.
       '@typescript-eslint/prefer-as-const': 'off',
       'no-restricted-syntax': [
@@ -151,5 +146,14 @@ export default [
   {
     files: ['**/test/**/*.test.ts'],
     rules: { 'node-test/no-export': 'error' },
+  },
+  {
+    files: ['**/*.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      // It asks for `!` in place of `as NonNullable<T>`, both of which the two rules above report.
+      '@typescript-eslint/non-nullable-type-assertion-style': 'off',
+    },
   },
 ];
