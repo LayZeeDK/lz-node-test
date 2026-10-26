@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { PluginKind } from '@stryker-mutator/api/plugin';
@@ -12,6 +11,7 @@ import {
   strykerPlugins,
   strykerValidationSchema,
 } from '../../src/index.ts';
+import pkg from '../../package.json' with { type: 'json' };
 
 /** Stryker validates its options with these settings, and merges the properties of each plugin's schema into its own. */
 function validator() {
@@ -53,11 +53,7 @@ describe('plugin declaration', () => {
   });
 
   it('supports the Node.js versions that package.json supports', () => {
-    const { engines } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
-      engines: { node: string };
-    };
-
-    assert.equal(engines.node, `>=${LZ_MIN_NODE_VERSION.join('.')}`);
+    assert.equal(pkg.engines.node, `>=${LZ_MIN_NODE_VERSION.join('.')}`);
   });
 
   lzTestEach([

@@ -6,7 +6,7 @@
 //   npm run bench -- --runner path/to/baseline/index.ts --runner packages/lz-stryker-node-test-runner/src/index.ts
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -17,6 +17,7 @@ import { Bench } from 'tinybench';
 
 import { COVER, DRY_RUN, fixture, logger, mutantRunOptions, strykerOptions } from './index.fixtures.ts';
 import type { LzStrykerNodeTestRunner } from '../src/index.ts';
+import pkg from '../package.json' with { type: 'json' };
 
 type RunnerModule = typeof import('../src/index.ts');
 
@@ -168,11 +169,15 @@ async function loadRunner(path: string, dir: string): Promise<LzStrykerNodeTestR
   return runner;
 }
 
-const MUTATE_SUITES = (
-  JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8')) as {
-    scripts: { mutate: string };
+function mutateSuites(): string[] {
+  const { scripts } = pkg;
+
+  if (!('mutate' in scripts) || typeof scripts.mutate !== 'string') {
+    throw new Error(`${pkg.name} has no mutate script whose Stryker suites the bench could time`);
   }
-).scripts.mutate.split(' && ');
+
+  return scripts.mutate.split(' && ');
+}
 
 function mutate(suite: string): void {
   const result = spawnSync(`npx ${suite}`, {
@@ -229,7 +234,7 @@ async function main(): Promise<void> {
     }
 
     for (let run = 0; run < mutateRuns; run++) {
-      for (const suite of MUTATE_SUITES) {
+      for (const suite of mutateSuites()) {
         const label = `${suite}, wall`;
         add(label, (await round([[label, () => mutate(suite)]])).get(label)!);
       }

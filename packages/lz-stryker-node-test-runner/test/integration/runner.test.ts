@@ -423,7 +423,14 @@ describe('LzStrykerNodeTestRunner', () => {
       await runner.init();
       await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
 
-      return JSON.parse(readFileSync(join(dir, 'exec-argv.json'), 'utf8')) as string[];
+      const argv: unknown = JSON.parse(readFileSync(join(dir, 'exec-argv.json'), 'utf8'));
+      assert.ok(Array.isArray(argv), String(argv));
+      assert.ok(
+        argv.every((arg) => typeof arg === 'string'),
+        String(argv),
+      );
+
+      return argv;
     };
     const nodeArgs = ['--no-deprecation', '--stack-size=900'];
     const reporters = ['--test-reporter', 'spec', '--test-reporter-destination=stdout'];

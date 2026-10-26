@@ -8,7 +8,7 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["test/**/*.ts"],
+  "include": ["test/**/*.ts", "package.json"],
   "references": [
     {
       "path": "./tsconfig.lib.json"

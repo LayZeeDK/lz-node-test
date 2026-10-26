@@ -20,6 +20,7 @@ import {
   watchdog,
 } from '../../src/hook-core.ts';
 import { fixture, GROWS, HOOK_URL, REPORTER_ARG, shareCompileCache } from '../index.fixtures.ts';
+import { lzParseRecord } from '../../src/index.ts';
 import reporter from '../../src/reporter.ts';
 
 // Loaded here, outside any test, the hook stays inactive (the runner did not start this process, or its own hook is
@@ -107,7 +108,7 @@ function runWithHook(args: string[], env: Record<string, string>): Promise<{ cod
 
 function readRecords(outDir: string): Record<string, ProcessRecord> {
   return Object.fromEntries(
-    readdirSync(outDir).map((name) => [name, JSON.parse(readFileSync(join(outDir, name), 'utf8')) as ProcessRecord]),
+    readdirSync(outDir).map((name) => [name, lzParseRecord(readFileSync(join(outDir, name), 'utf8'))]),
   );
 }
 

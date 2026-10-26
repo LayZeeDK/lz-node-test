@@ -28,6 +28,7 @@ import {
   type RecordedTest,
   type TestEvent,
 } from '../../src/hook-core.ts';
+import { lzParseRecord } from '../../src/index.ts';
 import { bodyOf, fakeNodeTest, TEST_FILE, testContext, type Fn } from '../hook-core.fixtures.ts';
 
 function reported(
@@ -441,7 +442,7 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
       beforeExitListeners.push(listener);
     },
     writeRecord: (path, record) => {
-      records.push({ path, record: JSON.parse(JSON.stringify(record)) as ProcessRecord });
+      records.push({ path, record: lzParseRecord(JSON.stringify(record)) });
     },
     exit: (code) => {
       exits.push(code);

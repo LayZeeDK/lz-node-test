@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.spec.json",
   "compilerOptions": { "declarationMap": false, "emitDeclarationOnly": false },
-  "include": ["src/**/*.ts", "src/**/*.json", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.json", "test/**/*.ts", "package.json"]
 }
