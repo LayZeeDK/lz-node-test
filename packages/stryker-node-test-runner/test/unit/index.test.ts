@@ -210,6 +210,7 @@ describe('parseRecord', () => {
     [withFields({ mutantCoverage: { static: {} } }), 'mutantCoverage'],
     [withFields({ mutantCoverage: { perTest: {} } }), 'mutantCoverage'],
     [withFields({ mutantCoverage: { static: { '1': '2' }, perTest: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: { '1': 2, '3': '4' }, perTest: {} } }), 'mutantCoverage'],
     [withFields({ mutantCoverage: { static: {}, perTest: { t: 1 } } }), 'mutantCoverage'],
     [withFields({ mutantCoverage: { static: {}, perTest: { t: { '1': '2' } } } }), 'mutantCoverage'],
     [withFields({ peakMemoryMB: '40' }), 'peakMemoryMB'],
