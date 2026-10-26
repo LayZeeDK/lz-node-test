@@ -37,7 +37,12 @@ function setup({ builtIns = ['StringLiteral'], silent = [] as string[], version 
     },
   };
   const run = (mode: 'add' | 'replace', operators: Operator[]) =>
-    install(mode, operators, async () => instrumenter, (message) => warnings.push(message));
+    install(
+      mode,
+      operators,
+      async () => instrumenter,
+      (message) => warnings.push(message),
+    );
   const names = () => allMutators.map(({ name }) => name);
 
   return { run, names, instrumented, warnings };
@@ -200,7 +205,10 @@ describe('resolveFromCore', () => {
     };
 
     const mutants = async (mutators?: NodeMutatorLike[]) =>
-      (await instrumenter.instrument(files, mutators)).map(({ mutatorName, replacement }) => [mutatorName, replacement]);
+      (await instrumenter.instrument(files, mutators)).map(({ mutatorName, replacement }) => [
+        mutatorName,
+        replacement,
+      ]);
 
     assert.deepEqual([await mutants(), await mutants([own])], [[['StringLiteral', '""']], [['Own', '"y"']]]);
     assert.ok(instrumenter.allMutators.some(({ name }) => name === 'StringLiteral'));

@@ -89,7 +89,10 @@ describe('isRunning', () => {
     // The system process on Windows and init on POSIX run, and only an administrator may signal them.
     const system = process.platform === 'win32' ? 4 : 1;
 
-    assert.deepEqual([process.pid, system, NO_PROCESS].map((pid) => isRunning(pid)), [true, true, false]);
+    assert.deepEqual(
+      [process.pid, system, NO_PROCESS].map((pid) => isRunning(pid)),
+      [true, true, false],
+    );
   });
 
   // As root every signal is allowed, so the real processes above reach EPERM only for other users.
@@ -239,7 +242,10 @@ describe('isOwn', () => {
   });
 
   it('counts every file as owned where there are no user ids, as on Windows', () => {
-    assert.equal(isOwn('a', {}, () => assert.fail('looked up the owner')), true);
+    assert.equal(
+      isOwn('a', {}, () => assert.fail('looked up the owner')),
+      true,
+    );
   });
 
   it('counts a directory this process created as owned', (t) => {

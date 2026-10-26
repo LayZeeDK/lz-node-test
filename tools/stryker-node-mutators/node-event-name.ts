@@ -55,7 +55,8 @@ function receiverOf(path: NodePath): types.Node | undefined {
   }
 
   const { callee } = call;
-  const listens = callee.type === 'MemberExpression' && callee.property.type === 'Identifier' && LISTEN.has(callee.property.name);
+  const listens =
+    callee.type === 'MemberExpression' && callee.property.type === 'Identifier' && LISTEN.has(callee.property.name);
 
   return listens && path.key === 0 ? callee.object : undefined;
 }
@@ -67,7 +68,11 @@ function isEventsFunction(path: NodePath, callee: types.Node): boolean {
     return from !== undefined && NODE_EVENTS.has(from.source) && isOnceOrOn(from.imported);
   }
 
-  if (callee.type !== 'MemberExpression' || callee.object.type !== 'Identifier' || callee.property.type !== 'Identifier') {
+  if (
+    callee.type !== 'MemberExpression' ||
+    callee.object.type !== 'Identifier' ||
+    callee.property.type !== 'Identifier'
+  ) {
     return false;
   }
 

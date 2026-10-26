@@ -31,7 +31,11 @@ describe('assertions of the test context', () => {
 
   // fastify/test/register.test.js:131
   it('checks through a helper that returns its rejects', async (t) => {
-    await thenableRejects(t, Promise.resolve().then(() => share(1, 0)), { name: 'AssertionError' });
+    await thenableRejects(
+      t,
+      Promise.resolve().then(() => share(1, 0)),
+      { name: 'AssertionError' },
+    );
   });
 
   // fastify/test/listen.1.test.js:86

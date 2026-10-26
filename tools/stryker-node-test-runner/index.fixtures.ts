@@ -5,7 +5,12 @@ import { dirname, join } from 'node:path';
 import { after, type TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import { INSTRUMENTER_CONSTANTS, type Mutant, type MutantCoverage, type StrykerOptions } from '@stryker-mutator/api/core';
+import {
+  INSTRUMENTER_CONSTANTS,
+  type Mutant,
+  type MutantCoverage,
+  type StrykerOptions,
+} from '@stryker-mutator/api/core';
 import type { Logger } from '@stryker-mutator/api/logging';
 import {
   DryRunStatus,
@@ -118,7 +123,10 @@ export function strykerOptions(options: RunnerOptions = {}): StrykerOptions {
   return { checkers: [], testFiles: [], ...options } as unknown as StrykerOptions;
 }
 
-export async function initRunner(testFiles: string[] | undefined, lzNodeTest: NodeTestOptions = {}): Promise<NodeTestRunner> {
+export async function initRunner(
+  testFiles: string[] | undefined,
+  lzNodeTest: NodeTestOptions = {},
+): Promise<NodeTestRunner> {
   const options = { lzNodeTest: { ...lzNodeTest, ...(testFiles && { testFiles }) } };
   const runner = new NodeTestRunner(strykerOptions(options), logger());
   await runner.init();

@@ -180,10 +180,13 @@ describe('NodeTestRunner results', () => {
       [`${a} > parent > child`]: { child: 1 },
       ...(expectFailure && { [`${a} > expects a failure`]: { expected: 1 } }),
     });
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${a} > parent > child`] })))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 2,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${a} > parent > child`] })))),
+      {
+        status: MutantRunStatus.Survived,
+        nrOfTests: 2,
+      },
+    );
   });
 
   it('names the suites and tests a running test registers with it and describe after it, as node:test does', async (t) => {
@@ -217,10 +220,13 @@ describe('NodeTestRunner results', () => {
       [ids[1] as string]: { 'in suite': 1 },
       [ids[2] as string]: { 'after await': 1 },
     });
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[2] as string] })))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 2,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[2] as string] })))),
+      {
+        status: MutantRunStatus.Survived,
+        nrOfTests: 2,
+      },
+    );
   });
 
   it('reports where the test file declares each test, also through a helper', async (t) => {
@@ -270,10 +276,13 @@ describe('NodeTestRunner results', () => {
       [`${a} > <anonymous>`]: { empty: 1 },
       [`${a} > optionsFirst`]: { 'options first': 1 },
     });
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${a} > <anonymous>`] })))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 1,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${a} > <anonymous>`] })))),
+      {
+        status: MutantRunStatus.Survived,
+        nrOfTests: 1,
+      },
+    );
   });
 
   it('gives same-named tests of one parent, and names with the separator, ids of their own throughout', async (t) => {
@@ -308,10 +317,13 @@ describe('NodeTestRunner results', () => {
       [ids[2] as string]: { nested: 1 },
       [ids[3] as string]: { separator: 1 },
     });
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[1] as string] })))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 1,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[1] as string] })))),
+      {
+        status: MutantRunStatus.Survived,
+        nrOfTests: 1,
+      },
+    );
   });
 
   it('names the tests inside only and todo suites after their suites', async (t) => {

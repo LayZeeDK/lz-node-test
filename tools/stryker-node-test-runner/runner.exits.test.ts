@@ -148,7 +148,13 @@ describe('NodeTestRunner endings', () => {
     const exitCode = process.platform === 'win32' ? 1 : null;
     assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), {
       status: DryRunStatus.Error,
-      errorMessage: fileError(a, { records: [], exitCode, stderr: '', args: [REPORTER_ARG, a], nodeOptions: runNodeOptions() }),
+      errorMessage: fileError(a, {
+        records: [],
+        exitCode,
+        stderr: '',
+        args: [REPORTER_ARG, a],
+        nodeOptions: runNodeOptions(),
+      }),
     });
   });
 });

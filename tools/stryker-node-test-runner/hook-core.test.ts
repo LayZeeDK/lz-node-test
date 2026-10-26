@@ -237,7 +237,12 @@ describe('recordEvents', () => {
         ...suite('s', ...reported('works', 1, 'pass', testDetails)),
         ...reported('a > b', 0, 'pass', testDetails),
       ]).map(({ id }) => id),
-      [`${TEST_FILE} > s > works`, `${TEST_FILE} > s > works (2)`, `${TEST_FILE} > s (2) > works`, `${TEST_FILE} > a \\> b`],
+      [
+        `${TEST_FILE} > s > works`,
+        `${TEST_FILE} > s > works (2)`,
+        `${TEST_FILE} > s (2) > works`,
+        `${TEST_FILE} > a \\> b`,
+      ],
     );
   });
 
@@ -273,7 +278,10 @@ describe('recordEvents', () => {
     const positions = new Map([[`${TEST_FILE} > "after" hook`, { line: 2, column: 4 }]]);
 
     assert.deepEqual(
-      record([{ type: 'test:fail', data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 4, error } } }], positions),
+      record(
+        [{ type: 'test:fail', data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 4, error } } }],
+        positions,
+      ),
       [
         {
           id: `${TEST_FILE} > "after" hook`,
@@ -321,11 +329,11 @@ describe('redirectNodeTest', () => {
     const required = hooks.resolve('node:test', { conditions: ['node', 'require'] }, passOn) as typeof imported;
     const loaded = [imported, required].map(({ url }) => hooks.load(url, {}, passOn) as typeof imported);
 
+    assert.deepEqual([imported.format, required.format, imported.url === required.url], ['module', 'commonjs', false]);
     assert.deepEqual(
-      [imported.format, required.format, imported.url === required.url],
-      ['module', 'commonjs', false],
+      [imported, required].map(({ url }) => url.startsWith('node:')),
+      [false, false],
     );
-    assert.deepEqual([imported, required].map(({ url }) => url.startsWith('node:')), [false, false]);
     // Node.js requires a hook that does not pass a module on to say so.
     assert.deepEqual(
       [imported, required, ...loaded].map(({ format, shortCircuit }) => [format, shortCircuit]),
@@ -571,7 +579,11 @@ describe('install', () => {
 
   testFor([
     ['', {}, {}],
-    [', except the compile cache when the process has one', { NODE_COMPILE_CACHE: 'cache' }, { NODE_COMPILE_CACHE: 'cache' }],
+    [
+      ', except the compile cache when the process has one',
+      { NODE_COMPILE_CACHE: 'cache' },
+      { NODE_COMPILE_CACHE: 'cache' },
+    ],
   ] as const)("starts the memory watchdog without the process's environment%s", ([, env, expected]) => {
     const started: unknown[] = [];
     const { deps } = harness(
@@ -738,27 +750,24 @@ describe('install', () => {
     ['marks the record unfinished when it ends through process.exit() before', false, [], { unfinished: true }],
     ['leaves the record as it is when it ends through process.exit() after', false, [summary], {}],
     ['leaves the record as it is when it ends by itself without', true, [], {}],
-  ] as const)(
-    "%s node:test's summary",
-    ([, natural, last, unfinished]) => {
-      const { deps, records, exit, wrapped } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE });
-      install(deps);
-      wrapped().it('passes', () => {});
-      report(deps, 'passes', 'pass');
+  ] as const)("%s node:test's summary", ([, natural, last, unfinished]) => {
+    const { deps, records, exit, wrapped } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE });
+    install(deps);
+    wrapped().it('passes', () => {});
+    report(deps, 'passes', 'pass');
 
-      for (const event of last) {
-        deps.global[reporting]?.(event);
-      }
+    for (const event of last) {
+      deps.global[reporting]?.(event);
+    }
 
-      exit({ natural });
+    exit({ natural });
 
-      assert.deepEqual(records[0]?.record, {
-        main: true,
-        tests: [{ id: `${TEST_FILE} > passes`, status: 'passed', timeSpentMs: 2 }],
-        ...unfinished,
-      });
-    },
-  );
+    assert.deepEqual(records[0]?.record, {
+      main: true,
+      tests: [{ id: `${TEST_FILE} > passes`, status: 'passed', timeSpentMs: 2 }],
+      ...unfinished,
+    });
+  });
 
   it('records where the test file declares a test, named by URL as an ES module or by path as CommonJS', () => {
     const file = resolve(TEST_FILE);
@@ -781,7 +790,12 @@ describe('install', () => {
 
   testFor([
     ['the source-mapped call sites, when one is in the test file', TEST_FILE, [true], { line: 6, column: 6 }],
-    ['the call sites as they are, when no source-mapped one is', join('/repo', 'src', 'a.ts'), [true, false], { line: 2, column: 4 }],
+    [
+      'the call sites as they are, when no source-mapped one is',
+      join('/repo', 'src', 'a.ts'),
+      [true, false],
+      { line: 2, column: 4 },
+    ],
   ] as const)('records the position from %s', ([, mappedFile, reads, startPosition]) => {
     const sourceMaps: boolean[] = [];
     const { deps, records, exit, wrapped } = harness(
@@ -1032,9 +1046,12 @@ describe('install', () => {
     });
 
     testFor([
-      ['throws', (): unknown => {
-        throw new Error('after failed');
-      }],
+      [
+        'throws',
+        (): unknown => {
+          throw new Error('after failed');
+        },
+      ],
       ['rejects', (): unknown => Promise.reject(new Error('after failed'))],
     ] as const)('stops waiting at a root `after` hook that %s, as node:test runs none after it', async ([, hook]) => {
       const h = harness(env);
@@ -1075,7 +1092,7 @@ describe('install', () => {
       assert.deepEqual([h.timers.length, passed], [error ? 1 : 0, [error]]);
     });
 
-    it("starts the grace only once its own root `after` hook has run, as one added inside another hook runs earlier", async () => {
+    it('starts the grace only once its own root `after` hook has run, as one added inside another hook runs earlier', async () => {
       const h = harness(env);
       install(h.deps);
       h.wrapped().after(() => {});
@@ -1089,12 +1106,21 @@ describe('install', () => {
       assert.equal(h.timers.length, 1);
     });
 
-    const fileFailure = { type: 'test:fail', data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 1 } } } as const;
+    const fileFailure = {
+      type: 'test:fail',
+      data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 1 } },
+    } as const;
 
     testFor([
       ['starts', 'node:test reports the file failed once the tests finished', false, fileFailure, 1],
       ['does not start', 'node:test reports the file failed before the tests finished', true, fileFailure, 0],
-      ['does not start', 'a nested failure has no type', false, { ...fileFailure, data: { ...fileFailure.data, nesting: 1 } }, 0],
+      [
+        'does not start',
+        'a nested failure has no type',
+        false,
+        { ...fileFailure, data: { ...fileFailure.data, nesting: 1 } },
+        0,
+      ],
       ['does not start', 'the file passed', false, { ...fileFailure, type: 'test:pass' }, 0],
       [
         'does not start',

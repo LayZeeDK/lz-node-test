@@ -57,8 +57,14 @@ describe('plugin declaration', () => {
 
   testEach([
     [{}, { lzNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [] } }],
-    [{ lzNodeTest: { maxMemoryMB: 1500 } }, { lzNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [], maxMemoryMB: 1500 } }],
-    [{ lzNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } }, { lzNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } }],
+    [
+      { lzNodeTest: { maxMemoryMB: 1500 } },
+      { lzNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [], maxMemoryMB: 1500 } },
+    ],
+    [
+      { lzNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } },
+      { lzNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } },
+    ],
   ])('fills in the defaults of %j', (options, filled) => {
     assert.ok(validator()(options));
     assert.deepEqual(options, filled);

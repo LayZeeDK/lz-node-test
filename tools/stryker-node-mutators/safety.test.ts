@@ -12,7 +12,16 @@ import { productionOperators, testOperators } from './operators.ts';
 
 const OPERATORS = [...productionOperators, ...testOperators];
 const ALLOWED: ReadonlySet<string> = new Set(['Error', 'Promise.reject']);
-const KEYWORDS: ReadonlySet<string> = new Set(['catch', 'for', 'function', 'if', 'return', 'switch', 'typeof', 'while']);
+const KEYWORDS: ReadonlySet<string> = new Set([
+  'catch',
+  'for',
+  'function',
+  'if',
+  'return',
+  'switch',
+  'typeof',
+  'while',
+]);
 const TARGETS = [
   'process.kill(pid, 0);',
   "import { rmSync } from 'node:fs';\nrmSync(dir, { recursive: true });",

@@ -25,7 +25,7 @@ describe('AssertStatement', () => {
     ['console.assert', 'console.assert(ready);'],
     ['an assert of another library', "import { assert } from 'chai';\nassert.ok(ready);"],
     ['a function of its own named assert', 'function assert(value: unknown) {}\nassert(ready);'],
-    ["a test context's assert", "function check(t: any) {\n  t.assert.ok(ready);\n}"],
+    ["a test context's assert", 'function check(t: any) {\n  t.assert.ok(ready);\n}'],
     ['an assertion whose value is used', `${STRICT}const result = assert.ok(ready);`],
     ['an assertion reached through an array', `${STRICT}[assert][0].ok(ready);`],
     ['a statement that is no call', `${STRICT}assert;`],
@@ -49,20 +49,17 @@ describe('AssertStatement', () => {
       "import assert from 'node:assert';\nassert(ready);",
       ['CallExpression'],
     ],
-  ])(
-    "gives an assertion %s exactly one removal next to Stryker's mutators, its own",
-    async (_title, source, alone) => {
-      const instrumenter = await resolveFromCore();
-      const builtIns = instrumenter.allMutators.filter((mutator) => !isOwn(mutator));
-      const removals = async (mutators: typeof builtIns) =>
-        (await instrumenter.instrument([{ name: 'sample.ts', content: source }], mutators))
-          .filter(({ replacement }) => replacement === ';')
-          .map(({ mutatorName }) => mutatorName);
+  ])("gives an assertion %s exactly one removal next to Stryker's mutators, its own", async (_title, source, alone) => {
+    const instrumenter = await resolveFromCore();
+    const builtIns = instrumenter.allMutators.filter((mutator) => !isOwn(mutator));
+    const removals = async (mutators: typeof builtIns) =>
+      (await instrumenter.instrument([{ name: 'sample.ts', content: source }], mutators))
+        .filter(({ replacement }) => replacement === ';')
+        .map(({ mutatorName }) => mutatorName);
 
-      assert.deepEqual(
-        [await removals(builtIns), await removals([...builtIns, toNodeMutator(assertStatement, instrumenter.types)])],
-        [alone, ['AssertStatement']],
-      );
-    },
-  );
+    assert.deepEqual(
+      [await removals(builtIns), await removals([...builtIns, toNodeMutator(assertStatement, instrumenter.types)])],
+      [alone, ['AssertStatement']],
+    );
+  });
 });

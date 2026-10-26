@@ -58,7 +58,20 @@ function wrapped(filter?: string[], bail = false, activeMutant?: string) {
 
   const see = () => seen.push(ns.currentTestId);
 
-  return { ...fake, original: fake.module, module, ns, env, tests, positions, sites, seen, see, registering, rootAfters };
+  return {
+    ...fake,
+    original: fake.module,
+    module,
+    ns,
+    env,
+    tests,
+    positions,
+    sites,
+    seen,
+    see,
+    registering,
+    rootAfters,
+  };
 }
 
 describe('wrapNodeTest', () => {
@@ -118,16 +131,19 @@ describe('wrapNodeTest', () => {
       `${TEST_FILE} > s > works (3) > child`,
       `${TEST_FILE} > s > works (3) > child (2)`,
     ]);
-    assert.deepEqual([...positions.keys()], [
-      `${TEST_FILE} > s`,
-      `${TEST_FILE} > s > works`,
-      `${TEST_FILE} > s > works (2)`,
-      `${TEST_FILE} > s > works (3)`,
-      `${TEST_FILE} > s (2)`,
-      `${TEST_FILE} > s (2) > works`,
-      `${TEST_FILE} > s > works (3) > child`,
-      `${TEST_FILE} > s > works (3) > child (2)`,
-    ]);
+    assert.deepEqual(
+      [...positions.keys()],
+      [
+        `${TEST_FILE} > s`,
+        `${TEST_FILE} > s > works`,
+        `${TEST_FILE} > s > works (2)`,
+        `${TEST_FILE} > s > works (3)`,
+        `${TEST_FILE} > s (2)`,
+        `${TEST_FILE} > s (2) > works`,
+        `${TEST_FILE} > s > works (3) > child`,
+        `${TEST_FILE} > s > works (3) > child (2)`,
+      ],
+    );
   });
 
   it('leaves the suite after a suite body throws', async () => {
@@ -234,7 +250,7 @@ describe('wrapNodeTest', () => {
     ]);
   });
 
-  testEach(['describe', 'suite', 'test'] as const)('keeps the other properties of node:test\'s %s', (kind) => {
+  testEach(['describe', 'suite', 'test'] as const)("keeps the other properties of node:test's %s", (kind) => {
     const { module } = wrapped();
 
     assert.equal((module[kind] as unknown as { mock: string }).mock, `${kind}.mock`);
@@ -582,10 +598,10 @@ describe('wrapNodeTest', () => {
       body.call(receiver, context, (...args: unknown[]) => calls.push(args));
 
       assert.deepEqual(seen, [receiver, context]);
-      assert.deepEqual([ns.currentTestId, env[ENV.current]], [
-        `${TEST_FILE} > calls back`,
-        `${TEST_FILE} > calls back`,
-      ]);
+      assert.deepEqual(
+        [ns.currentTestId, env[ENV.current]],
+        [`${TEST_FILE} > calls back`, `${TEST_FILE} > calls back`],
+      );
       assert.deepEqual(calls, []);
 
       await context.end();
@@ -801,12 +817,20 @@ describe('wrapNodeTest', () => {
       module.it('same', () => {});
 
       for (const registered of [...hooksOf(registrations, 'beforeEach'), ...hooksOf(registrations, 'after')]) {
-        for (const context of [testContext([], 'suite'), testContext([], 'same'), testContext([], 'inner'), undefined]) {
+        for (const context of [
+          testContext([], 'suite'),
+          testContext([], 'same'),
+          testContext([], 'inner'),
+          undefined,
+        ]) {
           assert.equal(registered(context), 'hook result');
         }
       }
 
-      assert.deepEqual(seen, Array.from({ length: 8 }, () => undefined));
+      assert.deepEqual(
+        seen,
+        Array.from({ length: 8 }, () => undefined),
+      );
       assert.ok(!(ENV.current in env));
     });
 
@@ -1057,4 +1081,3 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(calls, bail ? [[]] : [[undefined]]);
   });
 });
-

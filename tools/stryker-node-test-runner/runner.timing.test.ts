@@ -111,6 +111,9 @@ describe('NodeTestRunner timing', () => {
 
     assert.ok(result.status === MutantRunStatus.Survived, `expected a survived mutant, got ${JSON.stringify(result)}`);
     assert.ok(result.duration !== undefined, 'expected a duration');
-    assert.ok(result.duration >= 300 && result.duration <= Math.ceil(elapsed), `${result.duration} ms of ${elapsed} ms`);
+    assert.ok(
+      result.duration >= 300 && result.duration <= Math.ceil(elapsed),
+      `${result.duration} ms of ${elapsed} ms`,
+    );
   });
 });

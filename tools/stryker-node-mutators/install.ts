@@ -30,7 +30,10 @@ export interface Instrumenter {
   readonly allMutators: NodeMutatorLike[];
   /** The Babel types of the instrumenter's own @babel/core, to build the nodes it places. */
   readonly types: BabelTypes;
-  instrument(files: readonly SourceFile[], mutators?: readonly NodeMutatorLike[]): Promise<readonly InstrumentedMutant[]>;
+  instrument(
+    files: readonly SourceFile[],
+    mutators?: readonly NodeMutatorLike[],
+  ): Promise<readonly InstrumentedMutant[]>;
 }
 
 export type Mode = 'add' | 'replace';

@@ -88,11 +88,7 @@ export function isOwn(
  */
 export function removeLeftDirs(
   dir: string,
-  {
-    running = isRunning,
-    owned = isOwn,
-    remove = (path: string) => rmSync(path, { recursive: true }),
-  } = {},
+  { running = isRunning, owned = isOwn, remove = (path: string) => rmSync(path, { recursive: true }) } = {},
 ): void {
   for (const name of readdirSync(dir)) {
     const pid = /^stryker-node-test-(?:cache-|peaks-)?(\d+)-/.exec(name)?.[1];

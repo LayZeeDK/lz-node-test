@@ -164,9 +164,15 @@ describe('NodeTestRunner', () => {
     process.execPath = join(dir, 'missing-node');
     const runner = await initRunner(['a.test.mjs']);
 
-    await assert.rejects(settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: true, disableBail: false, coverageAnalysis: 'perTest' }), 1_000), {
-      code: 'ENOENT',
-    });
+    await assert.rejects(
+      settle(
+        runner.runFile(join(dir, 'a.test.mjs'), { dryRun: true, disableBail: false, coverageAnalysis: 'perTest' }),
+        1_000,
+      ),
+      {
+        code: 'ENOENT',
+      },
+    );
 
     // Node emits close after the error; letting it fire within this test keeps its coverage attributed to the test.
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -778,10 +784,13 @@ describe('NodeTestRunner', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${a} > selected > runs`] })))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 1,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${a} > selected > runs`] })))),
+      {
+        status: MutantRunStatus.Survived,
+        nrOfTests: 1,
+      },
+    );
   });
 
   it('stops after the first file with a failure, and a mutant run after any failure, unless bail is off', async (t) => {
@@ -878,12 +887,15 @@ describe('NodeTestRunner', () => {
     assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...DRY_RUN, testFiles: ['b.test.mjs'] }))).tests), [
       { id: `${b} > fails`, status: TestStatus.Failed, failureMessage: 'expected failure' },
     ]);
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${c} > fails`] })))), {
-      status: MutantRunStatus.Killed,
-      killedBy: [`${c} > fails`],
-      failureMessage: 'expected failure',
-      nrOfTests: 1,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${c} > fails`] })))),
+      {
+        status: MutantRunStatus.Killed,
+        killedBy: [`${c} > fails`],
+        failureMessage: 'expected failure',
+        nrOfTests: 1,
+      },
+    );
   });
 
   it('reports a statically activated mutant that breaks loading the test file as a runtime error', async (t) => {
@@ -920,10 +932,13 @@ describe('NodeTestRunner', () => {
     const runner = await initRunner(['a.test.mjs']);
     const testFilter = [`${join(dir, 'a.test.mjs')} > sees the mutant`];
 
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'runtime', testFilter })))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 1,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'runtime', testFilter })))),
+      {
+        status: MutantRunStatus.Survived,
+        nrOfTests: 1,
+      },
+    );
   });
 
   testFor([
@@ -951,9 +966,12 @@ describe('NodeTestRunner', () => {
     const runner = await initRunner(['*.test.mjs']);
     const testFilter = [`${join(dir, file)} > ${test}`];
 
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'runtime', testFilter })))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 1,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'runtime', testFilter })))),
+      {
+        status: MutantRunStatus.Survived,
+        nrOfTests: 1,
+      },
+    );
   });
 });

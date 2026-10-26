@@ -1,6 +1,11 @@
 import type { NodePath, types } from '@babel/core';
 
-export const NODE_ASSERT: ReadonlySet<string> = new Set(['node:assert', 'node:assert/strict', 'assert', 'assert/strict']);
+export const NODE_ASSERT: ReadonlySet<string> = new Set([
+  'node:assert',
+  'node:assert/strict',
+  'assert',
+  'assert/strict',
+]);
 
 export interface ImportOf {
   readonly source: string;

@@ -18,9 +18,13 @@ describe('NodeEventName', () => {
     ['a listener put first once', "child.prependOnceListener('close', f);", ['"exit"']],
     ['a parameter named process, as a child', "function f(process: any) {\n  process.on('exit', g);\n}", ['"close"']],
     ['a process of another module, as a child', "import process from 'other';\nprocess.on('exit', f);", ['"close"']],
-    ['a named import of node:process, as a child', "import { env } from 'node:process';\nenv.on('exit', f);", ['"close"']],
+    [
+      'a named import of node:process, as a child',
+      "import { env } from 'node:process';\nenv.on('exit', f);",
+      ['"close"'],
+    ],
     ['once of node:events', "import { once } from 'node:events';\nawait once(child, 'exit');", ['"close"']],
-    ["on of events, on the process", "import { on } from 'events';\non(process, 'exit');", ['"beforeExit"']],
+    ['on of events, on the process', "import { on } from 'events';\non(process, 'exit');", ['"beforeExit"']],
     ['once of a default import', "import events from 'node:events';\nawait events.once(child, 'close');", ['"exit"']],
     [
       "EventEmitter's once",
@@ -44,13 +48,22 @@ describe('NodeEventName', () => {
     ['a function on of its own', "on('exit', f);"],
     ["the emitter's place in once of node:events", "import { once } from 'node:events';\nonce('exit', child);"],
     ['once of another module', "import { once } from 'other';\nonce(child, 'exit');"],
-    ['another function of node:events', "import { getEventListeners } from 'node:events';\ngetEventListeners(child, 'exit');"],
+    [
+      'another function of node:events',
+      "import { getEventListeners } from 'node:events';\ngetEventListeners(child, 'exit');",
+    ],
     ['once of a default import of another module', "import events from 'other';\nevents.once(child, 'exit');"],
-    ['another named import of node:events', "import { errorMonitor } from 'node:events';\nerrorMonitor.once(child, 'exit');"],
+    [
+      'another named import of node:events',
+      "import { errorMonitor } from 'node:events';\nerrorMonitor.once(child, 'exit');",
+    ],
     ['another member of node:events', "import events from 'node:events';\nevents.listenerCount(child, 'exit');"],
     ['once of a member', "import events from 'node:events';\nevents.EventEmitter.once(child, 'exit');"],
     // fastify/test/http2/closing.test.js:193
-    ['an event outside the tables of a member, in once', "import { once } from 'node:events';\nawait once(fastify.server, 'session');"],
+    [
+      'an event outside the tables of a member, in once',
+      "import { once } from 'node:events';\nawait once(fastify.server, 'session');",
+    ],
     // fastify/test/helper.js:564
     ["the process's warning", "process.on('warning', f);"],
     // pino-pretty/bin.js:88

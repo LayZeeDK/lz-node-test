@@ -25,12 +25,16 @@ const SAMPLE = fileURLToPath(new URL('./type-check.sample.ts', import.meta.url))
 
 /** The messages of the errors that type checking `source` with the repository's compiler options reports. */
 function typeErrors(source: string): string[] {
-  const config = ts.getParsedCommandLineOfConfigFile(fileURLToPath(new URL('../../tsconfig.json', import.meta.url)), {}, {
-    ...ts.sys,
-    onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-      throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+  const config = ts.getParsedCommandLineOfConfigFile(
+    fileURLToPath(new URL('../../tsconfig.json', import.meta.url)),
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+      },
     },
-  });
+  );
   assert.ok(config);
   const { options } = config;
   const host = ts.createCompilerHost(options);
@@ -82,7 +86,11 @@ describe('AssertCall', () => {
       `${STRICT}const check = async () => await assert.rejects(load());`,
       `${REJECTED} : assert.rejects(load())`,
     ],
-    ['a returned assertion', `${STRICT}function check(x: unknown) {\n  return assert.ok(x);\n}`, `${THROWING} : assert.ok(x)`],
+    [
+      'a returned assertion',
+      `${STRICT}function check(x: unknown) {\n  return assert.ok(x);\n}`,
+      `${THROWING} : assert.ok(x)`,
+    ],
     // fastify/test/register.test.js:123
     [
       "the test context's returned rejects",
@@ -143,11 +151,17 @@ describe('AssertCall', () => {
     ['a computed assert of the test context', `${TEST}it('works', (t) => {\n  t[assert].ok(true);\n});`],
     ["another call that is an arrow function's body", '[1].forEach((n) => console.log(n));'],
     // pino-pretty/test/cli.test.js:20
-    ["the test context's fail passed as a value", `${TEST}it('works', (t) => {\n  child.on('error', t.assert.fail);\n});`],
+    [
+      "the test context's fail passed as a value",
+      `${TEST}it('works', (t) => {\n  child.on('error', t.assert.fail);\n});`,
+    ],
     // fastify/test/inject.test.js:288
     ["the test context's fail bound", `${TEST}it('works', (t) => {\n  t.assert.fail.bind(t, 'never');\n});`],
     // fastify/test/hooks.test.js:3279, fast-json-stringify/test/typesArray.test.js:255
-    ["tap's fail and equal on the test context", `${TEST}it('works', (t) => {\n  t.fail('should throw');\n  t.equal(1, 1);\n});`],
+    [
+      "tap's fail and equal on the test context",
+      `${TEST}it('works', (t) => {\n  t.fail('should throw');\n  t.equal(1, 1);\n});`,
+    ],
     // pino-pretty/test/error-objects.test.js:38
     ["the test context's plan", `${TEST}it('works', (t) => {\n  t.plan(2);\n});`],
     // pino-pretty/test/cli-rc.test.js:213

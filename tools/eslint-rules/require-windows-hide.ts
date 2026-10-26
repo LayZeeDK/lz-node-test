@@ -6,12 +6,15 @@ const windowsHideInText = /windowsHide['"]?\s*:\s*true/;
 const typeWrappers = new Set(['TSAsExpression', 'TSSatisfiesExpression', 'TSNonNullExpression', 'TSTypeAssertion']);
 
 function isNamed(key: Node, computed: boolean, name: string): boolean {
-  return (key.type === 'Identifier' && !computed && key.name === name) || (key.type === 'Literal' && key.value === name);
+  return (
+    (key.type === 'Identifier' && !computed && key.name === name) || (key.type === 'Literal' && key.value === name)
+  );
 }
 
 function property(node: ObjectExpression, name: string): Property | undefined {
   return node.properties.findLast(
-    (candidate): candidate is Property => candidate.type === 'Property' && isNamed(candidate.key, candidate.computed, name),
+    (candidate): candidate is Property =>
+      candidate.type === 'Property' && isNamed(candidate.key, candidate.computed, name),
   );
 }
 

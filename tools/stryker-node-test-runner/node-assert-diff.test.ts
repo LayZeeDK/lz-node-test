@@ -38,7 +38,7 @@ it("still has Node.js's assertion diff grow with the square of the lines it comp
       'raise package.json engines to releases with the fix and remove the watchdog with all that serves it, or skip ' +
       'this test on releases with the fix. The watchdog is watchdog.ts, which hook.ts starts; ' +
       "hook-core.ts's install starts it through canWatchMemory, watchMemory and ENV.memoryLimit, keeps it in the " +
-      'global slot of its watchdog symbol, and records the dry-run peakMemoryMB it is limited by. The runner\'s side ' +
+      "global slot of its watchdog symbol, and records the dry-run peakMemoryMB it is limited by. The runner's side " +
       'is memory-limits.ts, ownDir and the peaks- directories that removeLeftDirs removes in dirs.ts, and in ' +
       "index.ts the lzNodeTest.maxMemoryMB option, its schema entry and fileOutcome's memoryLimitReached branch. The " +
       "tests' GROWS fixture in index.fixtures.ts goes with them.",

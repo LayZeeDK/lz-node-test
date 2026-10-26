@@ -89,7 +89,9 @@ describe('NodeTestRunner limits', () => {
 
   it("limits each mutant run's processes to their file's dry-run peak, times 1.5, plus 1024 MB, in every runner", async (t) => {
     const limit = `process.env.${ENV.memoryLimit}`;
-    project(t, { 'a.test.mjs': fixture(`it('fails with its memory limit', () => { if (${limit}) throw new Error(${limit}); });`) });
+    project(t, {
+      'a.test.mjs': fixture(`it('fails with its memory limit', () => { if (${limit}) throw new Error(${limit}); });`),
+    });
     const dryRunner = await initRunner(['a.test.mjs']);
 
     assert.deepEqual(
@@ -127,13 +129,19 @@ describe('NodeTestRunner limits', () => {
 
       for (const run of [1, 2]) {
         const result = await settle(runner.mutantRun(mutantRunOptions()));
-        assert.ok(result.status === MutantRunStatus.Killed, `expected run ${run} to be killed, got ${JSON.stringify(result)}`);
+        assert.ok(
+          result.status === MutantRunStatus.Killed,
+          `expected run ${run} to be killed, got ${JSON.stringify(result)}`,
+        );
         limits.push(Number(result.failureMessage));
       }
 
       assert.deepEqual(limits, expected);
       assert.equal(warnings.length, warningCount);
-      assert.ok(warnings.every((warning) => warning.includes(`"${dir}`)), String(warnings));
+      assert.ok(
+        warnings.every((warning) => warning.includes(`"${dir}`)),
+        String(warnings),
+      );
     },
   );
 

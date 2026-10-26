@@ -563,8 +563,20 @@ export interface WrapOptions {
  * once its reporters start, so a few quick tests can still run after the first failure.
  */
 export function wrapNodeTest(options: WrapOptions): NodeTestModule {
-  const { ns, testFile, tests, filter, bail, activeMutant, env, positions, callSites, nodeTest, registering, rootAfter } =
-    options;
+  const {
+    ns,
+    testFile,
+    tests,
+    filter,
+    bail,
+    activeMutant,
+    env,
+    positions,
+    callSites,
+    nodeTest,
+    registering,
+    rootAfter,
+  } = options;
   const idOf = uniqueIds();
   /**
    * node:test makes the suite or test whose body runs, followed through asynchronous calls, the parent of the suites
@@ -755,7 +767,12 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         after.call(context, leave);
         // `t.test` registers a subtest of `t`'s test, wherever it is called.
         context.test = wrapTest(context.test, () => id);
-        context.after = (hook, ...rest) => after.call(context, attributing(hook, () => id), ...rest);
+        context.after = (hook, ...rest) =>
+          after.call(
+            context,
+            attributing(hook, () => id),
+            ...rest,
+          );
         context.beforeEach = (hook, ...rest) => beforeEach.call(context, attributing(hook, testOf), ...rest);
         activate();
 
@@ -899,4 +916,3 @@ export function redirectNodeTest(names: string[]): ModuleHooks {
     },
   };
 }
-

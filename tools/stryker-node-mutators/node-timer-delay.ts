@@ -48,7 +48,11 @@ function delayIndex(path: NodePath, callee: types.Node): number | undefined {
     return TIMERS.has(from.imported) ? timersDelayIndex(from.source) : undefined;
   }
 
-  if (callee.type !== 'MemberExpression' || callee.object.type !== 'Identifier' || callee.property.type !== 'Identifier') {
+  if (
+    callee.type !== 'MemberExpression' ||
+    callee.object.type !== 'Identifier' ||
+    callee.property.type !== 'Identifier'
+  ) {
     return undefined;
   }
 

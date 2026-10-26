@@ -139,7 +139,11 @@ describe('NodeTestRunner with the test context', () => {
         "payload('put', t);",
         "it('runs', (t) => each(t, ['first', 'second']));",
       ),
-      'b.test.mjs': fixture("import t from 'node:test';", "import { payload } from './helper.mjs';", "payload('put', t);"),
+      'b.test.mjs': fixture(
+        "import t from 'node:test';",
+        "import { payload } from './helper.mjs';",
+        "payload('put', t);",
+      ),
     });
     const runner = await initRunner(['*.test.mjs']);
     const a = join(dir, 'a.test.mjs');

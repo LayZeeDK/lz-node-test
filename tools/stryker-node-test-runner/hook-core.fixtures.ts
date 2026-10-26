@@ -100,7 +100,10 @@ export function rawBodyOf(registrations: Registration[], name: string): Fn {
   return registration.rest.find((arg) => typeof arg === 'function') as Fn;
 }
 
-export function bodyOf(registrations: Registration[], name: string): (this: unknown, ...args: unknown[]) => Promise<unknown> {
+export function bodyOf(
+  registrations: Registration[],
+  name: string,
+): (this: unknown, ...args: unknown[]) => Promise<unknown> {
   const body = rawBodyOf(registrations, name);
 
   return async function (this: unknown, ...args: unknown[]) {

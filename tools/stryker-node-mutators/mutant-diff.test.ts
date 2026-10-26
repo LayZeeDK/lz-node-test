@@ -93,7 +93,12 @@ describe('corpusDiff', () => {
     };
 
     assert.equal(
-      await corpusDiff(['a.ts'], () => [{ name: 'Own', sample: '', *mutate() {} }], async () => instrumenter, () => ''),
+      await corpusDiff(
+        ['a.ts'],
+        () => [{ name: 'Own', sample: '', *mutate() {} }],
+        async () => instrumenter,
+        () => '',
+      ),
       '### a.ts\n\n1 mutants without the operators, 1 with them.\n\n    + 1:1 Own ;\n    - 1:1 CallExpression ;\n',
     );
   });

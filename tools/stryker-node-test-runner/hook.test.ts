@@ -280,30 +280,31 @@ describe('hook', () => {
     },
   );
 
-  it('lets a test file whose tests leave nothing open end by itself, long before the held-open time', { timeout: 20_000 }, async (t) => {
-    const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(testFile, fixture("it('passes', () => {});"));
+  it(
+    'lets a test file whose tests leave nothing open end by itself, long before the held-open time',
+    { timeout: 20_000 },
+    async (t) => {
+      const dir = tempDir(t);
+      const outDir = tempDir(t);
+      const testFile = join(dir, 'fixture.test.mjs');
+      writeFileSync(testFile, fixture("it('passes', () => {});"));
 
-    const { code, pid } = await runWithHook([testFile], {
-      [ENV.out]: outDir,
-      [ENV.file]: testFile,
-      [ENV.heldOpen]: '60000',
-    });
+      const { code, pid } = await runWithHook([testFile], {
+        [ENV.out]: outDir,
+        [ENV.file]: testFile,
+        [ENV.heldOpen]: '60000',
+      });
 
-    assert.equal(code, 0);
-    assert.equal(readRecords(outDir)[`${pid}.0.json`]?.heldOpen, undefined);
-  });
+      assert.equal(code, 0);
+      assert.equal(readRecords(outDir)[`${pid}.0.json`]?.heldOpen, undefined);
+    },
+  );
 
   it('records the tests and coverage of the test file it runs in, in a file named after the process', async (t) => {
     const dir = tempDir(t);
     const outDir = tempDir(t);
     const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(
-      testFile,
-      fixture("it('covers', () => { cover('fixture-1'); });"),
-    );
+    writeFileSync(testFile, fixture("it('covers', () => { cover('fixture-1'); });"));
 
     const { code, pid } = await runWithHook([testFile], {
       [ENV.out]: outDir,
@@ -335,7 +336,7 @@ describe('hook', () => {
       [
         "import test from 'node:test';",
         "import { createRequire } from 'node:module';",
-        'const required = createRequire(import.meta.url)(\'node:test\');',
+        "const required = createRequire(import.meta.url)('node:test');",
         'const cover = () => {',
         '  const ns = globalThis.__stryker__;',
         '  ns.mutantCoverage ??= { static: {}, perTest: {} };',
@@ -373,17 +374,20 @@ describe('hook', () => {
   testFor([
     ['ends by itself', '', {}],
     ['ends through process.exit()', 'process.exit(0);\n', { unfinished: true }],
-  ] as const)('marks the record of a test file that %s without tests as unfinished or not', async ([, exits, unfinished], t) => {
-    const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(testFile, `import 'node:test';\n${exits}`);
+  ] as const)(
+    'marks the record of a test file that %s without tests as unfinished or not',
+    async ([, exits, unfinished], t) => {
+      const dir = tempDir(t);
+      const outDir = tempDir(t);
+      const testFile = join(dir, 'fixture.test.mjs');
+      writeFileSync(testFile, `import 'node:test';\n${exits}`);
 
-    const { code, pid } = await runWithHook([testFile], { [ENV.out]: outDir, [ENV.file]: testFile });
+      const { code, pid } = await runWithHook([testFile], { [ENV.out]: outDir, [ENV.file]: testFile });
 
-    assert.equal(code, 0);
-    assert.deepEqual(readRecords(outDir)[`${pid}.0.json`], { main: true, tests: [], ...unfinished });
-  });
+      assert.equal(code, 0);
+      assert.deepEqual(readRecords(outDir)[`${pid}.0.json`], { main: true, tests: [], ...unfinished });
+    },
+  );
 
   it('records where a CommonJS test file declares its tests', async (t) => {
     const dir = tempDir(t);
@@ -448,7 +452,9 @@ describe('hook', () => {
     const levels = Array.from({ length: 12 }, (_, level) => `export const level${level} = () => level${level + 1}();`);
     writeFileSync(
       join(dir, 'helper.mjs'),
-      ["import { it } from 'node:test';", ...levels, "export const level12 = () => it('deep', () => {});", ''].join('\n'),
+      ["import { it } from 'node:test';", ...levels, "export const level12 = () => it('deep', () => {});", ''].join(
+        '\n',
+      ),
     );
     const testFile = join(dir, 'fixture.test.mjs');
     writeFileSync(testFile, "import { level0 } from './helper.mjs';\n\n  level0();\n");

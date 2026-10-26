@@ -5,7 +5,15 @@ import { describe, it, type TestContext } from 'node:test';
 import { DryRunStatus, MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import { ENV } from './hook-core.ts';
-import { DRY_RUN, fixture, initRunner, mutantRunOptions, project, settle, shareCompileCache } from './index.fixtures.ts';
+import {
+  DRY_RUN,
+  fixture,
+  initRunner,
+  mutantRunOptions,
+  project,
+  settle,
+  shareCompileCache,
+} from './index.fixtures.ts';
 
 shareCompileCache();
 

@@ -95,7 +95,9 @@ function scenarios(files: string[]): Scenario[] {
     {
       name: 'mutant run, filter covering 3 files',
       run: async (runner) => {
-        const result = await runner.mutantRun(mutantRunOptions({ timeout: 60_000, testFilter: [testId(0, 1), testId(2, 1), testId(4, 1)] }));
+        const result = await runner.mutantRun(
+          mutantRunOptions({ timeout: 60_000, testFilter: [testId(0, 1), testId(2, 1), testId(4, 1)] }),
+        );
         assert.equal(result.status, MutantRunStatus.Survived);
         assert.equal(result.nrOfTests, 3);
 

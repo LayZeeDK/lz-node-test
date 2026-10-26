@@ -246,7 +246,9 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
   }
 
   if (unreadable !== undefined) {
-    return { end: { status: DryRunStatus.Error, errorMessage: `Unreadable test results for "${file}": ${unreadable}` } };
+    return {
+      end: { status: DryRunStatus.Error, errorMessage: `Unreadable test results for "${file}": ${unreadable}` },
+    };
   }
 
   for (const record of records) {
@@ -257,7 +259,11 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
     }
   }
 
-  const results = toTestResults(file, records.flatMap((record) => record.tests), fileMs);
+  const results = toTestResults(
+    file,
+    records.flatMap((record) => record.tests),
+    fileMs,
+  );
   const failed = results.some((result) => result.status === TestStatus.Failed);
 
   // Like Stryker's own runners, a failure that no test explains is an error, not a killed mutant.
@@ -293,7 +299,9 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
       return { end: { status: DryRunStatus.Error, errorMessage } };
     }
 
-    return { end: { status: DryRunStatus.Timeout, reason: `Test file "${file}" stayed alive, held open by ${heldBy}` } };
+    return {
+      end: { status: DryRunStatus.Timeout, reason: `Test file "${file}" stayed alive, held open by ${heldBy}` },
+    };
   }
 
   // Stryker treats a test runner that exits during a run as crashed, whatever its exit code, and so do its runners
