@@ -49,7 +49,8 @@ const { values: args } = parseArgs({
 const runs = Number(args.runs);
 const mutateRuns = Number(args['mutate-runs']);
 const runnerPaths = args.runner.length > 0 ? args.runner : [join(import.meta.dirname, '..', 'src', 'index.ts')];
-assert.ok(runs >= 1 && mutateRuns >= 0, 'runs must be >= 1 and mutate-runs >= 0');
+assert.ok(runs >= 1, 'runs must be >= 1');
+assert.ok(mutateRuns >= 0, 'mutate-runs must be >= 0');
 
 function fixtureFile(index: number): string {
   const spawns = index < SPAWNING_FILES;

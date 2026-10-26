@@ -175,7 +175,9 @@ describe('hook', () => {
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);
     added.exit[0]?.();
     const peakMB = readRecords(outDir)[`${process.pid}.0.json`]?.peakMemoryMB;
-    assert.ok(peakMB !== undefined && Number.isInteger(peakMB) && peakMB >= rssMB && peakMB < 100_000, String(peakMB));
+    assert.ok(Number.isInteger(peakMB), String(peakMB));
+    assert.ok(peakMB! >= rssMB, `${peakMB} MB, below the ${rssMB} MB held`);
+    assert.ok(peakMB! < 100_000, String(peakMB));
   });
 
   it("keeps a worker thread's record apart from the test file's, as a worker started from a file loads the hook too", async (t) => {
@@ -537,7 +539,8 @@ describe('hook', () => {
       const { tests, memoryLimitReached } = records[`${pid}.memory.json`];
       assert.deepEqual(tests, []);
       assert.equal(memoryLimitReached?.limitMB, 200);
-      assert.ok(memoryLimitReached.rssMB > 200 && memoryLimitReached.rssMB < 400, String(memoryLimitReached.rssMB));
+      assert.ok(memoryLimitReached.rssMB > 200, String(memoryLimitReached.rssMB));
+      assert.ok(memoryLimitReached.rssMB < 400, String(memoryLimitReached.rssMB));
     },
   );
 
@@ -550,7 +553,9 @@ describe('hook', () => {
     });
 
     const peakMB = readRecords(outDir)[`${pid}.0.json`]?.peakMemoryMB;
-    assert.ok(Number.isInteger(peakMB) && peakMB! >= 100 && peakMB! < 1000, String(peakMB));
+    assert.ok(Number.isInteger(peakMB), String(peakMB));
+    assert.ok(peakMB! >= 100, String(peakMB));
+    assert.ok(peakMB! < 1000, String(peakMB));
   });
 
   it("watches memory from the main thread only, not from a test's own worker threads", async (t) => {

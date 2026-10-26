@@ -115,7 +115,8 @@ describe('NodeTestRunner limits', () => {
     );
 
     // A Node.js process that runs one empty test holds well under 500 MB.
-    assert.ok(limits[0] !== undefined && limits[0] > 1024 && limits[0] < 1024 + 1.5 * 500, String(limits));
+    assert.ok(limits[0] > 1024, String(limits));
+    assert.ok(limits[0] < 1024 + 1.5 * 500, String(limits));
     assert.deepEqual(limits, [limits[0], limits[0], limits[0]]);
   });
   testFor([
