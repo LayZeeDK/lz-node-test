@@ -1,9 +1,9 @@
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/types';
 import type { Rule } from 'eslint';
 import type { Literal, Node, ObjectExpression, Property, TemplateLiteral } from 'estree';
 
 const detachedInText = /detached['"]?\s*:\s*true/;
 const windowsHideInText = /windowsHide['"]?\s*:\s*true/;
-const typeWrappers = new Set(['TSAsExpression', 'TSSatisfiesExpression', 'TSNonNullExpression', 'TSTypeAssertion']);
 
 function isNamed(key: Node, computed: boolean, name: string): boolean {
   return (
@@ -18,8 +18,21 @@ function property(node: ObjectExpression, name: string): Property | undefined {
   );
 }
 
-function unwrap(node: Node): Node {
-  return typeWrappers.has(node.type) ? unwrap((node as Node & { expression: Node }).expression) : node;
+/** ESLint types the nodes as ESTree's, which has no TypeScript nodes; the TypeScript parser gives those too. */
+type ParsedNode = Node | TSESTree.Node;
+
+function unwrap(node: ParsedNode): ParsedNode {
+  switch (node.type) {
+    case AST_NODE_TYPES.TSAsExpression:
+    case AST_NODE_TYPES.TSSatisfiesExpression:
+    case AST_NODE_TYPES.TSNonNullExpression:
+    case AST_NODE_TYPES.TSTypeAssertion: {
+      return unwrap(node.expression);
+    }
+    default: {
+      return node;
+    }
+  }
 }
 
 function isFalse(node: Node): boolean {
