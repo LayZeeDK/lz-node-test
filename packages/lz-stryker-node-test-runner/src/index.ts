@@ -540,6 +540,11 @@ export function lzRunEnv(
   return env;
 }
 
+/** The Stryker options the runner reads, of all that Stryker passes it. */
+type RunnerStrykerOptions = Pick<StrykerOptions, 'allowEmpty' | 'checkers' | 'concurrency' | 'testFiles'> & {
+  lzStrykerNodeTest?: unknown;
+};
+
 export class LzStrykerNodeTestRunner implements TestRunner {
   static inject = tokens(commonTokens.options, commonTokens.logger);
 
@@ -557,7 +562,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   readonly #allowEmpty: boolean;
   readonly #log: Logger;
 
-  constructor(options: StrykerOptions, log: Logger) {
+  constructor(options: RunnerStrykerOptions, log: Logger) {
     const lzStrykerNodeTest = parseOptions(options.lzStrykerNodeTest);
     const patterns = lzStrykerNodeTest.testFiles ?? DEFAULTS.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.

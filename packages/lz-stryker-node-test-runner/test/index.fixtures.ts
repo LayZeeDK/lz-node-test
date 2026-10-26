@@ -5,12 +5,7 @@ import { dirname, join } from 'node:path';
 import { after, type TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import {
-  INSTRUMENTER_CONSTANTS,
-  type Mutant,
-  type MutantCoverage,
-  type StrykerOptions,
-} from '@stryker-mutator/api/core';
+import { INSTRUMENTER_CONSTANTS, type MutantCoverage } from '@stryker-mutator/api/core';
 import type { Logger } from '@stryker-mutator/api/logging';
 import {
   DryRunStatus,
@@ -119,8 +114,8 @@ export interface RunnerOptions {
   allowEmpty?: boolean;
 }
 
-export function strykerOptions(options: RunnerOptions = {}): StrykerOptions {
-  return { checkers: [], testFiles: [], ...options } as unknown as StrykerOptions;
+export function strykerOptions(options: RunnerOptions = {}): ConstructorParameters<typeof LzStrykerNodeTestRunner>[0] {
+  return { checkers: [], testFiles: [], allowEmpty: false, ...options };
 }
 
 export async function initRunner(
@@ -141,7 +136,13 @@ export function mutantRunOptions(options: Partial<MutantRunOptions> = {}): Mutan
     timeout: 10_000,
     disableBail: false,
     // Not a number, so it never activates a mutant in an instrumented copy of the hook.
-    activeMutant: { id: 'fixture-mutant' } as Mutant,
+    activeMutant: {
+      id: 'fixture-mutant',
+      fileName: 'fixture.ts',
+      mutatorName: 'Fixture',
+      replacement: '',
+      location: { start: { line: 1, column: 1 }, end: { line: 1, column: 2 } },
+    },
     sandboxFileName: 'sandbox',
     mutantActivation: 'runtime',
     reloadEnvironment: true,
