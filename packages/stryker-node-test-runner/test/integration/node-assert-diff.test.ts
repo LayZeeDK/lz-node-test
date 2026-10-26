@@ -11,7 +11,7 @@ const before = process.memoryUsage.rss() / 1024;
 try {
   assert.deepStrictEqual({ ids: new Array(lines).fill(null) }, { ids: new Array(lines).fill('string') });
 } catch {}
-console.log(Math.round((process.resourceUsage().maxRSS - before) / 1024));
+process.stdout.write(String(Math.round((process.resourceUsage().maxRSS - before) / 1024)));
 `;
 
 const STARTER = `
