@@ -1,9 +1,12 @@
 import nx from '@nx/eslint-plugin';
 import n from 'eslint-plugin-n';
+import nodeTest from 'eslint-node-test';
 
 // Relative to the config ESLint loads: the root one or a package's, which spreads this one.
 const SRC = ['**/src/**/*.ts'];
 const TEST = ['**/test/**/*.ts'];
+// Code samples the operators' tests mutate, not tests.
+const SYNTHETIC = ['**/test/synthetic/**'];
 
 export default [
   ...nx.configs['flat/base'],
@@ -88,5 +91,50 @@ export default [
         },
       ],
     },
+  },
+  {
+    files: [...SRC, ...TEST],
+    ignores: SYNTHETIC,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: ['node:assert', 'assert', 'assert/strict'].map((name) => ({
+            name,
+            message: "Import assert from 'node:assert/strict', whose equal and deepEqual are the strict methods.",
+          })),
+        },
+      ],
+    },
+  },
+  {
+    // Test rules stay off src: @layzee/lz-node-test's src imports node:test as a library.
+    files: TEST,
+    ignores: SYNTHETIC,
+    plugins: { 'node-test': nodeTest },
+    rules: {
+      ...nodeTest.configs.recommended.rules,
+      'node-test/prefer-test-context-assert': 'off',
+      'node-test/no-import-test-files': 'off',
+      'node-test/no-process-env-mutation': 'off',
+      'node-test/no-process-exit-in-test': 'off',
+      'node-test/no-export': 'off',
+      'node-test/no-done-callback': 'error',
+      'node-test/no-skip-without-reason': 'error',
+      'node-test/no-commented-tests': 'error',
+      'node-test/no-snapshot-in-loop': 'error',
+      'node-test/no-assert-in-hook': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'CallExpression > MemberExpression.callee[object.name=/^test(Each|For)$/][property.name="only"]',
+          message: 'Remove .only before committing: it makes node:test --test-only skip every other test.',
+        },
+      ],
+    },
+  },
+  {
+    files: ['**/test/**/*.test.ts'],
+    rules: { 'node-test/no-export': 'error' },
   },
 ];

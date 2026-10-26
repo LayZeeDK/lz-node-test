@@ -17,6 +17,11 @@ export default [
     },
   },
   {
+    // The modifier tests run testEach.only and testFor.only on purpose.
+    files: ['test/**/*.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
+  },
+  {
     ignores: ['**/out-tsc'],
   },
 ];
