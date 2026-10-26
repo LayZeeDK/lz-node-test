@@ -89,7 +89,7 @@ function string(value: unknown): string {
   }
 
   if (typeof value === 'object' && value !== null) {
-    const { toString } = value as { toString?: unknown };
+    const { toString }: { toString?: unknown } = value;
 
     return typeof toString === 'function' && toString !== Object.prototype.toString
       ? String(toString.call(value))
@@ -102,7 +102,9 @@ function string(value: unknown): string {
 /** Whether `value` is `-0` or a NaN with its sign bit set, which `parseFloat` would print without the sign. */
 function negative(value: unknown): boolean {
   return (
-    (value === 0 || Number.isNaN(value)) && new Uint32Array(new Float64Array([value as number]).buffer)[1] >>> 31 === 1
+    typeof value === 'number' &&
+    (value === 0 || Number.isNaN(value)) &&
+    new Uint32Array(new Float64Array([value]).buffer)[1] >>> 31 === 1
   );
 }
 
@@ -110,7 +112,7 @@ function json(value: unknown): string {
   try {
     return String(JSON.stringify(value));
   } catch (error) {
-    if ((error as Error).message.includes('circular structure')) {
+    if (error instanceof Error && error.message.includes('circular structure')) {
       return '[Circular]';
     }
 

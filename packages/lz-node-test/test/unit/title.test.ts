@@ -75,6 +75,20 @@ describe('formatTitle', () => {
     assert.throws(() => formatTitle('%j', [10n], 0), { name: 'TypeError', message: /BigInt/ });
   });
 
+  it('throws what a toJSON method throws for %j, also when it is no Error', () => {
+    const thrown = 'circular structure';
+    const value = {
+      toJSON() {
+        throw thrown;
+      },
+    };
+
+    assert.throws(
+      () => formatTitle('%j', [value], 0),
+      (error) => error === thrown,
+    );
+  });
+
   lzTestEach([
     ['%o', [digits(40)], `'${digits(38)}…'`],
     ['%o', [`'${digits(49)}`], `"'${digits(37)}…"`],
