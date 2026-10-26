@@ -101,7 +101,7 @@ function runWithHook(args: string[], env: Record<string, string>): Promise<{ cod
       stdio: 'ignore',
     });
     child.on('error', fail);
-    child.on('close', (code) => done({ code, pid: child.pid as number }));
+    child.on('close', (code) => done({ code, pid: child.pid! }));
   });
 }
 
@@ -550,7 +550,7 @@ describe('hook', () => {
     });
 
     const peakMB = readRecords(outDir)[`${pid}.0.json`]?.peakMemoryMB;
-    assert.ok(Number.isInteger(peakMB) && (peakMB as number) >= 100 && (peakMB as number) < 1000, String(peakMB));
+    assert.ok(Number.isInteger(peakMB) && peakMB! >= 100 && peakMB! < 1000, String(peakMB));
   });
 
   it("watches memory from the main thread only, not from a test's own worker threads", async (t) => {

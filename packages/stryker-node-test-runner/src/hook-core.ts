@@ -518,7 +518,7 @@ export function recordEvents(
 
     // node:test reports a failing `after` hook of the test file as a failure of the file itself, which has no type.
     const fileHook = kind === undefined;
-    const id = fileHook ? testId(testFile, AFTER_HOOK) : (ids.get(data.nesting) as string);
+    const id = fileHook ? testId(testFile, AFTER_HOOK) : ids.get(data.nesting)!;
 
     const test: RecordedTest = { id, status: 'passed', timeSpentMs };
     const startPosition = positions.get(id);
