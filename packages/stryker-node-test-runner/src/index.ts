@@ -8,6 +8,7 @@ import {
   INSTRUMENTER_CONSTANTS,
   type CoverageAnalysis,
   type MutantCoverage,
+  type Position,
   type StrykerOptions,
 } from '@stryker-mutator/api/core';
 import type { Logger } from '@stryker-mutator/api/logging';
@@ -31,6 +32,7 @@ import { removeDir, removeLeftDirs } from './dirs.ts';
 import { ENV, recordName, testId, within, type ProcessRecord, type RecordedTest } from './hook-core.ts';
 import { memoryLimits, peakMemoryDir, type MemoryLimits } from './memory-limits.ts';
 import { groupOptions, processEnd } from './process-end.ts';
+import type { MemoryLimitReached } from './watchdog.ts';
 import schema from './schema/node-test-runner-options.json' with { type: 'json' };
 
 /** Options under `lzStrykerNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
@@ -178,14 +180,103 @@ function withoutReporters(args: string[]): string[] {
   return args.filter((arg, index) => !reporterOption(arg) && reporterOption(String(args[index - 1]))?.[1] !== '');
 }
 
-export function parseRecord(json: string): ProcessRecord {
-  const record = JSON.parse(json) as Partial<ProcessRecord> | null;
+function notARecord(field?: string): never {
+  const message = 'not a record of test results';
 
-  if (!Array.isArray(record?.tests)) {
-    throw new Error('not a record of test results');
+  throw new Error(field === undefined ? message : `${message}: ${field}`);
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const isNumber = (value: unknown) => typeof value === 'number';
+const isString = (value: unknown) => typeof value === 'string';
+const isTrue = (value: unknown) => value === true;
+const isStrings = (value: unknown) => Array.isArray(value) && value.every(isString);
+const isCounts = (value: unknown) => isObject(value) && Object.values(value).every(isNumber);
+const isPosition = (value: unknown): value is Position =>
+  isObject(value) && isNumber(value.line) && isNumber(value.column);
+const isMemoryLimit = (value: unknown): value is MemoryLimitReached =>
+  isObject(value) && isNumber(value.rssMB) && isNumber(value.limitMB);
+const isCoverage = (value: unknown): value is MutantCoverage =>
+  isObject(value) && isCounts(value.static) && isObject(value.perTest) && Object.values(value.perTest).every(isCounts);
+
+/** `value` under `key` when it is there and passes `check`, which `field` names; nothing when it is not there. */
+function optional<K extends string, T>(
+  key: K,
+  value: unknown,
+  check: (value: unknown) => value is T,
+  field: string = key,
+): { [P in K]?: T } {
+  const result: { [P in K]?: T } = {};
+
+  if (value === undefined) {
+    return result;
   }
 
-  return record as ProcessRecord;
+  if (!check(value)) {
+    notARecord(field);
+  }
+
+  result[key] = value;
+
+  return result;
+}
+
+function parseTest(value: unknown, path: string): RecordedTest {
+  if (!isObject(value)) {
+    notARecord(path);
+  }
+
+  const { id, status, failureMessage, timeSpentMs, startPosition } = value;
+
+  if (!isString(id)) {
+    notARecord(`${path}.id`);
+  }
+
+  if (status !== 'passed' && status !== 'failed' && status !== 'skipped') {
+    notARecord(`${path}.status`);
+  }
+
+  if (!isNumber(timeSpentMs)) {
+    notARecord(`${path}.timeSpentMs`);
+  }
+
+  return {
+    id,
+    status,
+    timeSpentMs,
+    ...optional('failureMessage', failureMessage, isString, `${path}.failureMessage`),
+    ...optional('startPosition', startPosition, isPosition, `${path}.startPosition`),
+  };
+}
+
+export function parseRecord(json: string): ProcessRecord {
+  const record: unknown = JSON.parse(json);
+
+  if (!isObject(record)) {
+    notARecord();
+  }
+
+  const { tests, main, hitCount, mutantCoverage, peakMemoryMB, memoryLimitReached, diagnostics, unfinished, heldOpen } =
+    record;
+
+  if (!Array.isArray(tests)) {
+    notARecord('tests');
+  }
+
+  return {
+    tests: tests.map((test, index) => parseTest(test, `tests[${index}]`)),
+    ...optional('main', main, isTrue),
+    ...optional('hitCount', hitCount, isNumber),
+    ...optional('mutantCoverage', mutantCoverage, isCoverage),
+    ...optional('peakMemoryMB', peakMemoryMB, isNumber),
+    ...optional('memoryLimitReached', memoryLimitReached, isMemoryLimit),
+    ...optional('diagnostics', diagnostics, isStrings),
+    ...optional('unfinished', unfinished, isTrue),
+    ...optional('heldOpen', heldOpen, isStrings),
+  };
 }
 
 type FileOutcome =

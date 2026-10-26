@@ -165,8 +165,62 @@ describe('parseRecord', () => {
     assert.deepEqual(parseRecord(JSON.stringify(record)), record);
   });
 
-  testFor(['{}', 'null', '[]', '{"tests":{}}'])('refuses %s, which lists no tests', (json) => {
+  it('returns a record with every field', () => {
+    const record = {
+      main: true,
+      tests: [
+        { id: `${FILE} > t`, status: 'passed', timeSpentMs: 1, startPosition: { line: 2, column: 3 } },
+        { id: `${FILE} > u`, status: 'failed', failureMessage: 'boom', timeSpentMs: 0 },
+        { id: `${FILE} > v`, status: 'skipped', timeSpentMs: 0 },
+      ],
+      hitCount: 3,
+      mutantCoverage: { static: { '1': 2 }, perTest: { [`${FILE} > t`]: { '3': 1 } } },
+      peakMemoryMB: 40,
+      memoryLimitReached: { rssMB: 300, limitMB: 200 },
+      diagnostics: ['late error'],
+      unfinished: true,
+      heldOpen: ['TCPServerWrap'],
+    };
+
+    assert.deepEqual(parseRecord(JSON.stringify(record)), record);
+  });
+
+  testFor(['null', '[]', '1'])('refuses %s, which is no record', (json) => {
     assert.throws(() => parseRecord(json), { message: 'not a record of test results' });
+  });
+
+  const test = { id: `${FILE} > t`, status: 'passed', timeSpentMs: 1 };
+  const withFields = (fields: object) => JSON.stringify({ tests: [test], ...fields });
+  const withTestFields = (fields: object) => JSON.stringify({ tests: [{ ...test, ...fields }] });
+
+  testEach([
+    ['{}', 'tests'],
+    ['{"tests":{}}', 'tests'],
+    ['{"tests":[1]}', 'tests[0]'],
+    [withTestFields({ id: 1 }), 'tests[0].id'],
+    [JSON.stringify({ tests: [test, { ...test, id: null }] }), 'tests[1].id'],
+    [withTestFields({ status: 'done' }), 'tests[0].status'],
+    [withTestFields({ failureMessage: 1 }), 'tests[0].failureMessage'],
+    [withTestFields({ timeSpentMs: '1' }), 'tests[0].timeSpentMs'],
+    [withTestFields({ startPosition: { line: 1 } }), 'tests[0].startPosition'],
+    [withTestFields({ startPosition: { line: '1', column: 2 } }), 'tests[0].startPosition'],
+    [withTestFields({ startPosition: null }), 'tests[0].startPosition'],
+    [withFields({ main: false }), 'main'],
+    [withFields({ hitCount: '3' }), 'hitCount'],
+    [withFields({ mutantCoverage: { static: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { perTest: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: { '1': '2' }, perTest: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: {}, perTest: { t: 1 } } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: {}, perTest: { t: { '1': '2' } } } }), 'mutantCoverage'],
+    [withFields({ peakMemoryMB: '40' }), 'peakMemoryMB'],
+    [withFields({ memoryLimitReached: { rssMB: 300 } }), 'memoryLimitReached'],
+    [withFields({ memoryLimitReached: { limitMB: 200 } }), 'memoryLimitReached'],
+    [withFields({ diagnostics: 'late error' }), 'diagnostics'],
+    [withFields({ diagnostics: [1] }), 'diagnostics'],
+    [withFields({ unfinished: false }), 'unfinished'],
+    [withFields({ heldOpen: [null] }), 'heldOpen'],
+  ])('refuses %s, naming %s', (json, field) => {
+    assert.throws(() => parseRecord(json), { message: `not a record of test results: ${field}` });
   });
 
   it('refuses what does not parse', () => {
