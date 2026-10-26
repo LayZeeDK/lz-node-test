@@ -37,7 +37,7 @@ const SIGNATURES =
 
 /** The rows of a template literal table: one object per row, keyed by the column names of its first line. */
 export function templateRows(strings: readonly unknown[], values: readonly unknown[]): Record<string, unknown>[] {
-  const columns = strings.join('').trim().replaceAll(' ', '').split('\n')[0]!.split('|');
+  const columns = strings.join('').trim().replaceAll(' ', '').split('\n')[0].split('|');
 
   // Array.from rounds the length down, which drops the values of an incomplete last row.
   return Array.from({ length: values.length / columns.length }, (_, row) =>

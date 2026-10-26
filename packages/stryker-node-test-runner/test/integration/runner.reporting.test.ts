@@ -216,17 +216,14 @@ describe('NodeTestRunner results', () => {
       ],
     );
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {
-      [ids[0] as string]: { inner: 1 },
-      [ids[1] as string]: { 'in suite': 1 },
-      [ids[2] as string]: { 'after await': 1 },
+      [ids[0]]: { inner: 1 },
+      [ids[1]]: { 'in suite': 1 },
+      [ids[2]]: { 'after await': 1 },
     });
-    assert.deepEqual(
-      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[2] as string] })))),
-      {
-        status: MutantRunStatus.Survived,
-        nrOfTests: 2,
-      },
-    );
+    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[2]] })))), {
+      status: MutantRunStatus.Survived,
+      nrOfTests: 2,
+    });
   });
 
   it('reports where the test file declares each test, also through a helper', async (t) => {
@@ -312,18 +309,15 @@ describe('NodeTestRunner results', () => {
       ],
     );
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {
-      [ids[0] as string]: { first: 1 },
-      [ids[1] as string]: { second: 1 },
-      [ids[2] as string]: { nested: 1 },
-      [ids[3] as string]: { separator: 1 },
+      [ids[0]]: { first: 1 },
+      [ids[1]]: { second: 1 },
+      [ids[2]]: { nested: 1 },
+      [ids[3]]: { separator: 1 },
     });
-    assert.deepEqual(
-      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[1] as string] })))),
-      {
-        status: MutantRunStatus.Survived,
-        nrOfTests: 1,
-      },
-    );
+    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [ids[1]] })))), {
+      status: MutantRunStatus.Survived,
+      nrOfTests: 1,
+    });
   });
 
   it('names the tests inside only and todo suites after their suites', async (t) => {

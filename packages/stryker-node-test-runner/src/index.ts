@@ -205,7 +205,7 @@ export async function runInPool<T, R>(
   const lane = async () => {
     for (let index = next++; !failed && index < end; index = next++) {
       try {
-        const result = await work(items[index] as T);
+        const result = await work(items[index]);
         results[index] = result;
 
         if (stops(result)) {

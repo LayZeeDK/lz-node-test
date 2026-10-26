@@ -140,7 +140,7 @@ describe('hook', () => {
   it("moves its exit listener behind the process's others when the process ends by itself", async (t) => {
     const emitter: EventEmitter = process;
     const { exit, beforeExit } = await loadRunnerStartedHook(tempDir(t));
-    const write = exit[0] as () => void;
+    const write = exit[0];
     const later = () => {};
     emitter.on('exit', write);
     emitter.on('exit', later);
@@ -534,7 +534,7 @@ describe('hook', () => {
       assert.notEqual(code, 0);
       const records = readRecords(outDir);
       assert.deepEqual(Object.keys(records), [`${pid}.memory.json`]);
-      const { tests, memoryLimitReached } = records[`${pid}.memory.json`] as ProcessRecord;
+      const { tests, memoryLimitReached } = records[`${pid}.memory.json`];
       assert.deepEqual(tests, []);
       assert.equal(memoryLimitReached?.limitMB, 200);
       assert.ok(memoryLimitReached.rssMB > 200 && memoryLimitReached.rssMB < 400, String(memoryLimitReached.rssMB));

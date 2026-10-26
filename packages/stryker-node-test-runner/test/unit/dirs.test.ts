@@ -195,7 +195,7 @@ describe('removeLeftDirs', () => {
     });
 
     assert.deepEqual(readdirSync(dir).sort(), names.slice(1));
-    assert.deepEqual(asked.sort(), [join(dir, names[0] as string), join(dir, names[1] as string)]);
+    assert.deepEqual(asked.sort(), [join(dir, names[0]), join(dir, names[1])]);
   });
 
   it('leaves a directory it cannot check or remove yet and goes on with the others', (t) => {

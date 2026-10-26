@@ -120,9 +120,9 @@ function scenarios(files: string[]): Scenario[] {
 function stat(ms: number[]): Stat {
   const sorted = [...ms].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  const medianMs = sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-  const minMs = sorted[0]!;
-  const maxMs = sorted[sorted.length - 1]!;
+  const medianMs = sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const minMs = sorted[0];
+  const maxMs = sorted[sorted.length - 1];
 
   return { runs: sorted.length, medianMs, minMs, maxMs, spread: (maxMs - minMs) / medianMs };
 }
@@ -151,7 +151,7 @@ async function round(tasks: [name: string, fn: () => unknown][]): Promise<Map<st
 
   for (const task of await bench.run()) {
     assert.ok(task.result.state === 'completed', `${task.name} ended as ${task.result.state}`);
-    times.set(task.name, task.result.latency.samples![0]!);
+    times.set(task.name, task.result.latency.samples![0]);
   }
 
   return times;
@@ -219,8 +219,8 @@ async function main(): Promise<void> {
         for (const [label] of sides) {
           add(label, times.get(label)!);
 
-          if (label !== first![0]) {
-            add(`${label} / first runner`, times.get(label)! / times.get(first![0])!);
+          if (label !== first[0]) {
+            add(`${label} / first runner`, times.get(label)! / times.get(first[0])!);
           }
         }
       }
