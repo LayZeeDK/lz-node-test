@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseArguments, templateRows, type EachOptions } from '../../src/register.ts';
+import { parseArguments, templateRows } from '../../src/register.ts';
 import { report, SIGNATURES } from '../reported.fixtures.ts';
 import { lzTestEach } from '../../src/test-each.ts';
 import { lzTestFor } from '../../src/test-for.ts';
@@ -56,9 +56,13 @@ describe('the options of lzTestEach and lzTestFor', () => {
   });
 
   it('throws before registering a test for options after a function, two functions, or null options', () => {
-    assert.throws(() => lzTestEach([1])('x', () => {}, {} as number), SIGNATURES);
-    assert.throws(() => lzTestFor([1])('x', () => {}, (() => {}) as unknown as number), SIGNATURES);
-    assert.throws(() => lzTestEach([1])('x', null as unknown as EachOptions, () => {}), SIGNATURES);
+    // @ts-expect-error -- options after the function, which the types refuse and the check must catch
+    assert.throws(() => lzTestEach([1])('x', () => {}, {}), SIGNATURES);
+    const second = () => {};
+    // @ts-expect-error -- a second function, which the types refuse and the check must catch
+    assert.throws(() => lzTestFor([1])('x', () => {}, second), SIGNATURES);
+    // @ts-expect-error -- null options, which the types refuse and the check must catch
+    assert.throws(() => lzTestEach([1])('x', null, () => {}), SIGNATURES);
   });
 });
 
@@ -88,19 +92,18 @@ describe('parseArguments', () => {
     assert.deepEqual(parseArguments(args[0], args[1]), expected);
   });
 
-  // The shapes untyped callers can pass.
-  const untyped = parseArguments as (optionsOrFn: unknown, fnOrTimeout: unknown) => unknown;
-
   lzTestEach([
     { shape: 'options after a function', args: [fn, {}] },
     { shape: 'two functions', args: [fn, fn] },
     { shape: 'null options', args: [null, fn] },
   ])('rejects $shape', ({ args: [optionsOrFn, fnOrTimeout] }) => {
-    assert.throws(() => untyped(optionsOrFn, fnOrTimeout), SIGNATURES);
+    // @ts-expect-error -- the shapes untyped callers can pass, which the types refuse
+    assert.throws(() => parseArguments(optionsOrFn, fnOrTimeout), SIGNATURES);
   });
 
   it('accepts a null after a function', () => {
-    assert.deepEqual(untyped(fn, null), { options: {}, fn });
+    // @ts-expect-error -- null in place of a timeout, which untyped callers can pass
+    assert.deepEqual(parseArguments(fn, null), { options: {}, fn });
   });
 });
 

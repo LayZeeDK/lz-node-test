@@ -56,7 +56,8 @@ describe('LzStrykerNodeTestRunner', () => {
   it('rejects, instead of throwing, when the dry run fails before it runs a file', async () => {
     const runner = new LzStrykerNodeTestRunner(strykerOptions(), logger());
 
-    await assert.rejects(runner.dryRun({ ...DRY_RUN, testFiles: [42 as unknown as string] }), TypeError);
+    // @ts-expect-error -- a test file that is no string, which makes the dry run fail before it runs a file
+    await assert.rejects(runner.dryRun({ ...DRY_RUN, testFiles: [42] }), TypeError);
   });
 
   it('can be disposed without being initialized', async () => {
