@@ -45,11 +45,11 @@ export function removeDir(
         clearTimeout(timer);
         done();
       },
-      (error: Error) => {
+      (error: unknown) => {
         clearTimeout(timer);
 
         if (waiting) {
-          log.warn(`Left ${dir} for a later runner to remove: ${error.message}`);
+          log.warn(`Left ${dir} for a later runner to remove: ${(error as Error).message}`);
           done();
         }
       },
