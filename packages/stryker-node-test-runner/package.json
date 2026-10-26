@@ -1,0 +1,30 @@
+{
+  "name": "@layzee/stryker-node-test-runner",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@lz-node-test/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "nx": {
+    "name": "stryker-node-test-runner",
+    "tags": [
+      "type:lib"
+    ]
+  }
+}
