@@ -9,6 +9,7 @@ import { formatName, formatTitle } from './title.ts';
 export type Awaitable<T> = T | Promise<T>;
 
 /** A test's name: a string, or a function, which names it by its own name and is never called. */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- a class names a test too, so a callable type is too narrow
 export type Name = string | Function;
 
 /** node:test's options for each test of the table, and `fails`, which makes a test pass only when its body fails. */
