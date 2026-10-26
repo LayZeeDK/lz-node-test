@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { it } from 'node:test';
 
-import { lzFixture, lzMutants } from '../src/fixture.ts';
+import { lzFixture, lzLeftover, lzMutants } from '../src/fixture.ts';
 
 const fixture = await lzFixture('esm-js');
 const production = await fixture.stryker();
@@ -33,6 +35,16 @@ it('mutates only the assertions of a test file with the test-code entry and kill
   ]);
 });
 
-it('leaves nothing in its temporary directory after either run', () => {
-  assert.deepEqual([...production.leftover, ...testCode.leftover], []);
+it('leaves only the dry run memory peaks in its temporary directory after either run', () => {
+  assert.deepEqual(
+    [...lzLeftover(production), ...lzLeftover(testCode)],
+    ['lz-stryker-node-test-peaks-<pid>-dry-run', 'lz-stryker-node-test-peaks-<pid>-dry-run'],
+  );
+});
+
+it('removes the memory peaks of an ended run at the next run', () => {
+  const [firstPeaks] = production.leftover;
+
+  assert.ok(firstPeaks);
+  assert.equal(existsSync(join(fixture.dir, 'tmp', firstPeaks)), false);
 });

@@ -108,6 +108,11 @@ export function lzMutants(run: LzStrykerRun, file: string): string[] {
   return mutants.map(lzMutantLine);
 }
 
+/** The names a run left in its temporary directory, with the process id in each written as `<pid>`. */
+export function lzLeftover(run: LzStrykerRun): string[] {
+  return run.leftover.map((name) => name.replace(/-\d+-/, '-<pid>-'));
+}
+
 /** The one mutant at `<file>:<line>:<column>` with `replacement`; throws when none or more than one matches. */
 export function lzMutant(run: LzStrykerRun, { at, replacement }: { at: string; replacement: string }): LzMutantDetail {
   const matches = [...reportOf(run)].flatMap(([file, mutants]) =>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 
-import { lzFixture, lzMutants } from '../src/fixture.ts';
+import { lzFixture, lzLeftover, lzMutants } from '../src/fixture.ts';
 
 const run = await (await lzFixture('node-test-features')).stryker();
 
@@ -30,6 +30,6 @@ it('reports the mutants only a test that --test-only skips reaches as not covere
   ]);
 });
 
-it('leaves nothing in its temporary directory', () => {
-  assert.deepEqual(run.leftover, []);
+it('leaves only the dry run memory peaks in its temporary directory', () => {
+  assert.deepEqual(lzLeftover(run), ['lz-stryker-node-test-peaks-<pid>-dry-run']);
 });
