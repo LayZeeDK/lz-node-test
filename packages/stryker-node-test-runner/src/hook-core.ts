@@ -78,11 +78,14 @@ type HookRegistrar = (this: unknown, hook?: Body, ...rest: unknown[]) => unknown
  * Node.js 24.
  */
 type Register = Registrar & { skip: Registrar; todo: Registrar; only: Registrar; expectFailure?: Registrar };
+/** A node:test function as the wrapper calls it: with the arguments it was given, which node:test checks itself. */
+type Target = (this: unknown, ...args: never[]) => unknown;
+type TargetRegister = Target & { skip: Target; todo: Target; only: Target; expectFailure?: Target };
 interface TestContext {
   skip(): void;
-  test: Registrar;
-  after: HookRegistrar;
-  beforeEach: HookRegistrar;
+  test: Target;
+  after: Target;
+  beforeEach: Target;
 }
 
 export interface TestEvent {
@@ -113,6 +116,18 @@ export type NodeTestModule = Register & {
   beforeEach: HookRegistrar;
   after: HookRegistrar;
   afterEach: HookRegistrar;
+};
+
+/** The functions of node:test that the wrapper wraps. */
+export type NodeTestTarget = TargetRegister & {
+  describe: TargetRegister;
+  suite: TargetRegister;
+  it: TargetRegister;
+  test: TargetRegister;
+  before: Target;
+  beforeEach: Target;
+  after: Target;
+  afterEach: Target;
 };
 
 const AFTER_HOOK = '"after" hook';
@@ -152,7 +167,7 @@ export interface HookDependencies {
     [wrappedNodeTest]?: NodeTestModule;
     [watchdog]?: unknown;
   };
-  nodeTest: () => NodeTestModule;
+  nodeTest: () => NodeTestTarget;
   registerHooks: (hooks: ModuleHooks) => unknown;
   onExit: (listener: () => void) => void;
   offExit: (listener: () => void) => void;
@@ -263,7 +278,12 @@ export function install(deps: HookDependencies): boolean {
   if (main) {
     const positions = new Map<string, Position>();
     const nodeTest = deps.nodeTest();
-    const ends = ending(deps, tests, (hook) => nodeTest.after(hook), Number(deps.env[ENV.heldOpen]) || HELD_OPEN_MS);
+    const ends = ending(
+      deps,
+      tests,
+      (hook) => Reflect.apply(nodeTest.after, nodeTest, [hook]),
+      Number(deps.env[ENV.heldOpen]) || HELD_OPEN_MS,
+    );
     end = ends;
     // ES modules are named by their URL, CommonJS modules by their path.
     const callSites = (sourceMap: boolean) =>
@@ -561,7 +581,7 @@ export interface WrapOptions {
   env: Record<string, string | undefined>;
   positions: Map<string, Position>;
   callSites: () => CallSite[];
-  nodeTest: NodeTestModule;
+  nodeTest: NodeTestTarget;
   /** Called before each suite, test or hook goes to node:test, `topLevel` for a suite or test outside any other. */
   registering: (topLevel: boolean) => void;
   /** Wraps a function registered as an `after` hook outside any suite, a root `after` hook of the test file. */
@@ -621,7 +641,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   };
   /** Like node:test's own filters, a suite without a selected test runs its body and registers none of its hooks. */
   const wrapHook = (
-    register: HookRegistrar,
+    register: Target,
     prepare: (hook: Body | undefined, suite: string | undefined) => Body | undefined = (hook) => hook,
   ): HookRegistrar =>
     function (this: unknown, hook?: Body, ...rest: unknown[]) {
@@ -633,7 +653,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
       registering(false);
 
-      return register.call(this, prepare(hook, suite), ...rest);
+      return Reflect.apply(register, this, [prepare(hook, suite), ...rest]);
     };
   /**
    * node:test's `fullName` of each suite and test, by id, and the test each `fullName` names, or none for a suite or
@@ -738,12 +758,12 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
    * it run one at a time, as node:test does without `concurrency`, and coverage goes to the one current test.
    */
   const registerWith = (
-    register: Registrar,
+    register: Target,
     self: unknown,
     { name, options, body }: { name: string; options: object | null | undefined; body: Body | DoneBody | undefined },
-  ) => register.call(self, name, { ...options, concurrency: false }, ...(body ? [body] : []));
+  ): unknown => Reflect.apply(register, self, [name, { ...options, concurrency: false }, ...(body ? [body] : [])]);
 
-  const wrapSuite = (register: Registrar): Registrar =>
+  const wrapSuite = (register: Target): Registrar =>
     function (this: unknown, ...args: unknown[]) {
       const parsed = parse(args);
       const id = named(parentId(), parsed.name, false);
@@ -755,7 +775,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       return registerWith(register, this, { ...parsed, body: parsed.body && wrap(parsed.body) });
     };
 
-  const wrapTest = (register: Registrar, parent = parentId): Registrar =>
+  const wrapTest = (register: Target, parent = parentId): Registrar =>
     function (this: unknown, ...args: unknown[]) {
       const parsed = parse(args);
       const { options, body } = parsed;
@@ -775,16 +795,13 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
           }
         };
         const { after, beforeEach } = context;
-        after.call(context, leave);
+        Reflect.apply(after, context, [leave]);
         // `t.test` registers a subtest of `t`'s test, wherever it is called.
         context.test = wrapTest(context.test, () => id);
-        context.after = (hook, ...rest) =>
-          after.call(
-            context,
-            attributing(hook, () => id),
-            ...rest,
-          );
-        context.beforeEach = (hook, ...rest) => beforeEach.call(context, attributing(hook, testOf), ...rest);
+        context.after = (hook?: Body, ...rest: unknown[]) =>
+          Reflect.apply(after, context, [attributing(hook, () => id), ...rest]);
+        context.beforeEach = (hook?: Body, ...rest: unknown[]) =>
+          Reflect.apply(beforeEach, context, [attributing(hook, testOf), ...rest]);
         activate();
 
         return leave;
@@ -840,14 +857,14 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     };
 
   // The bodies of skipped suites and tests never run, so `skip` only notes where they are declared.
-  const declareSkipped = (register: Registrar): Registrar =>
+  const declareSkipped = (register: Target): Registrar =>
     function (this: unknown, ...args: unknown[]) {
       registering(parentId() === testFile);
       declare(idOf(parentId(), parse(args).name));
 
-      return register.apply(this, args as Parameters<Registrar>);
+      return Reflect.apply(register, this, args);
     };
-  const withShorthands = (original: Register, wrap: (register: Registrar) => Registrar): Register =>
+  const withShorthands = (original: TargetRegister, wrap: (register: Target) => Registrar): Register =>
     Object.assign(wrap(original), original, {
       skip: declareSkipped(original.skip),
       todo: wrap(original.todo),

@@ -4,7 +4,7 @@ import { extname, resolve } from 'node:path';
 import { getCallSites } from 'node:util';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 
-import { ENV, install, writesAllowed, type HookDependencies, type NodeTestModule } from './hook-core.ts';
+import { ENV, install, writesAllowed, type HookDependencies } from './hook-core.ts';
 import { workersAllowed } from './watchdog.ts';
 
 // The memory watchdog's thread runs this script, where Stryker sees no coverage, so it only starts watchdog.ts's watch,
@@ -36,7 +36,7 @@ install({
   pid: process.pid,
   threadId,
   global: globalThis as HookDependencies['global'],
-  nodeTest: () => process.getBuiltinModule('node:test') as NodeTestModule,
+  nodeTest: () => process.getBuiltinModule('node:test'),
   registerHooks: registerHooks as HookDependencies['registerHooks'],
   onExit: (listener) => process.on('exit', listener),
   offExit: (listener) => process.off('exit', listener),
