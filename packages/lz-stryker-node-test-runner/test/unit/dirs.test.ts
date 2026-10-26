@@ -178,7 +178,7 @@ describe('removeLeftDirs', () => {
       basename(peakMemoryDir(222)),
       'lz-stryker-node-test-e',
       'other-111-f',
-      'other-stryker-node-test-111-g',
+      'other-lz-stryker-node-test-111-g',
     ];
 
     for (const name of names) {
