@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 
+import { types } from '@babel/core';
+
 import type { Instrumenter, InstrumentedMutant, SourceFile } from '../../src/install.ts';
 import { corpusDiff, mutantDiff } from '../../src/mutant-diff.ts';
-import type { BabelTypes, NodeMutatorLike, Operator } from '../../src/operator.ts';
+import type { NodeMutatorLike, Operator } from '../../src/operator.ts';
 
 function mutant(mutatorName: string, line: number, column: number, replacement = ';'): InstrumentedMutant {
   return { mutatorName, replacement, location: { start: { line, column }, end: { line, column: column + 1 } } };
@@ -41,7 +43,7 @@ describe('corpusDiff', () => {
       dir: '/stryker/instrumenter',
       version: '10.1.1',
       allMutators: [{ name: 'StringLiteral', *mutate() {} }],
-      types: {} as BabelTypes,
+      types,
       async instrument(files, mutators: readonly NodeMutatorLike[] = []) {
         instrumented.push([[...files], mutators.map(({ name }) => name)]);
 
@@ -86,7 +88,7 @@ describe('corpusDiff', () => {
       dir: '/stryker/instrumenter',
       version: '10.1.1',
       allMutators: [],
-      types: {} as BabelTypes,
+      types,
       async instrument(_files, mutators = []) {
         return [mutators.length > 0 ? mutant('Own', 0, 0) : mutant('CallExpression', 0, 0)];
       },

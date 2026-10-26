@@ -1,12 +1,27 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { NodePath, types } from '@babel/core';
+import { parseSync, traverse, types, type NodePath } from '@babel/core';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { OWN, isOwn, toNodeMutator, type BabelTypes, type Operator } from '../../src/operator.ts';
+import { OWN, isOwn, toNodeMutator, type Operator } from '../../src/operator.ts';
 
-const NODE = { type: 'EmptyStatement' } as types.Node;
+const NODE = types.emptyStatement();
+
+function programPath(): NodePath {
+  const file = parseSync('', { babelrc: false, configFile: false });
+  assert.ok(file);
+  const paths: NodePath[] = [];
+  traverse(file, {
+    Program(path) {
+      paths.push(path);
+    },
+  });
+  const [path] = paths;
+  assert.ok(path);
+
+  return path;
+}
 
 const operator: Operator = {
   name: 'Alpha',
@@ -27,9 +42,9 @@ describe('toNodeMutator', () => {
     [false, [NODE]],
     [true, []],
   ])('gives, where isExpressionContext is %s, %j', (isExpressionContext, nodes) => {
-    const mutator = toNodeMutator(operator, {} as BabelTypes);
+    const mutator = toNodeMutator(operator, types);
 
-    assert.deepEqual([...mutator.mutate({} as NodePath, { isExpressionContext })], nodes);
+    assert.deepEqual([...mutator.mutate(programPath(), { isExpressionContext })], nodes);
     assert.equal(isOwn(mutator), true);
   });
 });

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
+import { types } from '@babel/core';
+
 import { lzTestEach } from '@layzee/lz-node-test';
 import {
   corePackageJson,
@@ -11,7 +13,7 @@ import {
   type InstrumentedMutant,
   type SourceFile,
 } from '../../src/install.ts';
-import { isOwn, type BabelTypes, type NodeMutatorLike, type Operator } from '../../src/operator.ts';
+import { isOwn, type NodeMutatorLike, type Operator } from '../../src/operator.ts';
 
 const LOCATION = { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } };
 
@@ -19,7 +21,11 @@ function operator(name: string): Operator {
   return { name, sample: `${name}();`, *mutate() {} };
 }
 
-function setup({ builtIns = ['StringLiteral'], silent = [] as string[], version = '10.1.1' } = {}) {
+function setup({
+  builtIns = ['StringLiteral'],
+  silent = [],
+  version = '10.1.1',
+}: { builtIns?: string[]; silent?: string[]; version?: string } = {}) {
   const allMutators: NodeMutatorLike[] = builtIns.map((name) => ({ name, *mutate() {} }));
   const instrumented: SourceFile[][] = [];
   const warnings: string[] = [];
@@ -27,7 +33,7 @@ function setup({ builtIns = ['StringLiteral'], silent = [] as string[], version 
     dir: '/stryker/instrumenter',
     version,
     allMutators,
-    types: {} as BabelTypes,
+    types,
     async instrument(files) {
       instrumented.push([...files]);
 
