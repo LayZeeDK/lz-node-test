@@ -30,5 +30,5 @@ export default {
   typescriptChecker: { prioritizePerformanceOverAccuracy: false },
   reporters: ['clear-text', 'progress'],
   thresholds: { high: 100, low: 100, break: 100 },
-  ignorePatterns: ['/.claude', '/.nx', '/plans'],
+  ignorePatterns: ['/.claude', '/.nx', '/plans', '/e2e'],
 };

@@ -50,6 +50,7 @@
   "plugins": [
     {
       "plugin": "@nx/js/typescript",
+      "exclude": ["e2e/fixtures/**"],
       "options": {
         "typecheck": {
           "targetName": "typecheck"

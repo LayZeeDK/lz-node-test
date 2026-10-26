@@ -7,13 +7,15 @@ const SRC = ['**/src/**/*.ts'];
 const TEST = ['**/test/**/*.ts'];
 // Code samples the operators' tests mutate, not tests.
 const SYNTHETIC = ['**/test/synthetic/**'];
+// Consumer projects the e2e suite installs; they break workspace rules on purpose.
+const E2E_FIXTURES = ['**/e2e/fixtures/**'];
 
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '**/out-tsc', '**/.stryker-tmp', ...SYNTHETIC],
+    ignores: ['**/dist', '**/out-tsc', '**/.stryker-tmp', ...SYNTHETIC, ...E2E_FIXTURES],
   },
   {
     linterOptions: { reportUnusedDisableDirectives: 'error' },
