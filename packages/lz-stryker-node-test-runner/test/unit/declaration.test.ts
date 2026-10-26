@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import { PluginKind } from '@stryker-mutator/api/plugin';
 import ajvModule from 'ajv';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { MIN_NODE_VERSION, NodeTestRunner, strykerPlugins, strykerValidationSchema } from '../../src/index.ts';
 
 /** Stryker validates its options with these settings, and merges the properties of each plugin's schema into its own. */
@@ -23,7 +23,7 @@ describe('plugin declaration', () => {
     ]);
   });
 
-  testEach([
+  lzTestEach([
     {},
     { lzStrykerNodeTest: {} },
     { lzStrykerNodeTest: { testFiles: ['a.test.ts', 'b/*.test.ts'] } },
@@ -33,7 +33,7 @@ describe('plugin declaration', () => {
     assert.ok(validator()(options));
   });
 
-  testEach([
+  lzTestEach([
     { lzStrykerNodeTest: '*.test.ts' },
     { lzStrykerNodeTest: { testFiles: '*.test.ts' } },
     { lzStrykerNodeTest: { testFiles: [1] } },
@@ -55,7 +55,7 @@ describe('plugin declaration', () => {
     assert.equal(engines.node, `>=${MIN_NODE_VERSION.join('.')}`);
   });
 
-  testEach([
+  lzTestEach([
     [{}, { lzStrykerNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [] } }],
     [
       { lzStrykerNodeTest: { maxMemoryMB: 1500 } },

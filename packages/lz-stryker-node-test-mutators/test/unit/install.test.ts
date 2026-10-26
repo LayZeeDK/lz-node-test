@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import {
   corePackageJson,
   install,
@@ -93,7 +93,7 @@ describe('install', () => {
     });
   });
 
-  testEach([
+  lzTestEach([
     ["a name of Stryker's", 'add', [operator('StringLiteral')], 'StringLiteral'],
     ["a name of Stryker's, also when it replaces them", 'replace', [operator('StringLiteral')], 'StringLiteral'],
     ['a name twice', 'add', [operator('Alpha'), operator('Beta'), operator('Alpha')], 'Alpha'],
@@ -114,7 +114,7 @@ describe('install', () => {
     assert.deepEqual([names(), instrumented], [['StringLiteral', 'CallExpression'], []]);
   });
 
-  testEach(['NodeTimer1', 'Node-Timer', 'Node_Timer', 'Node Timer', ''])(
+  lzTestEach(['NodeTimer1', 'Node-Timer', 'Node_Timer', 'Node Timer', ''])(
     'refuses the name %j, as a name has letters only',
     async (name) => {
       const { run, names } = setup();
@@ -138,7 +138,7 @@ describe('install', () => {
     });
   });
 
-  testEach(['10.2.0', '110.1.0'])(
+  lzTestEach(['10.2.0', '110.1.0'])(
     'warns about the instrumenter version %s, which it was not written for',
     async (version) => {
       const { run, warnings } = setup({ version });
@@ -181,7 +181,7 @@ describe('corePackageJson', () => {
     assert.equal(coreFor(join(CORE, 'bin', 'stryker.js')), join(CORE, 'package.json'));
   });
 
-  testEach([
+  lzTestEach([
     ['another script', join('/repo', 'tools', 'corpus-diff.ts')],
     ['a file next to the bin', join(CORE, 'bin', 'stryker.js.map')],
     ["another package's bin", join('/global', 'node_modules', '@stryker-mutator', 'other', 'bin', 'stryker.js')],

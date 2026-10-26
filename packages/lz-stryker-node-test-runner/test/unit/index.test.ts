@@ -5,8 +5,8 @@ import { describe, it } from 'node:test';
 
 import { TestStatus } from '@stryker-mutator/api/test-runner';
 
-import { testEach } from '@layzee/lz-node-test';
-import { testFor } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
 import { ACTIVE_MUTANT_ENV, ENV } from '../../src/hook-core.ts';
 import { ACTIVE_MUTANT, HOOK_URL, logger } from '../index.fixtures.ts';
 import {
@@ -117,7 +117,7 @@ describe('fileError', () => {
     `To reproduce it, run \`node "--no-deprecation" "${FILE}"\` in ${process.cwd()} ` +
     'with NODE_OPTIONS set to `--import "hook" --stack-size=900`.';
 
-  testFor([
+  lzTestFor([
     ['trimmed stderr', 1, '  \nline 1\nline 2 \n', [], ['Stderr:', 'line 1', 'line 2']],
     ['no stderr', 3, ' \n', [], []],
     ['the missing exit code of a killed process', null, '', [], []],
@@ -185,7 +185,7 @@ describe('parseRecord', () => {
     assert.deepEqual(parseRecord(JSON.stringify(record)), record);
   });
 
-  testFor(['null', '[]', '1'])('refuses %s, which is no record', (json) => {
+  lzTestFor(['null', '[]', '1'])('refuses %s, which is no record', (json) => {
     assert.throws(() => parseRecord(json), { message: 'not a record of test results' });
   });
 
@@ -193,7 +193,7 @@ describe('parseRecord', () => {
   const withFields = (fields: object) => JSON.stringify({ tests: [test], ...fields });
   const withTestFields = (fields: object) => JSON.stringify({ tests: [{ ...test, ...fields }] });
 
-  testEach([
+  lzTestEach([
     ['{}', 'tests'],
     ['{"tests":{}}', 'tests'],
     ['{"tests":[1]}', 'tests[0]'],
@@ -362,7 +362,7 @@ describe('runInPool', () => {
 });
 
 describe('testRunnerConcurrency', () => {
-  testEach([
+  lzTestEach([
     [undefined, false, 8, 7],
     [undefined, false, 4, 4],
     [3, false, 8, 3],
@@ -384,7 +384,7 @@ describe('testRunnerConcurrency', () => {
     },
   );
 
-  testEach([
+  lzTestEach([
     [[], undefined],
     [[], 3],
     [[], '50%'],

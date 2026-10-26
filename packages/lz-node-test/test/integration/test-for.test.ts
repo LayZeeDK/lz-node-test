@@ -1,13 +1,13 @@
 import { describe, it } from 'node:test';
 
 import { report } from '../reported.fixtures.ts';
-import { testFor } from '../../src/test-for.ts';
+import { lzTestFor } from '../../src/test-for.ts';
 
-describe('testFor', () => {
+describe('lzTestFor', () => {
   it("passes each case whole with the test's context, and names a missing case as no values", async (t) => {
     await t.assert.reports(() => {
-      testFor([[1, 2], 'x', null])('%s and %s', (row, t) => report(row, t.name));
-      testFor`
+      lzTestFor([[1, 2], 'x', null])('%s and %s', (row, t) => report(row, t.name));
+      lzTestFor`
           a    | b
           ${1} | ${'x'}
         `('$a $b', (row, t) => report(row, t.name));

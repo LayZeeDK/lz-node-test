@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { assertStatement } from '../../src/assert-statement.ts';
 import { resolveFromCore } from '../../src/install.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
@@ -10,7 +10,7 @@ import { isOwn, toNodeMutator } from '../../src/operator.ts';
 const STRICT = "import assert from 'node:assert/strict';\n";
 
 describe('AssertStatement', () => {
-  testEach([
+  lzTestEach([
     ['a default import', `${STRICT}assert.equal(state, 'ready');`],
     ['a default import called itself', "import assert from 'node:assert';\nassert(ready);"],
     ['a namespace import', "import * as assert from 'assert';\nassert.ok(ready);"],
@@ -21,7 +21,7 @@ describe('AssertStatement', () => {
     assert.deepEqual(await mutantsOf(assertStatement, source), [';']);
   });
 
-  testEach([
+  lzTestEach([
     ['console.assert', 'console.assert(ready);'],
     ['an assert of another library', "import { assert } from 'chai';\nassert.ok(ready);"],
     ['a function of its own named assert', 'function assert(value: unknown) {}\nassert(ready);'],
@@ -42,7 +42,7 @@ describe('AssertStatement', () => {
     assert.deepEqual(await mutantsOf(assertStatement, source), []);
   });
 
-  testEach([
+  lzTestEach([
     ['whose arguments Stryker mutates, and which Stryker alone keeps', `${STRICT}assert.equal(state, 'ready');`, []],
     [
       'whose arguments Stryker leaves, and which Stryker alone removes',

@@ -1,13 +1,13 @@
 import { describe, it } from 'node:test';
 
 import { report } from '../reported.fixtures.ts';
-import { testEach } from '../../src/test-each.ts';
+import { lzTestEach } from '../../src/test-each.ts';
 
-describe('testEach', () => {
+describe('lzTestEach', () => {
   it('spreads each case into the arguments when every case is an array, with no test context', async (t) => {
     await t.assert.reports(() => {
-      testEach([[1, 'a'], [2], []])('case %# of %s %s', report);
-      testEach([])('none', report);
+      lzTestEach([[1, 'a'], [2], []])('case %# of %s %s', report);
+      lzTestEach([])('none', report);
     }, [
       { name: 'case 0 of 1 a', outcome: 'fail', error: JSON.stringify([1, 'a']) },
       { name: 'case 1 of 2 undefined', outcome: 'fail', error: JSON.stringify([2]) },
@@ -17,7 +17,7 @@ describe('testEach', () => {
 
   it('passes each case whole when a case is not an array, and names the tests from the spread case', async (t) => {
     await t.assert.reports(() => {
-      testEach([[1, 2], 'x', null, { a: 1 }])('%s and %s, $a', report);
+      lzTestEach([[1, 2], 'x', null, { a: 1 }])('%s and %s, $a', report);
     }, [
       { name: '1 and 2, $a', outcome: 'fail', error: JSON.stringify([[1, 2]]) },
       { name: 'x and undefined, $a', outcome: 'fail', error: JSON.stringify(['x']) },
@@ -28,7 +28,7 @@ describe('testEach', () => {
 
   it('gives a template literal table one object per row, keyed by its first line, without a partial row', async (t) => {
     await t.assert.reports(() => {
-      testEach`
+      lzTestEach`
           first | second
           ${1}  | ${'x'}
           ${2}  | ${'y'}
@@ -42,12 +42,12 @@ describe('testEach', () => {
 
   it('passes a test whose body returns, and fails one whose body throws or whose promise rejects', async (t) => {
     await t.assert.reports(() => {
-      testEach([1, 2])('case %s', (n) => {
+      lzTestEach([1, 2])('case %s', (n) => {
         if (n === 2) {
           throw new Error('two');
         }
       });
-      testEach([1, 2])('async %s', async (n) => {
+      lzTestEach([1, 2])('async %s', async (n) => {
         if (n === 2) {
           throw new Error('rejects');
         }

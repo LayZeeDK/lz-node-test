@@ -32,7 +32,7 @@ export interface Case {
 }
 
 const SIGNATURES =
-  'testEach and testFor tables take (name, fn), (name, fn, timeout) or (name, options, fn); ' +
+  'lzTestEach and lzTestFor tables take (name, fn), (name, fn, timeout) or (name, options, fn); ' +
   'pass options as the second argument and a single function.';
 
 /** The rows of a template literal table: one object per row, keyed by the column names of its first line. */

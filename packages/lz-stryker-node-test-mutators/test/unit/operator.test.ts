@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import type { NodePath, types } from '@babel/core';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { OWN, isOwn, toNodeMutator, type BabelTypes, type Operator } from '../../src/operator.ts';
 
 const NODE = { type: 'EmptyStatement' } as types.Node;
@@ -23,7 +23,7 @@ describe('OWN', () => {
 });
 
 describe('toNodeMutator', () => {
-  testEach([
+  lzTestEach([
     [false, [NODE]],
     [true, []],
   ])('gives, where isExpressionContext is %s, %j', (isExpressionContext, nodes) => {

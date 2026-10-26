@@ -1,4 +1,4 @@
-// The titles of testEach and testFor tests, in Vitest's format. A `$` path also takes `[index]` brackets, as in
+// The titles of lzTestEach and lzTestFor tests, in Vitest's format. A `$` path also takes `[index]` brackets, as in
 // `$a[0]`, beyond Vitest's paths of names and `.`.
 import { inspect } from 'node:util';
 

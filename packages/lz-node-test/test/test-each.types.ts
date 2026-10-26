@@ -2,16 +2,16 @@
 // the callbacks get the types of the cases, as in Vitest.
 import type { TestContext } from 'node:test';
 
-import { testEach } from '../src/test-each.ts';
+import { lzTestEach } from '../src/test-each.ts';
 
-testEach([
+lzTestEach([
   [1, 'a'],
   [2, 'b'],
 ] as const)('tuple', (n, s) => {
   n satisfies 1 | 2;
   s satisfies 'a' | 'b';
 });
-testEach([
+lzTestEach([
   [1, 'a'],
   [2, 'b'],
 ])('array', (n, s) => {
@@ -19,23 +19,23 @@ testEach([
   // @ts-expect-error The second value is a string.
   s satisfies number;
 });
-testEach([{ a: 1 }, { a: 2 }])('object', (row) => {
+lzTestEach([{ a: 1 }, { a: 2 }])('object', (row) => {
   row.a satisfies number;
   // @ts-expect-error The rows have no b.
   void row.b;
 });
-testEach([1, 2])('scalar', (n) => {
+lzTestEach([1, 2])('scalar', (n) => {
   n satisfies number;
 });
 // @ts-expect-error Every argument is a value of the case.
-testEach([1, 2])('extra', (_n, _extra: string) => {});
-testEach`a | b ${1} | ${2}`('template', (row) => {
+lzTestEach([1, 2])('extra', (_n, _extra: string) => {});
+lzTestEach`a | b ${1} | ${2}`('template', (row) => {
   void row.anything;
 });
-testEach([1])('timeout', () => {}, 100);
-testEach([1])('options', { timeout: 100, fails: true, skip: 'reason' }, () => {});
-testEach([1])('todo');
+lzTestEach([1])('timeout', () => {}, 100);
+lzTestEach([1])('options', { timeout: 100, fails: true, skip: 'reason' }, () => {});
+lzTestEach([1])('todo');
 // @ts-expect-error The options go before the function.
-testEach([1])('options last', () => {}, { timeout: 100 });
-// @ts-expect-error A test of testEach gets no context.
-testEach([1])('context', (_n: number, _t: TestContext) => {});
+lzTestEach([1])('options last', () => {}, { timeout: 100 });
+// @ts-expect-error A test of lzTestEach gets no context.
+lzTestEach([1])('context', (_n: number, _t: TestContext) => {});

@@ -3,11 +3,11 @@ import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { describe, it } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { endGroup, groupOptions, processEnd } from '../../src/process-end.ts';
 
 describe('groupOptions', () => {
-  testEach([
+  lzTestEach([
     ['linux', { detached: true, windowsHide: true }],
     ['darwin', { detached: true, windowsHide: true }],
     ['win32', { detached: false, windowsHide: true }],

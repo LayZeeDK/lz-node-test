@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 import { nodeTimerDelay } from '../../src/node-timer-delay.ts';
 
 const PROMISES = "import { setTimeout as sleep } from 'node:timers/promises';\n";
 
 describe('NodeTimerDelay', () => {
-  testEach([
+  lzTestEach([
     ['the global setTimeout', 'setTimeout(() => {}, graceMs);', 'graceMs'],
     ['the global setInterval', 'setInterval(tick, 100);', '100'],
     ['setTimeout of node:timers', "import { setTimeout } from 'node:timers';\nsetTimeout(f, ms);", 'ms'],
@@ -31,7 +31,7 @@ describe('NodeTimerDelay', () => {
     assert.deepEqual(await mutantsOf(nodeTimerDelay, source), [`${delay} + 1`, `${delay} - 1`]);
   });
 
-  testEach([
+  lzTestEach([
     ['1, which a move down leaves at 1', 'setTimeout(f, 1);', ['1 + 1']],
     ['0, which either move leaves at 1', 'setTimeout(f, 0);', []],
     ['undefined, which is 1 already', 'setTimeout(f, undefined);', []],
@@ -40,7 +40,7 @@ describe('NodeTimerDelay', () => {
     assert.deepEqual(await mutantsOf(nodeTimerDelay, source), expected);
   });
 
-  testEach([
+  lzTestEach([
     ["mock timers' tick", 't.mock.timers.tick(999);'],
     ['the callback of a global setTimeout', 'setTimeout(delay);'],
     ['a function of its own named setTimeout', 'function setTimeout(f: unknown, ms: number) {}\nsetTimeout(f, 5);'],

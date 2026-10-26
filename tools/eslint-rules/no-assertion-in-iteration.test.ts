@@ -2,7 +2,7 @@ import parser from '@typescript-eslint/parser';
 import { RuleTester } from 'eslint';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import rule from './no-assertion-in-iteration.ts';
 
 const STRICT = "import assert from 'node:assert/strict';\n";
@@ -13,7 +13,7 @@ function tester(): RuleTester {
 }
 
 describe('no-assertion-in-iteration', () => {
-  testEach([
+  lzTestEach([
     ['an assertion outside any loop', `${STRICT}assert.ok(x);`],
     ['a call that is not an assertion in a loop body', `${STRICT}for (const x of xs) { f(x); }`],
     ['a call that is not an assertion in a loop condition', `${STRICT}while (next()) { x++; }`],
@@ -43,7 +43,7 @@ describe('no-assertion-in-iteration', () => {
     tester().run('no-assertion-in-iteration', rule, { valid: [code], invalid: [] });
   });
 
-  testEach([
+  lzTestEach([
     ['an assertion in a for...of body', `${STRICT}for (const x of xs) { assert.ok(x); }`, 'loop'],
     ['an assertion in a for body', `${STRICT}for (let i = 0; i < n; i++) { assert.ok(i); }`, 'loop'],
     ['an assertion in a for...in body', `${STRICT}for (const k in o) { assert.ok(k); }`, 'loop'],
@@ -80,7 +80,7 @@ describe('no-assertion-in-iteration', () => {
     tester().run('no-assertion-in-iteration', rule, { valid: [], invalid: [{ code, errors: [{ messageId }] }] });
   });
 
-  testEach([
+  lzTestEach([
     [
       'a loop body',
       `${STRICT}for (const x of xs) { assert.ok(x); }`,

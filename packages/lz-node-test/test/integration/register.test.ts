@@ -3,18 +3,18 @@ import { describe, it } from 'node:test';
 
 import { parseArguments, templateRows, type EachOptions } from '../../src/register.ts';
 import { report, SIGNATURES } from '../reported.fixtures.ts';
-import { testEach } from '../../src/test-each.ts';
-import { testFor } from '../../src/test-for.ts';
+import { lzTestEach } from '../../src/test-each.ts';
+import { lzTestFor } from '../../src/test-for.ts';
 
-describe('the options of testEach and testFor', () => {
+describe('the options of lzTestEach and lzTestFor', () => {
   it('registers todo tests without a function, also when a timeout replaces the options', async (t) => {
     await t.assert.reports(() => {
-      testEach([1])('no function %s');
-      testFor([1])('options only %s', { timeout: 100 });
+      lzTestEach([1])('no function %s');
+      lzTestFor([1])('options only %s', { timeout: 100 });
       // @ts-expect-error The types take no timeout after options, which untyped callers can still pass.
-      testEach([1])('options and a timeout %s', { skip: true }, 5000);
-      testEach([1])('a todo reason %s', { todo: 'later' });
-      testEach([1])('skipped %s', { skip: true });
+      lzTestEach([1])('options and a timeout %s', { skip: true }, 5000);
+      lzTestEach([1])('a todo reason %s', { todo: 'later' });
+      lzTestEach([1])('skipped %s', { skip: true });
     }, [
       { name: 'no function 1', outcome: 'pass', todo: true },
       { name: 'options only 1', outcome: 'pass', todo: true },
@@ -26,9 +26,9 @@ describe('the options of testEach and testFor', () => {
 
   it('applies a timeout given as a number or in the options, and passes node:test options through', async (t) => {
     await t.assert.reports(() => {
-      testEach([1])('number %s', () => new Promise((resolve) => setTimeout(resolve, 300)), 10);
-      testFor([1])('options %s', { timeout: 10 }, () => new Promise((resolve) => setTimeout(resolve, 300)));
-      testFor([1])('plan %s', { plan: 1 }, (n, t) => {
+      lzTestEach([1])('number %s', () => new Promise((resolve) => setTimeout(resolve, 300)), 10);
+      lzTestFor([1])('options %s', { timeout: 10 }, () => new Promise((resolve) => setTimeout(resolve, 300)));
+      lzTestFor([1])('plan %s', { plan: 1 }, (n, t) => {
         t.assert.equal(n, 1);
       });
     }, [
@@ -40,13 +40,13 @@ describe('the options of testEach and testFor', () => {
 
   it('lets a defined option override a modifier, and reads no options from a function', async (t) => {
     await t.assert.reports(() => {
-      testEach.skip([1])('undefined %s', { skip: undefined }, report);
-      testEach.skip([1])('false %s', { skip: false }, () => {});
-      testEach([1])(
+      lzTestEach.skip([1])('undefined %s', { skip: undefined }, report);
+      lzTestEach.skip([1])('false %s', { skip: false }, () => {});
+      lzTestEach([1])(
         'own properties %s',
         Object.assign(() => {}, { skip: true }),
       );
-      testEach([1])('fails %s', { fails: true }, report);
+      lzTestEach([1])('fails %s', { fails: true }, report);
     }, [
       { name: 'undefined 1', outcome: 'pass', skip: true },
       { name: 'false 1', outcome: 'pass' },
@@ -56,9 +56,9 @@ describe('the options of testEach and testFor', () => {
   });
 
   it('throws before registering a test for options after a function, two functions, or null options', () => {
-    assert.throws(() => testEach([1])('x', () => {}, {} as number), SIGNATURES);
-    assert.throws(() => testFor([1])('x', () => {}, (() => {}) as unknown as number), SIGNATURES);
-    assert.throws(() => testEach([1])('x', null as unknown as EachOptions, () => {}), SIGNATURES);
+    assert.throws(() => lzTestEach([1])('x', () => {}, {} as number), SIGNATURES);
+    assert.throws(() => lzTestFor([1])('x', () => {}, (() => {}) as unknown as number), SIGNATURES);
+    assert.throws(() => lzTestEach([1])('x', null as unknown as EachOptions, () => {}), SIGNATURES);
   });
 });
 
@@ -68,9 +68,9 @@ describe('t.assert.reports', () => {
 
     await assert.rejects(
       t.assert.reports(() => {
-        testEach([captured])('captured %s', report);
+        lzTestEach([captured])('captured %s', report);
       }, []),
-      { message: 't.assert.reports cases can use only testEach, testFor, report and globals, not captured.' },
+      { message: 't.assert.reports cases can use only lzTestEach, lzTestFor, report and globals, not captured.' },
     );
   });
 });
@@ -78,7 +78,7 @@ describe('t.assert.reports', () => {
 describe('parseArguments', () => {
   const fn = () => {};
 
-  testFor([
+  lzTestFor([
     ['(name, fn)', [fn, undefined], { options: {}, fn }],
     ['(name, fn, timeout)', [fn, 50], { options: { timeout: 50 }, fn }],
     ['(name, options, fn)', [{ skip: true }, fn], { options: { skip: true }, fn }],
@@ -91,7 +91,7 @@ describe('parseArguments', () => {
   // The shapes untyped callers can pass.
   const untyped = parseArguments as (optionsOrFn: unknown, fnOrTimeout: unknown) => unknown;
 
-  testEach([
+  lzTestEach([
     { shape: 'options after a function', args: [fn, {}] },
     { shape: 'two functions', args: [fn, fn] },
     { shape: 'null options', args: [null, fn] },
@@ -105,7 +105,7 @@ describe('parseArguments', () => {
 });
 
 describe('templateRows', () => {
-  testEach([
+  lzTestEach([
     [
       ['\n  a | b\n  ', ' | ', '\n  ', ' | ', '\n'],
       [1, 2, 3, 4],

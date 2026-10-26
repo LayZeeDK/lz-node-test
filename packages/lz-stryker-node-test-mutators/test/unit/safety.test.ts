@@ -4,7 +4,7 @@ import { describe } from 'node:test';
 import type { NodePath } from '@babel/core';
 import type { Location } from '@stryker-mutator/api/core';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { resolveFromCore } from '../../src/install.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 import { toNodeMutator, type Operator } from '../../src/operator.ts';
@@ -74,7 +74,7 @@ async function newCallees(operator: Operator, source: string): Promise<string[][
 }
 
 describe('safety', () => {
-  testEach(OPERATORS.map((operator) => [operator.name, operator]))(
+  lzTestEach(OPERATORS.map((operator) => [operator.name, operator]))(
     '%s calls nothing new in its replacements but Error and Promise.reject',
     async (_name, operator) => {
       const found = await Promise.all(CORPUS.map((source) => newCallees(operator, source)));
@@ -84,7 +84,7 @@ describe('safety', () => {
     },
   );
 
-  testEach([
+  lzTestEach([
     [
       'an operator that signals a process',
       'f();',
@@ -128,14 +128,14 @@ describe('safety', () => {
     assert.deepEqual(await newCallees(unsafe, source), expected);
   });
 
-  testEach(OPERATORS.flatMap((operator) => TARGETS.map((source) => [operator.name, source, operator] as const)))(
+  lzTestEach(OPERATORS.flatMap((operator) => TARGETS.map((source) => [operator.name, source, operator] as const)))(
     '%s leaves %j alone',
     async (_name, source, operator) => {
       assert.deepEqual(await mutantsOf(operator, source), []);
     },
   );
 
-  testEach(OPERATORS.map((operator) => [operator.name, operator] as const))(
+  lzTestEach(OPERATORS.map((operator) => [operator.name, operator] as const))(
     '%s makes a mutant of its own sample',
     async (_name, operator) => {
       assert.notDeepEqual(await mutantsOf(operator, operator.sample), []);

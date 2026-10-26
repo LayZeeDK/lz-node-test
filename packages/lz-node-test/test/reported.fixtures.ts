@@ -11,7 +11,7 @@ const TEST_FOR = new URL('../src/test-for.ts', import.meta.url).href;
 export const SIGNATURES = {
   name: 'TypeError',
   message:
-    'testEach and testFor tables take (name, fn), (name, fn, timeout) or (name, options, fn); ' +
+    'lzTestEach and lzTestFor tables take (name, fn), (name, fn, timeout) or (name, options, fn); ' +
     'pass options as the second argument and a single function.',
 };
 
@@ -34,7 +34,7 @@ declare module 'node:test' {
     interface TestContextAssert {
       /**
        * Runs a test file that calls `cases` and asserts that node:test reports `expected`, in order. The file has
-       * `testEach`, `testFor` and `report` and nothing else of the caller's, so `cases` can use only those and globals.
+       * `lzTestEach`, `lzTestFor` and `report` and nothing else of the caller's, so `cases` can use only those and globals.
        * With `only`, node:test runs only the tests marked only.
        */
       reports(cases: () => void, expected: Reported[], options?: { only?: boolean }): Promise<void>;
@@ -55,7 +55,7 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
 
   if (captured.length > 0) {
     throw new Error(
-      `t.assert.reports cases can use only testEach, testFor, report and globals, not ${captured.join(', ')}.`,
+      `t.assert.reports cases can use only lzTestEach, lzTestFor, report and globals, not ${captured.join(', ')}.`,
     );
   }
 
@@ -68,8 +68,8 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
     writeFileSync(
       file,
       [
-        `import { testEach } from ${JSON.stringify(TEST_EACH)};`,
-        `import { testFor } from ${JSON.stringify(TEST_FOR)};`,
+        `import { lzTestEach } from ${JSON.stringify(TEST_EACH)};`,
+        `import { lzTestFor } from ${JSON.stringify(TEST_FOR)};`,
         String(report),
         `(${cases})();`,
       ].join('\n'),
@@ -116,7 +116,7 @@ const libraries = new Map<string, ts.SourceFile | undefined>();
  * checker reports as names it cannot find. The library files are parsed once and shared by every call.
  */
 function capturedNames(source: string): string[] {
-  const text = `declare const testEach: any, testFor: any, report: any;\n(${source})();\n`;
+  const text = `declare const lzTestEach: any, lzTestFor: any, report: any;\n(${source})();\n`;
   const program = ts.createProgram([CASES_FILE], COMPILER_OPTIONS, {
     ...host,
     getSourceFile: (name, version) => {

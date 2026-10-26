@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { isOwn, isRunning, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
 import { logger, NO_PROCESS } from '../index.fixtures.ts';
 import { peakMemoryDir } from '../../src/memory-limits.ts';
@@ -96,7 +96,7 @@ describe('isRunning', () => {
   });
 
   // As root every signal is allowed, so the real processes above reach EPERM only for other users.
-  testEach([
+  lzTestEach([
     ['signalled', true, undefined],
     ['refused with EPERM', true, 'EPERM'],
     ['gone with ESRCH', false, 'ESRCH'],

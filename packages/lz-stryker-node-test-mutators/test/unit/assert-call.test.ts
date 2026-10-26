@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { assertCall } from '../../src/assert-call.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 
@@ -50,7 +50,7 @@ function typeErrors(source: string): string[] {
 }
 
 describe('AssertCall', () => {
-  testEach([
+  lzTestEach([
     ['a default import', `${STRICT}assert.equal(1, 1);`],
     ['a default import called itself', "import assert from 'node:assert';\nassert(true);"],
     ['a namespace import', "import * as assert from 'assert';\nassert.ok(true);"],
@@ -69,7 +69,7 @@ describe('AssertCall', () => {
     assert.deepEqual(await mutantsOf(assertCall, source), [`{ ${statement} ${THROW} }`]);
   });
 
-  testEach([
+  lzTestEach([
     ["an arrow function's body", `${STRICT}[1].forEach((n) => assert.ok(n));`, `${THROWING} : assert.ok(n)`],
     [
       "the test context's assert as an arrow function's body",
@@ -119,7 +119,7 @@ describe('AssertCall', () => {
     ]);
   });
 
-  testEach([
+  lzTestEach([
     ['assert.fail', `${STRICT}assert.fail('never');`],
     ['a named import of fail', "import { fail } from 'node:assert';\nfail('never');"],
     ['a renamed import of fail', "import { fail as never } from 'node:assert';\nnever();"],
@@ -131,7 +131,7 @@ describe('AssertCall', () => {
     assert.deepEqual(await mutantsOf(assertCall, source), []);
   });
 
-  testEach([
+  lzTestEach([
     ['console.assert', 'console.assert(true);'],
     ['a function of its own named assert', 'function assert(value: unknown) {}\nassert(true);'],
     ['an assert of another library', "import { assert } from 'chai';\nassert.ok(true);"],

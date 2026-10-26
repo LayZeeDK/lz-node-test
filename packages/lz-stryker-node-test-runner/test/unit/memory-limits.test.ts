@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { testFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
 import { logger } from '../index.fixtures.ts';
 import { memoryLimits } from '../../src/memory-limits.ts';
 
@@ -31,7 +31,7 @@ describe('memoryLimits', () => {
     assert.deepEqual(warnings, []);
   });
 
-  testFor([
+  lzTestFor([
     [[370], 1579],
     [[101], 1176],
     [[50, 370, 100], 1579],
@@ -55,7 +55,7 @@ describe('memoryLimits', () => {
     },
   );
 
-  testFor([[''], ['not a number'], ['12x'], ['x12']] as const)(
+  lzTestFor([[''], ['not a number'], ['12x'], ['x12']] as const)(
     'gives a file whose stored peak reads %j 1024 MB, warning about it as about a missing peak',
     ([stored], t) => {
       const { dir, warnings, limits } = setup(t);

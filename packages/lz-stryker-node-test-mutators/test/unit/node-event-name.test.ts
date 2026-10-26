@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 import { nodeEventName } from '../../src/node-event-name.ts';
 
 describe('NodeEventName', () => {
-  testEach([
+  lzTestEach([
     ["the process's exit", "process.on('exit', f);", ['"beforeExit"']],
     ["the process's beforeExit", "process.once('beforeExit', f);", ['"exit"']],
     ['an imported process', "import process from 'node:process';\nprocess.on('exit', f);", ['"beforeExit"']],
@@ -35,7 +35,7 @@ describe('NodeEventName', () => {
     assert.deepEqual(await mutantsOf(nodeEventName, source), expected);
   });
 
-  testEach([
+  lzTestEach([
     ['an event outside the tables', "child.on('data', f);"],
     ["a stream's event on the process", "process.on('close', f);"],
     ['the process inside a member', "globalThis.process.on('beforeExit', f);"],

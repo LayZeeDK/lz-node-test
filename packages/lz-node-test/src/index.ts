@@ -1,2 +1,2 @@
-export { testEach, type EachFunctionReturn, type TestEachFunction } from './test-each.ts';
-export { testFor, type TestForFunction, type TestForFunctionReturn } from './test-for.ts';
+export { lzTestEach, type LzEachFunctionReturn, type LzTestEachFunction } from './test-each.ts';
+export { lzTestFor, type LzTestForFunction, type LzTestForFunctionReturn } from './test-for.ts';

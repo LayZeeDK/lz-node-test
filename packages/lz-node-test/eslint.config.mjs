@@ -17,7 +17,7 @@ export default [
     },
   },
   {
-    // The modifier tests run testEach.only and testFor.only on purpose.
+    // The modifier tests run lzTestEach.only and lzTestFor.only on purpose.
     files: ['test/**/*.ts'],
     rules: { 'no-restricted-syntax': 'off' },
   },

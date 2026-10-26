@@ -6,7 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
 
-import { testFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
 import {
   complete,
   DRY_RUN,
@@ -78,7 +78,7 @@ describe('NodeTestRunner endings', () => {
   const passes = "it('passes', async () => { await new Promise((resolve) => setImmediate(resolve)); });";
   const neverEnds = "it('never ends', async () => { await new Promise((resolve) => setTimeout(resolve, 1_000)); });";
 
-  testFor([
+  lzTestFor([
     ['while it loads, before it declares a test', ['process.exit(0);', "it('never runs', () => {});"]],
     ['before node:test reports any test', [passes, "it('exits', () => { process.exit(0); });", neverEnds]],
     // fastify/test/als.test.js:9

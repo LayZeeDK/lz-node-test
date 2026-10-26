@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { assertMethod } from '../../src/bindings.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 import type { Operator } from '../../src/operator.ts';
@@ -19,7 +19,7 @@ const probe: Operator = {
 };
 
 describe('assertMethod', () => {
-  testEach([
+  lzTestEach([
     ['a call of the default import', "import assert from 'node:assert';\nassert(x);", ['"ok"']],
     ['a method of the default import', "import assert from 'node:assert/strict';\nassert.equal(x, 1);", ['"equal"']],
     ['a named import', "import { throws } from 'assert';\nthrows(f);", ['"throws"']],

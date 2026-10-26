@@ -2,15 +2,15 @@
 // the modifiers keep the callbacks' types, as in Vitest.
 import type { TestContext } from 'node:test';
 
-import { testEach } from '../src/test-each.ts';
-import { testFor } from '../src/test-for.ts';
+import { lzTestEach } from '../src/test-each.ts';
+import { lzTestFor } from '../src/test-for.ts';
 
-testEach.skip.only.todo.fails.skipIf(true).runIf(false)([1])('modifiers', (n) => {
+lzTestEach.skip.only.todo.fails.skipIf(true).runIf(false)([1])('modifiers', (n) => {
   n satisfies number;
 });
-testFor.fails.skipIf(1)([1])('modifiers', (n, t) => {
+lzTestFor.fails.skipIf(1)([1])('modifiers', (n, t) => {
   n satisfies number;
   t satisfies TestContext;
 });
 // @ts-expect-error The modifiers go before the table.
-void testEach([1]).skip;
+void lzTestEach([1]).skip;

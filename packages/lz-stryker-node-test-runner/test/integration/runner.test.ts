@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 
 import { DryRunStatus, MutantRunStatus, TestStatus, type DryRunOptions } from '@stryker-mutator/api/test-runner';
 
-import { testFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
 import { ENV } from '../../src/hook-core.ts';
 import {
   ACTIVE_MUTANT,
@@ -75,7 +75,7 @@ describe('NodeTestRunner', () => {
     await runner.dispose();
   });
 
-  testFor([
+  lzTestFor([
     [
       'refuses',
       '21.20.0',
@@ -223,7 +223,7 @@ describe('NodeTestRunner', () => {
     assert.ok(!existsSync(dirname(outDir)));
   });
 
-  testFor([
+  lzTestFor([
     ['exits', ''],
     ['exits through process.exit', 'process.exit(1);'],
     ['is killed', "process.kill(process.pid, 'SIGKILL');"],
@@ -335,7 +335,7 @@ describe('NodeTestRunner', () => {
     ]);
   });
 
-  testFor([
+  lzTestFor([
     ['does not parse', '{'],
     ['lists no tests', '{}'],
   ] as const)('reports a test file whose own record %s as an error', async ([, content], t) => {
@@ -382,7 +382,7 @@ describe('NodeTestRunner', () => {
     ]);
   });
 
-  testFor([{}, { lzStrykerNodeTest: {} }])(
+  lzTestFor([{}, { lzStrykerNodeTest: {} }])(
     'runs the TypeScript test files outside node_modules by default, with the options %j',
     async (options, t) => {
       const dir = project(t, {
@@ -954,7 +954,7 @@ describe('NodeTestRunner', () => {
     );
   });
 
-  testFor([
+  lzTestFor([
     { hooks: 'the before hooks of suites', file: 'a.test.mjs', test: 'suite > runs' },
     { hooks: 'beforeEach hooks', file: 'b.test.mjs', test: 'runs' },
   ])('activates a runtime mutant before $hooks', async ({ file, test }, t) => {

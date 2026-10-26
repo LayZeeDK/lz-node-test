@@ -3,7 +3,7 @@ import parser from '@typescript-eslint/parser';
 import { RuleTester } from 'eslint';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import rule from './require-windows-hide.ts';
 
 /** With no global describe or it, as under node:test, RuleTester runs each case inside the calling test. */
@@ -12,7 +12,7 @@ function tester(): RuleTester {
 }
 
 describe('require-windows-hide', () => {
-  testEach([
+  lzTestEach([
     ['a detached spawn with windowsHide: true', 'spawn(cmd, [], { detached: true, windowsHide: true });'],
     ['windowsHide before detached', '({ windowsHide: true, detached: true });'],
     ['quoted keys', "({ 'detached': true, 'windowsHide': true });"],
@@ -43,7 +43,7 @@ describe('require-windows-hide', () => {
     tester().run('require-windows-hide', rule, { valid: [code], invalid: [] });
   });
 
-  testEach([
+  lzTestEach([
     ['a detached spawn without windowsHide', "spawn(cmd, [], { detached: true, stdio: 'ignore' });"],
     ['a quoted detached key', "({ 'detached': true });"],
     ['windowsHide: false', '({ detached: true, windowsHide: false });'],
@@ -73,7 +73,7 @@ describe('require-windows-hide', () => {
     tester().run('require-windows-hide', rule, { valid: [], invalid: [{ code, errors: [{ messageId: 'missing' }] }] });
   });
 
-  testEach([
+  lzTestEach([
     ['an assignment of detached = true', 'options.detached = true;'],
     ['an assignment to a quoted member', "options['detached'] = daemon;"],
   ])('reports %s with its own message', (_, code) => {
@@ -83,7 +83,7 @@ describe('require-windows-hide', () => {
     });
   });
 
-  testEach([
+  lzTestEach([
     ['an object', '({ detached: daemon });', /^Pass windowsHide: true with detached: true/],
     ['an assignment', 'options.detached = daemon;', /^Set windowsHide: true on the same options object as detached/],
   ])('names the fix for %s in its message', (_, code, message) => {

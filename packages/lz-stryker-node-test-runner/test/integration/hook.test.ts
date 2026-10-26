@@ -9,7 +9,7 @@ import { describe, it, type TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
-import { testFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
 import {
   ENV,
   installed,
@@ -247,7 +247,7 @@ describe('hook', () => {
   const leavesServer = (name: string, then = '') =>
     `it('${name}', async () => { await new Promise((resolve) => createServer().listen(0, resolve)); ${then} });`;
 
-  testFor([
+  lzTestFor([
     ['with exit code 1 at once, when a test failed', 'fails', 'assert.fail();', '60000', 1, 'failed', {}],
     [
       "with node:test's exit code once the held-open time ends, naming the server, when its tests passed",
@@ -373,7 +373,7 @@ describe('hook', () => {
     assert.deepEqual(Object.keys(record?.mutantCoverage?.perTest ?? {}), ids);
   });
 
-  testFor([
+  lzTestFor([
     ['ends by itself', '', {}],
     ['ends through process.exit()', 'process.exit(0);\n', { unfinished: true }],
   ] as const)(
@@ -413,7 +413,7 @@ describe('hook', () => {
     );
   };
 
-  testFor([
+  lzTestFor([
     [
       'a loader transpiled, through its source map',
       'fixture.test.mjs',
@@ -518,7 +518,7 @@ describe('hook', () => {
     assert.deepEqual(readRecords(outDir), { [`${pid}.0.json`]: { tests: [] } });
   });
 
-  testFor([
+  lzTestFor([
     ['', {}],
     // The watchdog's thread gets none of the process's environment, so it stays CommonJS.
     [' run as an ES module', { NODE_OPTIONS: '--input-type=module' }],
@@ -589,7 +589,7 @@ describe('hook', () => {
     assert.equal(code, 0);
   });
 
-  testFor([
+  lzTestFor([
     ['the arguments', true],
     ['NODE_OPTIONS', false],
   ] as const)('loads a --require preload given in %s once, not again in the memory watchdog', async ([, inArgs], t) => {

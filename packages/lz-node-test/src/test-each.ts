@@ -10,7 +10,7 @@ import {
   type Register,
 } from './register.ts';
 
-/** The arguments of a `testEach` callback for a readonly tuple row of up to 10 values, as in Vitest and Jest. */
+/** The arguments of a `lzTestEach` callback for a readonly tuple row of up to 10 values, as in Vitest and Jest. */
 type ExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
   1: [T[0]];
   2: [T[0], T[1]];
@@ -45,26 +45,26 @@ type ExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
                     ? 10
                     : 'fallback'];
 
-/** Registers the tests of a `testEach` table. Without `fn`, each test is a todo test. */
-export interface EachFunctionReturn<T extends any[]> {
+/** Registers the tests of a `lzTestEach` table. Without `fn`, each test is a todo test. */
+export interface LzEachFunctionReturn<T extends any[]> {
   (name: Name, fn?: (...args: T) => Awaitable<void>, timeout?: number): void;
   (name: Name, options: EachOptions, fn?: (...args: T) => Awaitable<void>): void;
 }
 
-export interface TestEachFunction {
-  <T extends any[] | [any]>(cases: ReadonlyArray<T>): EachFunctionReturn<T>;
-  <T extends ReadonlyArray<any>>(cases: ReadonlyArray<T>): EachFunctionReturn<ExtractEachCallbackArgs<T>>;
-  <T>(cases: ReadonlyArray<T>): EachFunctionReturn<T[]>;
-  (...args: [TemplateStringsArray, ...any]): EachFunctionReturn<any[]>;
+export interface LzTestEachFunction {
+  <T extends any[] | [any]>(cases: ReadonlyArray<T>): LzEachFunctionReturn<T>;
+  <T extends ReadonlyArray<any>>(cases: ReadonlyArray<T>): LzEachFunctionReturn<ExtractEachCallbackArgs<T>>;
+  <T>(cases: ReadonlyArray<T>): LzEachFunctionReturn<T[]>;
+  (...args: [TemplateStringsArray, ...any]): LzEachFunctionReturn<any[]>;
 }
 
 /**
  * Registers one node:test `it` test per case of the table. A case that is an array is spread into `fn`'s arguments
- * when every case is an array; any other case is passed whole. `fn` gets no test context; use `testFor` for that.
+ * when every case is an array; any other case is passed whole. `fn` gets no test context; use `lzTestFor` for that.
  * A template literal table names its columns in its first line and gives `fn` one object per row. The name formats
  * the case as in Vitest's `test.each`: `%s %d %i %f %j %o %O %c`, `%#`, `%$`, `%%` and `$` paths.
  */
-export const testEach: Modified<TestEachFunction> = modified(eachCases, {});
+export const lzTestEach: Modified<LzTestEachFunction> = modified(eachCases, {});
 
 function eachCases(flags: Flags, cases: readonly unknown[]): Register<EachCallback> {
   const spread = cases.every(Array.isArray);

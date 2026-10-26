@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import {
   ACTIVE_MUTANT_ENV,
   ENV,
@@ -250,7 +250,7 @@ describe('wrapNodeTest', () => {
     ]);
   });
 
-  testEach(['describe', 'suite', 'test'] as const)("keeps the other properties of node:test's %s", (kind) => {
+  lzTestEach(['describe', 'suite', 'test'] as const)("keeps the other properties of node:test's %s", (kind) => {
     const { module } = wrapped();
 
     assert.equal((module[kind] as unknown as { mock: string }).mock, `${kind}.mock`);
@@ -1061,7 +1061,7 @@ describe('wrapNodeTest', () => {
 
   const bails = [true, false].map((bail) => ({ bail, verb: bail ? 'skips' : 'runs', mode: bail ? 'on' : 'off' }));
 
-  testEach(bails)('$verb the tests after a reported failure with bail $mode', async ({ bail }) => {
+  lzTestEach(bails)('$verb the tests after a reported failure with bail $mode', async ({ bail }) => {
     const { module, registrations, tests } = wrapped(undefined, bail);
     const ran: string[] = [];
     module.it('before the failure', () => {

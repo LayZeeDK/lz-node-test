@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { testFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
 import { checkMemory, watch, workersAllowed } from '../../src/watchdog.ts';
 
 const DATA = { limitMB: 200, recordPath: '/out/4321.memory.json' };
@@ -21,7 +21,7 @@ function check(rssBytes: number) {
 }
 
 describe('workersAllowed', () => {
-  testFor([
+  lzTestFor([
     ['outside the permission model', undefined, true],
     ['under the permission model with workers', true, true],
     ['under the permission model without workers', false, false],
@@ -69,7 +69,7 @@ describe('checkMemory', () => {
     assert.deepEqual(kills, [[process.pid, 'SIGKILL']]);
   });
 
-  testFor([
+  lzTestFor([
     ['at the limit', 200 * MB],
     ['just below the limit after rounding', 200.4 * MB],
   ] as const)('leaves the process alone %s', ([, rssBytes]) => {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { testEach } from '../../src/test-each.ts';
+import { lzTestEach } from '../../src/test-each.ts';
 import { formatName, formatTitle } from '../../src/title.ts';
 
 const circular: { self?: unknown } = {};
@@ -9,7 +9,7 @@ circular.self = circular;
 const digits = (length: number) => Array.from({ length }, (_, i) => i % 10).join('');
 
 describe('formatName', () => {
-  testEach([
+  lzTestEach([
     ['a string', 'case %s', 'case %s'],
     ['a named function', function named() {}, 'named'],
     ['an anonymous function', [() => {}][0], '<anonymous>'],
@@ -22,7 +22,7 @@ describe('formatName', () => {
 });
 
 describe('formatTitle', () => {
-  testEach([
+  lzTestEach([
     ['%s', ['abc'], 'abc'],
     ['%s', [1.5], '1.5'],
     ['%s', [-0], '-0'],
@@ -75,7 +75,7 @@ describe('formatTitle', () => {
     assert.throws(() => formatTitle('%j', [10n], 0), { name: 'TypeError', message: /BigInt/ });
   });
 
-  testEach([
+  lzTestEach([
     ['%o', [digits(40)], `'${digits(38)}…'`],
     ['%o', [`'${digits(49)}`], `"'${digits(37)}…"`],
     ['%o', [digits(37)], `'${digits(37)}'`],
@@ -94,7 +94,7 @@ describe('formatTitle', () => {
     assert.equal(formatTitle(template, items, 0), expected);
   });
 
-  testEach([
+  lzTestEach([
     ['$a and $b', [{ a: 1, b: 'x' }], '1 and x'],
     ['$a.b, $a.c', [{ a: { b: 2 } }], '2, undefined'],
     ['$a[10][1]', [{ a: [...Array.from({ length: 10 }), ['x', 'y']] }], 'y'],

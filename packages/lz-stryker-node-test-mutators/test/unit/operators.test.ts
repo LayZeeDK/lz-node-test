@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { operatorsFor, productionOperators, testOperators } from '../../src/operators.ts';
 
 describe('the catalogues', () => {
-  testEach([
+  lzTestEach([
     ['production', productionOperators, ['NodeTimerDelay', 'NodeEventName', 'AssertStatement']],
     ['test', testOperators, ['AssertCall', 'AssertValidator']],
   ])('name the %s operators', (_title, operators, names) => {
@@ -17,7 +17,7 @@ describe('the catalogues', () => {
 });
 
 describe('operatorsFor', () => {
-  testEach([
+  lzTestEach([
     ['tools/runner/process-end.test.ts', testOperators],
     ['tools/runner/process-end.ts', productionOperators],
     ['tools/runner/index.fixtures.ts', productionOperators],

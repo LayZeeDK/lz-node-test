@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
 
-import { testFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
 import { ENV } from '../../src/hook-core.ts';
 import {
   complete,
@@ -119,7 +119,7 @@ describe('NodeTestRunner limits', () => {
     assert.ok(limits[0] < 1024 + 1.5 * 500, String(limits));
     assert.deepEqual(limits, [limits[0], limits[0], limits[0]]);
   });
-  testFor([
+  lzTestFor([
     ['the 1024 MB floor, with a warning once,', undefined, [1024, 1024], 1],
     ['lzStrykerNodeTest.maxMemoryMB when set, without a warning,', 1500, [1500, 1500], 0],
   ] as const)(

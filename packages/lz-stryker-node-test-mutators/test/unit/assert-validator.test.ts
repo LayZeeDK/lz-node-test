@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { assertValidator } from '../../src/assert-validator.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 
@@ -10,7 +10,7 @@ const REJECTS = 'Promise.reject(new Error("Stryker"))';
 const STRICT = "import assert from 'node:assert/strict';\n";
 
 describe('AssertValidator', () => {
-  testEach([
+  lzTestEach([
     ['assert.throws', `${STRICT}assert.throws(() => parse(''), /empty/);`, [THROWS]],
     ['assert.throws without a validator', `${STRICT}assert.throws(() => parse(''));`, [THROWS]],
     ['assert.rejects', `${STRICT}await assert.rejects(load(), { message: 'gone' });`, [REJECTS]],
@@ -24,7 +24,7 @@ describe('AssertValidator', () => {
     assert.deepEqual(await mutantsOf(assertValidator, source), expected);
   });
 
-  testEach([
+  lzTestEach([
     ['a spread', `${STRICT}assert.throws(...args);`],
     ['assert.doesNotThrow', `${STRICT}assert.doesNotThrow(f);`],
     ['assert.doesNotReject', `${STRICT}await assert.doesNotReject(p);`],

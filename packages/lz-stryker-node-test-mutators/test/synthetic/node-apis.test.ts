@@ -6,7 +6,7 @@ import { describe, it, mock } from 'node:test';
 import timers from 'node:timers';
 import timersPromises from 'node:timers/promises';
 
-import { testEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/lz-node-test';
 import { closed, idle, later, onEnd, onFinish, onIdle, onSent, pause, poll, share, total, wait } from './node-apis.ts';
 
 const MS = 10;
@@ -34,7 +34,7 @@ async function callsOf(owner: object, method: string, run: () => unknown): Promi
 describe('the timers', () => {
   const callback = () => {};
 
-  testEach([
+  lzTestEach([
     ['pause', timersPromises, 'setTimeout', () => pause(MS), [MS]],
     ['wait', timersPromises.scheduler, 'wait', () => wait(MS), [MS]],
     ['later', timers, 'setTimeout', () => later(callback, MS), [callback, MS]],
