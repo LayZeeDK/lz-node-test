@@ -719,7 +719,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       });
       const { exitCode, stderr } = await processEnd(child, CLOSE_GRACE_MS, process.platform);
       // processEnd rejects for a process that failed to start, the only kind without a pid.
-      const mainRecord = recordName(child.pid!, 0);
+      const mainRecord = child.pid === undefined ? undefined : recordName(child.pid, 0);
       let unreadable: string | undefined;
       const records = readdirSync(outDir).flatMap((name) => {
         try {

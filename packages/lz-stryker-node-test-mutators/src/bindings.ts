@@ -15,13 +15,12 @@ export interface ImportOf {
 /** Only ES module `import` declarations count: the operators do not read CommonJS `require`. */
 export function importOf(path: NodePath, name: string): ImportOf | undefined {
   const bound = path.scope.getBinding(name)?.path;
-  const declaration = bound?.parent;
 
-  if (declaration?.type !== 'ImportDeclaration') {
+  if (bound?.parent.type !== 'ImportDeclaration') {
     return undefined;
   }
 
-  const specifier = bound!.node;
+  const { parent: declaration, node: specifier } = bound;
 
   return {
     source: declaration.source.value,

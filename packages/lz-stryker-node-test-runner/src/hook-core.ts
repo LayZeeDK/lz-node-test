@@ -537,11 +537,11 @@ export function recordEvents(
       diagnostics.push(data.message);
     }
 
-    if (type !== 'test:pass' && type !== 'test:fail') {
+    if ((type !== 'test:pass' && type !== 'test:fail') || data.details === undefined) {
       return;
     }
 
-    const { type: kind, duration_ms: timeSpentMs, error } = data.details!;
+    const { type: kind, duration_ms: timeSpentMs, error } = data.details;
 
     // node:test never runs a skipped suite's body, so the suite stands for the tests it declares.
     if (
@@ -554,7 +554,12 @@ export function recordEvents(
 
     // node:test reports a failing `after` hook of the test file as a failure of the file itself, which has no type.
     const fileHook = kind === undefined;
-    const id = fileHook ? testId(testFile, AFTER_HOOK) : ids.get(data.nesting)!;
+    const id = fileHook ? testId(testFile, AFTER_HOOK) : ids.get(data.nesting);
+
+    // node:test starts every test it reports; an event outside that order has no test to record.
+    if (id === undefined) {
+      return;
+    }
 
     const test: RecordedTest = { id, status: 'passed', timeSpentMs };
     const startPosition = positions.get(id);

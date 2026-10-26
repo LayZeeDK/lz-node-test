@@ -86,10 +86,11 @@ export default [
       'n/no-extraneous-import': 'error',
       '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],
       '@typescript-eslint/only-throw-error': ['error', { allowThrowingUnknown: true }],
-      '@typescript-eslint/consistent-type-assertions': [
-        'error',
-        { assertionStyle: 'as', objectLiteralTypeAssertions: 'never', arrayLiteralTypeAssertions: 'never' },
-      ],
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/non-nullable-type-assertion-style': 'off',
+      // It asks for `as const`, which the `as` ban below reports in src.
+      '@typescript-eslint/prefer-as-const': 'off',
       'no-restricted-syntax': [
         'error',
         {
@@ -97,8 +98,8 @@ export default [
           message: 'Pass the delay explicitly, so LzNodeTimerDelay can mutate it.',
         },
         {
-          selector:
-            "TSAsExpression:not([expression.type='Identifier']):not([expression.type='MemberExpression']):not([expression.type='ThisExpression']):not([expression.type='TSAsExpression'])",
+          // Also `as const`, which consistent-type-assertions allows.
+          selector: 'TSAsExpression, TSTypeAssertion',
           message:
             'Stryker 10 mutates nothing inside an `as` expression. Annotate the binding, use `satisfies`, or Object.freeze() a literal table instead.',
         },

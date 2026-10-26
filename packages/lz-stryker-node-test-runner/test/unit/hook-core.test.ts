@@ -130,6 +130,18 @@ describe('recordEvents', () => {
     );
   });
 
+  it('records no test for a result without details, or one whose test did not start', () => {
+    assert.deepEqual(
+      record([
+        { type: 'test:start', data: { name: 'no details', nesting: 0 } },
+        { type: 'test:pass', data: { name: 'no details', nesting: 0 } },
+        { type: 'test:fail', data: { name: 'not started', nesting: 1, details: testDetails } },
+        ...reported('recorded', 0, 'pass', testDetails),
+      ]),
+      [{ id: `${TEST_FILE} > recorded`, status: 'passed', timeSpentMs: 1.5 }],
+    );
+  });
+
   it('records a failed test with what it threw, or with the message node:test gives the failure', () => {
     const failure = (message: string, cause: unknown, failureType = 'testCodeFailure') => ({
       ...testDetails,
