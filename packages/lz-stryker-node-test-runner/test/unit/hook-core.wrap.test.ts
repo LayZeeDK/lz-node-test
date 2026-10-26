@@ -5,15 +5,18 @@ import { describe, it } from 'node:test';
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
 import { lzTestEach } from '@layzee/lz-node-test';
+import { ACTIVE_MUTANT_ENV, ENV, wrapNodeTest, type CallSite, type RecordedTest } from '../../src/hook-core.ts';
 import {
-  ACTIVE_MUTANT_ENV,
-  ENV,
-  wrapNodeTest,
-  type CallSite,
-  type RecordedTest,
-  type NodeTestModule,
-} from '../../src/hook-core.ts';
-import { bodyOf, fakeNodeTest, rawBodyOf, runBodies, TEST_FILE, testContext, type Fn } from '../hook-core.fixtures.ts';
+  bodyOf,
+  callable,
+  fakeNodeTest,
+  rawBodyOf,
+  runBodies,
+  TEST_FILE,
+  testContext,
+  type Fn,
+} from '../hook-core.fixtures.ts';
+import { callMember, member } from '../index.fixtures.ts';
 
 interface Subtests {
   test: (name: string, body: Fn) => unknown;
@@ -116,7 +119,7 @@ describe('wrapNodeTest', () => {
     const run = (kind: string, name: string, nth: number, context = testContext()) => {
       const registration = registrations.filter((candidate) => candidate.kind === kind && candidate.name === name)[nth];
 
-      return (registration?.rest.find((arg) => typeof arg === 'function') as Fn)(context);
+      return callable(registration?.rest.find((arg) => typeof arg === 'function'))(context);
     };
 
     await run('test', 'works', 0);
@@ -219,7 +222,7 @@ describe('wrapNodeTest', () => {
 
   it('names suites and tests without a name, or with options first, after their bodies, like node:test', async () => {
     const { module, registrations, seen, see } = wrapped();
-    const call = (register: unknown, ...args: unknown[]) => (register as (...args: unknown[]) => unknown)(...args);
+    const call = (register: unknown, ...args: unknown[]) => callable(register)(...args);
     call(module.describe, '', () => {
       call(module.it, () => see());
     });
@@ -231,7 +234,7 @@ describe('wrapNodeTest', () => {
     });
 
     for (const registration of registrations.filter(({ kind }) => kind !== 'describe')) {
-      await (registration.rest.find((arg) => typeof arg === 'function') as Fn)(testContext());
+      await callable(registration.rest.find((arg) => typeof arg === 'function'))(testContext());
     }
 
     assert.deepEqual(
@@ -253,13 +256,13 @@ describe('wrapNodeTest', () => {
   lzTestEach(['describe', 'suite', 'test'] as const)("keeps the other properties of node:test's %s", (kind) => {
     const { module } = wrapped();
 
-    assert.equal((module[kind] as unknown as { mock: string }).mock, `${kind}.mock`);
+    assert.equal(member(module[kind], 'mock'), `${kind}.mock`);
   });
 
   it('keeps the other properties of the node:test module', () => {
     const { module } = wrapped();
 
-    assert.equal((module as unknown as { run: string }).run, 'run');
+    assert.equal(member(module, 'run'), 'run');
   });
 
   it('wraps the module, which is the test function, in a copy and leaves node:test unchanged', async () => {
@@ -432,7 +435,7 @@ describe('wrapNodeTest', () => {
     await bodyOf(registrations, 'parent')(testContext(registrations));
 
     assert.deepEqual(
-      registrations.map(({ name, rest }) => [name, (rest[0] as { skip?: true }).skip]),
+      registrations.map(({ name, rest }) => [name, member(rest[0], 'skip')]),
       [
         ['parent', undefined],
         ['paren', true],
@@ -650,7 +653,7 @@ describe('wrapNodeTest', () => {
       const { module, registrations, seen, see } = wrapped();
       module.it('parent', async (t: Subtests) => {
         t.test('child', (_t: unknown, done: unknown) => {
-          (done as () => void)();
+          callable(done)();
           throw 0;
         });
         assert.throws(
@@ -709,7 +712,7 @@ describe('wrapNodeTest', () => {
 
       return 'hook result';
     };
-    const withDone = (_t: unknown, done: unknown) => (done as () => void)();
+    const withDone = (_t: unknown, done: unknown) => callable(done)();
     const topLevelBefore = () => {};
     module.before(topLevelBefore, { timeout: 5 });
     module.beforeEach(observe, { timeout: 6 });
@@ -720,7 +723,7 @@ describe('wrapNodeTest', () => {
     const hooks = registrations.filter(({ kind }) => kind !== 'describe').map(({ kind, rest }) => ({ kind, rest }));
 
     assert.deepEqual(
-      hooks.map(({ kind, rest }) => [kind, rest.slice(1), (rest[0] as Fn).length]),
+      hooks.map(({ kind, rest }) => [kind, rest.slice(1), member(rest[0], 'length')]),
       [
         ['before', [{ timeout: 5 }], 0],
         ['beforeEach', [{ timeout: 6 }], 0],
@@ -734,7 +737,7 @@ describe('wrapNodeTest', () => {
     const results = [];
 
     for (const index of [1, 3]) {
-      results.push((hooks[index]?.rest[0] as Fn).call('hook this', 'context'));
+      results.push(callable(hooks[index]?.rest[0]).call('hook this', 'context'));
       ns.activeMutant = undefined;
     }
 
@@ -744,7 +747,7 @@ describe('wrapNodeTest', () => {
 
   describe('hooks', () => {
     function hooksOf(registrations: { kind: string; rest: unknown[] }[], kind: string): Fn[] {
-      return registrations.filter((registration) => registration.kind === kind).map(({ rest }) => rest[0] as Fn);
+      return registrations.filter((registration) => registration.kind === kind).map(({ rest }) => callable(rest[0]));
     }
 
     it('makes the test that a beforeEach hook runs for current until its promise settles or it calls `done`', async () => {
@@ -762,7 +765,7 @@ describe('wrapNodeTest', () => {
       });
       module.beforeEach((_t: unknown, done: unknown) => {
         see();
-        finish = done as (error?: unknown) => void;
+        finish = callable(done);
 
         return 'called back';
       });
@@ -774,7 +777,7 @@ describe('wrapNodeTest', () => {
       module.describe('suite', () => {
         module.it('second', see);
       });
-      const [promised, callback, throwing] = hooksOf(registrations, 'beforeEach') as [Fn, Fn, Fn];
+      const [promised, callback, throwing] = hooksOf(registrations, 'beforeEach');
       const calls: unknown[][] = [];
 
       const context = testContext([], 'suite > second');
@@ -894,7 +897,7 @@ describe('wrapNodeTest', () => {
 
       await bodyOf(registrations, 'parent')(testContext(registrations, 'parent'));
       const [beforeEach] = registrations.filter(({ kind }) => kind === 't.beforeEach');
-      await (beforeEach?.rest[0] as Fn)(testContext([], 'parent > child'));
+      await callable(beforeEach?.rest[0])(testContext([], 'parent > child'));
       await hooksOf(registrations, 'after')[0]?.(testContext([], 'parent'));
 
       assert.deepEqual([beforeEach?.self, beforeEach?.rest[1]], [context, { timeout: 5 }]);
@@ -987,11 +990,11 @@ describe('wrapNodeTest', () => {
 
   it('wraps the functions that `it` carries, as `it` is `test` in node:test', async () => {
     const { module, registrations, seen, see } = wrapped([`${TEST_FILE} > selected > wanted`]);
-    const it = module.it as unknown as NodeTestModule;
-    it.describe('unselected', () => {
-      it.after(() => {});
+    const { it } = module;
+    callMember(it, 'describe', 'unselected', () => {
+      callMember(it, 'after', () => {});
     });
-    it.describe('selected', () => {
+    callMember(it, 'describe', 'selected', () => {
       it('wanted', see);
     });
 

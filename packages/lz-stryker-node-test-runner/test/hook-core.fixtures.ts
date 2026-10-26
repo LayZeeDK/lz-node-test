@@ -14,6 +14,19 @@ export interface Registration {
 
 export const TEST_FILE = join('/repo', 'a.test.ts');
 
+/** Lets a test call a function it only holds as `unknown`, such as one the code under test registered. */
+export function callable(value: unknown): Fn {
+  if (typeof value !== 'function') {
+    throw new TypeError(`${String(value)} is no function.`);
+  }
+
+  return function (this: unknown, ...args: unknown[]) {
+    const result: unknown = Reflect.apply(value, this, args);
+
+    return result;
+  };
+}
+
 export function fakeNodeTest(expectFailure = true) {
   const registrations: Registration[] = [];
   const suiteResults: unknown[] = [];
