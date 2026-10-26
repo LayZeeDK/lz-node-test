@@ -8,8 +8,9 @@ import { TestStatus } from '@stryker-mutator/api/test-runner';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import { ACTIVE_MUTANT_ENV, ENV } from '../../src/hook-core.ts';
-import { ACTIVE_MUTANT, HOOK_URL, logger } from '../index.fixtures.ts';
+import { ACTIVE_MUTANT, HOOK_URL, logger, strykerOptions } from '../index.fixtures.ts';
 import {
+  LzStrykerNodeTestRunner,
   lzFileError,
   lzFilesFor,
   lzMergeCoverage,
@@ -226,6 +227,33 @@ describe('lzParseRecord', () => {
 
   it('refuses what does not parse', () => {
     assert.throws(() => lzParseRecord('{'), SyntaxError);
+  });
+});
+
+describe('LzStrykerNodeTestRunner options', () => {
+  const runner = (lzStrykerNodeTest: unknown) =>
+    new LzStrykerNodeTestRunner({ ...strykerOptions(), lzStrykerNodeTest }, logger());
+
+  lzTestEach([
+    ['no options', undefined],
+    ['empty options', {}],
+    ['every option', { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'], maxMemoryMB: 512 }],
+  ])('takes %s', (_title, options) => {
+    assert.ok(runner(options) instanceof LzStrykerNodeTestRunner);
+  });
+
+  lzTestFor([null, [], 'options'])('refuses %j, which is no options object', (options) => {
+    assert.throws(() => runner(options), { message: 'not valid lzStrykerNodeTest options' });
+  });
+
+  lzTestEach([
+    [{ testFiles: 'a.test.ts' }, 'testFiles'],
+    [{ testFiles: [1] }, 'testFiles'],
+    [{ nodeArgs: '--enable-source-maps' }, 'nodeArgs'],
+    [{ nodeArgs: [null] }, 'nodeArgs'],
+    [{ maxMemoryMB: '512' }, 'maxMemoryMB'],
+  ])('refuses %j, naming %s', (options, field) => {
+    assert.throws(() => runner(options), { message: `not valid lzStrykerNodeTest options: ${field}` });
   });
 });
 

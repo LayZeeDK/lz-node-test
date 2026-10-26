@@ -208,6 +208,7 @@ function optional<K extends string, T>(
   value: unknown,
   check: (value: unknown) => value is T,
   field: string = key,
+  fail: (field: string) => never = notARecord,
 ): { [P in K]?: T } {
   const result: { [P in K]?: T } = {};
 
@@ -216,7 +217,7 @@ function optional<K extends string, T>(
   }
 
   if (!check(value)) {
-    notARecord(field);
+    fail(field);
   }
 
   result[key] = value;
@@ -276,6 +277,31 @@ export function lzParseRecord(json: string): ProcessRecord {
     ...optional('diagnostics', diagnostics, isStrings),
     ...optional('unfinished', unfinished, isTrue),
     ...optional('heldOpen', heldOpen, isStrings),
+  };
+}
+
+function notOptions(field?: string): never {
+  const message = 'not valid lzStrykerNodeTest options';
+
+  throw new Error(field === undefined ? message : `${message}: ${field}`);
+}
+
+/** Stryker checks the options against the schema first; this proves the fields the runner reads. */
+function parseOptions(value: unknown): LzStrykerNodeTestOptions {
+  if (value === undefined) {
+    return {};
+  }
+
+  if (!isObject(value)) {
+    notOptions();
+  }
+
+  const { testFiles, nodeArgs, maxMemoryMB } = value;
+
+  return {
+    ...optional('testFiles', testFiles, isStrings, 'testFiles', notOptions),
+    ...optional('nodeArgs', nodeArgs, isStrings, 'nodeArgs', notOptions),
+    ...optional('maxMemoryMB', maxMemoryMB, isNumber, 'maxMemoryMB', notOptions),
   };
 }
 
@@ -532,17 +558,17 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   readonly #log: Logger;
 
   constructor(options: StrykerOptions, log: Logger) {
-    const lzStrykerNodeTest = (options as { lzStrykerNodeTest?: LzStrykerNodeTestOptions }).lzStrykerNodeTest;
-    const patterns = lzStrykerNodeTest?.testFiles ?? DEFAULTS.testFiles.default;
+    const lzStrykerNodeTest = parseOptions(options.lzStrykerNodeTest);
+    const patterns = lzStrykerNodeTest.testFiles ?? DEFAULTS.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
     this.#patterns = [...patterns, ...options.testFiles];
-    this.#nodeArgs = withoutReporters(lzStrykerNodeTest?.nodeArgs ?? DEFAULTS.nodeArgs.default);
+    this.#nodeArgs = withoutReporters(lzStrykerNodeTest.nodeArgs ?? DEFAULTS.nodeArgs.default);
     this.#dryRunConcurrency = lzTestRunnerConcurrency(
       options.concurrency,
       options.checkers.length > 0,
       availableParallelism(),
     );
-    this.#memoryLimits = memoryLimits(lzStrykerNodeTest?.maxMemoryMB, peakMemoryDir(process.ppid), log);
+    this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, peakMemoryDir(process.ppid), log);
     this.#allowEmpty = options.allowEmpty;
     this.#log = log;
   }
