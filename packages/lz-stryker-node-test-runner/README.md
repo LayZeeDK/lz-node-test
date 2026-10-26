@@ -70,4 +70,6 @@ To fix it, close what the tests open in an `after` hook. If you cannot, pass `--
 ## Temporary files
 
 The runner keeps its run directories in `os.tmpdir()`, named `lz-stryker-node-test-*`, and removes them when the run
-ends. A directory that a crashed run left behind is removed by the next run.
+ends. One directory stays: `lz-stryker-node-test-peaks-<pid>-dry-run`, the memory peaks of the dry run, which the
+mutant runs read until Stryker ends. The next run removes it, as it removes any directory that a crashed run left
+behind. With `maxMemoryMB` set, the runner records no peaks and leaves nothing.
