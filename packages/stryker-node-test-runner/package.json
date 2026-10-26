@@ -33,6 +33,13 @@
     "name": "stryker-node-test-runner",
     "tags": [
       "type:lib"
-    ]
+    ],
+    "targets": {
+      "test-integration": {
+        "dependsOn": [
+          "build"
+        ]
+      }
+    }
   }
 }

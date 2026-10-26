@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { globSync, mkdirSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
@@ -81,8 +81,10 @@ export interface FileRun {
   unreadable?: string;
 }
 
-const HOOK_URL = pathToFileURL(resolve(import.meta.dirname, 'hook.ts')).href;
-const REPORTER_URL = pathToFileURL(resolve(import.meta.dirname, 'reporter.ts')).href;
+// .ts from the source, .js from the build.
+const EXT = extname(import.meta.filename);
+const HOOK_URL = pathToFileURL(resolve(import.meta.dirname, `hook${EXT}`)).href;
+const REPORTER_URL = pathToFileURL(resolve(import.meta.dirname, `reporter${EXT}`)).href;
 const CLOSE_GRACE_MS = 1_500;
 
 /** Without `perTest`, the hits inside tests count as static, as Stryker's coverage analysis `all` expects. */

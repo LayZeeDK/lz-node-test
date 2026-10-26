@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
-import { resolve } from 'node:path';
+import { extname, resolve } from 'node:path';
 import { getCallSites } from 'node:util';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 
@@ -11,7 +11,7 @@ import { workersAllowed } from './watchdog.ts';
 // whose code this process's tests reach.
 const WATCHDOG = `Promise.all([
   import('node:worker_threads'),
-  import(${JSON.stringify(new URL('./watchdog.ts', import.meta.url).href)}),
+  import(${JSON.stringify(new URL(`./watchdog${extname(import.meta.filename)}`, import.meta.url).href)}),
 ]).then(([{ workerData }, { watch }]) => watch(workerData));`;
 
 // Exported so the tests can call them in their own process: those of the test files they start report no coverage.
