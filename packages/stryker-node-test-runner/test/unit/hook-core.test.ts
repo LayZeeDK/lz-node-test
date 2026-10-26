@@ -1161,7 +1161,7 @@ describe('install', () => {
       const [finished, failing, later] = afterHooks(h.fake);
 
       finished?.();
-      assert.throws(() => failing?.());
+      assert.throws(() => failing?.(), { message: 'after failed' });
       later?.();
       finished?.();
 
