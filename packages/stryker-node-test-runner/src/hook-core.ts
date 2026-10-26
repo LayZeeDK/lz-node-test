@@ -118,7 +118,6 @@ export type NodeTestModule = Register & {
   afterEach: HookRegistrar;
 };
 
-/** The functions of node:test that the wrapper wraps. */
 export type NodeTestTarget = TargetRegister & {
   describe: TargetRegister;
   suite: TargetRegister;
