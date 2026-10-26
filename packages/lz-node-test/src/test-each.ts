@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- the types copy Vitest's test.each, whose any lets TypeScript infer each row's arguments */
 import { modified, type Modified } from './modified.ts';
 import {
   register,

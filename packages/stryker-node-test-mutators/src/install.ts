@@ -170,6 +170,7 @@ export async function resolveFromCore(corePackage: string = corePackageJson()): 
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the instrumenter exports only its index, so these modules have no importable types
 function importFile(path: string): Promise<any> {
   return import(pathToFileURL(path).href);
 }

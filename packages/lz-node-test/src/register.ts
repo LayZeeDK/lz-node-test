@@ -17,6 +17,7 @@ export interface EachOptions extends TestOptions {
 }
 
 export type Flags = Pick<EachOptions, 'skip' | 'only' | 'todo' | 'fails'>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- unknown[] would reject a callback with typed parameters
 export type EachCallback = (...args: any[]) => Awaitable<void>;
 type Body = (t: TestContext) => Awaitable<void>;
 

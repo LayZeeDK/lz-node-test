@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- the types copy Vitest's test.for, whose any lets TypeScript infer each row's type */
 import type { TestContext } from 'node:test';
 
 import { modified, type Modified } from './modified.ts';
