@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe } from 'node:test';
 
 import type { NodePath } from '@babel/core';
 import type { Location } from '@stryker-mutator/api/core';

@@ -85,5 +85,7 @@ function storedPeak(path: string): number | undefined {
     const stored = readFileSync(path, 'utf8');
 
     return /^\d+$/.test(stored) ? Number(stored) : undefined;
-  } catch {}
+  } catch {
+    return undefined;
+  }
 }

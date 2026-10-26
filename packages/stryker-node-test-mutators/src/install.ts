@@ -130,6 +130,7 @@ function coreBin(argv1: string, realpath: (path: string) => string): string | un
     return CORE_BIN.test(bin) ? bin : undefined;
   } catch {
     // `node --eval` and the REPL run no script file.
+    return undefined;
   }
 }
 
