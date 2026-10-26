@@ -29,7 +29,8 @@ import {
   type TestEvent,
 } from '../../src/hook-core.ts';
 import { lzParseRecord } from '../../src/index.ts';
-import { bodyOf, fakeNodeTest, TEST_FILE, testContext, type Fn } from '../hook-core.fixtures.ts';
+import { bodyOf, callable, fakeNodeTest, TEST_FILE, testContext, type Fn } from '../hook-core.fixtures.ts';
+import { member } from '../index.fixtures.ts';
 
 function reported(
   name: string,
@@ -502,8 +503,10 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
 const OUT = join('/tmp', 'out');
 
 /** The `after` hooks registered with node:test, in order; the hook's own comes first. */
-function afterHooks(fake: ReturnType<typeof fakeNodeTest>): Fn[] {
-  return fake.registrations.filter(({ kind }) => kind === 'after').map(({ rest }) => rest[0] as Fn);
+function afterHooks(fake: ReturnType<typeof fakeNodeTest>): (Fn | undefined)[] {
+  return fake.registrations
+    .filter(({ kind }) => kind === 'after')
+    .map(({ rest: [hook] }) => (typeof hook === 'function' ? callable(hook) : undefined));
 }
 
 /** A test file whose test, `name`, has run its body and been reported. */
@@ -751,7 +754,9 @@ describe('install', () => {
     const { deps, records, calls, exit, onExit } = harness({ [ENV.out]: OUT, [ENV.dryRun]: 'true' });
     install(deps);
     const coverage = { static: {}, perTest: {} };
-    deps.global.__stryker__!.mutantCoverage = coverage;
+    const ns = deps.global.__stryker__;
+    assert.ok(ns);
+    ns.mutantCoverage = coverage;
     onExit(() => {
       Object.assign(coverage.static, { exit: 1 });
     });
@@ -879,9 +884,7 @@ describe('install', () => {
     wrapped().it('unwanted', () => {});
 
     assert.deepEqual(
-      fake.registrations
-        .filter(({ kind }) => kind === 'test')
-        .map(({ name, rest }) => [name, (rest[0] as { skip?: true }).skip]),
+      fake.registrations.filter(({ kind }) => kind === 'test').map(({ name, rest }) => [name, member(rest[0], 'skip')]),
       [
         ['wanted', undefined],
         ['unwanted', true],
@@ -1073,7 +1076,7 @@ describe('install', () => {
       await ranAndReported(h, 'fails', 'fail');
 
       finished?.();
-      const firstDone = first?.() as Promise<unknown>;
+      const firstDone: unknown = first?.();
       h.wrapped().after(() => {});
       const [, , , added] = afterHooks(h.fake);
       resolveFirst();
@@ -1228,7 +1231,12 @@ describe('install', () => {
     const written = ['true', 'false', undefined].map((dryRun) => {
       const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.dryRun]: dryRun, [ENV.hitLimit]: '9' });
       install(deps);
-      const ns = deps.global.__stryker__!;
+      const ns = deps.global.__stryker__;
+
+      if (ns === undefined) {
+        throw new Error('install set no __stryker__ namespace.');
+      }
+
       ns.mutantCoverage = coverage;
       ns.hitCount = 7;
       exit();

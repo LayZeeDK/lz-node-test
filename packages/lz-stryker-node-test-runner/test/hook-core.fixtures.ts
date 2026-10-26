@@ -20,11 +20,14 @@ export function callable(value: unknown): Fn {
     throw new TypeError(`${String(value)} is no function.`);
   }
 
-  return function (this: unknown, ...args: unknown[]) {
+  const call = function (this: unknown, ...args: unknown[]) {
     const result: unknown = Reflect.apply(value, this, args);
 
     return result;
   };
+
+  // The wrapper declares the same parameters, as node:test passes `done` by a function's length.
+  return Object.defineProperty(call, 'length', { value: value.length });
 }
 
 export function fakeNodeTest(expectFailure = true) {
@@ -33,11 +36,11 @@ export function fakeNodeTest(expectFailure = true) {
   const register = (kind: string) =>
     function (this: unknown, name: string, ...rest: unknown[]) {
       registrations.push({ kind, name, rest, self: this });
-      const body = rest.find((arg) => typeof arg === 'function') as Fn | undefined;
+      const body = rest.find((arg) => typeof arg === 'function');
 
-      if (/^(describe|suite)(\.only|\.todo)?$/.test(kind) && body) {
+      if (/^(describe|suite)(\.only|\.todo)?$/.test(kind) && typeof body === 'function') {
         try {
-          suiteResults.push(body.call('suite this', 'suite argument'));
+          suiteResults.push(Reflect.apply(body, 'suite this', ['suite argument']));
         } catch (error) {
           suiteResults.push(error);
         }
@@ -110,7 +113,7 @@ export function rawBodyOf(registrations: Registration[], name: string): Fn {
   const registration = registrations.find((candidate) => candidate.name === name);
   assert.ok(registration, `${name} was not registered`);
 
-  return registration.rest.find((arg) => typeof arg === 'function') as Fn;
+  return callable(registration.rest.find((arg) => typeof arg === 'function'));
 }
 
 export function bodyOf(
@@ -123,7 +126,11 @@ export function bodyOf(
     try {
       return await body.apply(this, args);
     } finally {
-      await (args[0] as Partial<ReturnType<typeof testContext>> | undefined)?.end?.();
+      const [context] = args;
+
+      if (typeof context === 'object' && context !== null && 'end' in context && typeof context.end === 'function') {
+        await Reflect.apply(context.end, context, []);
+      }
     }
   };
 }
