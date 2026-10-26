@@ -170,7 +170,7 @@ describe('hook', () => {
       unref.mock.calls.map((call) => call.this),
       [watching],
     );
-    assert.doesNotThrow(() => watching.emit('error', new Error('preload failed')));
+    watching.emit('error', new Error('preload failed'));
 
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);
     added.exit[0]?.();
