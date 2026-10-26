@@ -13,4 +13,4 @@ testFor.fails.skipIf(1)([1])('modifiers', (n, t) => {
   t satisfies TestContext;
 });
 // @ts-expect-error The modifiers go before the table.
-testEach([1]).skip;
+void testEach([1]).skip;
