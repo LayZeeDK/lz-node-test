@@ -28,7 +28,7 @@ testEach([1, 2])('scalar', (n) => {
   n satisfies number;
 });
 // @ts-expect-error Every argument is a value of the case.
-testEach([1, 2])('extra', (n, extra: string) => {});
+testEach([1, 2])('extra', (_n, _extra: string) => {});
 testEach`a | b ${1} | ${2}`('template', (row) => {
   void row.anything;
 });
@@ -38,4 +38,4 @@ testEach([1])('todo');
 // @ts-expect-error The options go before the function.
 testEach([1])('options last', () => {}, { timeout: 100 });
 // @ts-expect-error A test of testEach gets no context.
-testEach([1])('context', (n: number, t: TestContext) => {});
+testEach([1])('context', (_n: number, _t: TestContext) => {});
