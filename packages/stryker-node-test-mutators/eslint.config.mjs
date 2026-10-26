@@ -9,6 +9,8 @@ export default [
         'error',
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          // The install finds Stryker core's instrumenter through require.resolve, which the rule cannot see.
+          ignoredDependencies: ['@stryker-mutator/core'],
         },
       ],
     },

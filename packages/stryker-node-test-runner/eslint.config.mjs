@@ -9,6 +9,8 @@ export default [
         'error',
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          // Stryker core is the host that loads the runner; the runner never imports it.
+          ignoredDependencies: ['@stryker-mutator/core'],
         },
       ],
     },
