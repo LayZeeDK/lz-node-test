@@ -20,7 +20,7 @@ export function endGroup(
     kill(-pid, 'SIGKILL');
   } catch (error) {
     // The group no longer exists once every process in it has ended.
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ESRCH')) {
       throw error;
     }
   }

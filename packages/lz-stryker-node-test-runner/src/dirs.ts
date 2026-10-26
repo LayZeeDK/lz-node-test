@@ -49,7 +49,9 @@ export function removeDir(
         clearTimeout(timer);
 
         if (waiting) {
-          log.warn(`Left ${dir} for a later runner to remove: ${(error as Error).message}`);
+          log.warn(
+            `Left ${dir} for a later runner to remove: ${error instanceof Error ? error.message : String(error)}`,
+          );
           done();
         }
       },
@@ -64,7 +66,7 @@ export function isRunning(pid: number, kill: (pid: number, signal: 0) => void = 
 
     return true;
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== 'ESRCH';
+    return !(error instanceof Error && 'code' in error && error.code === 'ESRCH');
   }
 }
 

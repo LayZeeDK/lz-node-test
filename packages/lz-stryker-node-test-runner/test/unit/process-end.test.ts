@@ -17,7 +17,7 @@ describe('groupOptions', () => {
 });
 
 describe('endGroup', () => {
-  function setup(platform: NodeJS.Platform, error?: NodeJS.ErrnoException) {
+  function setup(platform: NodeJS.Platform, error?: unknown) {
     const calls: unknown[][] = [];
     const end = () =>
       endGroup(123, platform, (pid, signal) => {
@@ -53,6 +53,17 @@ describe('endGroup', () => {
 
     setup('linux', gone).end();
     assert.throws(() => setup('linux', denied).end(), denied);
+  });
+
+  lzTestEach([
+    ['an Error without a code', new Error('kill failed')],
+    ['an object with the code ESRCH that is no Error', { code: 'ESRCH' }],
+    ['a string', 'ESRCH'],
+  ])('throws %s that killing the group throws', (_title, thrown) => {
+    assert.throws(
+      () => setup('linux', thrown).end(),
+      (error) => error === thrown,
+    );
   });
 });
 

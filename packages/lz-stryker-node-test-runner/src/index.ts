@@ -702,7 +702,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
           // A process that the tests started can still be writing its record when the grace period ends. The test
           // file's own process writes its record before it exits, unless the memory watchdog ends it mid-write.
           if (name === mainRecord) {
-            unreadable = (error as Error).message;
+            unreadable = error instanceof Error ? error.message : String(error);
           }
 
           return [];

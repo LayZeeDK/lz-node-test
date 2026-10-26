@@ -55,6 +55,17 @@ describe('removeDir', () => {
     assert.deepEqual(warnings, [`Left ${DIR} for a later runner to remove: EPERM: operation not permitted`]);
   });
 
+  it('names what the removal rejected with in the warning, also when it is no Error', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { warnings, settled } = removal(() => Promise.reject('EBUSY'));
+
+    assert.equal(await settled(), 'done');
+
+    t.mock.timers.tick(1_000);
+
+    assert.deepEqual(warnings, [`Left ${DIR} for a later runner to remove: EBUSY`]);
+  });
+
   it('stops waiting for a directory still in use after `waitMs`, with a warning', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const { warnings, settled } = removal(() => new Promise(() => {}));
@@ -110,6 +121,18 @@ describe('isRunning', () => {
     };
 
     assert.equal(isRunning(42, kill), expected);
+  });
+
+  lzTestEach([
+    ['an Error without a code', new Error('kill failed')],
+    ['an object with the code ESRCH that is no Error', { code: 'ESRCH' }],
+    ['a string', 'ESRCH'],
+  ])('takes a process as running when signalling it throws %s', (_title, thrown) => {
+    const kill = () => {
+      throw thrown;
+    };
+
+    assert.equal(isRunning(42, kill), true);
   });
 });
 
