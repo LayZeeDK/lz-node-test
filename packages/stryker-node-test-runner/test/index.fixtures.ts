@@ -112,7 +112,7 @@ export function logger(debug: string[] = [], debugEnabled = true, warnings: stri
 }
 
 export interface RunnerOptions {
-  lzNodeTest?: NodeTestOptions;
+  lzStrykerNodeTest?: NodeTestOptions;
   testFiles?: string[];
   concurrency?: number;
   checkers?: string[];
@@ -125,9 +125,9 @@ export function strykerOptions(options: RunnerOptions = {}): StrykerOptions {
 
 export async function initRunner(
   testFiles: string[] | undefined,
-  lzNodeTest: NodeTestOptions = {},
+  lzStrykerNodeTest: NodeTestOptions = {},
 ): Promise<NodeTestRunner> {
-  const options = { lzNodeTest: { ...lzNodeTest, ...(testFiles && { testFiles }) } };
+  const options = { lzStrykerNodeTest: { ...lzStrykerNodeTest, ...(testFiles && { testFiles }) } };
   const runner = new NodeTestRunner(strykerOptions(options), logger());
   await runner.init();
 

@@ -21,7 +21,7 @@ export async function testCode(config) {
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   plugins: ['@stryker-mutator/*', '@layzee/stryker-node-test-runner'],
-  testRunner: 'lz-node-test',
+  testRunner: 'lz-stryker-node-test',
   testRunnerNodeArgs: [SOURCE],
   checkers: ['typescript'],
   checkerNodeArgs: [SOURCE],

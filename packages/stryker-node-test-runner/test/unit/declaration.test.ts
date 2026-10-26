@@ -17,32 +17,32 @@ function validator() {
 }
 
 describe('plugin declaration', () => {
-  it('declares the lz-node-test test runner', () => {
+  it('declares the lz-stryker-node-test test runner', () => {
     assert.deepEqual(strykerPlugins, [
-      { kind: PluginKind.TestRunner, name: 'lz-node-test', injectableClass: NodeTestRunner },
+      { kind: PluginKind.TestRunner, name: 'lz-stryker-node-test', injectableClass: NodeTestRunner },
     ]);
   });
 
   testEach([
     {},
-    { lzNodeTest: {} },
-    { lzNodeTest: { testFiles: ['a.test.ts', 'b/*.test.ts'] } },
-    { lzNodeTest: { nodeArgs: ['--enable-source-maps', '--stack-size=900'] } },
-    { lzNodeTest: { maxMemoryMB: 1500 } },
+    { lzStrykerNodeTest: {} },
+    { lzStrykerNodeTest: { testFiles: ['a.test.ts', 'b/*.test.ts'] } },
+    { lzStrykerNodeTest: { nodeArgs: ['--enable-source-maps', '--stack-size=900'] } },
+    { lzStrykerNodeTest: { maxMemoryMB: 1500 } },
   ])('accepts the options %j', (options) => {
     assert.ok(validator()(options));
   });
 
   testEach([
-    { lzNodeTest: '*.test.ts' },
-    { lzNodeTest: { testFiles: '*.test.ts' } },
-    { lzNodeTest: { testFiles: [1] } },
-    { lzNodeTest: { testfiles: ['*.test.ts'] } },
-    { lzNodeTest: { nodeArgs: '--enable-source-maps' } },
-    { lzNodeTest: { nodeArgs: [1] } },
-    { lzNodeTest: { maxMemoryMB: '1500' } },
-    { lzNodeTest: { maxMemoryMB: 0 } },
-    { lzNodeTest: { maxMemoryMB: 1.5 } },
+    { lzStrykerNodeTest: '*.test.ts' },
+    { lzStrykerNodeTest: { testFiles: '*.test.ts' } },
+    { lzStrykerNodeTest: { testFiles: [1] } },
+    { lzStrykerNodeTest: { testfiles: ['*.test.ts'] } },
+    { lzStrykerNodeTest: { nodeArgs: '--enable-source-maps' } },
+    { lzStrykerNodeTest: { nodeArgs: [1] } },
+    { lzStrykerNodeTest: { maxMemoryMB: '1500' } },
+    { lzStrykerNodeTest: { maxMemoryMB: 0 } },
+    { lzStrykerNodeTest: { maxMemoryMB: 1.5 } },
   ])('rejects the options %j', (options) => {
     assert.ok(!validator()(options));
   });
@@ -56,14 +56,14 @@ describe('plugin declaration', () => {
   });
 
   testEach([
-    [{}, { lzNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [] } }],
+    [{}, { lzStrykerNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [] } }],
     [
-      { lzNodeTest: { maxMemoryMB: 1500 } },
-      { lzNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [], maxMemoryMB: 1500 } },
+      { lzStrykerNodeTest: { maxMemoryMB: 1500 } },
+      { lzStrykerNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [], maxMemoryMB: 1500 } },
     ],
     [
-      { lzNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } },
-      { lzNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } },
+      { lzStrykerNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } },
+      { lzStrykerNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } },
     ],
   ])('fills in the defaults of %j', (options, filled) => {
     assert.ok(validator()(options));

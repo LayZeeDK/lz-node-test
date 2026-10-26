@@ -33,14 +33,14 @@ import { memoryLimits, peakMemoryDir, type MemoryLimits } from './memory-limits.
 import { groupOptions, processEnd } from './process-end.ts';
 import schema from './schema/node-test-runner-options.json' with { type: 'json' };
 
-/** Options under `lzNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
+/** Options under `lzStrykerNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
 export interface NodeTestOptions {
   testFiles?: string[];
   nodeArgs?: string[];
   maxMemoryMB?: number;
 }
 
-const DEFAULTS = schema.properties.lzNodeTest.properties;
+const DEFAULTS = schema.properties.lzStrykerNodeTest.properties;
 
 /** The oldest Node.js the runner supports, as `engines` in package.json says, as major and minor version. */
 export const MIN_NODE_VERSION = [22, 18] as const;
@@ -237,8 +237,8 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
 
     if (run.dryRun) {
       const errorMessage =
-        `A process of "${file}" held ${rssMB} MB in the dry run, more than lzNodeTest.maxMemoryMB (${limitMB} MB), so ` +
-        "its mutant runs would time out. Raise lzNodeTest.maxMemoryMB, or leave it out to derive each file's limit from " +
+        `A process of "${file}" held ${rssMB} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB (${limitMB} MB), so ` +
+        "its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's limit from " +
         'the dry run.';
 
       return { end: { status: DryRunStatus.Error, errorMessage } };
@@ -295,7 +295,7 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
       const errorMessage =
         `Test file "${file}" stayed alive after its tests and root after hooks ended, held open by ${heldBy}, so ` +
         'node --test would not end either. Close what its tests open in an after hook, or pass --test-force-exit in ' +
-        'lzNodeTest.nodeArgs, as for node --test (NODE_OPTIONS does not allow it); node:test then loses errors ' +
+        'lzStrykerNodeTest.nodeArgs, as for node --test (NODE_OPTIONS does not allow it); node:test then loses errors ' +
         'raised after the tests and root after hooks end.';
 
       return { end: { status: DryRunStatus.Error, errorMessage } };
@@ -441,17 +441,17 @@ export class NodeTestRunner implements TestRunner {
   readonly #log: Logger;
 
   constructor(options: StrykerOptions, log: Logger) {
-    const lzNodeTest = (options as { lzNodeTest?: NodeTestOptions }).lzNodeTest;
-    const patterns = lzNodeTest?.testFiles ?? DEFAULTS.testFiles.default;
+    const lzStrykerNodeTest = (options as { lzStrykerNodeTest?: NodeTestOptions }).lzStrykerNodeTest;
+    const patterns = lzStrykerNodeTest?.testFiles ?? DEFAULTS.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
     this.#patterns = [...patterns, ...options.testFiles];
-    this.#nodeArgs = withoutReporters(lzNodeTest?.nodeArgs ?? DEFAULTS.nodeArgs.default);
+    this.#nodeArgs = withoutReporters(lzStrykerNodeTest?.nodeArgs ?? DEFAULTS.nodeArgs.default);
     this.#dryRunConcurrency = testRunnerConcurrency(
       options.concurrency,
       options.checkers.length > 0,
       availableParallelism(),
     );
-    this.#memoryLimits = memoryLimits(lzNodeTest?.maxMemoryMB, peakMemoryDir(process.ppid), log);
+    this.#memoryLimits = memoryLimits(lzStrykerNodeTest?.maxMemoryMB, peakMemoryDir(process.ppid), log);
     this.#allowEmpty = options.allowEmpty;
     this.#log = log;
   }
@@ -465,7 +465,7 @@ export class NodeTestRunner implements TestRunner {
 
     if (!supportsNode(node)) {
       throw new Error(
-        `The lz-node-test test runner needs Node.js ${MIN_NODE_VERSION.join('.')} or later, and this is Node.js ${node}.`,
+        `The lz-stryker-node-test test runner needs Node.js ${MIN_NODE_VERSION.join('.')} or later, and this is Node.js ${node}.`,
       );
     }
 
@@ -625,6 +625,6 @@ export class NodeTestRunner implements TestRunner {
   }
 }
 
-export const strykerPlugins = [declareClassPlugin(PluginKind.TestRunner, 'lz-node-test', NodeTestRunner)];
+export const strykerPlugins = [declareClassPlugin(PluginKind.TestRunner, 'lz-stryker-node-test', NodeTestRunner)];
 
 export const strykerValidationSchema = schema;

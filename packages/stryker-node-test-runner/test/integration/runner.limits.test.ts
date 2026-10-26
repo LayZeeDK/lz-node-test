@@ -113,7 +113,7 @@ describe('NodeTestRunner limits', () => {
   });
   testFor([
     ['the 1024 MB floor, with a warning once,', undefined, [1024, 1024], 1],
-    ['lzNodeTest.maxMemoryMB when set, without a warning,', 1500, [1500, 1500], 0],
+    ['lzStrykerNodeTest.maxMemoryMB when set, without a warning,', 1500, [1500, 1500], 0],
   ] as const)(
     'gives the processes of a file that the dry run did not run %s in every mutant run',
     async ([, maxMemoryMB, expected, warningCount], t) => {
@@ -122,7 +122,7 @@ describe('NodeTestRunner limits', () => {
         'a.test.mjs': fixture(`it('fails with its memory limit', () => { throw new Error(${limit}); });`),
       });
       const warnings: string[] = [];
-      const options = { lzNodeTest: { testFiles: ['a.test.mjs'], maxMemoryMB } };
+      const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], maxMemoryMB } };
       const runner = new NodeTestRunner(strykerOptions(options), logger([], true, warnings));
       await runner.init();
       const limits = [];
@@ -145,10 +145,10 @@ describe('NodeTestRunner limits', () => {
     },
   );
 
-  it('ends a dry run under lzNodeTest.maxMemoryMB as an error that names the first file, in order, that held more', async (t) => {
+  it('ends a dry run under lzStrykerNodeTest.maxMemoryMB as an error that names the first file, in order, that held more', async (t) => {
     const waits = fixture("it('waits', async () => { await new Promise((resolve) => setTimeout(resolve, 1_000)); });");
     const dir = project(t, { 'a.test.mjs': waits, 'b.test.mjs': waits });
-    const options = { lzNodeTest: { testFiles: ['*.test.mjs'], maxMemoryMB: 10 }, concurrency: 2 };
+    const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'], maxMemoryMB: 10 }, concurrency: 2 };
     const runner = new NodeTestRunner(strykerOptions(options), logger());
     await runner.init();
 
@@ -159,8 +159,8 @@ describe('NodeTestRunner limits', () => {
     assert.ok(rssMB > 10, result.errorMessage);
     assert.equal(
       result.errorMessage,
-      `A process of "${join(dir, 'a.test.mjs')}" held ${rssMB} MB in the dry run, more than lzNodeTest.maxMemoryMB ` +
-        "(10 MB), so its mutant runs would time out. Raise lzNodeTest.maxMemoryMB, or leave it out to derive each file's " +
+      `A process of "${join(dir, 'a.test.mjs')}" held ${rssMB} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB ` +
+        "(10 MB), so its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's " +
         'limit from the dry run.',
     );
   });

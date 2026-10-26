@@ -5,5 +5,5 @@ export default {
   ...base,
   mutate: ['packages/stryker-node-test-runner/src/**/*.ts'],
   tsconfigFile: 'packages/stryker-node-test-runner/tsconfig.stryker.json',
-  lzNodeTest: { testFiles: ['packages/stryker-node-test-runner/test/**/*.test.ts'], nodeArgs: [SOURCE] },
+  lzStrykerNodeTest: { testFiles: ['packages/stryker-node-test-runner/test/**/*.test.ts'], nodeArgs: [SOURCE] },
 };
