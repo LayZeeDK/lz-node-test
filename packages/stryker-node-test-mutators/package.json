@@ -12,11 +12,18 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./test-code": {
+      "@lz-node-test/source": "./src/test-code.ts",
+      "types": "./dist/test-code.d.ts",
+      "default": "./dist/test-code.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "!dist/**/*.tsbuildinfo"
+    "!dist/**/*.tsbuildinfo",
+    "!dist/corpus-diff.*",
+    "!dist/mutant-diff.*"
   ],
   "engines": {
     "node": ">=22.18"
@@ -24,6 +31,11 @@
   "scripts": {
     "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\"",
     "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\""
+  },
+  "peerDependencies": {
+    "@babel/core": "~8.0.0",
+    "@stryker-mutator/api": "~10.1.1",
+    "@stryker-mutator/core": "~10.1.1"
   },
   "devDependencies": {
     "@layzee/lz-node-test": "*"
