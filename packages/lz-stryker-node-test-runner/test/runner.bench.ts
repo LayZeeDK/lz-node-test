@@ -12,18 +12,59 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
+import {
+  DryRunStatus,
+  MutantRunStatus,
+  TestStatus,
+  type DryRunOptions,
+  type MutantRunOptions,
+} from '@stryker-mutator/api/test-runner';
 import { Bench } from 'tinybench';
 
-import { COVER, DRY_RUN, fixture, logger, mutantRunOptions, strykerOptions } from './index.fixtures.ts';
-import type { LzStrykerNodeTestRunner } from '../src/index.ts';
+import {
+  callMember,
+  construct,
+  COVER,
+  DRY_RUN,
+  fixture,
+  logger,
+  member,
+  mutantRunOptions,
+  strykerOptions,
+} from './index.fixtures.ts';
 import pkg from '../package.json' with { type: 'json' };
 
-type RunnerModule = typeof import('../src/index.ts');
+/**
+ * A runner loaded from any path, this package's source or a baseline build of it, so the bench checks what its methods
+ * return instead of trusting a type.
+ */
+interface BenchRunner {
+  dryRun: (options: DryRunOptions) => Promise<unknown>;
+  mutantRun: (options: MutantRunOptions) => Promise<unknown>;
+  dispose: () => Promise<unknown>;
+}
 
 interface Scenario {
   name: string;
-  run: (runner: LzStrykerNodeTestRunner) => Promise<number>;
+  run: (runner: BenchRunner) => Promise<number>;
+}
+
+function method(target: unknown, name: string): (...args: unknown[]) => Promise<unknown> {
+  return async (...args) => {
+    const result: unknown = await callMember(target, name, ...args);
+
+    return result;
+  };
+}
+
+function timeOf(times: Map<string, number>, label: string): number {
+  const ms = times.get(label);
+
+  if (ms === undefined) {
+    throw new Error(`No time for ${label}.`);
+  }
+
+  return ms;
 }
 
 interface Stat {
@@ -76,22 +117,25 @@ function scenarios(files: string[]): Scenario[] {
       name: `dry run, ${FILES} files x ${TESTS_PER_FILE} tests`,
       run: async (runner) => {
         const result = await runner.dryRun({ ...DRY_RUN, timeout: 60_000 });
-        assert.equal(result.status, DryRunStatus.Complete);
-        assert.ok(result.tests.every((test) => test.status === TestStatus.Success));
-        assert.equal(Object.keys(result.mutantCoverage?.perTest ?? {}).length, TEST_COUNT);
-        assert.equal(result.mutantCoverage?.perTest[testId(0, 0)]?.['child-0'], 1);
+        const tests = member(result, 'tests');
+        const perTest = member(member(result, 'mutantCoverage'), 'perTest');
+        assert.equal(member(result, 'status'), DryRunStatus.Complete);
+        assert.ok(Array.isArray(tests));
+        assert.ok(tests.every((test) => member(test, 'status') === TestStatus.Success));
+        assert.equal(Object.keys(Object(perTest)).length, TEST_COUNT);
+        assert.equal(member(member(perTest, testId(0, 0)), 'child-0'), 1);
 
-        return result.tests.length;
+        return tests.length;
       },
     },
     {
       name: 'mutant run, no filter (every file)',
       run: async (runner) => {
         const result = await runner.mutantRun(mutantRunOptions({ timeout: 60_000 }));
-        assert.equal(result.status, MutantRunStatus.Survived);
-        assert.equal(result.nrOfTests, TEST_COUNT);
+        assert.equal(member(result, 'status'), MutantRunStatus.Survived);
+        assert.equal(member(result, 'nrOfTests'), TEST_COUNT);
 
-        return result.nrOfTests;
+        return TEST_COUNT;
       },
     },
     {
@@ -100,20 +144,20 @@ function scenarios(files: string[]): Scenario[] {
         const result = await runner.mutantRun(
           mutantRunOptions({ timeout: 60_000, testFilter: [testId(0, 1), testId(2, 1), testId(4, 1)] }),
         );
-        assert.equal(result.status, MutantRunStatus.Survived);
-        assert.equal(result.nrOfTests, 3);
+        assert.equal(member(result, 'status'), MutantRunStatus.Survived);
+        assert.equal(member(result, 'nrOfTests'), 3);
 
-        return result.nrOfTests;
+        return 3;
       },
     },
     {
       name: 'mutant run, filter covering 1 file',
       run: async (runner) => {
         const result = await runner.mutantRun(mutantRunOptions({ timeout: 60_000, testFilter: [testId(3, 2)] }));
-        assert.equal(result.status, MutantRunStatus.Survived);
-        assert.equal(result.nrOfTests, 1);
+        assert.equal(member(result, 'status'), MutantRunStatus.Survived);
+        assert.equal(member(result, 'nrOfTests'), 1);
 
-        return result.nrOfTests;
+        return 1;
       },
     },
   ];
@@ -156,17 +200,24 @@ async function round(tasks: [name: string, fn: () => unknown][]): Promise<Map<st
   );
 
   return new Map(
-    results.map((task) => [task.name, task.result.state === 'completed' ? task.result.latency.samples![0] : NaN]),
+    results.map((task) => [
+      task.name,
+      (task.result.state === 'completed' ? task.result.latency.samples?.[0] : undefined) ?? NaN,
+    ]),
   );
 }
 
-async function loadRunner(path: string, dir: string): Promise<LzStrykerNodeTestRunner> {
-  const module = (await import(pathToFileURL(resolve(path)).href)) as RunnerModule;
+async function loadRunner(path: string, dir: string): Promise<BenchRunner> {
+  const module: unknown = await import(pathToFileURL(resolve(path)).href);
   const options = { lzStrykerNodeTest: { testFiles: [join(dir, '*.test.mjs').replaceAll('\\', '/')] } };
-  const runner = new module.LzStrykerNodeTestRunner(strykerOptions(options), logger([], false));
-  await runner.init();
+  const runner = construct(member(module, 'LzStrykerNodeTestRunner'), [strykerOptions(options), logger([], false)]);
+  await method(runner, 'init')();
 
-  return runner;
+  return {
+    dryRun: method(runner, 'dryRun'),
+    mutantRun: method(runner, 'mutantRun'),
+    dispose: method(runner, 'dispose'),
+  };
 }
 
 function mutateSuites(): string[] {
@@ -193,7 +244,7 @@ function mutate(suite: string): void {
 async function main(): Promise<void> {
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'node-test-runner-bench-')));
   const files: string[] = [];
-  const runners: LzStrykerNodeTestRunner[] = [];
+  const runners: BenchRunner[] = [];
 
   try {
     for (let index = 0; index < FILES; index++) {
@@ -224,10 +275,10 @@ async function main(): Promise<void> {
         const [first] = sides;
 
         for (const [label] of sides) {
-          add(label, times.get(label)!);
+          add(label, timeOf(times, label));
 
           if (label !== first[0]) {
-            add(`${label} / first runner`, times.get(label)! / times.get(first[0])!);
+            add(`${label} / first runner`, timeOf(times, label) / timeOf(times, first[0]));
           }
         }
       }
@@ -236,7 +287,7 @@ async function main(): Promise<void> {
     for (let run = 0; run < mutateRuns; run++) {
       for (const suite of mutateSuites()) {
         const label = `${suite}, wall`;
-        add(label, (await round([[label, () => mutate(suite)]])).get(label)!);
+        add(label, timeOf(await round([[label, () => mutate(suite)]]), label));
       }
     }
 

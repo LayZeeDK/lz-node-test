@@ -8,7 +8,7 @@ import { TestStatus } from '@stryker-mutator/api/test-runner';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import { ACTIVE_MUTANT_ENV, ENV } from '../../src/hook-core.ts';
-import { ACTIVE_MUTANT, HOOK_URL, logger, strykerOptions } from '../index.fixtures.ts';
+import { ACTIVE_MUTANT, callMember, construct, HOOK_URL, logger, member, strykerOptions } from '../index.fixtures.ts';
 import {
   LzStrykerNodeTestRunner,
   lzFileError,
@@ -430,21 +430,15 @@ describe('lzTestRunnerConcurrency', () => {
         './concurrent/concurrency-token-provider.js',
         import.meta.resolve('@stryker-mutator/core'),
       );
-      const { ConcurrencyTokenProvider } = (await import(providerUrl.href)) as {
-        ConcurrencyTokenProvider: new (
-          options: { checkers: string[]; concurrency: number | string | undefined },
-          log: ReturnType<typeof logger>,
-        ) => {
-          testRunnerToken$: { subscribe(next: (token: number) => void): unknown };
-          freeCheckers(): void;
-          dispose(): void;
-        };
-      };
-      const provider = new ConcurrencyTokenProvider({ checkers: [...checkers], concurrency }, logger());
-      const tokens: number[] = [];
-      provider.testRunnerToken$.subscribe((token) => tokens.push(token));
-      provider.freeCheckers();
-      provider.dispose();
+      const providerModule: unknown = await import(providerUrl.href);
+      const provider = construct(member(providerModule, 'ConcurrencyTokenProvider'), [
+        { checkers: [...checkers], concurrency },
+        logger(),
+      ]);
+      const tokens: unknown[] = [];
+      callMember(member(provider, 'testRunnerToken$'), 'subscribe', (token: unknown) => tokens.push(token));
+      callMember(provider, 'freeCheckers');
+      callMember(provider, 'dispose');
 
       assert.equal(lzTestRunnerConcurrency(concurrency, checkers.length > 0, availableParallelism()), tokens.length);
     },

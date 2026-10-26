@@ -317,32 +317,38 @@ function loadContext(conditions: string[]): LoadHookContext {
   return { conditions, format: undefined, importAttributes: {} };
 }
 
+/** Imports and requires node:test through `hooks`, with `wrapped`, which may be any fake, as the wrapped module. */
 async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
-  const global: HookDependencies['global'] = globalThis;
-  const previous = global[wrappedNodeTest];
+  const slots: Record<symbol, unknown> = globalThis;
+  const previous = slots[wrappedNodeTest];
   const passOn = () => assert.fail('passed node:test on');
   const sourceFor = (conditions: string[]) => {
     const { url } = hooks.resolve('node:test', resolveContext(conditions), passOn);
     const { source } = hooks.load(url, loadContext(conditions), passOn);
 
     if (typeof source !== 'string') {
-      assert.fail(`loaded no source text: ${String(source)}`);
+      throw new TypeError(`Loaded no source text: ${String(source)}`);
     }
 
     return source;
   };
 
   try {
-    global[wrappedNodeTest] = wrapped as NodeTestModule;
+    slots[wrappedNodeTest] = wrapped;
     // A comment of its own keeps the import from coming from the module cache.
     const source = `${sourceFor(['node', 'import'])}\n// ${randomUUID()}`;
-    const module = (await import(`data:text/javascript,${encodeURIComponent(source)}`)) as Record<string, unknown>;
-    const commonjs = { exports: undefined as unknown };
+    const module: unknown = await import(`data:text/javascript,${encodeURIComponent(source)}`);
+
+    if (typeof module !== 'object' || module === null) {
+      throw new TypeError('The redirected import gave no module.');
+    }
+
+    const commonjs: { exports: unknown } = { exports: undefined };
     new Function('module', sourceFor(['node', 'require']))(commonjs);
 
     return { module, commonjs: commonjs.exports };
   } finally {
-    global[wrappedNodeTest] = previous;
+    slots[wrappedNodeTest] = previous;
   }
 }
 
