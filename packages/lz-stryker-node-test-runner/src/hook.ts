@@ -35,7 +35,7 @@ install({
   mainFile: process.argv[1] ? resolve(process.argv[1]) : undefined,
   pid: process.pid,
   threadId,
-  global: globalThis as HookDependencies['global'],
+  global: globalThis,
   nodeTest: () => process.getBuiltinModule('node:test'),
   registerHooks,
   onExit: (listener) => process.on('exit', listener),

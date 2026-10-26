@@ -32,7 +32,7 @@ async function loadRunnerStartedHook(
   outDir: string,
   env: Record<string, string> = {},
 ): Promise<Record<'exit' | 'beforeExit', (() => void)[]>> {
-  const global = globalThis as HookDependencies['global'];
+  const global: HookDependencies['global'] = globalThis;
   const previousMark = global[installed];
   const previousEnv = Object.values(ENV)
     .filter((key) => key !== ENV.current)
@@ -158,7 +158,7 @@ describe('hook', () => {
 
   it('starts the memory watchdog, survives its failure, and records the peak memory, when the runner asks', async (t) => {
     const outDir = tempDir(t);
-    const global = globalThis as HookDependencies['global'];
+    const global: HookDependencies['global'] = globalThis;
     const unref = t.mock.method(Worker.prototype, 'unref');
 
     const added = await loadRunnerStartedHook(outDir, { [ENV.dryRun]: 'true', [ENV.memoryLimit]: '1000000' });
@@ -650,7 +650,7 @@ describe('hook', () => {
 
 describe('reporter', () => {
   it('passes each event to the hook of the test file, and ignores the events of other processes', () => {
-    const global = globalThis as HookDependencies['global'];
+    const global: HookDependencies['global'] = globalThis;
     const previous = global[reporting];
     const events: TestEvent[] = [];
     const errors: unknown[] = [];

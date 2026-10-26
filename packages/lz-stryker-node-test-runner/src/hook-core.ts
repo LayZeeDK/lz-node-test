@@ -161,6 +161,8 @@ export interface HookDependencies {
   /** Worker threads load the hook too; 0 is the main thread. */
   threadId: number;
   global: {
+    /** The one member every global object has, so that `globalThis` is assignable to this type. */
+    readonly globalThis: unknown;
     __stryker__?: InstrumenterContext;
     [installed]?: true;
     [reporting]?: (event: TestEvent) => void;

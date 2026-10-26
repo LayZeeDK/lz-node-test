@@ -4,7 +4,7 @@ import { Transform } from 'node:stream';
 
 import { reporting, type HookDependencies, type TestEvent } from './hook-core.ts';
 
-const global = globalThis as HookDependencies['global'];
+const global: HookDependencies['global'] = globalThis;
 
 export default new Transform({
   writableObjectMode: true,

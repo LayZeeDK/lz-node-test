@@ -305,7 +305,7 @@ function loadContext(conditions: string[]): LoadHookContext {
 }
 
 async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
-  const global = globalThis as HookDependencies['global'];
+  const global: HookDependencies['global'] = globalThis;
   const previous = global[wrappedNodeTest];
   const passOn = () => assert.fail('passed node:test on');
   const sourceFor = (conditions: string[]) => {
@@ -407,7 +407,7 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
     mainFile: TEST_FILE,
     pid: 4321,
     threadId: 0,
-    global: {},
+    global: { globalThis: undefined },
     nodeTest: () => {
       calls.push('nodeTest');
 
@@ -534,7 +534,7 @@ describe('install', () => {
     const { deps, calls } = harness({ [ENV.file]: TEST_FILE });
 
     assert.equal(install(deps), false);
-    assert.deepEqual(deps.global, {});
+    assert.deepEqual(deps.global, { globalThis: undefined });
     assert.deepEqual(calls, []);
   });
 
