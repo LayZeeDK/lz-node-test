@@ -24,14 +24,14 @@ import {
   type TestResult,
 } from '@stryker-mutator/api/test-runner';
 
-import { NodeTestRunner, runEnv, type NodeTestOptions } from '../src/index.ts';
+import { LzStrykerNodeTestRunner, lzRunEnv, type LzStrykerNodeTestOptions } from '../src/index.ts';
 
 export const ACTIVE_MUTANT = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
 export const HOOK_URL = pathToFileURL(join(import.meta.dirname, '..', 'src', 'hook.ts')).href;
 export const REPORTER_ARG = `--test-reporter=${pathToFileURL(join(import.meta.dirname, '..', 'src', 'reporter.ts')).href}`;
 
 export function runNodeOptions(): string {
-  return runEnv(process.env, '', '', '', { dryRun: false, disableBail: false }, undefined).NODE_OPTIONS;
+  return lzRunEnv(process.env, '', '', '', { dryRun: false, disableBail: false }, undefined).NODE_OPTIONS;
 }
 
 /**
@@ -112,7 +112,7 @@ export function logger(debug: string[] = [], debugEnabled = true, warnings: stri
 }
 
 export interface RunnerOptions {
-  lzStrykerNodeTest?: NodeTestOptions;
+  lzStrykerNodeTest?: LzStrykerNodeTestOptions;
   testFiles?: string[];
   concurrency?: number;
   checkers?: string[];
@@ -125,10 +125,10 @@ export function strykerOptions(options: RunnerOptions = {}): StrykerOptions {
 
 export async function initRunner(
   testFiles: string[] | undefined,
-  lzStrykerNodeTest: NodeTestOptions = {},
-): Promise<NodeTestRunner> {
+  lzStrykerNodeTest: LzStrykerNodeTestOptions = {},
+): Promise<LzStrykerNodeTestRunner> {
   const options = { lzStrykerNodeTest: { ...lzStrykerNodeTest, ...(testFiles && { testFiles }) } };
-  const runner = new NodeTestRunner(strykerOptions(options), logger());
+  const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
   await runner.init();
 
   return runner;

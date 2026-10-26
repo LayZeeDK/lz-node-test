@@ -36,7 +36,7 @@ import type { MemoryLimitReached } from './watchdog.ts';
 import schema from './schema/node-test-runner-options.json' with { type: 'json' };
 
 /** Options under `lzStrykerNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
-export interface NodeTestOptions {
+export interface LzStrykerNodeTestOptions {
   testFiles?: string[];
   nodeArgs?: string[];
   maxMemoryMB?: number;
@@ -45,16 +45,16 @@ export interface NodeTestOptions {
 const DEFAULTS = schema.properties.lzStrykerNodeTest.properties;
 
 /** The oldest Node.js the runner supports, as `engines` in package.json says, as major and minor version. */
-export const MIN_NODE_VERSION: readonly [major: number, minor: number] = [22, 18];
+export const LZ_MIN_NODE_VERSION: readonly [major: number, minor: number] = [22, 18];
 
 function supportsNode(version: string): boolean {
   const [major, minor] = version.split('.').map(Number);
-  const [minMajor, minMinor] = MIN_NODE_VERSION;
+  const [minMajor, minMinor] = LZ_MIN_NODE_VERSION;
 
   return major > minMajor || (major === minMajor && minor >= minMinor);
 }
 
-export type RunOptions =
+export type LzRunOptions =
   | {
       dryRun: true;
       disableBail: boolean;
@@ -74,7 +74,7 @@ export type RunOptions =
       testFilter?: string[];
     };
 
-export interface FileRun {
+export interface LzFileRun {
   records: ProcessRecord[];
   exitCode: number | null;
   stderr: string;
@@ -90,7 +90,7 @@ const REPORTER_URL = pathToFileURL(resolve(import.meta.dirname, `reporter${EXT}`
 const CLOSE_GRACE_MS = 1_500;
 
 /** Without `perTest`, the hits inside tests count as static, as Stryker's coverage analysis `all` expects. */
-export function mergeCoverage(coverages: (MutantCoverage | undefined)[], perTest: boolean): MutantCoverage {
+export function lzMergeCoverage(coverages: (MutantCoverage | undefined)[], perTest: boolean): MutantCoverage {
   const total: MutantCoverage = { static: {}, perTest: {} };
   const add = (into: Record<string, number>, from: Record<string, number>) => {
     for (const [mutantId, hits] of Object.entries(from)) {
@@ -122,7 +122,7 @@ export function mergeCoverage(coverages: (MutantCoverage | undefined)[], perTest
  * the summed time of the tests it runs, so it then scales with the processes it starts, which Stryker's other workers
  * slow down as well.
  */
-export function toTestResults(testFile: string, recorded: RecordedTest[], fileMs: number): TestResult[] {
+export function lzToTestResults(testFile: string, recorded: RecordedTest[], fileMs: number): TestResult[] {
   const prefix = testId(testFile, '');
   const outermost = recorded.filter((test) => !recorded.some((other) => other !== test && within(test.id, other.id)));
   const outside = fileMs - outermost.reduce((sum, test) => sum + test.timeSpentMs, 0);
@@ -149,7 +149,7 @@ function nodeCommand(args: string[]): string {
 }
 
 /** Reports a test file that failed outside its tests as Stryker's tap runner does: command, diagnostics, stderr. */
-export function fileError(testFile: string, { records, exitCode, stderr, args, nodeOptions }: FileRun): string {
+export function lzFileError(testFile: string, { records, exitCode, stderr, args, nodeOptions }: LzFileRun): string {
   const diagnostics = records.flatMap((record) => record.diagnostics ?? []);
   const heldOpen = records.flatMap((record) => record.heldOpen ?? []);
   const output = stderr.trim();
@@ -252,7 +252,7 @@ function parseTest(value: unknown, path: string): RecordedTest {
   };
 }
 
-export function parseRecord(json: string): ProcessRecord {
+export function lzParseRecord(json: string): ProcessRecord {
   const record: unknown = JSON.parse(json);
 
   if (!isObject(record)) {
@@ -283,7 +283,7 @@ type FileOutcome =
   | { end: DryRunResult }
   | { results: TestResult[]; coverages: (MutantCoverage | undefined)[]; failed: boolean };
 
-export async function runInPool<T, R>(
+export async function lzRunInPool<T, R>(
   items: T[],
   limit: number,
   work: (item: T) => Promise<R>,
@@ -319,7 +319,7 @@ export async function runInPool<T, R>(
   return results.slice(0, end);
 }
 
-function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOptions): FileOutcome {
+function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRunOptions): FileOutcome {
   const { records, exitCode, unreadable } = fileRun;
   const memoryLimitReached = records.find((record) => record.memoryLimitReached)?.memoryLimitReached;
 
@@ -352,7 +352,7 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
     }
   }
 
-  const results = toTestResults(
+  const results = lzToTestResults(
     file,
     records.flatMap((record) => record.tests),
     fileMs,
@@ -361,7 +361,7 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
 
   // Like Stryker's own runners, a failure that no test explains is an error, not a killed mutant.
   if (exitCode !== 0 && !failed) {
-    return { end: { status: DryRunStatus.Error, errorMessage: fileError(file, fileRun) } };
+    return { end: { status: DryRunStatus.Error, errorMessage: lzFileError(file, fileRun) } };
   }
 
   const main = records.find((record) => record.main);
@@ -410,7 +410,7 @@ function fileOutcome(file: string, fileRun: FileRun, fileMs: number, run: RunOpt
   return { results, coverages: records.map((record) => record.mutantCoverage), failed };
 }
 
-export function filesFor(testFiles: string[], testFilter: string[] | undefined): string[] {
+export function lzFilesFor(testFiles: string[], testFilter: string[] | undefined): string[] {
   if (!testFilter) {
     return testFiles;
   }
@@ -424,7 +424,7 @@ export function filesFor(testFiles: string[], testFilter: string[] | undefined):
  * Beside checkers, Stryker splits it between checkers and test runners, at least one each, and hands the checkers'
  * share to test runners once checking is done (`freeCheckers`), so a concurrency of 1 ends with 2 test runners.
  */
-export function testRunnerConcurrency(
+export function lzTestRunnerConcurrency(
   concurrency: StrykerOptions['concurrency'],
   checkers: boolean,
   cores: number,
@@ -441,12 +441,12 @@ export function testRunnerConcurrency(
   return checkers ? Math.max(Math.ceil(total / 2), 1) + Math.max(Math.floor(total / 2), 1) : total;
 }
 
-export function runEnv(
+export function lzRunEnv(
   base: NodeJS.ProcessEnv,
   file: string,
   outDir: string,
   tmpDir: string,
-  run: RunOptions,
+  run: LzRunOptions,
   cacheDir: string | undefined,
   memoryLimitMB?: number,
 ): NodeJS.ProcessEnv & { NODE_OPTIONS: string } {
@@ -514,7 +514,7 @@ export function runEnv(
   return env;
 }
 
-export class NodeTestRunner implements TestRunner {
+export class LzStrykerNodeTestRunner implements TestRunner {
   static inject = tokens(commonTokens.options, commonTokens.logger);
 
   #testFiles: string[] = [];
@@ -532,12 +532,12 @@ export class NodeTestRunner implements TestRunner {
   readonly #log: Logger;
 
   constructor(options: StrykerOptions, log: Logger) {
-    const lzStrykerNodeTest = (options as { lzStrykerNodeTest?: NodeTestOptions }).lzStrykerNodeTest;
+    const lzStrykerNodeTest = (options as { lzStrykerNodeTest?: LzStrykerNodeTestOptions }).lzStrykerNodeTest;
     const patterns = lzStrykerNodeTest?.testFiles ?? DEFAULTS.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
     this.#patterns = [...patterns, ...options.testFiles];
     this.#nodeArgs = withoutReporters(lzStrykerNodeTest?.nodeArgs ?? DEFAULTS.nodeArgs.default);
-    this.#dryRunConcurrency = testRunnerConcurrency(
+    this.#dryRunConcurrency = lzTestRunnerConcurrency(
       options.concurrency,
       options.checkers.length > 0,
       availableParallelism(),
@@ -556,7 +556,7 @@ export class NodeTestRunner implements TestRunner {
 
     if (!supportsNode(node)) {
       throw new Error(
-        `The lz-stryker-node-test test runner needs Node.js ${MIN_NODE_VERSION.join('.')} or later, and this is Node.js ${node}.`,
+        `The lz-stryker-node-test test runner needs Node.js ${LZ_MIN_NODE_VERSION.join('.')} or later, and this is Node.js ${node}.`,
       );
     }
 
@@ -593,7 +593,7 @@ export class NodeTestRunner implements TestRunner {
       dryRun: true,
       disableBail: options.disableBail,
       coverageAnalysis: options.coverageAnalysis,
-    } satisfies RunOptions;
+    } satisfies LzRunOptions;
     const memoryLimitMB = this.#memoryLimits.startDryRun();
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
@@ -615,8 +615,8 @@ export class NodeTestRunner implements TestRunner {
       mutantActivation: options.mutantActivation,
       hitLimit: options.hitLimit,
       testFilter: options.testFilter,
-    } satisfies RunOptions;
-    const result = await this.#run(filesFor(this.#testFiles, options.testFilter), run, 1, (file) =>
+    } satisfies LzRunOptions;
+    const result = await this.#run(lzFilesFor(this.#testFiles, options.testFilter), run, 1, (file) =>
       this.runFile(file, run, this.#memoryLimits.forMutantRun(file)),
     );
     const mutantResult = toMutantRunResult(result);
@@ -631,14 +631,14 @@ export class NodeTestRunner implements TestRunner {
 
   async #run(
     files: string[],
-    run: RunOptions,
+    run: LzRunOptions,
     limit: number,
-    runOne: (file: string) => Promise<FileRun>,
+    runOne: (file: string) => Promise<LzFileRun>,
   ): Promise<DryRunResult> {
     const tests: TestResult[] = [];
     const coverages: (MutantCoverage | undefined)[] = [];
     const ends = (outcome: FileOutcome) => 'end' in outcome || (!run.disableBail && outcome.failed);
-    const outcomes = await runInPool(
+    const outcomes = await lzRunInPool(
       files,
       limit,
       async (file) => {
@@ -667,11 +667,11 @@ export class NodeTestRunner implements TestRunner {
     return {
       status: DryRunStatus.Complete,
       tests,
-      mutantCoverage: mergeCoverage(coverages, run.coverageAnalysis !== 'all'),
+      mutantCoverage: lzMergeCoverage(coverages, run.coverageAnalysis !== 'all'),
     };
   }
 
-  async runFile(file: string, run: RunOptions, memoryLimitMB?: number): Promise<FileRun> {
+  async runFile(file: string, run: LzRunOptions, memoryLimitMB?: number): Promise<LzFileRun> {
     const runDir = mkdtempSync(join(tmpdir(), `stryker-node-test-${process.pid}-`));
     const outDir = join(runDir, 'out');
     const tmpDir = join(runDir, 'tmp');
@@ -679,7 +679,7 @@ export class NodeTestRunner implements TestRunner {
     try {
       mkdirSync(outDir);
       mkdirSync(tmpDir);
-      const env = runEnv(process.env, file, outDir, tmpDir, run, this.#cacheDir, memoryLimitMB);
+      const env = lzRunEnv(process.env, file, outDir, tmpDir, run, this.#cacheDir, memoryLimitMB);
       const args = [`--test-reporter=${REPORTER_URL}`, ...this.#nodeArgs, file];
 
       if (this.#log.isDebugEnabled()) {
@@ -697,7 +697,7 @@ export class NodeTestRunner implements TestRunner {
       let unreadable: string | undefined;
       const records = readdirSync(outDir).flatMap((name) => {
         try {
-          return [parseRecord(readFileSync(join(outDir, name), 'utf8'))];
+          return [lzParseRecord(readFileSync(join(outDir, name), 'utf8'))];
         } catch (error) {
           // A process that the tests started can still be writing its record when the grace period ends. The test
           // file's own process writes its record before it exits, unless the memory watchdog ends it mid-write.
@@ -716,6 +716,8 @@ export class NodeTestRunner implements TestRunner {
   }
 }
 
-export const strykerPlugins = [declareClassPlugin(PluginKind.TestRunner, 'lz-stryker-node-test', NodeTestRunner)];
+export const strykerPlugins = [
+  declareClassPlugin(PluginKind.TestRunner, 'lz-stryker-node-test', LzStrykerNodeTestRunner),
+];
 
 export const strykerValidationSchema = schema;

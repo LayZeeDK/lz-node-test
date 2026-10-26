@@ -16,13 +16,13 @@ import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/
 import { Bench } from 'tinybench';
 
 import { COVER, DRY_RUN, fixture, logger, mutantRunOptions, strykerOptions } from './index.fixtures.ts';
-import type { NodeTestRunner } from '../src/index.ts';
+import type { LzStrykerNodeTestRunner } from '../src/index.ts';
 
 type RunnerModule = typeof import('../src/index.ts');
 
 interface Scenario {
   name: string;
-  run: (runner: NodeTestRunner) => Promise<number>;
+  run: (runner: LzStrykerNodeTestRunner) => Promise<number>;
 }
 
 interface Stat {
@@ -159,10 +159,10 @@ async function round(tasks: [name: string, fn: () => unknown][]): Promise<Map<st
   );
 }
 
-async function loadRunner(path: string, dir: string): Promise<NodeTestRunner> {
+async function loadRunner(path: string, dir: string): Promise<LzStrykerNodeTestRunner> {
   const module = (await import(pathToFileURL(resolve(path)).href)) as RunnerModule;
   const options = { lzStrykerNodeTest: { testFiles: [join(dir, '*.test.mjs').replaceAll('\\', '/')] } };
-  const runner = new module.NodeTestRunner(strykerOptions(options), logger([], false));
+  const runner = new module.LzStrykerNodeTestRunner(strykerOptions(options), logger([], false));
   await runner.init();
 
   return runner;
@@ -188,7 +188,7 @@ function mutate(suite: string): void {
 async function main(): Promise<void> {
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'node-test-runner-bench-')));
   const files: string[] = [];
-  const runners: NodeTestRunner[] = [];
+  const runners: LzStrykerNodeTestRunner[] = [];
 
   try {
     for (let index = 0; index < FILES; index++) {

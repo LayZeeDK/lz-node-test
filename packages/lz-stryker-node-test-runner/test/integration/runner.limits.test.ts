@@ -20,11 +20,11 @@ import {
   strykerOptions,
   withoutDuration,
 } from '../index.fixtures.ts';
-import { NodeTestRunner } from '../../src/index.ts';
+import { LzStrykerNodeTestRunner } from '../../src/index.ts';
 
 shareCompileCache();
 
-describe('NodeTestRunner limits', () => {
+describe('LzStrykerNodeTestRunner limits', () => {
   const loop = (hits: number) =>
     [
       'const ns = globalThis.__stryker__;',
@@ -131,7 +131,7 @@ describe('NodeTestRunner limits', () => {
       });
       const warnings: string[] = [];
       const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], maxMemoryMB } };
-      const runner = new NodeTestRunner(strykerOptions(options), logger([], true, warnings));
+      const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger([], true, warnings));
       await runner.init();
       const results = [];
 
@@ -160,7 +160,7 @@ describe('NodeTestRunner limits', () => {
     const waits = fixture("it('waits', async () => { await new Promise((resolve) => setTimeout(resolve, 1_000)); });");
     const dir = project(t, { 'a.test.mjs': waits, 'b.test.mjs': waits });
     const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'], maxMemoryMB: 10 }, concurrency: 2 };
-    const runner = new NodeTestRunner(strykerOptions(options), logger());
+    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
     await runner.init();
 
     const result = await settle(runner.dryRun(DRY_RUN));

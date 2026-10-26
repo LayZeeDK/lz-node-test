@@ -19,11 +19,11 @@ import {
   strykerOptions,
   withoutDuration,
 } from '../index.fixtures.ts';
-import { NodeTestRunner } from '../../src/index.ts';
+import { LzStrykerNodeTestRunner } from '../../src/index.ts';
 
 shareCompileCache();
 
-describe('NodeTestRunner timing', () => {
+describe('LzStrykerNodeTestRunner timing', () => {
   it("times each test with the time its file's run spent outside the tests, such as starting node", async (t) => {
     project(t, { 'a.test.mjs': fixture("it('first', () => {});", "it('second', () => {});") });
     const runner = await initRunner(['*.test.mjs']);
@@ -58,7 +58,7 @@ describe('NodeTestRunner timing', () => {
       );
     const dir = project(t, { 'a.test.mjs': meets('a', 'b'), 'b.test.mjs': meets('b', 'a') });
     const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'] }, concurrency, checkers };
-    const runner = new NodeTestRunner(strykerOptions(options), logger());
+    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
     await runner.init();
 
     return { dir, runner, a: `${join(dir, 'a.test.mjs')} > meets b`, b: `${join(dir, 'b.test.mjs')} > meets a` };

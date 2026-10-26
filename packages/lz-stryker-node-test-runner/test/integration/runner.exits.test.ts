@@ -23,11 +23,11 @@ import {
   summary,
 } from '../index.fixtures.ts';
 import { isRunning } from '../../src/dirs.ts';
-import { fileError } from '../../src/index.ts';
+import { lzFileError } from '../../src/index.ts';
 
 shareCompileCache();
 
-describe('NodeTestRunner endings', () => {
+describe('LzStrykerNodeTestRunner endings', () => {
   it('ends the processes that the tests of a test file leave running once its run is over', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
@@ -148,7 +148,7 @@ describe('NodeTestRunner endings', () => {
     const exitCode = process.platform === 'win32' ? 1 : null;
     assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), {
       status: DryRunStatus.Error,
-      errorMessage: fileError(a, {
+      errorMessage: lzFileError(a, {
         records: [],
         exitCode,
         stderr: '',

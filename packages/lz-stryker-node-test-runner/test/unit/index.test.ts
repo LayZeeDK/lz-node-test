@@ -10,23 +10,23 @@ import { lzTestFor } from '@layzee/lz-node-test';
 import { ACTIVE_MUTANT_ENV, ENV } from '../../src/hook-core.ts';
 import { ACTIVE_MUTANT, HOOK_URL, logger } from '../index.fixtures.ts';
 import {
-  fileError,
-  filesFor,
-  mergeCoverage,
-  parseRecord,
-  runEnv,
-  runInPool,
-  type RunOptions,
-  testRunnerConcurrency,
-  toTestResults,
+  lzFileError,
+  lzFilesFor,
+  lzMergeCoverage,
+  lzParseRecord,
+  lzRunEnv,
+  lzRunInPool,
+  type LzRunOptions,
+  lzTestRunnerConcurrency,
+  lzToTestResults,
 } from '../../src/index.ts';
 
 const FILE = join('/repo', 'a.test.mjs');
 
-describe('mergeCoverage', () => {
+describe('lzMergeCoverage', () => {
   it('adds up the hits of every process and skips processes without coverage', () => {
     assert.deepEqual(
-      mergeCoverage(
+      lzMergeCoverage(
         [
           { static: { 1: 1 }, perTest: { first: { 2: 1 } } },
           undefined,
@@ -39,12 +39,12 @@ describe('mergeCoverage', () => {
   });
 
   it('is empty without coverage', () => {
-    assert.deepEqual(mergeCoverage([], true), { static: {}, perTest: {} });
+    assert.deepEqual(lzMergeCoverage([], true), { static: {}, perTest: {} });
   });
 
   it('counts the hits inside tests as static when asked to drop the tests', () => {
     assert.deepEqual(
-      mergeCoverage(
+      lzMergeCoverage(
         [
           { static: { 1: 1 }, perTest: { first: { 1: 1, 2: 1 } } },
           { static: {}, perTest: { first: { 2: 3 }, second: { 4: 1 } } },
@@ -56,12 +56,12 @@ describe('mergeCoverage', () => {
   });
 });
 
-describe('toTestResults', () => {
+describe('lzToTestResults', () => {
   const base = (id: string) => ({ id, name: id.slice(`${FILE} > `.length), fileName: FILE });
 
   it('reports each recorded test with its status, failure message, and rounded time plus the time the file spent outside its tests', () => {
     assert.deepEqual(
-      toTestResults(
+      lzToTestResults(
         FILE,
         [
           { id: `${FILE} > passes`, status: 'passed', timeSpentMs: 1.6 },
@@ -87,7 +87,7 @@ describe('toTestResults', () => {
 
   it("counts a parent test's time once, as it includes the time of the subtests it runs", () => {
     assert.deepEqual(
-      toTestResults(
+      lzToTestResults(
         FILE,
         [
           { id: `${FILE} > parent > first`, status: 'passed', timeSpentMs: 1 },
@@ -106,13 +106,13 @@ describe('toTestResults', () => {
     const startPosition = { line: 4, column: 2 };
 
     assert.deepEqual(
-      toTestResults(FILE, [{ id: `${FILE} > passes`, status: 'passed', timeSpentMs: 1, startPosition }], 1),
+      lzToTestResults(FILE, [{ id: `${FILE} > passes`, status: 'passed', timeSpentMs: 1, startPosition }], 1),
       [{ ...base(`${FILE} > passes`), timeSpentMs: 1, status: TestStatus.Success, startPosition }],
     );
   });
 });
 
-describe('fileError', () => {
+describe('lzFileError', () => {
   const command =
     `To reproduce it, run \`node "--no-deprecation" "${FILE}"\` in ${process.cwd()} ` +
     'with NODE_OPTIONS set to `--import "hook" --stack-size=900`.';
@@ -152,17 +152,17 @@ describe('fileError', () => {
     };
 
     assert.equal(
-      fileError(FILE, run),
+      lzFileError(FILE, run),
       [`Error running file "${FILE}": node exited with code ${exitCode} outside any test.`, command, ...end].join('\n'),
     );
   });
 });
 
-describe('parseRecord', () => {
+describe('lzParseRecord', () => {
   it('returns the record a process wrote', () => {
     const record = { main: true, tests: [{ id: `${FILE} > t`, status: 'passed', timeSpentMs: 1 }], hitCount: 3 };
 
-    assert.deepEqual(parseRecord(JSON.stringify(record)), record);
+    assert.deepEqual(lzParseRecord(JSON.stringify(record)), record);
   });
 
   it('returns a record with every field', () => {
@@ -182,11 +182,11 @@ describe('parseRecord', () => {
       heldOpen: ['TCPServerWrap'],
     };
 
-    assert.deepEqual(parseRecord(JSON.stringify(record)), record);
+    assert.deepEqual(lzParseRecord(JSON.stringify(record)), record);
   });
 
   lzTestFor(['null', '[]', '1'])('refuses %s, which is no record', (json) => {
-    assert.throws(() => parseRecord(json), { message: 'not a record of test results' });
+    assert.throws(() => lzParseRecord(json), { message: 'not a record of test results' });
   });
 
   const test = { id: `${FILE} > t`, status: 'passed', timeSpentMs: 1 };
@@ -221,41 +221,41 @@ describe('parseRecord', () => {
     [withFields({ unfinished: false }), 'unfinished'],
     [withFields({ heldOpen: [null] }), 'heldOpen'],
   ])('refuses %s, naming %s', (json, field) => {
-    assert.throws(() => parseRecord(json), { message: `not a record of test results: ${field}` });
+    assert.throws(() => lzParseRecord(json), { message: `not a record of test results: ${field}` });
   });
 
   it('refuses what does not parse', () => {
-    assert.throws(() => parseRecord('{'), SyntaxError);
+    assert.throws(() => lzParseRecord('{'), SyntaxError);
   });
 });
 
-describe('filesFor', () => {
+describe('lzFilesFor', () => {
   const a = join('/repo', 'a.test.mjs');
   const b = join('/repo', 'b.test.mjs');
   const longer = `${a}.old`;
   const files = [a, b, longer];
 
   it('returns every file without a filter', () => {
-    assert.deepEqual(filesFor(files, undefined), files);
+    assert.deepEqual(lzFilesFor(files, undefined), files);
   });
 
   it('returns no file for an empty filter', () => {
-    assert.deepEqual(filesFor(files, []), []);
+    assert.deepEqual(lzFilesFor(files, []), []);
   });
 
   it('returns the files that contain a filtered test, or that the filter names themselves', () => {
-    assert.deepEqual(filesFor(files, [`${longer} > suite > test`]), [longer]);
-    assert.deepEqual(filesFor(files, [`${a} > test`]), [a]);
-    assert.deepEqual(filesFor(files, [b, `${a} > test`]), [a, b]);
+    assert.deepEqual(lzFilesFor(files, [`${longer} > suite > test`]), [longer]);
+    assert.deepEqual(lzFilesFor(files, [`${a} > test`]), [a]);
+    assert.deepEqual(lzFilesFor(files, [b, `${a} > test`]), [a, b]);
   });
 });
 
-describe('runInPool', () => {
+describe('lzRunInPool', () => {
   function setup(count: number, limit: number, stops: (result: number) => boolean = () => false) {
     const started: number[] = [];
     const settle: ((result: number) => void)[] = [];
     const fail: ((error: Error) => void)[] = [];
-    const pool = runInPool(
+    const pool = lzRunInPool(
       Array.from({ length: count }, (_, index) => index),
       limit,
       (item) => {
@@ -350,7 +350,7 @@ describe('runInPool', () => {
 
     assert.deepEqual(await pool, [0, 1]);
     assert.deepEqual(
-      await runInPool(
+      await lzRunInPool(
         [],
         4,
         () => Promise.reject(new Error('no work')),
@@ -361,7 +361,7 @@ describe('runInPool', () => {
   });
 });
 
-describe('testRunnerConcurrency', () => {
+describe('lzTestRunnerConcurrency', () => {
   lzTestEach([
     [undefined, false, 8, 7],
     [undefined, false, 4, 4],
@@ -380,7 +380,7 @@ describe('testRunnerConcurrency', () => {
   ])(
     'gives concurrency %j, with checkers %j, on %d cores %d test runners, as Stryker does',
     (concurrency, checkers, cores, runners) => {
-      assert.equal(testRunnerConcurrency(concurrency, checkers, cores), runners);
+      assert.equal(lzTestRunnerConcurrency(concurrency, checkers, cores), runners);
     },
   );
 
@@ -418,12 +418,12 @@ describe('testRunnerConcurrency', () => {
       provider.freeCheckers();
       provider.dispose();
 
-      assert.equal(testRunnerConcurrency(concurrency, checkers.length > 0, availableParallelism()), tokens.length);
+      assert.equal(lzTestRunnerConcurrency(concurrency, checkers.length > 0, availableParallelism()), tokens.length);
     },
   );
 });
 
-describe('runEnv', () => {
+describe('lzRunEnv', () => {
   const OUT = join('/tmp', 'out');
   const TMP = join('/tmp', 'tmp');
 
@@ -448,7 +448,7 @@ describe('runEnv', () => {
     };
     const before = { ...base };
 
-    assert.deepEqual(runEnv(base, FILE, OUT, TMP, { dryRun: false, disableBail: true }, undefined), {
+    assert.deepEqual(lzRunEnv(base, FILE, OUT, TMP, { dryRun: false, disableBail: true }, undefined), {
       PATH: 'path',
       NODE_OPTIONS: `--import ${JSON.stringify(HOOK_URL)} --max-old-space-size=100`,
       [ENV.out]: OUT,
@@ -474,24 +474,24 @@ describe('runEnv', () => {
     const kept = ['--max-old-space-size=100', '--title="a \\" --test-reporter=b"', '--test-reporter-destinations=x'];
 
     assert.equal(
-      runEnv({ NODE_OPTIONS }, FILE, OUT, TMP, { dryRun: false, disableBail: true }, undefined).NODE_OPTIONS,
+      lzRunEnv({ NODE_OPTIONS }, FILE, OUT, TMP, { dryRun: false, disableBail: true }, undefined).NODE_OPTIONS,
       [`--import ${JSON.stringify(HOOK_URL)}`, ...kept].join(' '),
     );
   });
 
   it("uses the runner's compile cache directory unless the environment names one", () => {
-    const run = { dryRun: false, disableBail: false } satisfies RunOptions;
+    const run = { dryRun: false, disableBail: false } satisfies LzRunOptions;
 
     const inherited = { NODE_COMPILE_CACHE: 'inherited' };
 
-    assert.equal(runEnv({}, FILE, OUT, TMP, run, 'own').NODE_COMPILE_CACHE, 'own');
-    assert.equal(runEnv(inherited, FILE, OUT, TMP, run, 'own').NODE_COMPILE_CACHE, 'inherited');
-    assert.equal(runEnv(inherited, FILE, OUT, TMP, run, undefined).NODE_COMPILE_CACHE, 'inherited');
+    assert.equal(lzRunEnv({}, FILE, OUT, TMP, run, 'own').NODE_COMPILE_CACHE, 'own');
+    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, 'own').NODE_COMPILE_CACHE, 'inherited');
+    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, undefined).NODE_COMPILE_CACHE, 'inherited');
   });
 
   it('passes the run state and the memory limit on to the test file', () => {
     assert.deepEqual(
-      runEnv(
+      lzRunEnv(
         {},
         FILE,
         OUT,
@@ -523,9 +523,9 @@ describe('runEnv', () => {
   });
 
   it('activates the mutant from the start of the process, or for the hook to activate once the tests start', () => {
-    const run = { dryRun: false, disableBail: false, activeMutant: '12' } satisfies RunOptions;
+    const run = { dryRun: false, disableBail: false, activeMutant: '12' } satisfies LzRunOptions;
     const active = (mutantActivation: 'runtime' | 'static') => {
-      const env = runEnv({}, FILE, OUT, TMP, { ...run, mutantActivation }, undefined);
+      const env = lzRunEnv({}, FILE, OUT, TMP, { ...run, mutantActivation }, undefined);
 
       return { atStart: env[ACTIVE_MUTANT], onceTestsStart: env[ENV.activeMutant] };
     };
@@ -541,8 +541,8 @@ describe('runEnv', () => {
         { dryRun: false, disableBail: true },
         { dryRun: true, disableBail: false, coverageAnalysis: 'perTest' },
         { dryRun: true, disableBail: true, coverageAnalysis: 'perTest' },
-      ] satisfies RunOptions[]
-    ).map((run) => runEnv({}, FILE, OUT, TMP, run, undefined)[ENV.bail]);
+      ] satisfies LzRunOptions[]
+    ).map((run) => lzRunEnv({}, FILE, OUT, TMP, run, undefined)[ENV.bail]);
 
     assert.deepEqual(bails, ['true', undefined, undefined, undefined]);
   });

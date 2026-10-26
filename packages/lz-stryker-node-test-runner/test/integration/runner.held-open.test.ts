@@ -33,7 +33,7 @@ function heldOpenFor(t: TestContext, ms: number): void {
   });
 }
 
-describe('NodeTestRunner with a test file that its tests keep alive', () => {
+describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', () => {
   it('reports a mutant killed at once when a failed test leaves a server listening', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(SERVER, `it('fails', async () => { ${LISTEN} assert.fail('expected failure'); });`),

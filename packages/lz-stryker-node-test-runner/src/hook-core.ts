@@ -132,16 +132,16 @@ export type NodeTestTarget = TargetRegister & {
 const AFTER_HOOK = '"after" hook';
 
 export const ENV = Object.freeze({
-  out: 'STRYKER_NODE_TEST_OUT',
-  file: 'STRYKER_NODE_TEST_FILE',
-  dryRun: 'STRYKER_NODE_TEST_DRY_RUN',
-  hitLimit: 'STRYKER_NODE_TEST_HIT_LIMIT',
-  memoryLimit: 'STRYKER_NODE_TEST_MEMORY_LIMIT_MB',
-  current: 'STRYKER_NODE_TEST_CURRENT',
-  filter: 'STRYKER_NODE_TEST_FILTER',
-  bail: 'STRYKER_NODE_TEST_BAIL',
-  activeMutant: 'STRYKER_NODE_TEST_ACTIVE_MUTANT',
-  heldOpen: 'STRYKER_NODE_TEST_HELD_OPEN_MS',
+  out: 'LZ_STRYKER_NODE_TEST_OUT',
+  file: 'LZ_STRYKER_NODE_TEST_FILE',
+  dryRun: 'LZ_STRYKER_NODE_TEST_DRY_RUN',
+  hitLimit: 'LZ_STRYKER_NODE_TEST_HIT_LIMIT',
+  memoryLimit: 'LZ_STRYKER_NODE_TEST_MEMORY_LIMIT_MB',
+  current: 'LZ_STRYKER_NODE_TEST_CURRENT',
+  filter: 'LZ_STRYKER_NODE_TEST_FILTER',
+  bail: 'LZ_STRYKER_NODE_TEST_BAIL',
+  activeMutant: 'LZ_STRYKER_NODE_TEST_ACTIVE_MUTANT',
+  heldOpen: 'LZ_STRYKER_NODE_TEST_HELD_OPEN_MS',
 });
 
 /**

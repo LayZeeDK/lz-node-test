@@ -6,7 +6,12 @@ import { PluginKind } from '@stryker-mutator/api/plugin';
 import ajvModule from 'ajv';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { MIN_NODE_VERSION, NodeTestRunner, strykerPlugins, strykerValidationSchema } from '../../src/index.ts';
+import {
+  LZ_MIN_NODE_VERSION,
+  LzStrykerNodeTestRunner,
+  strykerPlugins,
+  strykerValidationSchema,
+} from '../../src/index.ts';
 
 /** Stryker validates its options with these settings, and merges the properties of each plugin's schema into its own. */
 function validator() {
@@ -19,7 +24,7 @@ function validator() {
 describe('plugin declaration', () => {
   it('declares the lz-stryker-node-test test runner', () => {
     assert.deepEqual(strykerPlugins, [
-      { kind: PluginKind.TestRunner, name: 'lz-stryker-node-test', injectableClass: NodeTestRunner },
+      { kind: PluginKind.TestRunner, name: 'lz-stryker-node-test', injectableClass: LzStrykerNodeTestRunner },
     ]);
   });
 
@@ -52,7 +57,7 @@ describe('plugin declaration', () => {
       engines: { node: string };
     };
 
-    assert.equal(engines.node, `>=${MIN_NODE_VERSION.join('.')}`);
+    assert.equal(engines.node, `>=${LZ_MIN_NODE_VERSION.join('.')}`);
   });
 
   lzTestEach([
