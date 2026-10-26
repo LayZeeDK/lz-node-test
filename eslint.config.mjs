@@ -132,6 +132,7 @@ export default [
       'node-test/no-commented-tests': 'error',
       'node-test/no-snapshot-in-loop': 'error',
       'node-test/no-assert-in-hook': 'error',
+      '@nx/workspace-no-assertion-in-iteration': 'error',
       'no-restricted-syntax': [
         'error',
         {
