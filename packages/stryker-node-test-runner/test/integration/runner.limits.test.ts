@@ -98,18 +98,21 @@ describe('NodeTestRunner limits', () => {
       complete(await settle(dryRunner.dryRun(DRY_RUN))).tests.map((test) => test.status),
       [TestStatus.Success],
     );
-    const limits = [];
+    const results = [];
 
     // Stryker runs the dry run in one worker and the mutants in all of them, each with a runner of its own.
     for (const runner of [await initRunner(['a.test.mjs']), dryRunner, await initRunner(['a.test.mjs'])]) {
-      const result = await settle(runner.mutantRun(mutantRunOptions()));
-      assert.strictEqual(
-        result.status,
-        MutantRunStatus.Killed,
-        `expected a killed mutant, got ${JSON.stringify(result)}`,
-      );
-      limits.push(Number(result.failureMessage));
+      results.push(await settle(runner.mutantRun(mutantRunOptions())));
     }
+
+    assert.deepEqual(
+      results.map(({ status }) => status),
+      [MutantRunStatus.Killed, MutantRunStatus.Killed, MutantRunStatus.Killed],
+      JSON.stringify(results),
+    );
+    const limits = results.map((result) =>
+      result.status === MutantRunStatus.Killed ? Number(result.failureMessage) : NaN,
+    );
 
     // A Node.js process that runs one empty test holds well under 500 MB.
     assert.ok(limits[0] !== undefined && limits[0] > 1024 && limits[0] < 1024 + 1.5 * 500, String(limits));
@@ -129,19 +132,21 @@ describe('NodeTestRunner limits', () => {
       const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], maxMemoryMB } };
       const runner = new NodeTestRunner(strykerOptions(options), logger([], true, warnings));
       await runner.init();
-      const limits = [];
+      const results = [];
 
-      for (const run of [1, 2]) {
-        const result = await settle(runner.mutantRun(mutantRunOptions()));
-        assert.strictEqual(
-          result.status,
-          MutantRunStatus.Killed,
-          `expected run ${run} to be killed, got ${JSON.stringify(result)}`,
-        );
-        limits.push(Number(result.failureMessage));
+      for (let run = 0; run < 2; run++) {
+        results.push(await settle(runner.mutantRun(mutantRunOptions())));
       }
 
-      assert.deepEqual(limits, expected);
+      assert.deepEqual(
+        results.map(({ status }) => status),
+        [MutantRunStatus.Killed, MutantRunStatus.Killed],
+        JSON.stringify(results),
+      );
+      assert.deepEqual(
+        results.map((result) => (result.status === MutantRunStatus.Killed ? Number(result.failureMessage) : NaN)),
+        expected,
+      );
       assert.equal(warnings.length, warningCount);
       assert.ok(
         warnings.every((warning) => warning.includes(`"${dir}`)),

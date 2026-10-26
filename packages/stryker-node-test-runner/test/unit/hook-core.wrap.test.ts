@@ -731,11 +731,14 @@ describe('wrapNodeTest', () => {
     assert.equal(hooks[0]?.rest[0], topLevelBefore);
     assert.deepEqual([ns.activeMutant, env[ACTIVE_MUTANT_ENV]], [undefined, undefined]);
 
+    const results = [];
+
     for (const index of [1, 3]) {
-      assert.equal((hooks[index]?.rest[0] as Fn).call('hook this', 'context'), 'hook result');
+      results.push((hooks[index]?.rest[0] as Fn).call('hook this', 'context'));
       ns.activeMutant = undefined;
     }
 
+    assert.deepEqual(results, ['hook result', 'hook result']);
     assert.deepEqual(seen, ['7', '7', 'hook this', ['context'], '7', '7', 'hook this', ['context']]);
   });
 
@@ -816,6 +819,8 @@ describe('wrapNodeTest', () => {
       module.it('same', () => {});
       module.it('same', () => {});
 
+      const results = [];
+
       for (const registered of [...hooksOf(registrations, 'beforeEach'), ...hooksOf(registrations, 'after')]) {
         for (const context of [
           testContext([], 'suite'),
@@ -823,10 +828,14 @@ describe('wrapNodeTest', () => {
           testContext([], 'inner'),
           undefined,
         ]) {
-          assert.equal(registered(context), 'hook result');
+          results.push(registered(context));
         }
       }
 
+      assert.deepEqual(
+        results,
+        Array.from({ length: 8 }, () => 'hook result'),
+      );
       assert.deepEqual(
         seen,
         Array.from({ length: 8 }, () => undefined),

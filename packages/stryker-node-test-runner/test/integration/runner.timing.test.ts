@@ -35,9 +35,11 @@ describe('NodeTestRunner timing', () => {
     assert.equal(tests.length, 2);
 
     // Starting node takes tens of milliseconds, and neither test takes one.
-    for (const test of tests) {
-      assert.ok(test.timeSpentMs >= 20 && test.timeSpentMs <= wall, `${test.timeSpentMs} ms of a ${wall} ms run`);
-    }
+    assert.deepEqual(
+      tests.map((test) => test.timeSpentMs >= 20 && test.timeSpentMs <= wall),
+      [true, true],
+      `${tests.map((test) => test.timeSpentMs).join(' and ')} ms of a ${wall} ms run`,
+    );
   });
 
   async function meetingFiles(t: TestContext, concurrency: number, checkers: string[] = []) {

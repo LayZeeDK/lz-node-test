@@ -1186,8 +1186,7 @@ describe('install', () => {
     const written = ['true', 'false', undefined].map((dryRun) => {
       const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.dryRun]: dryRun, [ENV.hitLimit]: '9' });
       install(deps);
-      const ns = deps.global.__stryker__;
-      assert.ok(ns);
+      const ns = deps.global.__stryker__!;
       ns.mutantCoverage = coverage;
       ns.hitCount = 7;
       exit();

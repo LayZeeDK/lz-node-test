@@ -147,14 +147,15 @@ async function round(tasks: [name: string, fn: () => unknown][]): Promise<Map<st
     bench.add(name, fn);
   }
 
-  const times = new Map<string, number>();
+  const results = await bench.run();
+  assert.deepEqual(
+    results.map((task) => [task.name, task.result.state]),
+    tasks.map(([name]) => [name, 'completed']),
+  );
 
-  for (const task of await bench.run()) {
-    assert.strictEqual(task.result.state, 'completed', `${task.name} ended as ${task.result.state}`);
-    times.set(task.name, task.result.latency.samples![0]);
-  }
-
-  return times;
+  return new Map(
+    results.map((task) => [task.name, task.result.state === 'completed' ? task.result.latency.samples![0] : NaN]),
+  );
 }
 
 async function loadRunner(path: string, dir: string): Promise<NodeTestRunner> {
