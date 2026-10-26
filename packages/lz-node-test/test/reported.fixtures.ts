@@ -136,7 +136,13 @@ function capturedNames(source: string): string[] {
     // Cannot find name 'x', and the same with a suggestion.
     .filter((diagnostic) => diagnostic.code === 2304 || diagnostic.code === 2552);
 
-  const names = unknown.map((diagnostic) => text.slice(diagnostic.start, diagnostic.start! + diagnostic.length!));
+  const names = unknown.map(({ start, length, messageText }) => {
+    if (start === undefined || length === undefined) {
+      throw new Error(`A diagnostic without a position: ${JSON.stringify(messageText)}`);
+    }
+
+    return text.slice(start, start + length);
+  });
 
   return [...new Set(names)];
 }

@@ -191,8 +191,7 @@ export function withoutDuration(
   if (result.status === MutantRunStatus.Killed || result.status === MutantRunStatus.Survived) {
     const { duration, ...rest } = result;
 
-    // undefined >= 0 is false, so a missing duration fails too.
-    assert.ok(duration! >= 0, `expected a duration, got ${JSON.stringify(result)}`);
+    assert.ok((duration ?? -1) >= 0, `expected a duration, got ${JSON.stringify(result)}`);
 
     return rest;
   }

@@ -92,7 +92,7 @@ describe('LzStrykerNodeTestRunner', () => {
     ['runs on', '22.18.0', undefined],
     ['runs on', '23.0.0', undefined],
   ] as const)('%s Node.js %s', async ([, version, message], t) => {
-    const { value } = Object.getOwnPropertyDescriptor(process.versions, 'node')!;
+    const value = process.versions.node;
     Object.defineProperty(process.versions, 'node', { value: version });
     t.after(() => Object.defineProperty(process.versions, 'node', { value }));
     project(t, { 'a.test.mjs': PASSING });
