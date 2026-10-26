@@ -127,6 +127,7 @@ describe('processEnd', () => {
   });
 
   it('ends when the process closes its stdio, with its exit code and stderr, without waiting', async (t) => {
+    // eslint-disable-next-line node-test/require-mock-timers-advance -- time stands still, so the 1_000 ms grace never ends the wait
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const { child, settled } = ending(1_000);
     child.stderr.write('first ');
