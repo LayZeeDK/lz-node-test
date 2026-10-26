@@ -198,7 +198,7 @@ describe('LzStrykerNodeTestRunner', () => {
 
   it('removes the directories that runners of ended processes left behind when it is initialized', async (t) => {
     project(t, { 'a.test.mjs': PASSING });
-    const left = join(tmpdir(), `stryker-node-test-${NO_PROCESS}-left`);
+    const left = join(tmpdir(), `lz-stryker-node-test-${NO_PROCESS}-left`);
     mkdirSync(join(left, 'out'), { recursive: true });
     t.after(() => rmSync(left, { recursive: true, force: true }));
 
@@ -224,7 +224,7 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.deepEqual({ exitCode, stderr, count: records.length }, { exitCode: 0, stderr: '', count: 1 });
     const outDir = readFileSync(join(dir, 'out-dir.txt'), 'utf8');
     assert.equal(dirname(dirname(outDir)), resolve(tmpdir()));
-    assert.ok(basename(dirname(outDir)).startsWith(`stryker-node-test-${process.pid}-`), outDir);
+    assert.ok(basename(dirname(outDir)).startsWith(`lz-stryker-node-test-${process.pid}-`), outDir);
     assert.ok(!existsSync(dirname(outDir)));
   });
 

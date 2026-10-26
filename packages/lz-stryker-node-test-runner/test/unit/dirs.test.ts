@@ -147,13 +147,13 @@ describe('removeLeftDirs', () => {
     const dir = mkdtempSync(join(tmpdir(), 'left-dirs-'));
     t.after(() => rmSync(dir, { recursive: true, force: true }));
     const names = [
-      'stryker-node-test-111-a',
-      'stryker-node-test-cache-111-b',
+      'lz-stryker-node-test-111-a',
+      'lz-stryker-node-test-cache-111-b',
       basename(peakMemoryDir(111)),
-      'stryker-node-test-222-c',
-      'stryker-node-test-cache-222-d',
+      'lz-stryker-node-test-222-c',
+      'lz-stryker-node-test-cache-222-d',
       basename(peakMemoryDir(222)),
-      'stryker-node-test-e',
+      'lz-stryker-node-test-e',
       'other-111-f',
       'other-stryker-node-test-111-g',
     ];
@@ -178,7 +178,11 @@ describe('removeLeftDirs', () => {
   it("leaves the directories of other users' runners", (t) => {
     const dir = mkdtempSync(join(tmpdir(), 'left-dirs-'));
     t.after(() => rmSync(dir, { recursive: true, force: true }));
-    const names = ['stryker-node-test-111-mine', 'stryker-node-test-111-theirs', 'stryker-node-test-222-running'];
+    const names = [
+      'lz-stryker-node-test-111-mine',
+      'lz-stryker-node-test-111-theirs',
+      'lz-stryker-node-test-222-running',
+    ];
 
     for (const name of names) {
       mkdirSync(join(dir, name));
@@ -201,7 +205,7 @@ describe('removeLeftDirs', () => {
   it('leaves a directory it cannot check or remove yet and goes on with the others', (t) => {
     const dir = mkdtempSync(join(tmpdir(), 'left-dirs-'));
     t.after(() => rmSync(dir, { recursive: true, force: true }));
-    const names = ['stryker-node-test-111-a', 'stryker-node-test-111-b', 'stryker-node-test-111-c'];
+    const names = ['lz-stryker-node-test-111-a', 'lz-stryker-node-test-111-b', 'lz-stryker-node-test-111-c'];
 
     for (const name of names) {
       mkdirSync(join(dir, name));

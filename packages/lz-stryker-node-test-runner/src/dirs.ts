@@ -91,7 +91,7 @@ export function removeLeftDirs(
   { running = isRunning, owned = isOwn, remove = (path: string) => rmSync(path, { recursive: true }) } = {},
 ): void {
   for (const name of readdirSync(dir)) {
-    const pid = /^stryker-node-test-(?:cache-|peaks-)?(\d+)-/.exec(name)?.[1];
+    const pid = /^lz-stryker-node-test-(?:cache-|peaks-)?(\d+)-/.exec(name)?.[1];
     const path = join(dir, name);
 
     if (pid !== undefined && !running(Number(pid))) {

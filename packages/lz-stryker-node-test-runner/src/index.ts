@@ -577,7 +577,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     removeLeftDirs(tmpdir());
 
     if (process.env.NODE_COMPILE_CACHE === undefined) {
-      this.#cacheDir = mkdtempSync(join(tmpdir(), `stryker-node-test-cache-${process.pid}-`));
+      this.#cacheDir = mkdtempSync(join(tmpdir(), `lz-stryker-node-test-cache-${process.pid}-`));
     }
   }
 
@@ -672,7 +672,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   }
 
   async runFile(file: string, run: LzRunOptions, memoryLimitMB?: number): Promise<LzFileRun> {
-    const runDir = mkdtempSync(join(tmpdir(), `stryker-node-test-${process.pid}-`));
+    const runDir = mkdtempSync(join(tmpdir(), `lz-stryker-node-test-${process.pid}-`));
     const outDir = join(runDir, 'out');
     const tmpDir = join(runDir, 'tmp');
 

@@ -194,7 +194,7 @@ let stalled = false;
 
 export function ownCacheDirs(): string[] {
   return readdirSync(tmpdir())
-    .filter((name) => name.startsWith(`stryker-node-test-cache-${process.pid}-`))
+    .filter((name) => name.startsWith(`lz-stryker-node-test-cache-${process.pid}-`))
     .sort();
 }
 

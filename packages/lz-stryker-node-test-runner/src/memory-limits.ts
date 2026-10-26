@@ -14,7 +14,7 @@ import type { ProcessRecord } from './hook-core.ts';
  * may replace, so the directory is named after the process they share: Stryker's own.
  */
 export function peakMemoryDir(strykerPid: number): string {
-  return join(tmpdir(), `stryker-node-test-peaks-${strykerPid}-dry-run`);
+  return join(tmpdir(), `lz-stryker-node-test-peaks-${strykerPid}-dry-run`);
 }
 
 /**
