@@ -73,6 +73,8 @@ export default [
       '@typescript-eslint/non-nullable-type-assertion-style': 'error',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // Augmenting node:test's types takes a namespace inside `declare module`.
+      '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
     },
   },
   {
