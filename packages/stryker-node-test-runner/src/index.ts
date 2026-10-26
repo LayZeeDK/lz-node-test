@@ -43,10 +43,10 @@ export interface NodeTestOptions {
 const DEFAULTS = schema.properties.lzStrykerNodeTest.properties;
 
 /** The oldest Node.js the runner supports, as `engines` in package.json says, as major and minor version. */
-export const MIN_NODE_VERSION = [22, 18] as const;
+export const MIN_NODE_VERSION: readonly [major: number, minor: number] = [22, 18];
 
 function supportsNode(version: string): boolean {
-  const [major, minor] = version.split('.').map(Number) as [number, number];
+  const [major, minor] = version.split('.').map(Number);
   const [minMajor, minMinor] = MIN_NODE_VERSION;
 
   return major > minMajor || (major === minMajor && minor >= minMinor);

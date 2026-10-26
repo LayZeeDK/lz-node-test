@@ -165,7 +165,7 @@ function attribute(source: unknown, path: string, fallback?: unknown): unknown {
   let value = source;
 
   for (const key of path.replace(/\[(\d+)\]/g, '.$1').split('.')) {
-    value = (Object(value) as Record<string, unknown>)[key];
+    value = Reflect.get(new Object(value), key);
 
     if (value === undefined) {
       return fallback;

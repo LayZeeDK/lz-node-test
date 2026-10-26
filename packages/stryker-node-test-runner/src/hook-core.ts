@@ -70,6 +70,7 @@ export interface ProcessRecord {
 }
 
 type Body = (this: unknown, ...args: unknown[]) => unknown;
+type DoneBody = (this: unknown, context: unknown, done: (error?: unknown) => void) => unknown;
 type Registrar = (this: unknown, name: string, ...rest: unknown[]) => unknown;
 type HookRegistrar = (this: unknown, hook?: Body, ...rest: unknown[]) => unknown;
 /**
@@ -116,7 +117,7 @@ export type NodeTestModule = Register & {
 
 const AFTER_HOOK = '"after" hook';
 
-export const ENV = {
+export const ENV = Object.freeze({
   out: 'STRYKER_NODE_TEST_OUT',
   file: 'STRYKER_NODE_TEST_FILE',
   dryRun: 'STRYKER_NODE_TEST_DRY_RUN',
@@ -127,7 +128,7 @@ export const ENV = {
   bail: 'STRYKER_NODE_TEST_BAIL',
   activeMutant: 'STRYKER_NODE_TEST_ACTIVE_MUTANT',
   heldOpen: 'STRYKER_NODE_TEST_HELD_OPEN_MS',
-} as const;
+});
 
 /**
  * How long a test file's process may stay alive after its tests and root `after` hooks when the ending does not end it
@@ -715,8 +716,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
    * is its own.
    */
   const parse = (args: unknown[]) => {
-    const body = args.find((arg) => typeof arg === 'function') as Body | undefined;
-    const options = args.find((arg) => typeof arg === 'object') as object | undefined;
+    const body = args.find((arg): arg is Body => typeof arg === 'function');
+    const options = args.find((arg): arg is object | null => typeof arg === 'object');
     const name = typeof args[0] === 'string' && args[0] !== '' ? args[0] : body?.name || '<anonymous>';
 
     return { name, options, body };
@@ -729,7 +730,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const registerWith = (
     register: Registrar,
     self: unknown,
-    { name, options, body }: { name: string; options: object | undefined; body: Body | undefined },
+    { name, options, body }: { name: string; options: object | null | undefined; body: Body | DoneBody | undefined },
   ) => register.call(self, name, { ...options, concurrency: false }, ...(body ? [body] : []));
 
   const wrapSuite = (register: Registrar): Registrar =>
@@ -778,7 +779,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
         return leave;
       };
-      const wrap = (body: Body): Body => {
+      const wrap = (body: Body) => {
         // node:test passes a `done` callback only to a function that declares a second parameter.
         if (body.length >= 2) {
           return function (this: unknown, context: unknown, done: (error?: unknown) => void) {
@@ -802,7 +803,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
               leave();
               throw error;
             }
-          } as Body;
+          };
         }
 
         return async function (this: unknown, ...args: unknown[]) {
@@ -910,7 +911,7 @@ export function redirectNodeTest(names: string[]): ModuleHooks {
         return nextLoad(url, context);
       }
 
-      const format = url.slice(WRAPPED_URL.length) as keyof typeof sources;
+      const format = url === `${WRAPPED_URL}commonjs` ? 'commonjs' : 'module';
 
       return { format, source: sources[format], shortCircuit: true };
     },
