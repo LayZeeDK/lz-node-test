@@ -22,17 +22,26 @@ export function modified<F>(
   flags: Flags,
 ): Modified<Table<F>> {
   const table: Table<F> = (rows, ...values) => cases(flags, values.length > 0 ? templateRows(rows, values) : rows);
-  const flag = (key: keyof Flags) => ({ get: () => modified(cases, { ...flags, [key]: true }) });
-  const conditions = {
+  const flag = (key: keyof Flags) => () => modified(cases, { ...flags, [key]: true });
+  const withConditions = Object.assign(table, {
     skipIf: (condition: unknown) => modified(cases, { ...flags, skip: Boolean(condition) }),
     runIf: (condition: unknown) => modified(cases, { ...flags, skip: !condition }),
-  };
+  });
 
-  // The getters must be defined, not assigned, and TypeScript cannot type what defineProperties adds.
-  return Object.defineProperties(Object.assign(table, conditions), {
-    skip: flag('skip'),
-    only: flag('only'),
-    todo: flag('todo'),
-    fails: flag('fails'),
-  }) as Modified<Table<F>>;
+  // The modifiers are getters, as assigning them would build every chain of modifiers at once, without end.
+  defineGetter(withConditions, 'skip', flag('skip'));
+  defineGetter(withConditions, 'only', flag('only'));
+  defineGetter(withConditions, 'todo', flag('todo'));
+  defineGetter(withConditions, 'fails', flag('fails'));
+
+  return withConditions;
+}
+
+/** Defines a getter on `target` and types it there, as TypeScript does not type what Object.defineProperty adds. */
+function defineGetter<T extends object, K extends PropertyKey, V>(
+  target: T,
+  key: K,
+  get: () => V,
+): asserts target is T & { readonly [P in K]: V } {
+  Object.defineProperty(target, key, { get });
 }
