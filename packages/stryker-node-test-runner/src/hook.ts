@@ -16,6 +16,7 @@ const WATCHDOG = `Promise.all([
 
 // Exported so the tests can call them in their own process: those of the test files they start report no coverage.
 // process.exit(undefined) sets the exit code to undefined, so it would exit with 0.
+// eslint-disable-next-line n/no-process-exit -- the hook ends a test file's process once its tests are done, though something may hold it open
 export const exit: HookDependencies['exit'] = (code) => process.exit(code ?? process.exitCode);
 
 export const activeResources: HookDependencies['activeResources'] = () => {
