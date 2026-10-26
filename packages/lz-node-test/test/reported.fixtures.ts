@@ -44,6 +44,7 @@ declare module 'node:test' {
 
 assert.register(
   'reports',
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- t.assert.reports returns the promise, and every caller awaits it
   async function (this: TestContext, cases: () => void, expected: Reported[], options: { only?: boolean } = {}) {
     this.assert.deepStrictEqual(await reported(cases, options.only), expected);
   },
