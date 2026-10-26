@@ -135,6 +135,7 @@ export default [
   },
   {
     files: ['**/test/**/*.test.ts'],
+    ignores: SYNTHETIC,
     rules: { 'node-test/no-export': 'error' },
   },
 ];
