@@ -13,7 +13,7 @@ export default [
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '**/out-tsc', ...SYNTHETIC],
+    ignores: ['**/dist', '**/out-tsc', '**/.stryker-tmp', ...SYNTHETIC],
   },
   {
     linterOptions: { reportUnusedDisableDirectives: 'error' },
