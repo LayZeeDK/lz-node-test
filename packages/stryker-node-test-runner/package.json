@@ -39,6 +39,7 @@
       "type:lib"
     ],
     "targets": {
+      "mutate": {},
       "test-integration": {
         "dependsOn": [
           "build"

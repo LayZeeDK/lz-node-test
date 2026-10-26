@@ -44,6 +44,9 @@
     "name": "stryker-node-test-mutators",
     "tags": [
       "type:lib"
-    ]
+    ],
+    "targets": {
+      "mutate": {}
+    }
   }
 }

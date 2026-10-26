@@ -1,13 +1,9 @@
-import base from './stryker.config.mjs';
+import base, { SOURCE } from '../../stryker.base.mjs';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   ...base,
-  mutate: [
-    'tools/test-each/**/*.ts',
-    '!tools/test-each/**/*.test.ts',
-    '!tools/test-each/**/*.fixtures.ts',
-    '!tools/test-each/**/*.types.ts',
-  ],
-  lzNodeTest: { testFiles: ['tools/test-each/**/*.test.ts'] },
+  mutate: ['packages/lz-node-test/src/**/*.ts'],
+  tsconfigFile: 'packages/lz-node-test/tsconfig.stryker.json',
+  lzNodeTest: { testFiles: ['packages/lz-node-test/test/**/*.test.ts'], nodeArgs: [SOURCE] },
 };

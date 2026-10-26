@@ -29,6 +29,9 @@
     "name": "lz-node-test",
     "tags": [
       "type:lib"
-    ]
+    ],
+    "targets": {
+      "mutate": {}
+    }
   }
 }

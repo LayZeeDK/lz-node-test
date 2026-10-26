@@ -21,6 +21,30 @@
     "test-integration": {
       "cache": true,
       "inputs": ["default", "^production", "nodeVersion"]
+    },
+    "mutate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "parallelism": false,
+      "dependsOn": ["build"],
+      "inputs": [
+        "default",
+        "^production",
+        "nodeVersion",
+        "{workspaceRoot}/stryker.base.mjs",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{workspaceRoot}/packages/stryker-node-test-runner/src/**/*",
+        "{workspaceRoot}/packages/stryker-node-test-mutators/src/**/*",
+        { "externalDependencies": ["@stryker-mutator/core", "@stryker-mutator/typescript-checker", "typescript"] }
+      ],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "parallel": false,
+        "commands": [
+          "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.config.mjs",
+          "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.test-code.config.mjs"
+        ]
+      }
     }
   },
   "plugins": [

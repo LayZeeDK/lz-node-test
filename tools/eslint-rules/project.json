@@ -7,6 +7,7 @@
     "test": {
       "command": "node --conditions=@lz-node-test/source --test \"*.test.ts\"",
       "options": { "cwd": "{projectRoot}" }
-    }
+    },
+    "mutate": {}
   }
 }
