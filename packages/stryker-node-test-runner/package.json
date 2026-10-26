@@ -21,6 +21,11 @@
   "engines": {
     "node": ">=22.18"
   },
+  "scripts": {
+    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\"",
+    "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\"",
+    "bench": "node --conditions=@lz-node-test/source test/runner.bench.ts"
+  },
   "devDependencies": {
     "@layzee/lz-node-test": "*"
   },

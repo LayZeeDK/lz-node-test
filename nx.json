@@ -3,8 +3,25 @@
   "analytics": false,
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
-    "production": ["default", "!{projectRoot}/.eslintrc.json", "!{projectRoot}/eslint.config.mjs"],
-    "sharedGlobals": []
+    "production": [
+      "default",
+      "!{projectRoot}/.eslintrc.json",
+      "!{projectRoot}/eslint.config.mjs",
+      "!{projectRoot}/test/**/*",
+      "!{projectRoot}/tsconfig.spec.json"
+    ],
+    "sharedGlobals": [],
+    "nodeVersion": [{ "runtime": "node -v" }]
+  },
+  "targetDefaults": {
+    "test": {
+      "cache": true,
+      "inputs": ["default", "^production", "nodeVersion"]
+    },
+    "test-integration": {
+      "cache": true,
+      "inputs": ["default", "^production", "nodeVersion"]
+    }
   },
   "plugins": [
     {

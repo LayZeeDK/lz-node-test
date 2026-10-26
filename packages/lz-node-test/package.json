@@ -21,6 +21,10 @@
   "engines": {
     "node": ">=22.18"
   },
+  "scripts": {
+    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\"",
+    "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\""
+  },
   "nx": {
     "name": "lz-node-test",
     "tags": [
