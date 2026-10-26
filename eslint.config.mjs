@@ -13,7 +13,7 @@ export default [
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '**/out-tsc'],
+    ignores: ['**/dist', '**/out-tsc', ...SYNTHETIC],
   },
   {
     linterOptions: { reportUnusedDisableDirectives: 'error' },
@@ -102,7 +102,6 @@ export default [
   },
   {
     files: [...SRC, ...TEST],
-    ignores: SYNTHETIC,
     rules: {
       'no-restricted-imports': [
         'error',
@@ -118,7 +117,6 @@ export default [
   {
     // Test rules stay off src: @layzee/lz-node-test's src imports node:test as a library.
     files: TEST,
-    ignores: SYNTHETIC,
     plugins: { 'node-test': nodeTest },
     rules: {
       ...nodeTest.configs.recommended.rules,
@@ -144,7 +142,6 @@ export default [
   },
   {
     files: ['**/test/**/*.test.ts'],
-    ignores: SYNTHETIC,
     rules: { 'node-test/no-export': 'error' },
   },
 ];
