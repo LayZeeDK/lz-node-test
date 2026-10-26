@@ -350,7 +350,7 @@ describe('NodeTestRunner', () => {
 
     const result = await settle(runner.dryRun(DRY_RUN));
 
-    assert.ok(result.status === DryRunStatus.Error);
+    assert.strictEqual(result.status, DryRunStatus.Error);
     const prefix = `Unreadable test results for "${join(dir, 'a.test.mjs')}": `;
     assert.ok(result.errorMessage.startsWith(prefix), result.errorMessage);
     assert.ok(result.errorMessage.length > prefix.length, result.errorMessage);
@@ -564,7 +564,7 @@ describe('NodeTestRunner', () => {
 
     const result = await settle(runner.dryRun(DRY_RUN));
 
-    assert.ok(result.status === DryRunStatus.Error);
+    assert.strictEqual(result.status, DryRunStatus.Error);
     const [first, , ...rest] = result.errorMessage.split('\n');
     assert.equal(first, `Error running file "${a}": node exited with code 1 outside any test.`);
     // node:test gives the position of the wrapper that registered the test.
@@ -920,7 +920,7 @@ describe('NodeTestRunner', () => {
       { id: `${a} > passes`, status: TestStatus.Success, failureMessage: undefined },
     ]);
     const result = await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'static' })));
-    assert.ok(result.status === MutantRunStatus.Error);
+    assert.strictEqual(result.status, MutantRunStatus.Error);
     assert.match(result.errorMessage, /Error: module-level mutant/);
   });
 

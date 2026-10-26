@@ -83,7 +83,7 @@ describe('NodeTestRunner limits', () => {
 
     const result = await settle(runner.mutantRun(mutantRunOptions()), 10_000);
 
-    assert.ok(result.status === MutantRunStatus.Timeout, `expected a timeout, got ${JSON.stringify(result)}`);
+    assert.strictEqual(result.status, MutantRunStatus.Timeout, `expected a timeout, got ${JSON.stringify(result)}`);
     assert.match(result.reason ?? '', /^Memory limit reached \(\d+\/200 MB\)$/);
   });
 
@@ -103,7 +103,11 @@ describe('NodeTestRunner limits', () => {
     // Stryker runs the dry run in one worker and the mutants in all of them, each with a runner of its own.
     for (const runner of [await initRunner(['a.test.mjs']), dryRunner, await initRunner(['a.test.mjs'])]) {
       const result = await settle(runner.mutantRun(mutantRunOptions()));
-      assert.ok(result.status === MutantRunStatus.Killed, `expected a killed mutant, got ${JSON.stringify(result)}`);
+      assert.strictEqual(
+        result.status,
+        MutantRunStatus.Killed,
+        `expected a killed mutant, got ${JSON.stringify(result)}`,
+      );
       limits.push(Number(result.failureMessage));
     }
 
@@ -129,8 +133,9 @@ describe('NodeTestRunner limits', () => {
 
       for (const run of [1, 2]) {
         const result = await settle(runner.mutantRun(mutantRunOptions()));
-        assert.ok(
-          result.status === MutantRunStatus.Killed,
+        assert.strictEqual(
+          result.status,
+          MutantRunStatus.Killed,
           `expected run ${run} to be killed, got ${JSON.stringify(result)}`,
         );
         limits.push(Number(result.failureMessage));
@@ -154,7 +159,7 @@ describe('NodeTestRunner limits', () => {
 
     const result = await settle(runner.dryRun(DRY_RUN));
 
-    assert.ok(result.status === DryRunStatus.Error, `expected an error, got ${JSON.stringify(result)}`);
+    assert.strictEqual(result.status, DryRunStatus.Error, `expected an error, got ${JSON.stringify(result)}`);
     const rssMB = Number(/ held (\d+) MB /.exec(result.errorMessage)?.[1]);
     assert.ok(rssMB > 10, result.errorMessage);
     assert.equal(

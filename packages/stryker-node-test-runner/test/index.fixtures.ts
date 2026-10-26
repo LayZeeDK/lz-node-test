@@ -150,7 +150,7 @@ export function mutantRunOptions(options: Partial<MutantRunOptions> = {}): Mutan
 }
 
 export function complete(result: DryRunResult): CompleteDryRunResult {
-  assert.ok(result.status === DryRunStatus.Complete, `expected a complete run, got ${JSON.stringify(result)}`);
+  assert.strictEqual(result.status, DryRunStatus.Complete, `expected a complete run, got ${JSON.stringify(result)}`);
 
   return result;
 }

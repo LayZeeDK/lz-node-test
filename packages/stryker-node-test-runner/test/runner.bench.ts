@@ -150,7 +150,7 @@ async function round(tasks: [name: string, fn: () => unknown][]): Promise<Map<st
   const times = new Map<string, number>();
 
   for (const task of await bench.run()) {
-    assert.ok(task.result.state === 'completed', `${task.name} ended as ${task.result.state}`);
+    assert.strictEqual(task.result.state, 'completed', `${task.name} ended as ${task.result.state}`);
     times.set(task.name, task.result.latency.samples![0]);
   }
 
