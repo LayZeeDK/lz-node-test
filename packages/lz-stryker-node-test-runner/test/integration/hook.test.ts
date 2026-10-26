@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import type { EventEmitter } from 'node:events';
 import { mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,15 +31,16 @@ shareCompileCache();
 async function loadRunnerStartedHook(
   outDir: string,
   env: Record<string, string> = {},
-): Promise<Record<'exit' | 'beforeExit', (() => void)[]>> {
+): Promise<Record<'exit' | 'beforeExit', ((code: number) => void)[]>> {
   const global: HookDependencies['global'] = globalThis;
   const previousMark = global[installed];
   const previousEnv = Object.values(ENV)
     .filter((key) => key !== ENV.current)
     .map((key) => [key, process.env[key]] as const);
-  const events = ['exit', 'beforeExit'] as const;
-  const emitter: EventEmitter = process;
-  const listeners = new Set(events.flatMap((event) => emitter.listeners(event)));
+  const listeners = {
+    exit: new Set(process.listeners('exit')),
+    beforeExit: new Set(process.listeners('beforeExit')),
+  };
 
   for (const [key] of previousEnv) {
     delete process.env[key];
@@ -68,17 +68,20 @@ async function loadRunnerStartedHook(
     }
   }
 
-  const detach = (event: (typeof events)[number]) => {
-    const added = emitter.listeners(event).filter((listener) => !listeners.has(listener)) as (() => void)[];
-
-    for (const listener of added) {
-      emitter.removeListener(event, listener);
-    }
-
-    return added;
+  const added = {
+    exit: process.listeners('exit').filter((listener) => !listeners.exit.has(listener)),
+    beforeExit: process.listeners('beforeExit').filter((listener) => !listeners.beforeExit.has(listener)),
   };
 
-  return { exit: detach('exit'), beforeExit: detach('beforeExit') };
+  for (const listener of added.exit) {
+    process.removeListener('exit', listener);
+  }
+
+  for (const listener of added.beforeExit) {
+    process.removeListener('beforeExit', listener);
+  }
+
+  return added;
 }
 
 function tempDir(t: TestContext): string {
@@ -102,7 +105,13 @@ function runWithHook(args: string[], env: Record<string, string>): Promise<{ cod
       stdio: 'ignore',
     });
     child.on('error', fail);
-    child.on('close', (code) => done({ code, pid: child.pid! }));
+    child.on('close', (code) => {
+      if (child.pid === undefined) {
+        fail(new Error('The child process started without a pid.'));
+      } else {
+        done({ code, pid: child.pid });
+      }
+    });
   });
 }
 
@@ -131,7 +140,7 @@ describe('hook', () => {
     assert.deepEqual(hookEnv(), before);
     assert.deepEqual([added.exit.length, added.beforeExit.length], [1, 1]);
 
-    added.exit[0]?.();
+    added.exit[0]?.(0);
 
     const records = readRecords(outDir);
     assert.deepEqual(Object.keys(records), [`${process.pid}.0.json`]);
@@ -139,20 +148,24 @@ describe('hook', () => {
   });
 
   it("moves its exit listener behind the process's others when the process ends by itself", async (t) => {
-    const emitter: EventEmitter = process;
     const { exit, beforeExit } = await loadRunnerStartedHook(tempDir(t));
-    const write = exit[0];
+    const [write] = exit;
     const later = () => {};
-    emitter.on('exit', write);
-    emitter.on('exit', later);
+
+    if (write === undefined) {
+      throw new Error('The hook added no exit listener.');
+    }
+
+    process.on('exit', write);
+    process.on('exit', later);
     t.after(() => {
-      emitter.off('exit', write);
-      emitter.off('exit', later);
+      process.off('exit', write);
+      process.off('exit', later);
     });
 
-    beforeExit[0]?.();
+    beforeExit[0]?.(0);
 
-    const listeners = emitter.listeners('exit');
+    const listeners = process.listeners('exit');
     assert.deepEqual(listeners.slice(-2), [later, write]);
     assert.equal(listeners.filter((listener) => listener === write).length, 1);
   });
@@ -174,11 +187,16 @@ describe('hook', () => {
     watching.emit('error', new Error('preload failed'));
 
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);
-    added.exit[0]?.();
+    added.exit[0]?.(0);
     const peakMB = readRecords(outDir)[`${process.pid}.0.json`]?.peakMemoryMB;
+
+    if (peakMB === undefined) {
+      throw new Error('The record has no peak memory.');
+    }
+
     assert.ok(Number.isInteger(peakMB), String(peakMB));
-    assert.ok(peakMB! >= rssMB, `${peakMB} MB, below the ${rssMB} MB held`);
-    assert.ok(peakMB! < 100_000, String(peakMB));
+    assert.ok(peakMB >= rssMB, `${peakMB} MB, below the ${rssMB} MB held`);
+    assert.ok(peakMB < 100_000, String(peakMB));
   });
 
   it("keeps a worker thread's record apart from the test file's, as a worker started from a file loads the hook too", async (t) => {
@@ -211,9 +229,9 @@ describe('hook', () => {
 
   it('ends the process with the code it is given, or else with the exit code set before', (t) => {
     const codes: unknown[] = [];
-    t.mock.method(process, 'exit', ((code?: number) => {
+    t.mock.method(process, 'exit', (code?: number) => {
       codes.push(code);
-    }) as typeof process.exit);
+    });
     const previous = process.exitCode;
     t.after(() => {
       process.exitCode = previous;
@@ -229,11 +247,11 @@ describe('hook', () => {
   it('calls back after the delay without keeping the process alive', (t) => {
     const timers: unknown[] = [];
     let unrefs = 0;
-    t.mock.method(globalThis, 'setTimeout', ((callback: () => void, ms: number) => {
+    t.mock.method(globalThis, 'setTimeout', (callback: () => void, ms: number) => {
       timers.push([callback, ms]);
 
       return { unref: () => unrefs++ };
-    }) as unknown as typeof setTimeout);
+    });
     const callback = () => {};
 
     later(callback, 250);
@@ -554,9 +572,14 @@ describe('hook', () => {
     });
 
     const peakMB = readRecords(outDir)[`${pid}.0.json`]?.peakMemoryMB;
+
+    if (peakMB === undefined) {
+      throw new Error('The record has no peak memory.');
+    }
+
     assert.ok(Number.isInteger(peakMB), String(peakMB));
-    assert.ok(peakMB! >= 100, String(peakMB));
-    assert.ok(peakMB! < 1000, String(peakMB));
+    assert.ok(peakMB >= 100, String(peakMB));
+    assert.ok(peakMB < 1000, String(peakMB));
   });
 
   it("watches memory from the main thread only, not from a test's own worker threads", async (t) => {
