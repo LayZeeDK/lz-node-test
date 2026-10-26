@@ -11,14 +11,18 @@ import { closed, idle, later, onEnd, onFinish, onIdle, onSent, pause, poll, shar
 
 const MS = 10;
 
-type Timers = Record<string, (...args: unknown[]) => unknown>;
+interface TimerMock {
+  mock: { readonly calls: readonly { readonly arguments: unknown }[]; restore(): void };
+}
 
 function settle(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-async function callsOf(owner: object, method: string, run: () => unknown): Promise<unknown[][]> {
-  const fake = mock.method(owner as Timers, method, () => ({ unref() {} }));
+const timer = () => ({ unref() {} });
+
+async function callsOf(mockTimer: () => TimerMock, run: () => unknown): Promise<unknown[]> {
+  const fake = mockTimer();
   syncBuiltinESMExports();
 
   try {
@@ -35,13 +39,13 @@ describe('the timers', () => {
   const callback = () => {};
 
   lzTestEach([
-    ['pause', timersPromises, 'setTimeout', () => pause(MS), [MS]],
-    ['wait', timersPromises.scheduler, 'wait', () => wait(MS), [MS]],
-    ['later', timers, 'setTimeout', () => later(callback, MS), [callback, MS]],
-    ['idle', globalThis, 'setTimeout', () => idle(callback, MS), [callback, MS]],
-    ['poll', globalThis, 'setInterval', () => poll(callback), [callback, 100]],
-  ])('%s gives the timer its milliseconds', async (_name, owner, method, run, args) => {
-    assert.deepEqual(await callsOf(owner, method, run), [args]);
+    ['pause', () => mock.method(timersPromises, 'setTimeout', timer), () => pause(MS), [MS]],
+    ['wait', () => mock.method(timersPromises.scheduler, 'wait', timer), () => wait(MS), [MS]],
+    ['later', () => mock.method(timers, 'setTimeout', timer), () => later(callback, MS), [callback, MS]],
+    ['idle', () => mock.method(globalThis, 'setTimeout', timer), () => idle(callback, MS), [callback, MS]],
+    ['poll', () => mock.method(globalThis, 'setInterval', timer), () => poll(callback), [callback, 100]],
+  ])('%s gives the timer its milliseconds', async (_name, mockTimer, run, args) => {
+    assert.deepEqual(await callsOf(mockTimer, run), [args]);
   });
 });
 

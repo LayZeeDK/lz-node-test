@@ -150,7 +150,7 @@ describe('LzStrykerNodeTestRunner results', () => {
 
   it('reports subtests and expectFailure tests with ids and coverage of their own, and filters subtests', async (t) => {
     // Node.js 22 has no expectFailure.
-    const expectFailure = typeof (it as { expectFailure?: unknown }).expectFailure === 'function';
+    const expectFailure = 'expectFailure' in it && typeof it.expectFailure === 'function';
     const dir = project(t, {
       'a.test.mjs': fixture(
         "it('parent', async (t) => {",

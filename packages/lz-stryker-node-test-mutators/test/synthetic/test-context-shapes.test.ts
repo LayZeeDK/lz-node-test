@@ -93,7 +93,7 @@ describe('assertions of the test context', () => {
       share(1, 0);
       t.assert.fail('should throw');
     } catch (error) {
-      t.assert.equal((error as AssertionError).operator, '==');
+      t.assert.equal(error instanceof AssertionError ? error.operator : error, '==');
     }
   });
 

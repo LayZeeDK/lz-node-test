@@ -80,13 +80,13 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
     for await (const event of run({ files: [file], only })) {
       if (event.type === 'test:pass' || event.type === 'test:fail') {
         const { name, skip, todo, details } = event.data;
-        const error = (details as { error?: Error & { cause?: Error } }).error;
+        const error = 'error' in details ? details.error : undefined;
         tests.push({
           name,
           outcome: event.type === 'test:pass' ? 'pass' : 'fail',
           ...(skip !== undefined && { skip: true }),
           ...(todo !== undefined && { todo: true }),
-          ...(error && { error: error.cause?.message ?? error.message }),
+          ...(error && { error: error.cause instanceof Error ? error.cause.message : error.message }),
         });
       }
     }
