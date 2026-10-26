@@ -29,7 +29,7 @@ import {
   type TestEvent,
 } from '../../src/hook-core.ts';
 import { lzParseRecord } from '../../src/index.ts';
-import { bodyOf, callable, fakeNodeTest, TEST_FILE, testContext, type Fn } from '../hook-core.fixtures.ts';
+import { bodyOf, callable, fakeNodeTest, rawBodyOf, TEST_FILE, testContext, type Fn } from '../hook-core.fixtures.ts';
 import { member } from '../index.fixtures.ts';
 
 function reported(
@@ -1249,5 +1249,53 @@ describe('install', () => {
       { tests: [], hitCount: 7 },
       { tests: [], hitCount: 7 },
     ]);
+  });
+});
+
+describe('passing `done` as node:test does', () => {
+  const env = { [ENV.out]: OUT, [ENV.file]: TEST_FILE };
+  /** node:test passes a `done` callback only to a function whose length is exactly 2. */
+  const callAsNodeTest = (fn: Fn | undefined, context: unknown): unknown => {
+    assert.ok(fn);
+
+    return fn.length === 2 ? fn(context, () => {}) : fn(context);
+  };
+  const threeParameters = (seen: unknown[]) => (_context: unknown, done: unknown, _extra: unknown) => {
+    seen.push(done);
+  };
+
+  it('passes no `done` to a root `after` hook with three parameters', async () => {
+    const h = harness(env);
+    install(h.deps);
+    const seen: unknown[] = [];
+    h.wrapped().after(threeParameters(seen));
+
+    await callAsNodeTest(afterHooks(h.fake)[1], {});
+
+    assert.deepEqual(seen, [undefined]);
+  });
+
+  it('passes no `done` to a beforeEach hook with three parameters that runs for a test', async () => {
+    const h = harness(env);
+    install(h.deps);
+    const seen: unknown[] = [];
+    h.wrapped().beforeEach(threeParameters(seen));
+    h.wrapped().it('first', () => {});
+    const hook = h.fake.registrations.find(({ kind }) => kind === 'beforeEach')?.rest[0];
+
+    await callAsNodeTest(callable(hook), testContext([], 'first'));
+
+    assert.deepEqual(seen, [undefined]);
+  });
+
+  it('passes no `done` to a test body with three parameters', async () => {
+    const h = harness(env);
+    install(h.deps);
+    const seen: unknown[] = [];
+    h.wrapped().it('three', threeParameters(seen));
+
+    await callAsNodeTest(rawBodyOf(h.fake.registrations, 'three'), testContext());
+
+    assert.deepEqual(seen, [undefined]);
   });
 });

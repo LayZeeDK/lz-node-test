@@ -485,10 +485,8 @@ export function ending(
           },
         );
       };
-      const wrapped = hook.length >= 2 ? callingBack : promising;
-      Object.defineProperty(wrapped, 'length', { value: hook.length });
 
-      return wrapped;
+      return hook.length === 2 ? callingBack : promising;
     },
     reported: ({ type, data }) => {
       // A failing root hook is reported as a failure of the file itself, which has no type.
@@ -734,10 +732,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
       return Promise.resolve(callAttributed(this, args, end)).finally(end);
     };
-    const wrapped = hook.length >= 2 ? callingBack : promising;
-    Object.defineProperty(wrapped, 'length', { value: hook.length });
 
-    return wrapped;
+    return hook.length === 2 ? callingBack : promising;
   };
   const activating = (hook: Body | undefined): Body | undefined => {
     // node:test registers a hook without a function, as one that does nothing.
@@ -842,8 +838,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         return leave;
       };
       const wrap = (body: Body) => {
-        // node:test passes a `done` callback only to a function that declares a second parameter.
-        if (body.length >= 2) {
+        // node:test passes a `done` callback only to a function whose length is exactly 2.
+        if (body.length === 2) {
           const callingBack: TestFn = function (this: unknown, context, done) {
             if (bailed()) {
               context.skip();
