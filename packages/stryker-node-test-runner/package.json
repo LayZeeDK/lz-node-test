@@ -21,6 +21,9 @@
   "engines": {
     "node": ">=22.18"
   },
+  "devDependencies": {
+    "@layzee/lz-node-test": "*"
+  },
   "nx": {
     "name": "stryker-node-test-runner",
     "tags": [

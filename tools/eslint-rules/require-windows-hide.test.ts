@@ -3,7 +3,7 @@ import parser from '@typescript-eslint/parser';
 import { RuleTester } from 'eslint';
 import { describe } from 'node:test';
 
-import { testEach } from '../test-each/test-each.ts';
+import { testEach } from '@layzee/lz-node-test';
 import rule from './require-windows-hide.ts';
 
 /** With no global describe or it, as under node:test, RuleTester runs each case inside the calling test. */
