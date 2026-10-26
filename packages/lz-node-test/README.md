@@ -1,7 +1,5 @@
-# lz-node-test
+# @layzee/lz-node-test
 
-This library was generated with [Nx](https://nx.dev).
+The `testEach` and `testFor` table-test helpers for `node:test`. It is ESM only and needs Node.js 22.18 or later.
 
-## Building
-
-Run `nx build lz-node-test` to build the library.
+The package is empty. Its code arrives in a later commit, and usage documentation arrives with it.

@@ -1,7 +1,8 @@
-# stryker-node-test-runner
+# @layzee/stryker-node-test-runner
 
-This library was generated with [Nx](https://nx.dev).
+A StrykerJS test runner for `node:test`. It is ESM only and needs Node.js 22.18 or later.
 
-## Building
+- Stryker plugin name: `lz-stryker-node-test`
+- Stryker options key: `lzStrykerNodeTest`
 
-Run `nx build stryker-node-test-runner` to build the library.
+The package is empty. Its code arrives in a later commit, and usage documentation arrives with it.

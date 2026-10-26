@@ -1,7 +1,5 @@
-# stryker-node-test-mutators
+# @layzee/stryker-node-test-mutators
 
-This library was generated with [Nx](https://nx.dev).
+StrykerJS mutators for Node.js APIs. It is ESM only and needs Node.js 22.18 or later.
 
-## Building
-
-Run `nx build stryker-node-test-mutators` to build the library.
+The package is empty. Its code arrives in a later commit, and usage documentation arrives with it.
