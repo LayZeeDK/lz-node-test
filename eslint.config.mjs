@@ -154,6 +154,8 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'error',
       // It asks for `!` in place of `as NonNullable<T>`, both of which the two rules above report.
       '@typescript-eslint/non-nullable-type-assertion-style': 'off',
+      // Deprecated in favour of no-empty-object-type, which reports the same node.
+      '@typescript-eslint/no-empty-interface': 'off',
     },
   },
 ];
