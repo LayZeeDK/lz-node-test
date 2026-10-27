@@ -78,7 +78,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
   const passes = "it('passes', async () => { await new Promise((resolve) => setImmediate(resolve)); });";
   const neverEnds = "it('never ends', async () => { await new Promise((resolve) => setTimeout(resolve, 1_000)); });";
 
-  lzTestFor([
+  lzTestFor<readonly [string, readonly string[]]>([
     ['while it loads, before it declares a test', ['process.exit(0);', "it('never runs', () => {});"]],
     ['before node:test reports any test', [passes, "it('exits', () => { process.exit(0); });", neverEnds]],
     // fastify/test/als.test.js:9
@@ -90,7 +90,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
       'after node:test reports a test',
       [passes, "it('exits later', () => { setTimeout(() => process.exit(0), 10); });", neverEnds],
     ],
-  ] as const)('reports a test file that exits with code 0 %s as an error', async ([, lines], t) => {
+  ])('reports a test file that exits with code 0 %s as an error', async ([, lines], t) => {
     const dir = project(t, { 'a.test.mjs': fixture(...lines) });
     const runner = await initRunner(['a.test.mjs']);
 

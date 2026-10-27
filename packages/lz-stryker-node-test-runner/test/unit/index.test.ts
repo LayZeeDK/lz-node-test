@@ -118,7 +118,15 @@ describe('lzFileError', () => {
     `To reproduce it, run \`node "--no-deprecation" "${file}"\` in ${process.cwd()} ` +
     'with NODE_OPTIONS set to `--import "hook" --stack-size=900`.';
 
-  lzTestFor([
+  lzTestFor<
+    readonly [
+      string,
+      number | null,
+      string,
+      readonly { readonly diagnostics?: readonly string[]; readonly heldOpen?: readonly string[] }[],
+      readonly string[],
+    ]
+  >([
     ['trimmed stderr', 1, '  \nline 1\nline 2 \n', [], ['Stderr:', 'line 1', 'line 2']],
     ['no stderr', 3, ' \n', [], []],
     ['the missing exit code of a killed process', null, '', [], []],
@@ -139,9 +147,9 @@ describe('lzFileError', () => {
           'reports an error raised after a test ended only when its process ends by itself.',
       ],
     ],
-  ] as const)('names the file, the exit code and the command, with %s', ([, exitCode, stderr, records, end]) => {
+  ])('names the file, the exit code and the command, with %s', ([, exitCode, stderr, records, end]) => {
     const run = {
-      records: records.map((record: { diagnostics?: readonly string[]; heldOpen?: readonly string[] }) => ({
+      records: records.map((record) => ({
         tests: [],
         ...(record.diagnostics && { diagnostics: [...record.diagnostics] }),
         ...(record.heldOpen && { heldOpen: [...record.heldOpen] }),

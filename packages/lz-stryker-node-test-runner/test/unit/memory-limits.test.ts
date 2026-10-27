@@ -31,13 +31,13 @@ describe('memoryLimits', () => {
     assert.deepEqual(warnings, []);
   });
 
-  lzTestFor([
+  lzTestFor<readonly [readonly (number | undefined)[], number]>([
     [[370], 1579],
     [[101], 1176],
     [[50, 370, 100], 1579],
     [[undefined], 1024],
     [[], 1024],
-  ] as const)(
+  ])(
     'gives a file whose dry-run processes peaked at %j MB a limit of %d MB, also in another runner',
     ([peaks, limitMB], t) => {
       const { dir, warnings, limits } = setup(t);
@@ -55,7 +55,7 @@ describe('memoryLimits', () => {
     },
   );
 
-  lzTestFor([[''], ['not a number'], ['12x'], ['x12']] as const)(
+  lzTestFor<readonly [string]>([[''], ['not a number'], ['12x'], ['x12']])(
     'gives a file whose stored peak reads %j 1024 MB, warning about it as about a missing peak',
     ([stored], t) => {
       const { dir, warnings, limits } = setup(t);

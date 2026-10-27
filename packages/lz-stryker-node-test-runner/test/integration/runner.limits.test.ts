@@ -122,10 +122,10 @@ describe('LzStrykerNodeTestRunner limits', () => {
     assert.ok(first < 1024 + 1.5 * 500, String(limits));
     assert.deepEqual(limits, [first, first, first]);
   });
-  lzTestFor([
+  lzTestFor<readonly [string, number | undefined, readonly [number, number], number]>([
     ['the 1024 MB floor, with a warning once,', undefined, [1024, 1024], 1],
     ['lzStrykerNodeTest.maxMemoryMB when set, without a warning,', 1500, [1500, 1500], 0],
-  ] as const)(
+  ])(
     'gives the processes of a file that the dry run did not run %s in every mutant run',
     async ([, maxMemoryMB, expected, warningCount], t) => {
       const limit = `process.env.${envNames.memoryLimit}`;

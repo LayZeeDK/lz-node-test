@@ -78,7 +78,7 @@ describe('LzStrykerNodeTestRunner', () => {
     await runner.dispose();
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, string, string | undefined]>([
     [
       'refuses',
       '21.20.0',
@@ -91,7 +91,7 @@ describe('LzStrykerNodeTestRunner', () => {
     ],
     ['runs on', '22.18.0', undefined],
     ['runs on', '23.0.0', undefined],
-  ] as const)('%s Node.js %s', async ([, version, message], t) => {
+  ])('%s Node.js %s', async ([, version, message], t) => {
     const value = process.versions.node;
     Object.defineProperty(process.versions, 'node', { value: version });
     t.after(() => Object.defineProperty(process.versions, 'node', { value }));
@@ -229,7 +229,7 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.ok(!existsSync(dirname(outDir)));
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, string]>([
     ['exits', ''],
     ['exits through process.exit', 'process.exit(1);'],
     ['is killed', "process.kill(process.pid, 'SIGKILL');"],
@@ -238,7 +238,7 @@ describe('LzStrykerNodeTestRunner', () => {
       "spawn(process.execPath, ['-e', 'setTimeout(() => {}, 300)'], " +
         "{ cwd: left, detached: true, windowsHide: true, stdio: 'ignore' }).unref();",
     ],
-  ] as const)('removes what a test file leaves in the temporary directory when it %s', async ([, exit], t) => {
+  ])('removes what a test file leaves in the temporary directory when it %s', async ([, exit], t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import { spawn } from 'node:child_process';",
@@ -341,10 +341,10 @@ describe('LzStrykerNodeTestRunner', () => {
     ]);
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, string]>([
     ['does not parse', '{'],
     ['lists no tests', '{}'],
-  ] as const)('reports a test file whose own record %s as an error', async ([, content], t) => {
+  ])('reports a test file whose own record %s as an error', async ([, content], t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import { writeFileSync } from 'node:fs';",

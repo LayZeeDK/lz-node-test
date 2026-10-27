@@ -21,11 +21,11 @@ function check(rssBytes: number) {
 }
 
 describe('workersAllowed', () => {
-  lzTestFor([
+  lzTestFor<readonly [string, boolean | undefined, boolean]>([
     ['outside the permission model', undefined, true],
     ['under the permission model with workers', true, true],
     ['under the permission model without workers', false, false],
-  ] as const)('lets a process start workers %s, or not', ([, allowed, expected]) => {
+  ])('lets a process start workers %s, or not', ([, allowed, expected]) => {
     const asked: string[] = [];
     const permission =
       allowed === undefined
@@ -69,10 +69,10 @@ describe('checkMemory', () => {
     assert.deepEqual(kills, [[process.pid, 'SIGKILL']]);
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, number]>([
     ['at the limit', 200 * mb],
     ['just below the limit after rounding', 200.4 * mb],
-  ] as const)('leaves the process alone %s', ([, rssBytes]) => {
+  ])('leaves the process alone %s', ([, rssBytes]) => {
     assert.deepEqual(check(rssBytes), { writes: [], kills: [] });
   });
 });

@@ -7,11 +7,11 @@ import { lzTestEach } from '@layzee/lz-node-test';
 import { endGroup, groupOptions, processEnd } from '../../src/process-end.ts';
 
 describe('groupOptions', () => {
-  lzTestEach([
+  lzTestEach<[NodeJS.Platform, { detached: boolean; windowsHide: boolean }]>([
     ['linux', { detached: true, windowsHide: true }],
     ['darwin', { detached: true, windowsHide: true }],
     ['win32', { detached: false, windowsHide: true }],
-  ] as const)('spawns a test file on %s with %j', (platform, options) => {
+  ])('spawns a test file on %s with %j', (platform, options) => {
     assert.deepEqual(groupOptions(platform), options);
   });
 });

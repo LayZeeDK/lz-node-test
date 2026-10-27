@@ -217,7 +217,7 @@ export function fixtureCoverage(coverage: MutantCoverage | undefined): MutantCov
       static: own(coverage.static),
       perTest: Object.fromEntries(
         Object.entries(coverage.perTest)
-          .map(([test, hits]) => [test, own(hits)] as const)
+          .map(([test, hits]): [string, Record<string, number>] => [test, own(hits)])
           .filter(([, hits]) => Object.keys(hits).length > 0),
       ),
     }
