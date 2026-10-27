@@ -108,15 +108,19 @@ export function logger(debug: string[] = [], debugEnabled = true, warnings: stri
 }
 
 export interface RunnerOptions {
-  lzStrykerNodeTest?: LzStrykerNodeTestOptions;
-  testFiles?: string[];
-  concurrency?: number;
-  checkers?: string[];
-  allowEmpty?: boolean;
+  readonly lzStrykerNodeTest?: LzStrykerNodeTestOptions;
+  readonly testFiles?: readonly string[];
+  readonly concurrency?: number;
+  readonly checkers?: readonly string[];
+  readonly allowEmpty?: boolean;
 }
 
-export function strykerOptions(options: RunnerOptions = {}): ConstructorParameters<typeof LzStrykerNodeTestRunner>[0] {
-  return { checkers: [], testFiles: [], allowEmpty: false, ...options };
+export function strykerOptions({
+  testFiles = [],
+  checkers = [],
+  ...options
+}: RunnerOptions = {}): ConstructorParameters<typeof LzStrykerNodeTestRunner>[0] {
+  return { allowEmpty: false, ...options, testFiles: [...testFiles], checkers: [...checkers] };
 }
 
 /** The member `key` of a value from a module whose types the tests cannot reach; nothing when it has none. */

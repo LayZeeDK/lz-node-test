@@ -39,14 +39,14 @@ import pkg from '../package.json' with { type: 'json' };
  * return instead of trusting a type.
  */
 interface BenchRunner {
-  dryRun: (options: DryRunOptions) => Promise<unknown>;
-  mutantRun: (options: MutantRunOptions) => Promise<unknown>;
-  dispose: () => Promise<unknown>;
+  readonly dryRun: (options: DryRunOptions) => Promise<unknown>;
+  readonly mutantRun: (options: MutantRunOptions) => Promise<unknown>;
+  readonly dispose: () => Promise<unknown>;
 }
 
 interface Scenario {
-  name: string;
-  run: (runner: BenchRunner) => Promise<number>;
+  readonly name: string;
+  readonly run: (runner: BenchRunner) => Promise<number>;
 }
 
 function method(target: unknown, name: string): (...args: unknown[]) => Promise<unknown> {
@@ -68,11 +68,11 @@ function timeOf(times: Map<string, number>, label: string): number {
 }
 
 interface Stat {
-  runs: number;
-  medianMs: number;
-  minMs: number;
-  maxMs: number;
-  spread: number;
+  readonly runs: number;
+  readonly medianMs: number;
+  readonly minMs: number;
+  readonly maxMs: number;
+  readonly spread: number;
 }
 
 const fileCount = 6;
