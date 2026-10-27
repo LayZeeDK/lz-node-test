@@ -8,7 +8,6 @@ import { lzIsRecord, lzMutantLine, lzParseReport, type LzMutantDetail, type LzRe
 const workspaceDir = join(import.meta.dirname, '..', '..');
 const packagesDir = join(workspaceDir, 'packages');
 const fixturesDir = join(import.meta.dirname, '..', 'fixtures');
-/** What a consumer installs beside the packed packages, at the versions the workspace root pins. */
 const pinnedNames: readonly string[] = [
   '@stryker-mutator/core',
   '@stryker-mutator/typescript-checker',
@@ -23,11 +22,8 @@ const concurrencyVariable = 'LZ_E2E_CONCURRENCY';
 
 interface LzStrykerOutcome {
   readonly exitCode: number;
-  /** stdout, then stderr. */
   readonly output: string;
-  /** Names the run left in the fixture's temporary directory; empty when it cleaned up. */
   readonly leftover: readonly string[];
-  /** Whether the harness ended the run after 15 minutes. */
   readonly timedOut: boolean;
 }
 
@@ -36,18 +32,10 @@ export type LzStrykerRun =
   | (LzStrykerOutcome & { reported: false });
 
 export interface LzFixture {
-  /** The installed copy of the fixture: a real path under `os.tmpdir()`, outside the workspace. */
   readonly dir: string;
-  /** `stryker run <configFile>` in `dir` with the JSON reporter and `LZ_E2E_CONCURRENCY` workers. */
   stryker(configFile?: string): Promise<LzStrykerRun>;
 }
 
-/**
- * Copies `e2e/fixtures/<name>` to a fresh directory under `os.tmpdir()`, packs every package under `packages/` into
- * it, installs the tarballs with the Stryker and TypeScript versions the workspace root pins, and removes the
- * directory when this process exits. Throws before any of that when `LZ_E2E_CONCURRENCY` is not a positive integer,
- * and with npm's output when a pack or the install fails.
- */
 export async function lzFixture(name: string): Promise<LzFixture> {
   const concurrency = lzConcurrency(process.env);
 
@@ -75,10 +63,7 @@ export async function lzFixture(name: string): Promise<LzFixture> {
   return { dir, stryker: (configFile = 'stryker.config.mjs') => stryker(dir, configFile, concurrency) };
 }
 
-/**
- * Stryker's worker count from `LZ_E2E_CONCURRENCY`. Required, so that no run falls back to Stryker's default of all
- * cores but one on a machine that other work shares.
- */
+/** Required, so that no run falls back to Stryker's default of all cores but one on a machine that other work shares. */
 export function lzConcurrency(env: NodeJS.ProcessEnv): number {
   const value = env[concurrencyVariable];
 
@@ -92,10 +77,6 @@ export function lzConcurrency(env: NodeJS.ProcessEnv): number {
   return Number(value);
 }
 
-/**
- * The mutants of `file` in a reported run as `<line>:<column> <mutator> <replacement> <status>`, sorted by position.
- * Throws with Stryker's output when the run never reported, and names the report's files when `file` is not one.
- */
 export function lzMutants(run: LzStrykerRun, file: string): string[] {
   const report = reportOf(run);
   const mutants = report.get(file);
@@ -107,12 +88,10 @@ export function lzMutants(run: LzStrykerRun, file: string): string[] {
   return mutants.map(lzMutantLine);
 }
 
-/** The names a run left in its temporary directory, with the process id in each written as `<pid>`. */
 export function lzLeftover(run: LzStrykerRun): string[] {
   return run.leftover.map((name) => name.replace(/-\d+-/, '-<pid>-'));
 }
 
-/** The one mutant at `<file>:<line>:<column>` with `replacement`; throws when none or more than one matches. */
 export function lzMutant(run: LzStrykerRun, { at, replacement }: { at: string; replacement: string }): LzMutantDetail {
   const matches = [...reportOf(run)].flatMap(([file, mutants]) =>
     mutants.filter((mutant) => `${file}:${mutant.line}:${mutant.column}` === at && mutant.replacement === replacement),
@@ -163,10 +142,7 @@ async function stryker(dir: string, configFile: string, concurrency: number): Pr
     : { ...outcome, reported: false };
 }
 
-/**
- * This process's environment with `tmp` as the temporary directory, less what the suite's own `node --test` sets
- * and a consumer's Stryker runs without.
- */
+/** Drops what the suite's own `node --test` sets and a consumer's Stryker runs without. */
 function consumerEnv(tmp: string): NodeJS.ProcessEnv {
   const inherited = Object.entries(process.env).filter(
     ([key]) => key !== 'NODE_OPTIONS' && key !== 'NODE_TEST_CONTEXT',
@@ -175,7 +151,6 @@ function consumerEnv(tmp: string): NodeJS.ProcessEnv {
   return { ...Object.fromEntries(inherited), TMPDIR: tmp, TEMP: tmp, TMP: tmp };
 }
 
-/** `npm pack` of each package under `packages/` into `into`; the tarball paths, as npm's JSON names them. */
 async function pack(into: string): Promise<string[]> {
   mkdirSync(into);
   const tarballs: string[] = [];
@@ -201,7 +176,6 @@ function packedFile(stdout: string): string {
   return entry.filename;
 }
 
-/** `<name>@<version>` for each pinned name, from the workspace root package.json's devDependencies. */
 function pinned(): string[] {
   const manifest: unknown = JSON.parse(readFileSync(join(workspaceDir, 'package.json'), 'utf8'));
   const devDependencies = lzIsRecord(manifest) ? manifest.devDependencies : undefined;
@@ -217,7 +191,7 @@ function pinned(): string[] {
   });
 }
 
-/** Runs npm as `node <npm-cli.js>`, so no shell and no `npm.cmd` on Windows; throws with its output when it fails. */
+/** Runs npm as `node <npm-cli.js>`, so no shell and no `npm.cmd` on Windows. */
 async function npm(cwd: string, args: readonly string[]): Promise<string> {
   const { exitCode, stdout, stderr } = await lzExec(process.execPath, [npmCli(), ...args], { cwd });
 
@@ -249,7 +223,7 @@ function npmCli(): string {
   return found;
 }
 
-/** Removes the fixture directories of e2e runs whose process no longer runs, as a killed run cannot remove its own. */
+/** A killed run cannot remove its own fixture directory. */
 function removeDeadRunDirs(dir: string): void {
   for (const name of readdirSync(dir)) {
     const pid = new RegExp(`^${dirPrefix}(\\d+)-`).exec(name)?.[1];

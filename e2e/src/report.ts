@@ -25,22 +25,16 @@ export interface LzMutantDetail {
   /** 1-based, as the report's `location.start` has it. */
   readonly column: number;
   readonly mutator: string;
-  /** Empty when the report leaves it out. */
   readonly replacement: string;
   readonly status: LzMutantStatus;
-  /** Empty when the report leaves it out. */
   readonly statusReason: string;
   readonly killedBy: readonly string[];
   readonly coveredBy: readonly string[];
 }
 
-/** Each mutated file's mutants, keyed by the report's path (relative, forward slashes), sorted by position. */
+/** Keyed by the report's path: relative, with forward slashes on every platform. */
 export type LzReport = ReadonlyMap<string, readonly LzMutantDetail[]>;
 
-/**
- * Parses the JSON reporter's file (mutation-testing-report-schema v2) field by field, throwing
- * `not a mutation report: <field>` at the first field that does not fit.
- */
 export function lzParseReport(json: string): LzReport {
   const report: unknown = JSON.parse(json);
 
@@ -57,7 +51,6 @@ export function lzParseReport(json: string): LzReport {
   return new Map(Object.entries(files).map(([file, entry]) => [file, parseFile(entry, `files["${file}"]`)]));
 }
 
-/** One mutant as `<line>:<column> <mutator> <replacement> <status>`, whitespace runs in the replacement as one space. */
 export function lzMutantLine({ line, column, mutator, replacement, status }: LzMutantDetail): string {
   return [`${line}:${column}`, mutator, replacement.replaceAll(/\s+/g, ' '), status]
     .filter((part) => part !== '')
