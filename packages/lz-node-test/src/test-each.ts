@@ -22,7 +22,7 @@ type ExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
   readonly 8: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7]];
   readonly 9: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8]];
   readonly 10: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9]];
-  readonly fallback: Array<T extends ReadonlyArray<infer U> ? U : any>;
+  readonly fallback: ReadonlyArray<T extends ReadonlyArray<infer U> ? U : any>;
 }[T extends Readonly<[any]>
   ? 1
   : T extends Readonly<[any, any]>
@@ -46,7 +46,7 @@ type ExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
                     : 'fallback'];
 
 /** Registers the tests of a `lzTestEach` table. Without `fn`, each test is a todo test. */
-export interface LzEachFunctionReturn<T extends any[]> {
+export interface LzEachFunctionReturn<T extends readonly any[]> {
   (name: Name, fn?: (...args: T) => Awaitable<void>, timeout?: number): void;
   (name: Name, options: EachOptions, fn?: (...args: T) => Awaitable<void>): void;
 }

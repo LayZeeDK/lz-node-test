@@ -23,6 +23,10 @@ export const readonlyMembers = [
     selector: `${declared} TSPropertySignature :not(TSTypeOperator[operator='readonly']) > TSArrayType`,
     message: 'Use readonly T[] for an array in a declared type.',
   },
+  {
+    selector: `${declared} TSPropertySignature TSTypeReference[typeName.name='Array']`,
+    message: 'Use ReadonlyArray<T> for Array<T> in a declared type.',
+  },
 ];
 
 export default [
