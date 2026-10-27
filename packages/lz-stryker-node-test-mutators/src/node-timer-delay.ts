@@ -59,8 +59,12 @@ function delayIndex(path: NodePath, callee: types.Node): number | undefined {
   const from = importOf(path, callee.object.name);
   const method = callee.property.name;
 
-  if (from?.imported === undefined) {
-    return from !== undefined && timers.has(method) ? timersDelayIndex(from.source) : undefined;
+  if (from === undefined) {
+    return undefined;
+  }
+
+  if (from.imported === undefined) {
+    return timers.has(method) ? timersDelayIndex(from.source) : undefined;
   }
 
   return from.imported === 'scheduler' && method === 'wait' && nodeTimersPromises.has(from.source) ? 0 : undefined;
