@@ -38,10 +38,7 @@ async function loadRunnerStartedHook(
   const previousEnv = Object.values(envNames)
     .filter((key) => key !== envNames.current)
     .map((key): readonly [string, string | undefined] => [key, process.env[key]]);
-  const listeners = {
-    exit: new Set(process.listeners('exit')),
-    beforeExit: new Set(process.listeners('beforeExit')),
-  };
+  const listeners = { exit: process.listeners('exit'), beforeExit: process.listeners('beforeExit') };
 
   for (const [key] of previousEnv) {
     delete process.env[key];
@@ -69,17 +66,21 @@ async function loadRunnerStartedHook(
     }
   }
 
-  const added = {
-    exit: process.listeners('exit').filter((listener) => !listeners.exit.has(listener)),
-    beforeExit: process.listeners('beforeExit').filter((listener) => !listeners.beforeExit.has(listener)),
+  return {
+    exit: takeAddedListeners('exit', listeners.exit),
+    beforeExit: takeAddedListeners('beforeExit', listeners.beforeExit),
   };
+}
 
-  for (const listener of added.exit) {
-    process.removeListener('exit', listener);
-  }
+function takeAddedListeners(
+  event: 'exit' | 'beforeExit',
+  before: readonly ((code: number) => void)[],
+): ((code: number) => void)[] {
+  const current = event === 'exit' ? process.listeners('exit') : process.listeners('beforeExit');
+  const added = current.filter((listener) => !before.includes(listener));
 
-  for (const listener of added.beforeExit) {
-    process.removeListener('beforeExit', listener);
+  for (const listener of added) {
+    process.removeListener(event, listener);
   }
 
   return added;
