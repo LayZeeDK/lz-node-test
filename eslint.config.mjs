@@ -3,8 +3,10 @@ import n from 'eslint-plugin-n';
 import nodeTest from 'eslint-node-test';
 
 // Relative to the config ESLint loads: the root one or a package's, which spreads this one.
-const SRC = ['**/src/**/*.ts'];
-const TEST = ['**/test/**/*.ts'];
+// The workspace's ESLint rules keep their tests beside them, outside src/ and test/.
+const TOOL_TEST = ['tools/eslint-rules/*.test.ts'];
+const SRC = ['**/src/**/*.ts', 'tools/eslint-rules/*.ts'];
+const TEST = ['**/test/**/*.ts', ...TOOL_TEST];
 // Code samples the operators' tests mutate, not tests.
 const SYNTHETIC = ['**/test/synthetic/**'];
 // Consumer projects the e2e suite installs; they break workspace rules on purpose.
@@ -79,6 +81,7 @@ export default [
   },
   {
     files: SRC,
+    ignores: TOOL_TEST,
     rules: {
       'n/no-process-exit': 'error',
       'n/no-extraneous-import': 'error',
@@ -144,7 +147,7 @@ export default [
     },
   },
   {
-    files: ['**/test/**/*.test.ts'],
+    files: ['**/test/**/*.test.ts', ...TOOL_TEST],
     rules: { 'node-test/no-export': 'error' },
   },
   {

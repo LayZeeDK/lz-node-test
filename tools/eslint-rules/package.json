@@ -3,5 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./index.ts"
+  "main": "./index.ts",
+  "devDependencies": {
+    "@typescript-eslint/types": "8.72.0",
+    "eslint": "10.13.0"
+  }
 }
