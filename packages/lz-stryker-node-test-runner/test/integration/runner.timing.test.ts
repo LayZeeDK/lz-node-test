@@ -10,17 +10,14 @@ import {
   dryRun,
   fixture,
   initRunner,
-  logger,
   mutantRunOptions,
   passed,
   project,
   settle,
   shareCompileCache,
   summary,
-  strykerOptions,
   withoutDuration,
 } from '../index.fixtures.ts';
-import { LzStrykerNodeTestRunner } from '../../src/index.ts';
 
 shareCompileCache();
 
@@ -58,9 +55,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
         '});',
       );
     const dir = project(t, { 'a.test.mjs': meets('a', 'b'), 'b.test.mjs': meets('b', 'a') });
-    const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'] }, concurrency, checkers };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
-    await runner.init();
+    const runner = await initRunner(['*.test.mjs'], {}, { concurrency, checkers });
 
     return { dir, runner, a: `${join(dir, 'a.test.mjs')} > meets b`, b: `${join(dir, 'b.test.mjs')} > meets a` };
   }

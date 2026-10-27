@@ -17,10 +17,8 @@ import {
   project,
   settle,
   shareCompileCache,
-  strykerOptions,
   withoutDuration,
 } from '../index.fixtures.ts';
-import { LzStrykerNodeTestRunner } from '../../src/index.ts';
 
 shareCompileCache();
 
@@ -133,11 +131,11 @@ describe('LzStrykerNodeTestRunner limits', () => {
         'a.test.mjs': fixture(`it('fails with its memory limit', () => { throw new Error(${limit}); });`),
       });
       const warnings: string[] = [];
-      const options = {
-        lzStrykerNodeTest: { testFiles: ['a.test.mjs'], ...(maxMemoryMB !== undefined && { maxMemoryMB }) },
-      };
-      const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger([], true, warnings));
-      await runner.init();
+      const runner = await initRunner(
+        ['a.test.mjs'],
+        { ...(maxMemoryMB !== undefined && { maxMemoryMB }) },
+        { log: logger([], true, warnings) },
+      );
       const results = [];
 
       for (let run = 0; run < 2; run++) {
@@ -164,9 +162,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
   it('ends a dry run under lzStrykerNodeTest.maxMemoryMB as an error that names the first file, in order, that held more', async (t) => {
     const waits = fixture("it('waits', async () => { await new Promise((resolve) => setTimeout(resolve, 1_000)); });");
     const dir = project(t, { 'a.test.mjs': waits, 'b.test.mjs': waits });
-    const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'], maxMemoryMB: 10 }, concurrency: 2 };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
-    await runner.init();
+    const runner = await initRunner(['*.test.mjs'], { maxMemoryMB: 10 }, { concurrency: 2 });
 
     const result = await settle(runner.dryRun(dryRun));
 

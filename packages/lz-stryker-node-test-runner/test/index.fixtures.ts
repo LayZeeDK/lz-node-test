@@ -153,11 +153,14 @@ export function construct(target: unknown, args: unknown[]): unknown {
 }
 
 export async function initRunner(
-  testFiles: string[] | undefined,
-  lzStrykerNodeTest: LzStrykerNodeTestOptions = {},
+  testFiles?: string[],
+  lzStrykerNodeTest?: LzStrykerNodeTestOptions,
+  { log = logger(), ...options }: Omit<RunnerOptions, 'lzStrykerNodeTest'> & { readonly log?: Logger } = {},
 ): Promise<LzStrykerNodeTestRunner> {
-  const options = { lzStrykerNodeTest: { ...lzStrykerNodeTest, ...(testFiles && { testFiles }) } };
-  const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
+  const lzOptions = (testFiles ?? lzStrykerNodeTest) && {
+    lzStrykerNodeTest: { ...lzStrykerNodeTest, ...(testFiles && { testFiles }) },
+  };
+  const runner = new LzStrykerNodeTestRunner(strykerOptions({ ...options, ...lzOptions }), log);
   await runner.init();
 
   return runner;

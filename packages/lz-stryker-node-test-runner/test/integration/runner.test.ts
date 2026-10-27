@@ -25,7 +25,6 @@ import {
   passing,
   project,
   reporterArg,
-  type RunnerOptions,
   runNodeOptions,
   settle,
   shareCompileCache,
@@ -33,7 +32,7 @@ import {
   strykerOptions,
   withoutDuration,
 } from '../index.fixtures.ts';
-import { lzFileError, LzStrykerNodeTestRunner } from '../../src/index.ts';
+import { lzFileError, LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../../src/index.ts';
 
 const compileCache = shareCompileCache();
 
@@ -396,8 +395,7 @@ describe('LzStrykerNodeTestRunner', () => {
         [join('node_modules', 'pkg', 'c.test.ts')]: failing,
         'd.test.mjs': failing,
       });
-      const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
-      await runner.init();
+      const runner = await initRunner(undefined, options.lzStrykerNodeTest);
       t.after(() => runner.dispose());
 
       const { tests } = complete(await settle(runner.dryRun(dryRun)));
@@ -417,9 +415,8 @@ describe('LzStrykerNodeTestRunner', () => {
         "it('passes', () => {});",
       ),
     });
-    const execArgv = async (options: RunnerOptions) => {
-      const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
-      await runner.init();
+    const execArgv = async (lzStrykerNodeTest: LzStrykerNodeTestOptions) => {
+      const runner = await initRunner(undefined, lzStrykerNodeTest);
       await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
 
       const argv: unknown = JSON.parse(readFileSync(join(dir, 'exec-argv.json'), 'utf8'));
@@ -435,8 +432,8 @@ describe('LzStrykerNodeTestRunner', () => {
     const reporters = ['--test-reporter', 'spec', '--test-reporter-destination=stdout'];
     const withReporters = { testFiles: ['a.test.mjs'], nodeArgs: [...reporters, ...nodeArgs] };
 
-    assert.deepEqual(await execArgv({ lzStrykerNodeTest: withReporters }), [reporterArg, ...nodeArgs]);
-    assert.deepEqual(await execArgv({ lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } }), [reporterArg]);
+    assert.deepEqual(await execArgv(withReporters), [reporterArg, ...nodeArgs]);
+    assert.deepEqual(await execArgv({ testFiles: ['a.test.mjs'] }), [reporterArg]);
   });
 
   it('runs its own reporter only, whatever reporters NODE_OPTIONS and lzStrykerNodeTest.nodeArgs name', async (t) => {
@@ -450,9 +447,7 @@ describe('LzStrykerNodeTestRunner', () => {
       }
     });
     process.env['NODE_OPTIONS'] = `${nodeOptions ?? ''} --test-reporter=spec`;
-    const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], nodeArgs: ['--test-reporter=dot'] } };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
-    await runner.init();
+    const runner = await initRunner(['a.test.mjs'], { nodeArgs: ['--test-reporter=dot'] });
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
       passed(`${join(dir, 'a.test.mjs')} > passes`),
@@ -509,11 +504,13 @@ describe('LzStrykerNodeTestRunner', () => {
   it('logs the node command and directory of each test file, only when debug logging is on', async (t) => {
     const dir = project(t, { 'a.test.mjs': passing });
     const file = join(dir, 'a.test.mjs');
-    const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], nodeArgs: ['--no-deprecation'] } };
     const debugOf = async (debugEnabled: boolean) => {
       const debug: string[] = [];
-      const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger(debug, debugEnabled));
-      await runner.init();
+      const runner = await initRunner(
+        ['a.test.mjs'],
+        { nodeArgs: ['--no-deprecation'] },
+        { log: logger(debug, debugEnabled) },
+      );
       await settle(runner.runFile(file, { dryRun: false, disableBail: false }));
 
       return debug;
@@ -548,9 +545,7 @@ describe('LzStrykerNodeTestRunner', () => {
         'process.exitCode = 3;',
       ),
     });
-    const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'], nodeArgs: ['--no-deprecation'] } };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
-    await runner.init();
+    const runner = await initRunner(['*.test.mjs'], { nodeArgs: ['--no-deprecation'] });
     const b = join(dir, 'b.test.mjs');
     const errorMessage = lzFileError(b, {
       records: [],
@@ -897,9 +892,7 @@ describe('LzStrykerNodeTestRunner', () => {
 
   it("runs only the files of Stryker's --testFiles in the dry run, also outside lzStrykerNodeTest.testFiles", async (t) => {
     const dir = project(t, { 'a.test.mjs': passing, 'b.test.mjs': failing, 'c.spec.mjs': failing });
-    const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'] }, testFiles: ['c.spec.mjs'] };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
-    await runner.init();
+    const runner = await initRunner(['*.test.mjs'], {}, { testFiles: ['c.spec.mjs'] });
     const b = join(dir, 'b.test.mjs');
     const c = join(dir, 'c.spec.mjs');
 
