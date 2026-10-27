@@ -34,7 +34,9 @@ export interface Instrumenter {
   readonly dir: string;
   readonly version: string;
   /** The list that the instrumenter reads its mutators from each time it transforms a file. */
-  readonly allMutators: ListedMutator[];
+  readonly allMutators: readonly ListedMutator[];
+  /** Replaces the contents of `allMutators`, in place, so the instrumenter reads the new list. */
+  setMutators(mutators: readonly ListedMutator[]): void;
   /** The Babel types of the instrumenter's own @babel/core, to build the nodes it places. */
   readonly types: BabelTypes;
   instrument(files: readonly SourceFile[], mutators?: readonly ListedMutator[]): Promise<readonly InstrumentedMutant[]>;
@@ -58,9 +60,12 @@ export async function install(
   const mutators = operators.map((operator) => toNodeMutator(operator, instrumenter.types));
 
   if (mode === 'replace') {
-    allMutators.splice(0, allMutators.length, ...mutators);
+    instrumenter.setMutators(mutators);
   } else {
-    allMutators.push(...mutators.filter((mutator) => !allMutators.some(({ name }) => name === mutator.name)));
+    instrumenter.setMutators([
+      ...allMutators,
+      ...mutators.filter((mutator) => !allMutators.some(({ name }) => name === mutator.name)),
+    ]);
   }
 
   await selfCheck(instrumenter, operators);
@@ -166,11 +171,15 @@ export async function resolveFromCore(
   );
   const transformBabel = member(transformer, 'transformBabel', isFunction, transformerFile);
   const instrumenterClass = member(index, 'Instrumenter', isFunction, indexFile);
+  const allMutators = member(mutate, 'allMutators', isMutatorList, mutateFile);
 
   return {
     dir,
     version: member(fromCore(packageJson), 'version', isString, packageJson),
-    allMutators: member(mutate, 'allMutators', isMutatorList, mutateFile),
+    allMutators,
+    setMutators(mutators) {
+      allMutators.splice(0, allMutators.length, ...mutators);
+    },
     types: member(babel, 'types', isBabelTypes, babelFile),
     async instrument(files, mutators) {
       // The instrumenter takes a transform of its own in place of the one that reads `allMutators`.

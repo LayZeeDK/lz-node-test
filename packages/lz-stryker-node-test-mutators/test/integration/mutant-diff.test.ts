@@ -43,6 +43,7 @@ describe('corpusDiff', () => {
       dir: '/stryker/instrumenter',
       version: '10.1.1',
       allMutators: [{ name: 'StringLiteral', *mutate() {} }],
+      setMutators() {},
       types,
       async instrument(files, mutators: readonly NodeMutatorLike[] = []) {
         instrumented.push([[...files], mutators.map(({ name }) => name)]);
@@ -88,6 +89,7 @@ describe('corpusDiff', () => {
       dir: '/stryker/instrumenter',
       version: '10.1.1',
       allMutators: [],
+      setMutators() {},
       types,
       async instrument(_files, mutators = []) {
         return [mutators.length > 0 ? mutant('Own', 0, 0) : mutant('CallExpression', 0, 0)];

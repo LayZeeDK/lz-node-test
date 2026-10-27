@@ -11,6 +11,7 @@ import {
   install,
   resolveFromCore,
   type Instrumenter,
+  type ListedMutator,
   type InstrumentedMutant,
   type SourceFile,
 } from '../../src/install.ts';
@@ -27,13 +28,16 @@ function setup({
   silent = [],
   version = '10.1.1',
 }: { builtIns?: string[]; silent?: string[]; version?: string } = {}) {
-  const allMutators: NodeMutatorLike[] = builtIns.map((name) => ({ name, *mutate() {} }));
+  const allMutators: ListedMutator[] = builtIns.map((name) => ({ name, *mutate() {} }));
   const instrumented: SourceFile[][] = [];
   const warnings: string[] = [];
   const instrumenter: Instrumenter = {
     dir: '/stryker/instrumenter',
     version,
     allMutators,
+    setMutators(mutators) {
+      allMutators.splice(0, allMutators.length, ...mutators);
+    },
     types,
     async instrument(files) {
       instrumented.push([...files]);

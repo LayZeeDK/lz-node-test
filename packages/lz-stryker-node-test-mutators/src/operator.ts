@@ -17,7 +17,7 @@ export interface Operator {
 /** The shape of Stryker's `NodeMutator`, which the instrumenter's exports keep out of reach. */
 export interface NodeMutatorLike {
   readonly name: string;
-  mutate(path: NodePath, context: { isExpressionContext: boolean }): Iterable<types.Node>;
+  mutate(path: NodePath, context: { readonly isExpressionContext: boolean }): Iterable<types.Node>;
 }
 
 export const own = Symbol.for('lz-stryker-node-test-mutators');
