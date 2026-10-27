@@ -43,7 +43,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
     const result = await settle(runner.mutantRun(mutantRunOptions()));
 
     assert.equal(result.status, MutantRunStatus.Killed);
-    assert.deepEqual('killedBy' in result && result.killedBy, [`${join(dir, 'a.test.mjs')} > fails`]);
+    assert.deepEqual(result.killedBy, [`${join(dir, 'a.test.mjs')} > fails`]);
   });
 
   it('ends the dry run of a test file whose passing test leaves a server listening as an error that says what to do', async (t) => {
@@ -71,7 +71,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
     const result = await settle(runner.dryRun(dryRun));
 
     assert.equal(result.status, DryRunStatus.Error);
-    assert.match('errorMessage' in result ? result.errorMessage : '', /stayed alive .* held open by TCPServerWrap,/);
+    assert.match(result.errorMessage, /stayed alive .* held open by TCPServerWrap,/);
   });
 
   it('reports a mutant whose passing test leaves servers listening as timed out, naming them', async (t) => {
@@ -99,7 +99,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
 
     assert.equal(result.status, MutantRunStatus.Error);
     assert.match(
-      'errorMessage' in result ? result.errorMessage : '',
+      result.errorMessage,
       /node exited with code 1 outside any test\.\n.*\nIt stayed alive after its tests, held open by TCPServerWrap,/,
     );
   });
@@ -137,7 +137,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
     const result = await settle(runner.mutantRun(mutantRunOptions()));
 
     assert.equal(result.status, MutantRunStatus.Killed);
-    assert.deepEqual('killedBy' in result && result.killedBy, [
+    assert.deepEqual(result.killedBy, [
       `${join(dir, 'a.test.mjs')} > fails`,
       `${join(dir, 'a.test.mjs')} > "after" hook`,
     ]);
