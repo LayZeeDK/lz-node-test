@@ -27,8 +27,15 @@ interface SuiteCall {
   readonly args: readonly unknown[];
 }
 
-function wrapped(filter?: string[], bail = false, activeMutant?: string) {
-  const fake = fakeNodeTest();
+interface WrappedOptions {
+  readonly filter?: readonly string[];
+  readonly bail?: boolean;
+  readonly activeMutant?: string;
+  readonly expectFailure?: boolean;
+}
+
+function wrapped({ filter, bail = false, activeMutant, expectFailure }: WrappedOptions = {}) {
+  const fake = fakeNodeTest(expectFailure);
   const ns: InstrumenterContext = {};
   const env: Record<string, string | undefined> = {};
   const tests: RecordedTest[] = [];
@@ -426,7 +433,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('runs a test whose subtest the filter selects, and skips the subtests it does not select', async () => {
-    const { module, registrations, seen, see } = wrapped([`${testFile} > parent > wanted`]);
+    const { module, registrations, seen, see } = wrapped({ filter: [`${testFile} > parent > wanted`] });
     module.it('parent', async (t: Subtests) => {
       see();
       t.test('wanted', see);
@@ -450,7 +457,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('tells before each suite, test and hook goes to node:test, and whether it is a top-level suite or test', async () => {
-    const { module, registrations, registering } = wrapped([`${testFile} > runs`]);
+    const { module, registrations, registering } = wrapped({ filter: [`${testFile} > runs`] });
     module.after(() => {});
     module.describe('suite', () => {
       module.it('nested', () => {});
@@ -504,20 +511,7 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(seen, [`${testFile} > it.expectFailure`, `${testFile} > test.expectFailure`]);
     assert.equal(module.describe.expectFailure, undefined);
 
-    const node22 = wrapNodeTest({
-      ns: {},
-      testFile: testFile,
-      tests: [],
-      filter: undefined,
-      bail: false,
-      activeMutant: undefined,
-      env: {},
-      positions: new Map(),
-      callSites: () => [],
-      nodeTest: fakeNodeTest(false).module,
-      registering: () => {},
-      rootAfter: (hook) => hook,
-    });
+    const { module: node22 } = wrapped({ expectFailure: false });
 
     assert.deepEqual([node22.it.expectFailure, node22.expectFailure], [undefined, undefined]);
   });
@@ -685,7 +679,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('activates the runtime mutant when a test starts and keeps it active, also for processes it starts', async () => {
-    const { module, registrations, ns, env } = wrapped(undefined, false, '7');
+    const { module, registrations, ns, env } = wrapped({ activeMutant: '7' });
     const seen: unknown[] = [];
     module.it('first', () => {
       seen.push(ns.activeMutant, env[activeMutantEnv]);
@@ -708,7 +702,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('activates the runtime mutant before beforeEach hooks and the before hooks of suites run', () => {
-    const { module, registrations, ns, env } = wrapped(undefined, false, '7');
+    const { module, registrations, ns, env } = wrapped({ activeMutant: '7' });
     const seen: unknown[] = [];
     const observe = function (this: unknown, ...args: unknown[]) {
       seen.push(ns.activeMutant, env[activeMutantEnv], this, args);
@@ -948,7 +942,7 @@ describe('wrapNodeTest', () => {
 
   it('registers the tests outside the filter as skipped, so node:test runs neither them nor their hooks', () => {
     const filter = [`${testFile} > group > wanted`, `${testFile} > elsewhere`];
-    const { module, registrations } = wrapped(filter);
+    const { module, registrations } = wrapped({ filter });
     module.describe('group', () => {
       module.it('wanted', { skip: false }, () => {});
       module.it('unwanted', { timeout: 5 }, () => {});
@@ -995,7 +989,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('wraps the functions that `it` carries, as `it` is `test` in node:test', async () => {
-    const { module, registrations, seen, see } = wrapped([`${testFile} > selected > wanted`]);
+    const { module, registrations, seen, see } = wrapped({ filter: [`${testFile} > selected > wanted`] });
     const { it } = module;
     callMember(it, 'describe', 'unselected', () => {
       callMember(it, 'after', () => {});
@@ -1015,7 +1009,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('runs the bodies of the suites outside the filter, but registers none of their hooks', () => {
-    const { module, registrations, positions, sites } = wrapped([`${testFile} > selected > wanted`]);
+    const { module, registrations, positions, sites } = wrapped({ filter: [`${testFile} > selected > wanted`] });
     sites.push({ file: testFile, line: 2, column: 3 });
     const ran: string[] = [];
     const hook = () => {};
@@ -1064,7 +1058,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('runs every test of the file when the filter names the file itself', async () => {
-    const { module, registrations, seen, see } = wrapped([testFile]);
+    const { module, registrations, seen, see } = wrapped({ filter: [testFile] });
     module.describe('group', () => {
       module.it('first', see);
     });
@@ -1078,7 +1072,7 @@ describe('wrapNodeTest', () => {
   const bails = [true, false].map((bail) => ({ bail, verb: bail ? 'skips' : 'runs', mode: bail ? 'on' : 'off' }));
 
   lzTestEach(bails)('$verb the tests after a reported failure with bail $mode', async ({ bail }) => {
-    const { module, registrations, tests } = wrapped(undefined, bail);
+    const { module, registrations, tests } = wrapped({ bail });
     const ran: string[] = [];
     module.it('before the failure', () => {
       ran.push('before the failure');
