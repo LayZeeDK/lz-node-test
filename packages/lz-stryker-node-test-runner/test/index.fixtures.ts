@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { after, type TestContext } from 'node:test';
+import type { TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { INSTRUMENTER_CONSTANTS, type MutantCoverage } from '@stryker-mutator/api/core';
@@ -225,6 +225,7 @@ export function fixtureCoverage(coverage: MutantCoverage | undefined): MutantCov
 }
 
 let stalled = false;
+const stalledExitDelayMs = 10_000;
 
 export function ownCacheDirs(): string[] {
   return readdirSync(tmpdir())
@@ -242,6 +243,11 @@ export async function settle<T>(run: Promise<T>, ms = 5_000): Promise<T> {
       new Promise<never>((_, fail) => {
         timer = setTimeout(() => {
           stalled = true;
+          // A stalled run can leave a blocked process behind that would keep this one alive. Every later run fails
+          // at once on `stalled`, so the process only has to outlive the reporting of those failures.
+          setTimeout(() => {
+            process.exit(1);
+          }, stalledExitDelayMs).unref();
           fail(new Error(`the run did not end within ${ms} ms`));
         }, ms);
       }),
@@ -255,8 +261,7 @@ export function shareCompileCache(): string {
   const cacheDir = mkdtempSync(join(tmpdir(), 'node-test-runner-cache-'));
   process.env['NODE_COMPILE_CACHE'] = cacheDir;
 
-  // Removed on exit rather than in an `after` hook, and ahead of the hook's own exit listener, so a process that dies
-  // early or whose hook fails on exit (both happen under mutation testing) leaves nothing. The runners the tests never
+  // Removed on exit, so a process that dies early (which happens under mutation testing) leaves nothing. The runners the tests never
   // dispose (a mutant of the runner can give each one a directory) are swept here too.
   process.prependListener('exit', () => {
     for (const dir of [cacheDir, ...ownCacheDirs().map((name) => join(tmpdir(), name))]) {
@@ -265,13 +270,6 @@ export function shareCompileCache(): string {
       } catch {
         // A process a test started may still hold a file for a moment; the next run removes its own directory anyway.
       }
-    }
-  });
-
-  after(() => {
-    if (stalled) {
-      // A stalled run can leave a blocked process behind that would keep this one alive.
-      process.exit(1);
     }
   });
 

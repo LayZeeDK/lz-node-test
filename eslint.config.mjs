@@ -142,10 +142,18 @@ export default [
       'no-restricted-imports': [
         'error',
         {
-          paths: ['node:assert', 'assert', 'assert/strict'].map((name) => ({
-            name,
-            message: "Import assert from 'node:assert/strict', whose equal and deepEqual are the strict methods.",
-          })),
+          paths: [
+            ...['node:assert', 'assert', 'assert/strict'].map((name) => ({
+              name,
+              message: "Import assert from 'node:assert/strict', whose equal and deepEqual are the strict methods.",
+            })),
+            {
+              name: 'node:test',
+              importNames: ['before', 'after', 'beforeEach', 'afterEach'],
+              message:
+                'Shared hooks hide what a test starts from. Write a setup function each test calls, and clean up per test with t.after.',
+            },
+          ],
         },
       ],
     },
