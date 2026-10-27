@@ -24,10 +24,10 @@ export function idle(callback: () => void, ms: number): void {
 }
 
 // pino-pretty/test/basic.test.js:1288
-const POLL_MS = 100;
+const pollMs = 100;
 
 export function poll(tick: () => void): NodeJS.Timeout {
-  return setInterval(tick, POLL_MS);
+  return setInterval(tick, pollMs);
 }
 
 export async function closed(emitter: EventEmitter): Promise<void> {

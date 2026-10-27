@@ -9,7 +9,7 @@ import timersPromises from 'node:timers/promises';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { closed, idle, later, onEnd, onFinish, onIdle, onSent, pause, poll, share, total, wait } from './node-apis.ts';
 
-const MS = 10;
+const ms = 10;
 
 interface TimerMock {
   mock: { readonly calls: readonly { readonly arguments: unknown }[]; restore(): void };
@@ -39,10 +39,10 @@ describe('the timers', () => {
   const callback = () => {};
 
   lzTestEach([
-    ['pause', () => mock.method(timersPromises, 'setTimeout', timer), () => pause(MS), [MS]],
-    ['wait', () => mock.method(timersPromises.scheduler, 'wait', timer), () => wait(MS), [MS]],
-    ['later', () => mock.method(timers, 'setTimeout', timer), () => later(callback, MS), [callback, MS]],
-    ['idle', () => mock.method(globalThis, 'setTimeout', timer), () => idle(callback, MS), [callback, MS]],
+    ['pause', () => mock.method(timersPromises, 'setTimeout', timer), () => pause(ms), [ms]],
+    ['wait', () => mock.method(timersPromises.scheduler, 'wait', timer), () => wait(ms), [ms]],
+    ['later', () => mock.method(timers, 'setTimeout', timer), () => later(callback, ms), [callback, ms]],
+    ['idle', () => mock.method(globalThis, 'setTimeout', timer), () => idle(callback, ms), [callback, ms]],
     ['poll', () => mock.method(globalThis, 'setInterval', timer), () => poll(callback), [callback, 100]],
   ])('%s gives the timer its milliseconds', async (_name, mockTimer, run, args) => {
     assert.deepEqual(await callsOf(mockTimer, run), [args]);
