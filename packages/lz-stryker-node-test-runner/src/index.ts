@@ -364,17 +364,12 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
 
   if (memoryLimitReached) {
     const { rssMB, limitMB } = memoryLimitReached;
+    const errorMessage =
+      `A process of "${file}" held ${rssMB} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB (${limitMB} MB), so ` +
+      "its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's limit from " +
+      'the dry run.';
 
-    if (run.dryRun) {
-      const errorMessage =
-        `A process of "${file}" held ${rssMB} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB (${limitMB} MB), so ` +
-        "its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's limit from " +
-        'the dry run.';
-
-      return errorEnd(errorMessage);
-    }
-
-    return { end: { status: DryRunStatus.Timeout, reason: `Memory limit reached (${rssMB}/${limitMB} MB)` } };
+    return dryRunErrorElseTimeout(run, errorMessage, `Memory limit reached (${rssMB}/${limitMB} MB)`);
   }
 
   if (unreadable !== undefined) {
@@ -418,20 +413,13 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   // file can also be unfinished.
   if (!failed && main.heldOpen) {
     const heldBy = main.heldOpen.join(', ');
+    const errorMessage =
+      `Test file "${file}" stayed alive after its tests and root after hooks ended, held open by ${heldBy}, so ` +
+      'node --test would not end either. Close what its tests open in an after hook, or pass --test-force-exit in ' +
+      'lzStrykerNodeTest.nodeArgs, as for node --test (NODE_OPTIONS does not allow it); node:test then loses errors ' +
+      'raised after the tests and root after hooks end.';
 
-    if (run.dryRun) {
-      const errorMessage =
-        `Test file "${file}" stayed alive after its tests and root after hooks ended, held open by ${heldBy}, so ` +
-        'node --test would not end either. Close what its tests open in an after hook, or pass --test-force-exit in ' +
-        'lzStrykerNodeTest.nodeArgs, as for node --test (NODE_OPTIONS does not allow it); node:test then loses errors ' +
-        'raised after the tests and root after hooks end.';
-
-      return errorEnd(errorMessage);
-    }
-
-    return {
-      end: { status: DryRunStatus.Timeout, reason: `Test file "${file}" stayed alive, held open by ${heldBy}` },
-    };
+    return dryRunErrorElseTimeout(run, errorMessage, `Test file "${file}" stayed alive, held open by ${heldBy}`);
   }
 
   // Stryker treats a test runner that exits during a run as crashed, whatever its exit code, and so do its runners
@@ -449,6 +437,10 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
 
 function errorEnd(errorMessage: string): FileOutcome {
   return { end: { status: DryRunStatus.Error, errorMessage } };
+}
+
+function dryRunErrorElseTimeout(run: LzRunOptions, errorMessage: string, reason: string): FileOutcome {
+  return run.dryRun ? errorEnd(errorMessage) : { end: { status: DryRunStatus.Timeout, reason } };
 }
 
 export function lzFilesFor(testFiles: string[], testFilter: readonly string[] | undefined): string[] {
