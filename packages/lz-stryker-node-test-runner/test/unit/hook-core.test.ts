@@ -1146,44 +1146,45 @@ describe('install', () => {
       data: { name: testFile, nesting: 0, details: { duration_ms: 1 } },
     };
 
-    lzTestFor<readonly [string, string, boolean, TestEvent, number]>([
-      ['starts', 'node:test reports the file failed once the tests finished', false, fileFailure, 1],
-      ['does not start', 'node:test reports the file failed before the tests finished', true, fileFailure, 0],
+    lzTestFor<readonly [string, string, TestEvent, number]>([
+      ['starts', 'node:test reports the file failed once the tests finished', fileFailure, 1],
       [
         'does not start',
         'a nested failure has no type',
-        false,
         { ...fileFailure, data: { ...fileFailure.data, nesting: 1 } },
         0,
       ],
-      ['does not start', 'the file passed', false, { ...fileFailure, type: 'test:pass' }, 0],
+      ['does not start', 'the file passed', { ...fileFailure, type: 'test:pass' }, 0],
       [
         'does not start',
         'a top-level test failed',
-        false,
         { ...fileFailure, data: { ...fileFailure.data, details: { type: 'test', duration_ms: 1 } } },
         0,
       ],
     ])(
       '%s the grace at a root `after` hook that never settles when %s, as node:test times out such a hook',
-      ([, , early, event, timers]) => {
+      ([, , event, timers]) => {
         const h = installedHarness(fileEnv);
         h.wrapped().after(() => new Promise(() => {}));
         const [finished] = afterHooks(h.fake);
 
-        if (early) {
-          send(h.deps, event);
-        }
-
         finished?.();
-
-        if (!early) {
-          send(h.deps, event);
-        }
+        send(h.deps, event);
 
         assert.equal(h.timers.length, timers);
       },
     );
+
+    it('does not start the grace at a root `after` hook that never settles when node:test reports the file failed before the tests finished, as node:test times out such a hook', () => {
+      const h = installedHarness(fileEnv);
+      h.wrapped().after(() => new Promise(() => {}));
+      const [finished] = afterHooks(h.fake);
+
+      send(h.deps, fileFailure);
+      finished?.();
+
+      assert.equal(h.timers.length, 0);
+    });
 
     it('starts the grace once, whatever settles after it started', () => {
       const h = installedHarness(fileEnv);
