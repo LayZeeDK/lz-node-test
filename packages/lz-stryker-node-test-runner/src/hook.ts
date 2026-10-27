@@ -49,7 +49,7 @@ install({
   peakMemoryMB: () => Math.round(process.resourceUsage().maxRSS / 1024),
   canWatchMemory: isMainThread && workersAllowed(process.permission),
   watchMemory: (options) => {
-    const worker = new Worker(watchdog, { eval: true, ...options });
+    const worker = new Worker(watchdog, { eval: true, ...options, execArgv: [...options.execArgv] });
     worker.on('error', () => {
       // Listening keeps a watchdog error from ending the process.
     });

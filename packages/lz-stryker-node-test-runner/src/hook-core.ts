@@ -38,38 +38,38 @@ export function within(id: string, scope: string): boolean {
 }
 
 export interface RecordedTest {
-  id: string;
+  readonly id: string;
   /** Skipped tests include todo tests, which run but whose outcome node:test ignores. */
-  status: 'passed' | 'failed' | 'skipped';
-  failureMessage?: string;
-  timeSpentMs: number;
-  startPosition?: Position;
+  readonly status: 'passed' | 'failed' | 'skipped';
+  readonly failureMessage?: string;
+  readonly timeSpentMs: number;
+  readonly startPosition?: Position;
 }
 
 /** A function call on the stack: its file path and its 1-based position. */
 export interface CallSite {
-  file: string;
-  line: number;
-  column: number;
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
 }
 
 export interface ProcessRecord {
-  main?: true;
-  tests: RecordedTest[];
+  readonly main?: true;
+  readonly tests: readonly RecordedTest[];
   // undefined: the record goes through JSON.stringify, which leaves such a field out.
-  hitCount?: number | undefined;
-  mutantCoverage?: MutantCoverage | undefined;
-  peakMemoryMB?: number | undefined;
-  memoryLimitReached?: MemoryLimitReached;
-  diagnostics?: string[];
+  readonly hitCount?: number | undefined;
+  readonly mutantCoverage?: MutantCoverage | undefined;
+  readonly peakMemoryMB?: number | undefined;
+  readonly memoryLimitReached?: MemoryLimitReached;
+  readonly diagnostics?: readonly string[];
   /**
    * Set when the test file's process exited before node:test's summary through process.exit() or an uncaught
    * exception, which skip `beforeExit`, unless the hook ended it once node:test had reported every top-level suite and
    * test.
    */
-  unfinished?: true;
+  readonly unfinished?: true;
   /** What kept the test file's process alive after its tests and root `after` hooks, when the hook ended it for that. */
-  heldOpen?: string[];
+  readonly heldOpen?: readonly string[];
 }
 
 /** A function node:test calls, which every function is assignable to; the wrappers call it through `Reflect.apply`. */
@@ -80,56 +80,60 @@ type HookRegistrar = (this: unknown, hook?: Body, ...rest: unknown[]) => unknown
  * A node:test function with its shorthands, which do not call the function itself. Tests have `expectFailure` from
  * Node.js 24.
  */
-type Register = Registrar & { skip: Registrar; todo: Registrar; only: Registrar; expectFailure?: Registrar };
+type Register = Registrar & {
+  readonly skip: Registrar;
+  readonly todo: Registrar;
+  readonly only: Registrar;
+  readonly expectFailure?: Registrar;
+};
 /** A node:test function as the wrapper calls it: with the arguments it was given, which node:test checks itself. */
 type Target = (this: unknown, ...args: never[]) => unknown;
-type TargetRegister = Target & { skip: Target; todo: Target; only: Target; expectFailure?: Target };
-interface TestContext {
-  skip(): void;
-  test: Target;
-  after: Target;
-  beforeEach: Target;
-}
+type TargetRegister = Target & {
+  readonly skip: Target;
+  readonly todo: Target;
+  readonly only: Target;
+  readonly expectFailure?: Target;
+};
 
 export interface TestEvent {
-  type: string;
-  data: {
-    name: string;
-    nesting: number;
-    skip?: unknown;
-    todo?: unknown;
+  readonly type: string;
+  readonly data: {
+    readonly name: string;
+    readonly nesting: number;
+    readonly skip?: unknown;
+    readonly todo?: unknown;
     /** Present on `test:diagnostic`. */
-    message?: string;
+    readonly message?: string;
     /** Present on `test:pass` and `test:fail`. */
-    details?: {
+    readonly details?: {
       /** Absent when the test file itself fails. */
-      type?: 'suite' | 'test';
-      duration_ms: number;
-      error?: { failureType?: string; message: string; cause?: unknown };
+      readonly type?: 'suite' | 'test';
+      readonly duration_ms: number;
+      readonly error?: { readonly failureType?: string; readonly message: string; readonly cause?: unknown };
     };
   };
 }
 
 export type NodeTestModule = Register & {
-  describe: Register;
-  suite: Register;
-  it: Register;
-  test: Register;
-  before: HookRegistrar;
-  beforeEach: HookRegistrar;
-  after: HookRegistrar;
-  afterEach: HookRegistrar;
+  readonly describe: Register;
+  readonly suite: Register;
+  readonly it: Register;
+  readonly test: Register;
+  readonly before: HookRegistrar;
+  readonly beforeEach: HookRegistrar;
+  readonly after: HookRegistrar;
+  readonly afterEach: HookRegistrar;
 };
 
 export type NodeTestTarget = TargetRegister & {
-  describe: TargetRegister;
-  suite: TargetRegister;
-  it: TargetRegister;
-  test: TargetRegister;
-  before: Target;
-  beforeEach: Target;
-  after: Target;
-  afterEach: Target;
+  readonly describe: TargetRegister;
+  readonly suite: TargetRegister;
+  readonly it: TargetRegister;
+  readonly test: TargetRegister;
+  readonly before: Target;
+  readonly beforeEach: Target;
+  readonly after: Target;
+  readonly afterEach: Target;
 };
 
 const afterHook = '"after" hook';
@@ -156,49 +160,45 @@ export const heldOpenMs = 30_000;
 /** Stryker's variable for the active mutant, which instrumented code reads when it loads. */
 export const activeMutantEnv = '__STRYKER_ACTIVE_MUTANT__';
 
-export interface HookDependencies {
-  env: Record<string, string | undefined>;
-  mainFile: string | undefined;
-  pid: number;
+/** What the hook takes from the process; `install` also takes the global object, whose slots it sets. */
+export interface HookServices {
+  readonly env: Record<string, string | undefined>;
+  readonly mainFile: string | undefined;
+  readonly pid: number;
   /** Worker threads load the hook too; 0 is the main thread. */
-  threadId: number;
-  global: {
-    /** The one member every global object has, so that `globalThis` is assignable to this type. */
-    readonly globalThis: unknown;
-    __stryker__?: InstrumenterContext;
-    [installed]?: true;
-    [reporting]?: (event: TestEvent) => void;
-    [wrappedNodeTest]?: NodeTestModule;
-    [watchdog]?: unknown;
-  };
-  nodeTest: () => NodeTestTarget;
-  registerHooks: (hooks: ModuleHooks) => unknown;
-  onExit: (listener: () => void) => void;
-  offExit: (listener: () => void) => void;
+  readonly threadId: number;
+  readonly nodeTest: () => NodeTestTarget;
+  readonly registerHooks: (hooks: ModuleHooks) => unknown;
+  readonly onExit: (listener: () => void) => void;
+  readonly offExit: (listener: () => void) => void;
   /** Registers a `beforeExit` listener, which a process that ends by itself calls and `process.exit()` skips. */
-  onBeforeExit: (listener: () => void) => void;
-  writeRecord: (path: string, record: ProcessRecord) => void;
+  readonly onBeforeExit: (listener: () => void) => void;
+  readonly writeRecord: (path: string, record: ProcessRecord) => void;
   /** Ends the process as `process.exit` does, with `process.exitCode` when no code is given. */
-  exit: (code?: number) => void;
-  /** `process.getActiveResourcesInfo`, a new array on every call. */
-  activeResources: () => string[];
+  readonly exit: (code?: number) => void;
+  /** `process.getActiveResourcesInfo`. */
+  readonly activeResources: () => readonly string[];
   /** Calls `callback` after `ms` without keeping the process alive. */
-  later: (callback: () => void, ms: number) => void;
+  readonly later: (callback: () => void, ms: number) => void;
   /** Under the permission model without write access, the process runs as it would outside Stryker, with no record. */
-  canWriteRecords: boolean;
-  peakMemoryMB: () => number;
+  readonly canWriteRecords: boolean;
+  readonly peakMemoryMB: () => number;
   /** The main thread only, as a test's worker threads load the hook too, and only where the permission model allows. */
-  canWatchMemory: boolean;
+  readonly canWatchMemory: boolean;
   /**
    * A worker thread, as the watchdog must work while a test blocks the process: Node.js's assertion diff can fill
    * gigabytes in one synchronous call.
    */
-  watchMemory: (options: { workerData: WatchdogData; execArgv: string[]; env: Record<string, string> }) => unknown;
+  readonly watchMemory: (options: {
+    readonly workerData: WatchdogData;
+    readonly execArgv: readonly string[];
+    readonly env: Record<string, string>;
+  }) => unknown;
   /** The function calls on the stack, innermost first, as `util.getCallSites` gives them. */
-  callSites: (
+  readonly callSites: (
     frameCount: number,
-    options: { sourceMap: boolean },
-  ) => { scriptName: string; lineNumber: number; columnNumber: number }[];
+    options: { readonly sourceMap: boolean },
+  ) => readonly { readonly scriptName: string; readonly lineNumber: number; readonly columnNumber: number }[];
 }
 
 /**
@@ -236,7 +236,20 @@ function testIds(json: string): Set<string> {
   return new Set(ids);
 }
 
-export function install(deps: HookDependencies): boolean {
+export function install(
+  deps: HookServices & {
+    /** The global object, whose slots the hook sets for the modules it loads and for Stryker's instrumented code. */
+    readonly global: {
+      /** The one member every global object has, so that `globalThis` is assignable to this type. */
+      readonly globalThis: unknown;
+      __stryker__?: InstrumenterContext;
+      [installed]?: true;
+      [reporting]?: (event: TestEvent) => void;
+      [wrappedNodeTest]?: NodeTestModule;
+      [watchdog]?: unknown;
+    };
+  },
+): boolean {
   const outDir = deps.env[envNames.out];
 
   if (!outDir || deps.global[installed]) {
@@ -370,18 +383,20 @@ export function install(deps: HookDependencies): boolean {
   return true;
 }
 
+export type HookDependencies = Parameters<typeof install>[0];
+
 export interface Ending {
   /**
    * The test file registers a suite, test or hook through node:test, `topLevel` when it is a suite or test outside any
    * other. The first registration also registers a root `after` hook of the ending's own, ahead of the file's.
    */
-  registering: (topLevel: boolean) => void;
+  readonly registering: (topLevel: boolean) => void;
   /** Makes the ending wait for a root `after` hook of the test file to settle. */
-  track: (hook: Body) => Body;
+  readonly track: (hook: Body) => Body;
   /** node:test has reported another event. */
-  reported: (event: TestEvent) => void;
+  readonly reported: (event: TestEvent) => void;
   /** Whether node:test had reported every top-level suite and test when the hook ended the process, and what held it open. */
-  outcome: () => { complete: boolean; heldOpen?: string[] };
+  readonly outcome: () => { readonly complete: boolean; readonly heldOpen?: readonly string[] };
 }
 
 /**
@@ -412,7 +427,7 @@ export function ending(
   const before = deps.activeResources();
   // What the tests opened, not what the process had before they ran, such as the pipe the runner reads stderr from.
   const opened = () => {
-    const resources = deps.activeResources();
+    const resources = [...deps.activeResources()];
 
     for (const resource of before) {
       const index = resources.indexOf(resource);
@@ -427,7 +442,7 @@ export function ending(
   // node:test reports a test a little after it ends, so a failure can arrive after the hooks have settled. It reports a
   // suite after everything inside it, so once each top-level one is reported, everything is.
   const allReported = () => reportedTopLevel >= declared;
-  const end = (code: number | undefined, heldOpen?: string[]) => {
+  const end = (code: number | undefined, heldOpen?: readonly string[]) => {
     ended = { complete: allReported(), ...(heldOpen && { heldOpen }) };
     deps.exit(code);
   };
@@ -569,41 +584,37 @@ export function recordEvents(
       return;
     }
 
-    const test: RecordedTest = { id, status: 'passed', timeSpentMs };
     const startPosition = positions.get(id);
-
-    if (startPosition) {
-      test.startPosition = startPosition;
-    }
-
     // node:test runs a todo test but ignores its outcome.
-    if (data.skip !== undefined || data.todo !== undefined) {
-      test.status = 'skipped';
-    } else if (error) {
-      test.status = 'failed';
-      // The cause is what the test or hook threw; a timeout, a cancellation or an unmet expectFailure has a message only.
-      test.failureMessage = error.cause instanceof Error ? error.cause.message : error.message;
-    }
+    const skipped = data.skip !== undefined || data.todo !== undefined;
+    const failure = !skipped && error;
 
-    tests.push(test);
+    tests.push({
+      id,
+      status: skipped ? 'skipped' : failure ? 'failed' : 'passed',
+      timeSpentMs,
+      ...(startPosition && { startPosition }),
+      // The cause is what the test or hook threw; a timeout, a cancellation or an unmet expectFailure has a message only.
+      ...(failure && { failureMessage: failure.cause instanceof Error ? failure.cause.message : failure.message }),
+    });
   };
 }
 
 export interface WrapOptions {
-  ns: InstrumenterContext;
-  testFile: string;
-  tests: RecordedTest[];
-  filter: Set<string> | undefined;
-  bail: boolean;
-  activeMutant: string | undefined;
-  env: Record<string, string | undefined>;
-  positions: Map<string, Position>;
-  callSites: () => CallSite[];
-  nodeTest: NodeTestTarget;
+  readonly ns: InstrumenterContext;
+  readonly testFile: string;
+  readonly tests: readonly RecordedTest[];
+  readonly filter: Set<string> | undefined;
+  readonly bail: boolean;
+  readonly activeMutant: string | undefined;
+  readonly env: Record<string, string | undefined>;
+  readonly positions: Map<string, Position>;
+  readonly callSites: () => readonly CallSite[];
+  readonly nodeTest: NodeTestTarget;
   /** Called before each suite, test or hook goes to node:test, `topLevel` for a suite or test outside any other. */
-  registering: (topLevel: boolean) => void;
+  readonly registering: (topLevel: boolean) => void;
   /** Wraps a function registered as an `after` hook outside any suite, a root `after` hook of the test file. */
-  rootAfter: (hook: Body) => Body;
+  readonly rootAfter: (hook: Body) => Body;
 }
 
 /**
@@ -826,7 +837,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
        * The test stays current until its body ends and node:test has run its afterEach hooks, whichever is later, as
        * node:test waits for the test's subtests and plan in between. Its `t.after` hooks run after that.
        */
-      const enter = (context: TestContext) => {
+      // The wrapper replaces these functions on node:test's own context, which the test body calls them on.
+      const enter = (context: { test: Target; after: Target; beforeEach: Target }) => {
         active.add(id);
         setCurrent();
         let open = 2;
@@ -948,8 +960,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 }
 
 export interface ModuleHooks {
-  resolve: ResolveHookSync;
-  load: LoadHookSync;
+  readonly resolve: ResolveHookSync;
+  readonly load: LoadHookSync;
 }
 
 const wrappedUrl = 'thermos-stryker-node-test:node-test/';
