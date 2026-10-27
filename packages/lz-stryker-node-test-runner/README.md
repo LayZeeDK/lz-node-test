@@ -10,10 +10,11 @@ later.
 ## Install
 
 ```sh
-npm install --save-dev @stryker-mutator/core@~10.1.1 @layzee/lz-stryker-node-test-runner
+npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/lz-stryker-node-test-runner
 ```
 
-`@stryker-mutator/core` and `@stryker-mutator/api` are peer dependencies. The runner supports Stryker 10.1.
+`@stryker-mutator/core` and `@stryker-mutator/api` are peer dependencies. The runner accepts Stryker 10.1.1 or a later
+10.x version and is tested with 10.1.1.
 
 ## Configure Stryker
 

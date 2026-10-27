@@ -34,8 +34,8 @@
   },
   "peerDependencies": {
     "@babel/core": "~8.0.0",
-    "@stryker-mutator/api": "~10.1.1",
-    "@stryker-mutator/core": "~10.1.1"
+    "@stryker-mutator/api": "^10.1.1",
+    "@stryker-mutator/core": "^10.1.1"
   },
   "devDependencies": {
     "@layzee/lz-node-test": "*"
