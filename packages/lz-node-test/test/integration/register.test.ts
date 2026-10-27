@@ -86,8 +86,8 @@ describe('parseArguments', () => {
     ['(name, fn)', [fn, undefined], { options: {}, fn }],
     ['(name, fn, timeout)', [fn, 50], { options: { timeout: 50 }, fn }],
     ['(name, options, fn)', [{ skip: true }, fn], { options: { skip: true }, fn }],
-    ['(name, options, timeout)', [{ skip: true }, 50], { options: { timeout: 50 }, fn: undefined }],
-    ['(name)', [undefined, undefined], { options: {}, fn: undefined }],
+    ['(name, options, timeout)', [{ skip: true }, 50], { options: { timeout: 50 } }],
+    ['(name)', [undefined, undefined], { options: {} }],
   ] as const)('reads %s', ([, args, expected]) => {
     assert.deepEqual(parseArguments(args[0], args[1]), expected);
   });
