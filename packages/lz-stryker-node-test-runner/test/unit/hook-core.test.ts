@@ -356,7 +356,7 @@ async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
 }
 
 describe('redirectNodeTest', () => {
-  it('resolves node:test to a module of its own for import and for require, and leaves other modules alone', () => {
+  it('resolves node:test to a module of its own for import and for require', () => {
     const hooks = redirectNodeTest(['it']);
     const passOn = (...args: unknown[]) => ({ url: 'passed-on', format: undefined, passedOn: args });
     const context = resolveContext(['node', 'import']);
@@ -379,10 +379,18 @@ describe('redirectNodeTest', () => {
         ['commonjs', true],
       ],
     );
+  });
+
+  it('passes on every other module to the next hook', () => {
+    const hooks = redirectNodeTest(['it']);
+    const passOn = (...args: unknown[]) => ({ url: 'passed-on', format: undefined, passedOn: args });
+    const context = resolveContext(['node', 'import']);
     const loading = loadContext(['node', 'import']);
+    const redirected = hooks.resolve('node:test', context, passOn);
+
     assert.deepEqual(hooks.resolve('node:assert', context, passOn), passOn('node:assert', context));
     assert.deepEqual(hooks.load('node:assert', loading, passOn), passOn('node:assert', loading));
-    assert.deepEqual(hooks.load(`x${imported.url}`, loading, passOn), passOn(`x${imported.url}`, loading));
+    assert.deepEqual(hooks.load(`x${redirected.url}`, loading, passOn), passOn(`x${redirected.url}`, loading));
   });
 
   it('gives the wrapped module as default export and require result, and its properties as named exports', async () => {
