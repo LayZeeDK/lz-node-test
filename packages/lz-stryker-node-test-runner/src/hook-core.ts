@@ -112,6 +112,11 @@ export interface TestEvent {
   };
 }
 
+const isResult = (type: string): boolean => type === 'test:pass' || type === 'test:fail';
+
+/** node:test reports a failing `after` hook of the test file as a failure of the file itself, which has no type. */
+const fileLevel = (details: TestEvent['data']['details']): boolean => details?.type === undefined;
+
 export type NodeTestModule = Register & {
   readonly describe: Register;
   readonly suite: Register;
@@ -509,14 +514,13 @@ export function ending(
       return hook.length === 2 ? callingBack : promising;
     },
     reported: ({ type, data }) => {
-      // A failing root hook is reported as a failure of the file itself, which has no type.
-      if ((type === 'test:pass' || type === 'test:fail') && data.nesting === 0 && data.details?.type !== undefined) {
+      if (isResult(type) && data.nesting === 0 && !fileLevel(data.details)) {
         reportedTopLevel++;
       }
 
       // Also a root `after` hook that node:test ended by its timeout, whose function never settles; node:test runs none
       // after it.
-      if (finished && type === 'test:fail' && data.nesting === 0 && data.details?.type === undefined) {
+      if (finished && type === 'test:fail' && data.nesting === 0 && fileLevel(data.details)) {
         threw = true;
         settled();
       }
@@ -555,7 +559,7 @@ export function recordEvents(
       diagnostics.push(data.message);
     }
 
-    if ((type !== 'test:pass' && type !== 'test:fail') || data.details === undefined) {
+    if (!isResult(type) || data.details === undefined) {
       return;
     }
 
@@ -570,8 +574,7 @@ export function recordEvents(
       return;
     }
 
-    // node:test reports a failing `after` hook of the test file as a failure of the file itself, which has no type.
-    const fileHook = kind === undefined;
+    const fileHook = fileLevel(data.details);
     const id = fileHook ? testId(testFile, afterHook) : ids.get(data.nesting);
 
     // node:test starts every test it reports; an event outside that order has no test to record.
