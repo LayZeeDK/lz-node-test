@@ -3,7 +3,13 @@ import type { NodePath, types } from '@babel/core';
 import { importOf } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
-const listen: ReadonlySet<string> = new Set(['on', 'once', 'addListener', 'prependListener', 'prependOnceListener']);
+const listenMethods: ReadonlySet<string> = new Set([
+  'on',
+  'once',
+  'addListener',
+  'prependListener',
+  'prependOnceListener',
+]);
 const nodeEvents: ReadonlySet<string> = new Set(['node:events', 'events']);
 const nodeProcess: ReadonlySet<string> = new Set(['node:process', 'process']);
 const processSwaps: ReadonlyMap<string, readonly string[]> = new Map([
@@ -56,7 +62,9 @@ function receiverOf(path: NodePath): types.Node | undefined {
 
   const { callee } = call;
   const listens =
-    callee.type === 'MemberExpression' && callee.property.type === 'Identifier' && listen.has(callee.property.name);
+    callee.type === 'MemberExpression' &&
+    callee.property.type === 'Identifier' &&
+    listenMethods.has(callee.property.name);
 
   return listens && path.key === 0 ? callee.object : undefined;
 }

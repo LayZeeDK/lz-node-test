@@ -19,12 +19,12 @@ export const assertCall: Operator = {
   name: 'LzAssertCall',
   sample: 'export function check(t: any) {\n  t.assert.ok(true);\n}\n',
   *mutate(path, t) {
-    if (path.isExpressionStatement() && assertion(path, awaited(path.node.expression)) !== undefined) {
+    if (path.isExpressionStatement() && assertionMethod(path, awaited(path.node.expression)) !== undefined) {
       yield t.blockStatement([t.cloneNode(path.node), t.throwStatement(error(t))]);
     }
 
     if (path.isCallExpression() && isTail(path)) {
-      const method = assertion(path, path.node);
+      const method = assertionMethod(path, path.node);
 
       if (method !== undefined) {
         yield t.parenthesizedExpression(
@@ -53,7 +53,7 @@ function isTail(path: NodePath): boolean {
   return value.parent.type === 'ArrowFunctionExpression' || value.parent.type === 'ReturnStatement';
 }
 
-function assertion(path: NodePath, node: types.Expression): string | undefined {
+function assertionMethod(path: NodePath, node: types.Expression): string | undefined {
   if (node.type !== 'CallExpression') {
     return undefined;
   }
