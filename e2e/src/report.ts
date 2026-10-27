@@ -62,11 +62,11 @@ export function lzIsRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseFile(entry: unknown, path: string): LzMutantDetail[] {
-  if (!lzIsRecord(entry) || !Array.isArray(entry.mutants)) {
+  if (!lzIsRecord(entry) || !Array.isArray(entry['mutants'])) {
     notAReport(`${path}.mutants`);
   }
 
-  const mutants: unknown[] = entry.mutants;
+  const mutants: unknown[] = entry['mutants'];
 
   return mutants.map((mutant, index) => parseMutant(mutant, `${path}.mutants[${index}]`)).sort(byPosition);
 }
@@ -77,9 +77,9 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
   }
 
   const { mutatorName, replacement = '', location, status, statusReason = '', killedBy = [], coveredBy = [] } = mutant;
-  const start = lzIsRecord(location) ? location.start : undefined;
+  const start = lzIsRecord(location) ? location['start'] : undefined;
 
-  if (!lzIsRecord(start) || typeof start.line !== 'number' || typeof start.column !== 'number') {
+  if (!lzIsRecord(start) || typeof start['line'] !== 'number' || typeof start['column'] !== 'number') {
     notAReport(`${path}.location.start`);
   }
 
@@ -108,8 +108,8 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
   }
 
   return {
-    line: start.line,
-    column: start.column,
+    line: start['line'],
+    column: start['column'],
     mutator: mutatorName,
     replacement,
     status,

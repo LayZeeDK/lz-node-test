@@ -61,7 +61,7 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
 
   const dir = mkdtempSync(join(tmpdir(), 'test-each-'));
   // run() runs no files from inside a test file, which node:test marks with this variable.
-  const context = process.env.NODE_TEST_CONTEXT;
+  const context = process.env['NODE_TEST_CONTEXT'];
 
   try {
     const file = join(dir, 'cases.test.mjs');
@@ -74,7 +74,7 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
         `(${cases})();`,
       ].join('\n'),
     );
-    delete process.env.NODE_TEST_CONTEXT;
+    delete process.env['NODE_TEST_CONTEXT'];
     const tests: Reported[] = [];
     const record = (
       outcome: Reported['outcome'],
@@ -98,7 +98,7 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
     return tests;
   } finally {
     if (context !== undefined) {
-      process.env.NODE_TEST_CONTEXT = context;
+      process.env['NODE_TEST_CONTEXT'] = context;
     }
 
     rmSync(dir, { recursive: true, force: true });

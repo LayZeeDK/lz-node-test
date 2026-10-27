@@ -197,11 +197,14 @@ const isTrue = (value: unknown) => value === true;
 const isStrings = (value: unknown) => Array.isArray(value) && value.every(isString);
 const isCounts = (value: unknown) => isObject(value) && Object.values(value).every(isNumber);
 const isPosition = (value: unknown): value is Position =>
-  isObject(value) && isNumber(value.line) && isNumber(value.column);
+  isObject(value) && isNumber(value['line']) && isNumber(value['column']);
 const isMemoryLimit = (value: unknown): value is MemoryLimitReached =>
-  isObject(value) && isNumber(value.rssMB) && isNumber(value.limitMB);
+  isObject(value) && isNumber(value['rssMB']) && isNumber(value['limitMB']);
 const isCoverage = (value: unknown): value is MutantCoverage =>
-  isObject(value) && isCounts(value.static) && isObject(value.perTest) && Object.values(value.perTest).every(isCounts);
+  isObject(value) &&
+  isCounts(value['static']) &&
+  isObject(value['perTest']) &&
+  Object.values(value['perTest']).every(isCounts);
 
 /** `value` under `key` when it is there and passes `check`, which `field` names; nothing when it is not there. */
 function optional<K extends string, T>(
@@ -488,7 +491,7 @@ export function lzRunEnv(
     NODE_OPTIONS: [
       `--import ${JSON.stringify(HOOK_URL)}`,
       // node splits NODE_OPTIONS at spaces outside double quotes.
-      ...withoutReporters(base.NODE_OPTIONS?.match(/(?:[^\s"]|"(?:[^"\\]|\\.)*")+/g) ?? []),
+      ...withoutReporters(base['NODE_OPTIONS']?.match(/(?:[^\s"]|"(?:[^"\\]|\\.)*")+/g) ?? []),
     ].join(' '),
     [ENV.out]: outDir,
     [ENV.file]: file,
@@ -516,8 +519,8 @@ export function lzRunEnv(
     delete env[key];
   }
 
-  if (env.NODE_COMPILE_CACHE === undefined && cacheDir !== undefined) {
-    env.NODE_COMPILE_CACHE = cacheDir;
+  if (env['NODE_COMPILE_CACHE'] === undefined && cacheDir !== undefined) {
+    env['NODE_COMPILE_CACHE'] = cacheDir;
   }
 
   // At runtime activation the hook activates the mutant once the tests start, so module-level code runs unmutated.
@@ -613,7 +616,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
 
     removeLeftDirs(tmpdir());
 
-    if (process.env.NODE_COMPILE_CACHE === undefined) {
+    if (process.env['NODE_COMPILE_CACHE'] === undefined) {
       this.#cacheDir = mkdtempSync(join(tmpdir(), `lz-stryker-node-test-cache-${process.pid}-`));
     }
   }

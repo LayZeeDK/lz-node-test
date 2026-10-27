@@ -506,9 +506,9 @@ describe('lzRunEnv', () => {
 
     const inherited = { NODE_COMPILE_CACHE: 'inherited' };
 
-    assert.equal(lzRunEnv({}, FILE, OUT, TMP, run, 'own').NODE_COMPILE_CACHE, 'own');
-    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, 'own').NODE_COMPILE_CACHE, 'inherited');
-    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, undefined).NODE_COMPILE_CACHE, 'inherited');
+    assert.equal(lzRunEnv({}, FILE, OUT, TMP, run, 'own')['NODE_COMPILE_CACHE'], 'own');
+    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, 'own')['NODE_COMPILE_CACHE'], 'inherited');
+    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, undefined)['NODE_COMPILE_CACHE'], 'inherited');
   });
 
   it('passes the run state and the memory limit on to the test file', () => {

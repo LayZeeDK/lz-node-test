@@ -249,7 +249,7 @@ export async function settle<T>(run: Promise<T>, ms = 5_000): Promise<T> {
 
 export function shareCompileCache(): string {
   const cacheDir = mkdtempSync(join(tmpdir(), 'node-test-runner-cache-'));
-  process.env.NODE_COMPILE_CACHE = cacheDir;
+  process.env['NODE_COMPILE_CACHE'] = cacheDir;
 
   // Removed on exit rather than in an `after` hook, and ahead of the hook's own exit listener, so a process that dies
   // early or whose hook fails on exit (both happen under mutation testing) leaves nothing. The runners the tests never

@@ -136,9 +136,9 @@ describe('LzStrykerNodeTestRunner', () => {
     });
     const before = ownCacheDirs();
     t.after(() => {
-      process.env.NODE_COMPILE_CACHE = COMPILE_CACHE;
+      process.env['NODE_COMPILE_CACHE'] = COMPILE_CACHE;
     });
-    delete process.env.NODE_COMPILE_CACHE;
+    delete process.env['NODE_COMPILE_CACHE'];
     const runner = await initRunner(['a.test.mjs']);
 
     const { exitCode } = await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
@@ -442,15 +442,15 @@ describe('LzStrykerNodeTestRunner', () => {
 
   it('runs its own reporter only, whatever reporters NODE_OPTIONS and lzStrykerNodeTest.nodeArgs name', async (t) => {
     const dir = project(t, { 'a.test.mjs': PASSING });
-    const nodeOptions = process.env.NODE_OPTIONS;
+    const nodeOptions = process.env['NODE_OPTIONS'];
     t.after(() => {
       if (nodeOptions === undefined) {
-        delete process.env.NODE_OPTIONS;
+        delete process.env['NODE_OPTIONS'];
       } else {
-        process.env.NODE_OPTIONS = nodeOptions;
+        process.env['NODE_OPTIONS'] = nodeOptions;
       }
     });
-    process.env.NODE_OPTIONS = `${nodeOptions ?? ''} --test-reporter=spec`;
+    process.env['NODE_OPTIONS'] = `${nodeOptions ?? ''} --test-reporter=spec`;
     const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], nodeArgs: ['--test-reporter=dot'] } };
     const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
     await runner.init();

@@ -170,16 +170,16 @@ function packedFile(stdout: string): string {
   const entries: readonly unknown[] = Array.isArray(packed) ? packed : lzIsRecord(packed) ? Object.values(packed) : [];
   const [entry] = entries;
 
-  if (!lzIsRecord(entry) || typeof entry.filename !== 'string') {
+  if (!lzIsRecord(entry) || typeof entry['filename'] !== 'string') {
     throw new Error(`npm pack --json printed no filename:\n${stdout}`);
   }
 
-  return entry.filename;
+  return entry['filename'];
 }
 
 function pinned(): string[] {
   const manifest: unknown = JSON.parse(readFileSync(join(workspaceDir, 'package.json'), 'utf8'));
-  const devDependencies = lzIsRecord(manifest) ? manifest.devDependencies : undefined;
+  const devDependencies = lzIsRecord(manifest) ? manifest['devDependencies'] : undefined;
 
   return pinnedNames.map((name) => {
     const version = lzIsRecord(devDependencies) ? devDependencies[name] : undefined;
@@ -208,7 +208,7 @@ async function npm(cwd: string, args: readonly string[]): Promise<string> {
  * the one installed beside the Node.js binary, in the Windows or the POSIX layout.
  */
 function npmCli(): string {
-  const started = process.env.npm_execpath;
+  const started = process.env['npm_execpath'];
   const nodeDir = dirname(process.execPath);
   const candidates = [
     ...(started === undefined ? [] : [join(dirname(started), 'npm-cli.js')]),
