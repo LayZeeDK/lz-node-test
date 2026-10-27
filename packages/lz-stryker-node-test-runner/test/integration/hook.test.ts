@@ -289,21 +289,38 @@ describe('hook', () => {
   const leavesServer = (name: string, then = '') =>
     `it('${name}', async () => { await new Promise((resolve) => createServer().listen(0, resolve)); ${then} });`;
 
-  lzTestFor<readonly [string, string, string, string, number, string, Record<string, unknown>]>([
-    ['with exit code 1 at once, when a test failed', 'fails', 'assert.fail();', '60000', 1, 'failed', {}],
+  lzTestFor<
+    readonly [
+      string,
+      {
+        name: string;
+        then: string;
+        heldOpenMs: string;
+        exitCode: number;
+        status: string;
+        marks: Record<string, unknown>;
+      },
+    ]
+  >([
+    [
+      'with exit code 1 at once, when a test failed',
+      { name: 'fails', then: 'assert.fail();', heldOpenMs: '60000', exitCode: 1, status: 'failed', marks: {} },
+    ],
     [
       "with node:test's exit code once the held-open time ends, naming the server, when its tests passed",
-      'passes',
-      '',
-      '200',
-      0,
-      'passed',
-      { heldOpen: ['TCPServerWrap'] },
+      {
+        name: 'passes',
+        then: '',
+        heldOpenMs: '200',
+        exitCode: 0,
+        status: 'passed',
+        marks: { heldOpen: ['TCPServerWrap'] },
+      },
     ],
   ])(
     'ends a test file whose test leaves a server listening %s',
     { timeout: 30_000 },
-    async ([, name, then, heldOpenMs, exitCode, status, marks], t) => {
+    async ([, { name, then, heldOpenMs, exitCode, status, marks }], t) => {
       const { code, record } = await runTestFile(
         t,
         fixture("import { createServer } from 'node:http';", leavesServer(name, then)),
