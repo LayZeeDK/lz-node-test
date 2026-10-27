@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 
 import { parseArguments, templateRows, type EachOptions } from '../../src/register.ts';
 import { lzTestEach } from '../../src/test-each.ts';
-import { lzTestFor } from '../../src/test-for.ts';
 import { signatures } from '../reported.fixtures.ts';
 
 describe('parseArguments', () => {
@@ -21,8 +20,8 @@ describe('parseArguments', () => {
     ['(name)', [undefined, undefined], { options: {} }],
   ];
 
-  lzTestFor(cases)('reads %s', ([, args, expected]) => {
-    assert.deepEqual(parseArguments(args[0], args[1]), expected);
+  lzTestEach(cases)('reads %s', (_shape, [optionsOrFn, fnOrTimeout], expected) => {
+    assert.deepEqual(parseArguments(optionsOrFn, fnOrTimeout), expected);
   });
 
   lzTestEach([
