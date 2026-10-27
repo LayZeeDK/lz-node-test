@@ -261,8 +261,8 @@ export function shareCompileCache(): string {
   const cacheDir = mkdtempSync(join(tmpdir(), 'node-test-runner-cache-'));
   process.env['NODE_COMPILE_CACHE'] = cacheDir;
 
-  // Removed on exit, so a process that dies early (which happens under mutation testing) leaves nothing. The runners the tests never
-  // dispose (a mutant of the runner can give each one a directory) are swept here too.
+  // Removed on exit, so a process that dies early (which happens under mutation testing) leaves nothing. The runners
+  // the tests never dispose (a mutant of the runner can give each one a directory) are swept here too.
   process.prependListener('exit', () => {
     for (const dir of [cacheDir, ...ownCacheDirs().map((name) => join(tmpdir(), name))]) {
       try {
