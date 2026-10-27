@@ -10,6 +10,7 @@
   "private": true,
   "devDependencies": {
     "@babel/core": "8.0.9",
+    "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
     "@eslint/js": "10.0.1",
     "@nx/eslint": "24.0.1",
     "@nx/eslint-plugin": "24.0.1",

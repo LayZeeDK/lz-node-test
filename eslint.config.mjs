@@ -1,3 +1,4 @@
+import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import nx from '@nx/eslint-plugin';
 import n from 'eslint-plugin-n';
 import nodeTest from 'eslint-node-test';
@@ -48,6 +49,16 @@ export default [
   },
   {
     linterOptions: { reportUnusedDisableDirectives: 'error' },
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.mjs'],
+    plugins: comments.recommended.plugins,
+    rules: {
+      '@eslint-community/eslint-comments/require-description': 'error',
+      '@eslint-community/eslint-comments/no-unlimited-disable': 'error',
+      // A file-level disable at the top of a file needs no matching enable.
+      '@eslint-community/eslint-comments/disable-enable-pair': ['error', { allowWholeFile: true }],
+    },
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
