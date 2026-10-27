@@ -14,6 +14,7 @@ import {
   fixtureCoverage,
   initRunner,
   mutantRunOptions,
+  passed,
   passing,
   project,
   reporterArg,
@@ -116,7 +117,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
 
     assert.deepEqual(summary(tests), [
       { id: `${join(dir, 'a.test.mjs')} > fails`, status: TestStatus.Failed, failureMessage: 'x' },
-      { id: `${join(dir, 'a.test.mjs')} > exits later`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${join(dir, 'a.test.mjs')} > exits later`),
     ]);
   });
 

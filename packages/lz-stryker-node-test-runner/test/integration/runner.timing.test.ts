@@ -12,6 +12,7 @@ import {
   initRunner,
   logger,
   mutantRunOptions,
+  passed,
   project,
   settle,
   shareCompileCache,
@@ -67,10 +68,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
   it("runs as many of the dry run's test files at once as Stryker runs test runners, and a mutant run's one at a time", async (t) => {
     const { dir, runner, a, b } = await meetingFiles(t, 2);
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
-      { id: a, status: TestStatus.Success, failureMessage: undefined },
-      { id: b, status: TestStatus.Success, failureMessage: undefined },
-    ]);
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [passed(a), passed(b)]);
 
     for (const marker of ['a.started', 'b.started']) {
       rmSync(join(dir, marker));
@@ -87,10 +85,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
   it("runs the dry run's test files two at once beside checkers at a concurrency of 1, as Stryker does", async (t) => {
     const { runner, a, b } = await meetingFiles(t, 1, ['typescript']);
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
-      { id: a, status: TestStatus.Success, failureMessage: undefined },
-      { id: b, status: TestStatus.Success, failureMessage: undefined },
-    ]);
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [passed(a), passed(b)]);
   });
 
   it("runs the dry run's test files one at a time when Stryker runs one test runner", async (t) => {
@@ -98,7 +93,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
       { id: a, status: TestStatus.Failed, failureMessage: 'b never started' },
-      { id: b, status: TestStatus.Success, failureMessage: undefined },
+      passed(b),
     ]);
   });
 

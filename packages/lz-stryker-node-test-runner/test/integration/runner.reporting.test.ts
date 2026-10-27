@@ -12,6 +12,7 @@ import {
   fixtureCoverage,
   initRunner,
   mutantRunOptions,
+  passed,
   project,
   settle,
   shareCompileCache,
@@ -168,12 +169,10 @@ describe('LzStrykerNodeTestRunner results', () => {
     const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
-      { id: `${a} > parent > child`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${a} > parent > child`),
       { id: `${a} > parent > failing child`, status: TestStatus.Failed, failureMessage: 'child failure' },
       { id: `${a} > parent`, status: TestStatus.Failed, failureMessage: '1 subtest failed' },
-      ...(expectFailure
-        ? [{ id: `${a} > expects a failure`, status: TestStatus.Success, failureMessage: undefined }]
-        : []),
+      ...(expectFailure ? [passed(`${a} > expects a failure`)] : []),
     ]);
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {
       [`${a} > parent`]: { parent: 1, 'parent again': 1 },
@@ -344,7 +343,7 @@ describe('LzStrykerNodeTestRunner results', () => {
     const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
-      { id: `${a} > only suite > runs`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${a} > only suite > runs`),
       { id: `${join(dir, 'b.test.mjs')} > todo suite > fails`, status: TestStatus.Skipped, failureMessage: undefined },
     ]);
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, { [`${a} > only suite > runs`]: { only: 1 } });

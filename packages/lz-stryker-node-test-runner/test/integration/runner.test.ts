@@ -21,6 +21,7 @@ import {
   mutantRunOptions,
   noProcess,
   ownCacheDirs,
+  passed,
   passing,
   project,
   reporterArg,
@@ -336,9 +337,7 @@ describe('LzStrykerNodeTestRunner', () => {
 
     const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
-    assert.deepEqual(summary(tests), [
-      { id: `${join(dir, 'a.test.mjs')} > passes`, status: TestStatus.Success, failureMessage: undefined },
-    ]);
+    assert.deepEqual(summary(tests), [passed(`${join(dir, 'a.test.mjs')} > passes`)]);
   });
 
   lzTestFor<readonly [string, string]>([
@@ -379,7 +378,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
-      { id: `${join(dir, 'a.test.mjs')} > calls back`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${join(dir, 'a.test.mjs')} > calls back`),
       {
         id: `${join(dir, 'a.test.mjs')} > calls back with an error`,
         status: TestStatus.Failed,
@@ -404,8 +403,8 @@ describe('LzStrykerNodeTestRunner', () => {
       const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
       assert.deepEqual(summary(tests), [
-        { id: `${join(dir, 'a.test.ts')} > passes`, status: TestStatus.Success, failureMessage: undefined },
-        { id: `${join(dir, 'sub', 'b.test.ts')} > passes`, status: TestStatus.Success, failureMessage: undefined },
+        passed(`${join(dir, 'a.test.ts')} > passes`),
+        passed(`${join(dir, 'sub', 'b.test.ts')} > passes`),
       ]);
     },
   );
@@ -456,7 +455,7 @@ describe('LzStrykerNodeTestRunner', () => {
     await runner.init();
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
-      { id: `${join(dir, 'a.test.mjs')} > passes`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${join(dir, 'a.test.mjs')} > passes`),
     ]);
   });
 
@@ -466,9 +465,7 @@ describe('LzStrykerNodeTestRunner', () => {
 
     const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
-    assert.deepEqual(summary(tests), [
-      { id: `${join(dir, 'a.test.mjs')} > passes`, status: TestStatus.Success, failureMessage: undefined },
-    ]);
+    assert.deepEqual(summary(tests), [passed(`${join(dir, 'a.test.mjs')} > passes`)]);
   });
 
   it('reports the results and coverage of every test, including coverage of the processes a test starts', async (t) => {
@@ -493,9 +490,9 @@ describe('LzStrykerNodeTestRunner', () => {
     const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
-      { id: `${file} > suite > passes`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${file} > suite > passes`),
       { id: `${file} > suite > fails`, status: TestStatus.Failed, failureMessage: 'one is not two' },
-      { id: `${file} > spawns`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${file} > spawns`),
     ]);
     assert.deepEqual(
       tests.map((test) => test.name),
@@ -604,7 +601,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const a = join(dir, 'a.test.mjs');
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
-      { id: `${a} > passes`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${a} > passes`),
       { id: `${a} > is not done`, status: TestStatus.Skipped, failureMessage: undefined },
       { id: `${a} > is skipped`, status: TestStatus.Skipped, failureMessage: undefined },
     ]);
@@ -649,7 +646,7 @@ describe('LzStrykerNodeTestRunner', () => {
         failureMessage: 'test did not finish before its parent and was cancelled',
       },
       { id: `${b} > once`, status: TestStatus.Failed, failureMessage: 'before failure' },
-      { id: `${b} > last > passes`, status: TestStatus.Success, failureMessage: undefined },
+      passed(`${b} > last > passes`),
       { id: `${b} > last`, status: TestStatus.Failed, failureMessage: 'after failure' },
       { id: `${b} > times out`, status: TestStatus.Failed, failureMessage: 'test timed out after 10ms' },
     ]);
@@ -833,17 +830,13 @@ describe('LzStrykerNodeTestRunner', () => {
     });
     const runner = await initRunner(['b.test.mjs', 'a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
-    const passedA = { id: `${a} > passes`, status: TestStatus.Success, failureMessage: undefined };
+    const passedA = passed(`${a} > passes`);
     const failedA = { id: `${a} > fails`, status: TestStatus.Failed, failureMessage: 'expected failure' };
     const laterA = [
       { id: `${a} > fails later`, status: TestStatus.Failed, failureMessage: 'later failure' },
       { id: `${a} > calls back later`, status: TestStatus.Failed, failureMessage: 'callback failure' },
     ];
-    const passedB = {
-      id: `${join(dir, 'b.test.mjs')} > passes`,
-      status: TestStatus.Success,
-      failureMessage: undefined,
-    };
+    const passedB = passed(`${join(dir, 'b.test.mjs')} > passes`);
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [passedA, failedA, ...laterA]);
     assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
@@ -934,9 +927,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
-      { id: `${a} > passes`, status: TestStatus.Success, failureMessage: undefined },
-    ]);
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [passed(`${a} > passes`)]);
     const result = await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'static' })));
     assert.strictEqual(result.status, MutantRunStatus.Error);
     assert.match(result.errorMessage, /Error: module-level mutant/);

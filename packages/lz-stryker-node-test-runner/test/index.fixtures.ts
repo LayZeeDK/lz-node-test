@@ -283,3 +283,7 @@ export function summary(tests: TestResult[]) {
     failureMessage: test.status === TestStatus.Failed ? test.failureMessage : undefined,
   }));
 }
+
+export function passed(id: string) {
+  return { id, status: TestStatus.Success, failureMessage: undefined };
+}
