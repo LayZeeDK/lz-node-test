@@ -37,7 +37,7 @@ async function loadRunnerStartedHook(
   const previousMark = global[installed];
   const previousEnv = Object.values(envNames)
     .filter((key) => key !== envNames.current)
-    .map((key) => [key, process.env[key]] as const);
+    .map((key): readonly [string, string | undefined] => [key, process.env[key]]);
   const listeners = {
     exit: new Set(process.listeners('exit')),
     beforeExit: new Set(process.listeners('beforeExit')),
@@ -267,7 +267,7 @@ describe('hook', () => {
   const leavesServer = (name: string, then = '') =>
     `it('${name}', async () => { await new Promise((resolve) => createServer().listen(0, resolve)); ${then} });`;
 
-  lzTestFor([
+  lzTestFor<readonly [string, string, string, string, number, string, Record<string, unknown>]>([
     ['with exit code 1 at once, when a test failed', 'fails', 'assert.fail();', '60000', 1, 'failed', {}],
     [
       "with node:test's exit code once the held-open time ends, naming the server, when its tests passed",
@@ -278,7 +278,7 @@ describe('hook', () => {
       'passed',
       { heldOpen: ['TCPServerWrap'] },
     ],
-  ] as const)(
+  ])(
     'ends a test file whose test leaves a server listening %s',
     { timeout: 30_000 },
     async ([, name, then, heldOpenMs, exitCode, status, marks], t) => {
@@ -393,23 +393,20 @@ describe('hook', () => {
     assert.deepEqual(Object.keys(record?.mutantCoverage?.perTest ?? {}), ids);
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, string, Record<string, unknown>]>([
     ['ends by itself', '', {}],
     ['ends through process.exit()', 'process.exit(0);\n', { unfinished: true }],
-  ] as const)(
-    'marks the record of a test file that %s without tests as unfinished or not',
-    async ([, exits, unfinished], t) => {
-      const dir = tempDir(t);
-      const outDir = tempDir(t);
-      const testFile = join(dir, 'fixture.test.mjs');
-      writeFileSync(testFile, `import 'node:test';\n${exits}`);
+  ])('marks the record of a test file that %s without tests as unfinished or not', async ([, exits, unfinished], t) => {
+    const dir = tempDir(t);
+    const outDir = tempDir(t);
+    const testFile = join(dir, 'fixture.test.mjs');
+    writeFileSync(testFile, `import 'node:test';\n${exits}`);
 
-      const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
+    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
 
-      assert.equal(code, 0);
-      assert.deepEqual(readRecords(outDir)[`${pid}.0.json`], { main: true, tests: [], ...unfinished });
-    },
-  );
+    assert.equal(code, 0);
+    assert.deepEqual(readRecords(outDir)[`${pid}.0.json`], { main: true, tests: [], ...unfinished });
+  });
 
   it('records where a CommonJS test file declares its tests', async (t) => {
     const dir = tempDir(t);
@@ -433,7 +430,7 @@ describe('hook', () => {
     );
   };
 
-  lzTestFor([
+  lzTestFor<readonly [string, string, string, { line: number; column: number }]>([
     [
       'a loader transpiled, through its source map',
       'fixture.test.mjs',
@@ -452,7 +449,7 @@ describe('hook', () => {
       "import { it } from 'node:test';\nconst typed: number = 1; it('stripped', () => {});\n",
       { line: 1, column: 25 },
     ],
-  ] as const)('records where the source declares a test that %s', async ([, name, source, position], t) => {
+  ])('records where the source declares a test that %s', async ([, name, source, position], t) => {
     const dir = tempDir(t);
     const outDir = tempDir(t);
     // A loader such as tsx turns source maps on this way, so stack traces are mapped and raw call sites are not.
@@ -538,11 +535,11 @@ describe('hook', () => {
     assert.deepEqual(readRecords(outDir), { [`${pid}.0.json`]: { tests: [] } });
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, Record<string, string>]>([
     ['', {}],
     // The watchdog's thread gets none of the process's environment, so it stays CommonJS.
     [' run as an ES module', { NODE_OPTIONS: '--input-type=module' }],
-  ] as const)(
+  ])(
     "ends a process%s that holds more memory than the memory limit, leaving the watchdog's record with both numbers",
     async ([, env], t) => {
       const outDir = tempDir(t);
@@ -619,7 +616,7 @@ describe('hook', () => {
   lzTestFor([
     ['the arguments', true],
     ['NODE_OPTIONS', false],
-  ] as const)('loads a --require preload given in %s once, not again in the memory watchdog', async ([, inArgs], t) => {
+  ])('loads a --require preload given in %s once, not again in the memory watchdog', async ([, inArgs], t) => {
     const dir = tempDir(t);
     const outDir = tempDir(t);
     const preload = join(dir, 'count.cjs');

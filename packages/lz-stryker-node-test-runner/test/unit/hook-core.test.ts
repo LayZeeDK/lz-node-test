@@ -32,11 +32,13 @@ import { lzParseRecord } from '../../src/index.ts';
 import { bodyOf, callable, fakeNodeTest, rawBodyOf, testFile, testContext, type Fn } from '../hook-core.fixtures.ts';
 import { member } from '../index.fixtures.ts';
 
+type TestDetails = NonNullable<TestEvent['data']['details']>;
+
 function reported(
   name: string,
   nesting: number,
   outcome: 'pass' | 'fail',
-  details: NonNullable<TestEvent['data']['details']>,
+  details: TestDetails,
   flags: { skip?: unknown; todo?: unknown } = {},
 ): TestEvent[] {
   return [
@@ -61,14 +63,14 @@ function record(
 }
 
 describe('testId', () => {
-  lzTestFor([
+  lzTestFor<readonly [string, string]>([
     ['a > b', `${testFile} > a \\> b`],
     ['x > > y', `${testFile} > x \\> \\> y`],
     ['> a', `${testFile} > \\> a`],
     ['a >', `${testFile} > a \\>`],
     ['>', `${testFile} > \\>`],
     ['a \\ > b', `${testFile} > a \\\\ \\> b`],
-  ] as const)('escapes `>` and `\\` in a name whose `>` could form the separator: %j', ([name, id]) => {
+  ])('escapes `>` and `\\` in a name whose `>` could form the separator: %j', ([name, id]) => {
     assert.equal(testId(testFile, name), id);
   });
 
@@ -104,8 +106,8 @@ describe('uniqueIds', () => {
 });
 
 describe('recordEvents', () => {
-  const testDetails = { type: 'test', duration_ms: 1.5 } as const;
-  const suiteDetails = { type: 'suite', duration_ms: 3 } as const;
+  const testDetails: TestDetails = { type: 'test', duration_ms: 1.5 };
+  const suiteDetails: TestDetails = { type: 'suite', duration_ms: 3 };
 
   it('records each test with its status and time, named after the file, its suites and its parent tests', () => {
     assert.deepEqual(
@@ -523,7 +525,7 @@ function report(deps: HookDependencies, name: string, outcome: 'pass' | 'fail'):
   assert.ok(recordEvent, 'the hook installed no reporting function');
   const error = { message: `${name} failed` };
 
-  const details = { type: 'test', duration_ms: 2, ...(outcome === 'fail' && { error }) } as const;
+  const details: TestDetails = { type: 'test', duration_ms: 2, ...(outcome === 'fail' && { error }) };
 
   for (const event of reported(name, 0, outcome, details)) {
     recordEvent(event);
@@ -531,11 +533,11 @@ function report(deps: HookDependencies, name: string, outcome: 'pass' | 'fail'):
 }
 
 describe('writesAllowed', () => {
-  lzTestFor([
+  lzTestFor<readonly [string, boolean | undefined, boolean]>([
     ['outside the permission model', undefined, true],
     ['under the permission model with write access', true, true],
     ['under the permission model without write access', false, false],
-  ] as const)('lets a process write its record %s, or not', ([, allowed, expected]) => {
+  ])('lets a process write its record %s, or not', ([, allowed, expected]) => {
     const asked: [string, string | undefined][] = [];
     const permission =
       allowed === undefined
@@ -615,14 +617,14 @@ describe('install', () => {
     assert.equal(deps.global[watchdog], 'the watchdog');
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, Record<string, string>, Record<string, string>]>([
     ['', {}, {}],
     [
       ', except the compile cache when the process has one',
       { NODE_COMPILE_CACHE: 'cache' },
       { NODE_COMPILE_CACHE: 'cache' },
     ],
-  ] as const)("starts the memory watchdog without the process's environment%s", ([, env, expected]) => {
+  ])("starts the memory watchdog without the process's environment%s", ([, env, expected]) => {
     const started: unknown[] = [];
     const { deps } = harness(
       { [envNames.out]: out, [envNames.memoryLimit]: '1500', NODE_OPTIONS: '--require x.cjs', ...env },
@@ -696,12 +698,12 @@ describe('install', () => {
     assert.deepEqual(seen, [`${testFile} > runs`]);
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, Record<string, string>, string | undefined]>([
     ['a process the tests spawned', { [envNames.file]: testFile }, '/repo/child.mjs'],
     ['a process without a main file', { [envNames.file]: testFile }, undefined],
     ['a run without a test file', {}, undefined],
     ['a run without a test file, from a main file', {}, testFile],
-  ] as const)('leaves node:test and its reporter alone in %s', ([, env, mainFile]) => {
+  ])('leaves node:test and its reporter alone in %s', ([, env, mainFile]) => {
     const { deps, calls } = harness({ [envNames.out]: out, ...env }, { mainFile });
 
     assert.equal(install(deps), true);
@@ -761,10 +763,10 @@ describe('install', () => {
     assert.deepEqual(records, []);
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, boolean, Record<string, number>]>([
     ['after the exit listeners of the tests, when it ends by itself', true, { exit: 1 }],
     ['before the exit listeners of the tests, when it ends through process.exit()', false, {}],
-  ] as const)('writes the record once, %s', ([, natural, exitHits]) => {
+  ])('writes the record once, %s', ([, natural, exitHits]) => {
     const { deps, records, calls, exit, onExit } = harness({ [envNames.out]: out, [envNames.dryRun]: 'true' });
     install(deps);
     const coverage = { static: {}, perTest: {} };
@@ -798,11 +800,11 @@ describe('install', () => {
 
   const summary: TestEvent = { type: 'test:summary', data: { name: '', nesting: 0 } };
 
-  lzTestFor([
+  lzTestFor<readonly [string, boolean, readonly TestEvent[], Record<string, boolean>]>([
     ['marks the record unfinished when it ends through process.exit() before', false, [], { unfinished: true }],
     ['leaves the record as it is when it ends through process.exit() after', false, [summary], {}],
     ['leaves the record as it is when it ends by itself without', true, [], {}],
-  ] as const)("%s node:test's summary", ([, natural, last, unfinished]) => {
+  ])("%s node:test's summary", ([, natural, last, unfinished]) => {
     const { deps, records, exit, wrapped } = harness({ [envNames.out]: out, [envNames.file]: testFile });
     install(deps);
     wrapped().it('passes', () => {});
@@ -840,7 +842,7 @@ describe('install', () => {
     assert.deepEqual(startPositions, [{ line: 2, column: 4 }, { line: 2, column: 4 }, undefined]);
   });
 
-  lzTestFor([
+  lzTestFor<readonly [string, string, readonly boolean[], { line: number; column: number }]>([
     ['the source-mapped call sites, when one is in the test file', testFile, [true], { line: 6, column: 6 }],
     [
       'the call sites as they are, when no source-mapped one is',
@@ -848,7 +850,7 @@ describe('install', () => {
       [true, false],
       { line: 2, column: 4 },
     ],
-  ] as const)('records the position from %s', ([, mappedFile, reads, startPosition]) => {
+  ])('records the position from %s', ([, mappedFile, reads, startPosition]) => {
     const sourceMaps: boolean[] = [];
     const { deps, records, exit, wrapped } = harness(
       { [envNames.out]: out, [envNames.file]: testFile },
@@ -1027,11 +1029,11 @@ describe('install', () => {
       );
     });
 
-    lzTestFor([
+    lzTestFor<readonly [string, string | undefined, number]>([
       ['the default of', undefined, 30_000],
       ['the default of, for 0,', '0', 30_000],
       ['250 ms, as set in', '250', 250],
-    ] as const)('waits %s the held-open variable', ([, heldOpen, ms]) => {
+    ])('waits %s the held-open variable', ([, heldOpen, ms]) => {
       const h = harness({ ...env, [envNames.heldOpen]: heldOpen });
       install(h.deps);
       h.wrapped().it('passes', () => {});
@@ -1043,10 +1045,10 @@ describe('install', () => {
       );
     });
 
-    lzTestFor([
+    lzTestFor<readonly [string, boolean, Record<string, unknown>]>([
       ['node:test reported every top-level test', true, { heldOpen: ['TCPServerWrap', 'PipeWrap'] }],
       ['a top-level test was not reported', false, { unfinished: true, heldOpen: ['TCPServerWrap', 'PipeWrap'] }],
-    ] as const)(
+    ])(
       "ends a file still alive when the grace ends with node:test's exit code, naming what its tests opened, when %s",
       async ([, reported, marks]) => {
         const h = harness(env);
@@ -1108,7 +1110,7 @@ describe('install', () => {
       assert.deepEqual([h.timers.length, h.exits], [1, [1]]);
     });
 
-    lzTestFor([
+    lzTestFor<readonly [string, () => unknown]>([
       [
         'throws',
         (): unknown => {
@@ -1116,7 +1118,7 @@ describe('install', () => {
         },
       ],
       ['rejects', (): unknown => Promise.reject(new Error('after failed'))],
-    ] as const)('stops waiting at a root `after` hook that %s, as node:test runs none after it', async ([, hook]) => {
+    ])('stops waiting at a root `after` hook that %s, as node:test runs none after it', async ([, hook]) => {
       const h = harness(env);
       install(h.deps);
       h.wrapped().after(hook);
@@ -1132,7 +1134,7 @@ describe('install', () => {
     lzTestFor([
       ['with no error, once it calls back', undefined],
       ['with an error, stopping the wait', new Error('after failed')],
-    ] as const)('passes a callback hook its `done` and settles %s', ([, error]) => {
+    ])('passes a callback hook its `done` and settles %s', ([, error]) => {
       const h = harness(env);
       install(h.deps);
       const passed: unknown[] = [];
@@ -1169,12 +1171,12 @@ describe('install', () => {
       assert.equal(h.timers.length, 1);
     });
 
-    const fileFailure = {
+    const fileFailure: TestEvent = {
       type: 'test:fail',
       data: { name: testFile, nesting: 0, details: { duration_ms: 1 } },
-    } as const;
+    };
 
-    lzTestFor([
+    lzTestFor<readonly [string, string, boolean, TestEvent, number]>([
       ['starts', 'node:test reports the file failed once the tests finished', false, fileFailure, 1],
       ['does not start', 'node:test reports the file failed before the tests finished', true, fileFailure, 0],
       [
@@ -1192,7 +1194,7 @@ describe('install', () => {
         { ...fileFailure, data: { ...fileFailure.data, details: { type: 'test', duration_ms: 1 } } },
         0,
       ],
-    ] as const)(
+    ])(
       '%s the grace at a root `after` hook that never settles when %s, as node:test times out such a hook',
       ([, , early, event, timers]) => {
         const h = harness(env);

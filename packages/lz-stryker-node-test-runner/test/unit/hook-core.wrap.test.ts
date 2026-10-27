@@ -253,11 +253,14 @@ describe('wrapNodeTest', () => {
     ]);
   });
 
-  lzTestEach(['describe', 'suite', 'test'] as const)("keeps the other properties of node:test's %s", (kind) => {
-    const { module } = wrapped();
+  lzTestEach<'describe' | 'suite' | 'test'>(['describe', 'suite', 'test'])(
+    "keeps the other properties of node:test's %s",
+    (kind) => {
+      const { module } = wrapped();
 
-    assert.equal(member(module[kind], 'mock'), `${kind}.mock`);
-  });
+      assert.equal(member(module[kind], 'mock'), `${kind}.mock`);
+    },
+  );
 
   it('keeps the other properties of the node:test module', () => {
     const { module } = wrapped();
@@ -1017,7 +1020,14 @@ describe('wrapNodeTest', () => {
     const ran: string[] = [];
     const hook = () => {};
     const hooks = () => {
-      for (const kind of ['before', 'beforeEach', 'after', 'afterEach'] as const) {
+      const kinds: readonly ('before' | 'beforeEach' | 'after' | 'afterEach')[] = [
+        'before',
+        'beforeEach',
+        'after',
+        'afterEach',
+      ];
+
+      for (const kind of kinds) {
         module[kind](hook, { timeout: 5 });
       }
     };
