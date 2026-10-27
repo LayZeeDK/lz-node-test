@@ -78,6 +78,7 @@ export default [
       '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
+      '@typescript-eslint/no-unsafe-argument': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       // Augmenting node:test's types takes a namespace inside `declare module`.
       '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],

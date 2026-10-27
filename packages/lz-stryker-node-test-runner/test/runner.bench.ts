@@ -122,7 +122,7 @@ function scenarios(files: string[]): Scenario[] {
         assert.equal(member(result, 'status'), DryRunStatus.Complete);
         assert.ok(Array.isArray(tests));
         assert.ok(tests.every((test) => member(test, 'status') === TestStatus.Success));
-        assert.equal(Object.keys(Object(perTest)).length, TEST_COUNT);
+        assert.equal(Object.keys(new Object(perTest)).length, TEST_COUNT);
         assert.equal(member(member(perTest, testId(0, 0)), 'child-0'), 1);
 
         return tests.length;
