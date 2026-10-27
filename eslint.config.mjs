@@ -29,6 +29,16 @@ export const readonlyMembers = [
   },
 ];
 
+// Spread into every block that sets no-restricted-syntax for src or tests, for the same reason.
+export const noTypeAssertions = [
+  {
+    // Also `as const`, which consistent-type-assertions allows.
+    selector: 'TSAsExpression, TSTypeAssertion',
+    message:
+      'Stryker 10 mutates nothing inside an `as` expression. Annotate the binding, use `satisfies`, or Object.freeze() a literal table instead.',
+  },
+];
+
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
@@ -121,12 +131,7 @@ export default [
           selector: 'CallExpression[callee.name=/^set(Timeout|Interval)$/][arguments.length<2]',
           message: 'Pass the delay explicitly, so LzNodeTimerDelay can mutate it.',
         },
-        {
-          // Also `as const`, which consistent-type-assertions allows.
-          selector: 'TSAsExpression, TSTypeAssertion',
-          message:
-            'Stryker 10 mutates nothing inside an `as` expression. Annotate the binding, use `satisfies`, or Object.freeze() a literal table instead.',
-        },
+        ...noTypeAssertions,
         ...readonlyMembers,
       ],
     },
@@ -170,6 +175,7 @@ export default [
           selector: 'CallExpression > MemberExpression.callee[object.name=/^test(Each|For)$/][property.name="only"]',
           message: 'Remove .only before committing: it makes node:test --test-only skip every other test.',
         },
+        ...noTypeAssertions,
         ...readonlyMembers,
       ],
     },
