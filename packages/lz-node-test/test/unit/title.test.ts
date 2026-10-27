@@ -68,7 +68,9 @@ describe('formatTitle', () => {
     ['%s', [1, 2, 3], '1'],
     ['%x %s 100%', ['a'], '%x a 100%'],
   ])('formats %j with %o as %j', (template, items, expected) => {
-    assert.equal(formatTitle(template, items, 2), expected);
+    const index = 2;
+
+    assert.equal(formatTitle(template, items, index), expected);
   });
 
   it('throws what JSON.stringify throws for %j, unless the value is circular', () => {
