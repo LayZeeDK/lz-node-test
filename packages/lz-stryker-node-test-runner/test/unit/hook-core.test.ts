@@ -517,7 +517,6 @@ const out = join('/tmp', 'out');
 /** The environment of the process that runs the test file. */
 const fileEnv = { [envNames.out]: out, [envNames.file]: testFile };
 
-/** A harness whose hook is installed, which is what almost every test wants. */
 function installedHarness(env: Record<string, string | undefined>, overrides: Partial<HookDependencies> = {}): Harness {
   const h = harness(env, overrides);
   install(h.deps);
@@ -539,7 +538,6 @@ async function ranAndReported(h: Harness, name: string, outcome: 'pass' | 'fail'
   report(h.deps, name, outcome);
 }
 
-/** Sends events to the hook's reporting function, which the test expects the hook to have installed. */
 function send(deps: HookDependencies, ...events: readonly TestEvent[]): void {
   const recordEvent = deps.global[reporting];
   assert.ok(recordEvent, 'the hook installed no reporting function');
