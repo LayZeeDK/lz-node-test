@@ -76,7 +76,8 @@ export function project(t: TestContext, files: Record<string, string>): string {
   process.chdir(dir);
   t.after(() => {
     process.chdir(previous);
-    rmSync(dir, { recursive: true, force: true });
+    // Windows refuses to remove a directory that a process the test just ended still works in.
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   return dir;
