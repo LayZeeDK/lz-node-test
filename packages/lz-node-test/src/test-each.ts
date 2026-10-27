@@ -12,17 +12,17 @@ import {
 
 /** The arguments of a `lzTestEach` callback for a readonly tuple row of up to 10 values, as in Vitest and Jest. */
 type ExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
-  1: [T[0]];
-  2: [T[0], T[1]];
-  3: [T[0], T[1], T[2]];
-  4: [T[0], T[1], T[2], T[3]];
-  5: [T[0], T[1], T[2], T[3], T[4]];
-  6: [T[0], T[1], T[2], T[3], T[4], T[5]];
-  7: [T[0], T[1], T[2], T[3], T[4], T[5], T[6]];
-  8: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7]];
-  9: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8]];
-  10: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9]];
-  fallback: Array<T extends ReadonlyArray<infer U> ? U : any>;
+  readonly 1: [T[0]];
+  readonly 2: [T[0], T[1]];
+  readonly 3: [T[0], T[1], T[2]];
+  readonly 4: [T[0], T[1], T[2], T[3]];
+  readonly 5: [T[0], T[1], T[2], T[3], T[4]];
+  readonly 6: [T[0], T[1], T[2], T[3], T[4], T[5]];
+  readonly 7: [T[0], T[1], T[2], T[3], T[4], T[5], T[6]];
+  readonly 8: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7]];
+  readonly 9: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8]];
+  readonly 10: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9]];
+  readonly fallback: Array<T extends ReadonlyArray<infer U> ? U : any>;
 }[T extends Readonly<[any]>
   ? 1
   : T extends Readonly<[any, any]>

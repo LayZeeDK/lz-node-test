@@ -14,7 +14,7 @@ export type Name = string | Function;
 
 /** node:test's options for each test of the table, and `fails`, which makes a test pass only when its body fails. */
 export interface EachOptions extends TestOptions {
-  fails?: boolean;
+  readonly fails?: boolean;
 }
 
 export type Flags = Pick<EachOptions, 'skip' | 'only' | 'todo' | 'fails'>;
@@ -31,8 +31,8 @@ export type Register<TCallback> = (
 
 /** One test of the table: the values its name formats, and its body unless it is a todo test. */
 export interface Case {
-  items: readonly unknown[];
-  body?: Body;
+  readonly items: readonly unknown[];
+  readonly body?: Body;
 }
 
 const signatures =

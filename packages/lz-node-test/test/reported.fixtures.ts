@@ -17,11 +17,11 @@ export const signatures = {
 
 /** A test node:test reported: its outcome, its skip and todo marks, and the message of the error it failed with. */
 export interface Reported {
-  name: string;
-  outcome: 'pass' | 'fail';
-  skip?: true;
-  todo?: true;
-  error?: string;
+  readonly name: string;
+  readonly outcome: 'pass' | 'fail';
+  readonly skip?: true;
+  readonly todo?: true;
+  readonly error?: string;
 }
 
 /** Fails the test with its arguments as JSON, so the error tells what the test's body got. */
@@ -37,7 +37,7 @@ declare module 'node:test' {
        * `lzTestEach`, `lzTestFor` and `report` and nothing else of the caller's, so `cases` can use only those and globals.
        * With `only`, node:test runs only the tests marked only.
        */
-      reports(cases: () => void, expected: Reported[], options?: { only?: boolean }): Promise<void>;
+      reports(cases: () => void, expected: Reported[], options?: { readonly only?: boolean }): Promise<void>;
     }
   }
 }
