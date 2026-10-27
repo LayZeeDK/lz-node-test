@@ -28,8 +28,8 @@ interface LzStrykerOutcome {
 }
 
 export type LzStrykerRun =
-  | (LzStrykerOutcome & { reported: true; report: LzReport })
-  | (LzStrykerOutcome & { reported: false });
+  | (LzStrykerOutcome & { readonly reported: true; readonly report: LzReport })
+  | (LzStrykerOutcome & { readonly reported: false });
 
 export interface LzFixture {
   readonly dir: string;
