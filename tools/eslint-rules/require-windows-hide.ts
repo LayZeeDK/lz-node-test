@@ -22,17 +22,16 @@ function property(node: ObjectExpression, name: string): Property | undefined {
 type ParsedNode = Node | TSESTree.Node;
 
 function unwrap(node: ParsedNode): ParsedNode {
-  switch (node.type) {
-    case AST_NODE_TYPES.TSAsExpression:
-    case AST_NODE_TYPES.TSSatisfiesExpression:
-    case AST_NODE_TYPES.TSNonNullExpression:
-    case AST_NODE_TYPES.TSTypeAssertion: {
-      return unwrap(node.expression);
-    }
-    default: {
-      return node;
-    }
+  if (
+    node.type === AST_NODE_TYPES.TSAsExpression ||
+    node.type === AST_NODE_TYPES.TSSatisfiesExpression ||
+    node.type === AST_NODE_TYPES.TSNonNullExpression ||
+    node.type === AST_NODE_TYPES.TSTypeAssertion
+  ) {
+    return unwrap(node.expression);
   }
+
+  return node;
 }
 
 function isFalse(node: Node): boolean {

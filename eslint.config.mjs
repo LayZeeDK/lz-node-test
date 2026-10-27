@@ -40,6 +40,15 @@ export const noTypeAssertions = [
   },
 ];
 
+// Spread beside noTypeAssertions. Runtime-private # members replace the TypeScript modifier.
+export const noPrivateModifier = [
+  {
+    selector:
+      ':matches(PropertyDefinition, MethodDefinition, TSParameterProperty, AccessorProperty, TSAbstractPropertyDefinition, TSAbstractMethodDefinition)[accessibility="private"]',
+    message: 'Use a # member instead of the private modifier.',
+  },
+];
+
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
@@ -112,6 +121,7 @@ export default [
       '@typescript-eslint/return-await': ['error', 'in-try-catch'],
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-call': 'error',
@@ -143,6 +153,7 @@ export default [
           message: 'Pass the delay explicitly, so LzNodeTimerDelay can mutate it.',
         },
         ...noTypeAssertions,
+        ...noPrivateModifier,
         ...readonlyMembers,
       ],
     },
@@ -195,6 +206,7 @@ export default [
           message: 'Remove .only before committing: it makes node:test --test-only skip every other test.',
         },
         ...noTypeAssertions,
+        ...noPrivateModifier,
         ...readonlyMembers,
       ],
     },

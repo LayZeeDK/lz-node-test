@@ -36,7 +36,8 @@ function typeErrors(source: string): string[] {
     },
   );
   assert.ok(config);
-  const { options } = config;
+  // A replacement that drops the only use of a parameter leaves it unused; these tests look at return types.
+  const options = { ...config.options, noUnusedParameters: false };
   const host = ts.createCompilerHost(options);
   const { fileExists, getSourceFile, readFile } = host;
   host.fileExists = (name) => name === sample || fileExists(name);
