@@ -70,15 +70,12 @@ export function parseArguments<TCallback extends EachCallback>(
     throw new TypeError(signatures);
   }
 
-  return {
-    options:
-      typeof fnOrTimeout === 'number' ? { timeout: fnOrTimeout } : typeof optionsOrFn === 'object' ? optionsOrFn : {},
-    ...(typeof optionsOrFn === 'function'
-      ? { fn: optionsOrFn }
-      : typeof fnOrTimeout === 'function'
-        ? { fn: fnOrTimeout }
-        : {}),
-  };
+  const options =
+    typeof fnOrTimeout === 'number' ? { timeout: fnOrTimeout } : typeof optionsOrFn === 'object' ? optionsOrFn : {};
+  const fn =
+    typeof optionsOrFn === 'function' ? optionsOrFn : typeof fnOrTimeout === 'function' ? fnOrTimeout : undefined;
+
+  return fn === undefined ? { options } : { options, fn };
 }
 
 /** Registers one test per case, each named after `name` and its case, with the table's options. */
