@@ -703,15 +703,13 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       coverages.push(...outcome.coverages);
     }
 
-    // Mutant runs leave coverageAnalysis unset and take the next return; toMutantRunResult drops their coverage.
-    if (run.coverageAnalysis === 'off') {
-      return { status: DryRunStatus.Complete, tests };
-    }
-
+    // Mutant runs leave coverageAnalysis unset and so merge coverage too; toMutantRunResult drops it.
     return {
       status: DryRunStatus.Complete,
       tests,
-      mutantCoverage: lzMergeCoverage(coverages, run.coverageAnalysis !== 'all'),
+      ...(run.coverageAnalysis !== 'off' && {
+        mutantCoverage: lzMergeCoverage(coverages, run.coverageAnalysis !== 'all'),
+      }),
     };
   }
 
