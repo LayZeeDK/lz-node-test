@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import type { Logger } from '@stryker-mutator/api/logging';
 
-const REMOVE_WAIT_MS = 2_000;
+const removeWaitMs = 2_000;
 
 /**
  * Creates `dir` for this user alone, or checks that the one that exists is this user's: in a temporary directory that
@@ -28,7 +28,7 @@ export function removeDir(
   dir: string,
   log: Logger,
   {
-    waitMs = REMOVE_WAIT_MS,
+    waitMs = removeWaitMs,
     remove = (path: string) => rm(path, { recursive: true, maxRetries: 10, retryDelay: 20 }),
   } = {},
 ): Promise<void> {

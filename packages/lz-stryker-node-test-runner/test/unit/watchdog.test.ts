@@ -4,14 +4,14 @@ import { describe, it } from 'node:test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import { checkMemory, watch, workersAllowed } from '../../src/watchdog.ts';
 
-const DATA = { limitMB: 200, recordPath: '/out/4321.memory.json' };
-const MB = 1048576;
+const data = { limitMB: 200, recordPath: '/out/4321.memory.json' };
+const mb = 1048576;
 
 function check(rssBytes: number) {
   const writes: unknown[][] = [];
   const kills: unknown[][] = [];
   checkMemory(
-    DATA,
+    data,
     rssBytes,
     (path, data) => writes.push([path, JSON.parse(data)]),
     (pid, signal) => kills.push([pid, signal]),
@@ -45,8 +45,8 @@ describe('workersAllowed', () => {
 
 describe('checkMemory', () => {
   it("writes the watchdog's record and ends the process once it holds more than the limit", () => {
-    assert.deepEqual(check(200.6 * MB), {
-      writes: [[DATA.recordPath, { tests: [], memoryLimitReached: { rssMB: 201, limitMB: 200 } }]],
+    assert.deepEqual(check(200.6 * mb), {
+      writes: [[data.recordPath, { tests: [], memoryLimitReached: { rssMB: 201, limitMB: 200 } }]],
       kills: [[process.pid, 'SIGKILL']],
     });
   });
@@ -57,8 +57,8 @@ describe('checkMemory', () => {
     assert.throws(
       () =>
         checkMemory(
-          DATA,
-          200.6 * MB,
+          data,
+          200.6 * mb,
           () => {
             throw new Error('ENOENT');
           },
@@ -70,8 +70,8 @@ describe('checkMemory', () => {
   });
 
   lzTestFor([
-    ['at the limit', 200 * MB],
-    ['just below the limit after rounding', 200.4 * MB],
+    ['at the limit', 200 * mb],
+    ['just below the limit after rounding', 200.4 * mb],
   ] as const)('leaves the process alone %s', ([, rssBytes]) => {
     assert.deepEqual(check(rssBytes), { writes: [], kills: [] });
   });
@@ -82,7 +82,7 @@ describe('watch', () => {
     t.mock.timers.enable({ apis: ['setInterval'] });
     const looks: number[] = [];
     let rss = 0;
-    watch(DATA, () => {
+    watch(data, () => {
       looks.push(rss);
 
       return ++rss;
@@ -99,7 +99,7 @@ describe('watch', () => {
   it("measures the process's resident memory by default", (t) => {
     t.mock.timers.enable({ apis: ['setInterval'] });
     const rss = t.mock.method(process.memoryUsage, 'rss', () => 1);
-    watch(DATA);
+    watch(data);
 
     t.mock.timers.tick(50);
 

@@ -16,7 +16,7 @@ import {
 } from '../../src/install.ts';
 import { isOwn, type NodeMutatorLike, type Operator } from '../../src/operator.ts';
 
-const LOCATION = { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } };
+const sampleLocation = { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } };
 
 function operator(name: string): Operator {
   return { name, sample: `${name}();`, *mutate() {} };
@@ -40,7 +40,9 @@ function setup({
 
       return allMutators
         .filter((mutator) => isOwn(mutator) && !silent.includes(mutator.name))
-        .map((mutator): InstrumentedMutant => ({ mutatorName: mutator.name, replacement: '', location: LOCATION }));
+        .map(
+          (mutator): InstrumentedMutant => ({ mutatorName: mutator.name, replacement: '', location: sampleLocation }),
+        );
     },
   };
   const run = (mode: 'add' | 'replace', operators: Operator[]) =>
@@ -161,8 +163,8 @@ describe('install', () => {
 });
 
 describe('corePackageJson', () => {
-  const CORE = join('/global', 'node_modules', '@stryker-mutator', 'core');
-  const HERE = join('/repo', 'node_modules', '@stryker-mutator', 'core', 'package.json');
+  const globalCore = join('/global', 'node_modules', '@stryker-mutator', 'core');
+  const here = join('/repo', 'node_modules', '@stryker-mutator', 'core', 'package.json');
 
   function coreFor(real: string | undefined) {
     return corePackageJson(
@@ -179,32 +181,32 @@ describe('corePackageJson', () => {
       (specifier) => {
         assert.equal(specifier, '@stryker-mutator/core/package.json');
 
-        return HERE;
+        return here;
       },
     );
   }
 
   it("takes the core whose bin started the process, through the bin's links", () => {
-    assert.equal(coreFor(join(CORE, 'bin', 'stryker.js')), join(CORE, 'package.json'));
+    assert.equal(coreFor(join(globalCore, 'bin', 'stryker.js')), join(globalCore, 'package.json'));
   });
 
   lzTestEach([
     ['another script', join('/repo', 'tools', 'corpus-diff.ts')],
-    ['a file next to the bin', join(CORE, 'bin', 'stryker.js.map')],
+    ['a file next to the bin', join(globalCore, 'bin', 'stryker.js.map')],
     ["another package's bin", join('/global', 'node_modules', '@stryker-mutator', 'other', 'bin', 'stryker.js')],
     ['a script that is no file', undefined],
   ])('takes the core this module resolves when the process runs %s', (_title, real) => {
-    assert.equal(coreFor(real), HERE);
+    assert.equal(coreFor(real), here);
   });
 
   it('takes the core this module resolves when the process runs no script, as `node --eval` does', () => {
     const core = corePackageJson(
       ['/usr/local/bin/node'],
-      () => join(CORE, 'bin', 'stryker.js'),
-      () => HERE,
+      () => join(globalCore, 'bin', 'stryker.js'),
+      () => here,
     );
 
-    assert.equal(core, HERE);
+    assert.equal(core, here);
   });
 });
 
@@ -294,7 +296,7 @@ describe('resolveFromCore', () => {
       }
     };
   const located = (mutant: object) => ({
-    mutants: [{ mutatorName: 'Own', replacement: '""', location: LOCATION, ...mutant }],
+    mutants: [{ mutatorName: 'Own', replacement: '""', location: sampleLocation, ...mutant }],
   });
   const noMutants = (index: string) => refusal(`the instrument() result of the Instrumenter of ${index}`, 'mutants');
 
@@ -310,14 +312,18 @@ describe('resolveFromCore', () => {
     ['a mutant with no mutator name', resolvingTo(located({ mutatorName: undefined })), noMutants],
     ['a mutant whose replacement is no string', resolvingTo(located({ replacement: 1 })), noMutants],
     ['a mutant with no location', resolvingTo(located({ location: undefined })), noMutants],
-    ['a mutant with no start', resolvingTo(located({ location: { end: LOCATION.end } })), noMutants],
-    ['a mutant with no end', resolvingTo(located({ location: { start: LOCATION.start } })), noMutants],
+    ['a mutant with no start', resolvingTo(located({ location: { end: sampleLocation.end } })), noMutants],
+    ['a mutant with no end', resolvingTo(located({ location: { start: sampleLocation.start } })), noMutants],
     [
       'a mutant with no start line',
-      resolvingTo(located({ location: { ...LOCATION, start: { column: 0 } } })),
+      resolvingTo(located({ location: { ...sampleLocation, start: { column: 0 } } })),
       noMutants,
     ],
-    ['a mutant with no end column', resolvingTo(located({ location: { ...LOCATION, end: { line: 0 } } })), noMutants],
+    [
+      'a mutant with no end column',
+      resolvingTo(located({ location: { ...sampleLocation, end: { line: 0 } } })),
+      noMutants,
+    ],
   ])('refuses %s', async (_title, instrumenterClass, message) => {
     const { load, replaced } = loadingWith(indexFile, { Instrumenter: instrumenterClass });
     const instrumenter = await resolveFromCore(corePackageJson(), load);

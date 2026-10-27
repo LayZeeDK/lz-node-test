@@ -5,14 +5,14 @@ import { describe, it } from 'node:test';
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { ACTIVE_MUTANT_ENV, ENV, wrapNodeTest, type CallSite, type RecordedTest } from '../../src/hook-core.ts';
+import { activeMutantEnv, envNames, wrapNodeTest, type CallSite, type RecordedTest } from '../../src/hook-core.ts';
 import {
   bodyOf,
   callable,
   fakeNodeTest,
   rawBodyOf,
   runBodies,
-  TEST_FILE,
+  testFile,
   testContext,
   type Fn,
 } from '../hook-core.fixtures.ts';
@@ -40,7 +40,7 @@ function wrapped(filter?: string[], bail = false, activeMutant?: string) {
   const rootAfters: unknown[] = [];
   const module = wrapNodeTest({
     ns,
-    testFile: TEST_FILE,
+    testFile: testFile,
     tests,
     filter: filter && new Set(filter),
     bail,
@@ -94,16 +94,16 @@ describe('wrapNodeTest', () => {
     await runBodies(registrations, ['first', 'second', 'third', 'top']);
 
     assert.deepEqual(seen, [
-      `${TEST_FILE} > outer > inner > first`,
-      `${TEST_FILE} > outer > second`,
-      `${TEST_FILE} > sibling > third`,
-      `${TEST_FILE} > top`,
+      `${testFile} > outer > inner > first`,
+      `${testFile} > outer > second`,
+      `${testFile} > sibling > third`,
+      `${testFile} > top`,
     ]);
   });
 
   it('tells same-named suites and tests of one parent apart in the order they are declared', async () => {
     const { module, registrations, positions, sites, seen, see } = wrapped();
-    sites.push({ file: TEST_FILE, line: 1, column: 1 });
+    sites.push({ file: testFile, line: 1, column: 1 });
     module.describe('s', () => {
       module.it('works', see);
       module.it.skip('works', see);
@@ -129,22 +129,22 @@ describe('wrapNodeTest', () => {
     await run('t.test', 'child', 1);
 
     assert.deepEqual(seen, [
-      `${TEST_FILE} > s > works`,
-      `${TEST_FILE} > s (2) > works`,
-      `${TEST_FILE} > s > works (3) > child`,
-      `${TEST_FILE} > s > works (3) > child (2)`,
+      `${testFile} > s > works`,
+      `${testFile} > s (2) > works`,
+      `${testFile} > s > works (3) > child`,
+      `${testFile} > s > works (3) > child (2)`,
     ]);
     assert.deepEqual(
       [...positions.keys()],
       [
-        `${TEST_FILE} > s`,
-        `${TEST_FILE} > s > works`,
-        `${TEST_FILE} > s > works (2)`,
-        `${TEST_FILE} > s > works (3)`,
-        `${TEST_FILE} > s (2)`,
-        `${TEST_FILE} > s (2) > works`,
-        `${TEST_FILE} > s > works (3) > child`,
-        `${TEST_FILE} > s > works (3) > child (2)`,
+        `${testFile} > s`,
+        `${testFile} > s > works`,
+        `${testFile} > s > works (2)`,
+        `${testFile} > s > works (3)`,
+        `${testFile} > s (2)`,
+        `${testFile} > s (2) > works`,
+        `${testFile} > s > works (3) > child`,
+        `${testFile} > s > works (3) > child (2)`,
       ],
     );
   });
@@ -160,7 +160,7 @@ describe('wrapNodeTest', () => {
     await bodyOf(registrations, 'after')(testContext());
 
     assert.equal(suiteResults[0], failure);
-    assert.deepEqual(seen, [`${TEST_FILE} > after`]);
+    assert.deepEqual(seen, [`${testFile} > after`]);
   });
 
   it('passes name, options, receiver and return values through, with tests inside run one at a time', async () => {
@@ -247,9 +247,9 @@ describe('wrapNodeTest', () => {
       ],
     );
     assert.deepEqual(seen, [
-      `${TEST_FILE} > <anonymous> > <anonymous>`,
-      `${TEST_FILE} > optionsFirst`,
-      `${TEST_FILE} > nameOnly`,
+      `${testFile} > <anonymous> > <anonymous>`,
+      `${testFile} > optionsFirst`,
+      `${testFile} > nameOnly`,
     ]);
   });
 
@@ -273,7 +273,7 @@ describe('wrapNodeTest', () => {
 
     await runBodies(registrations, ['default export', 'default export only']);
 
-    assert.deepEqual(seen, [`${TEST_FILE} > default export`, `${TEST_FILE} > default export only`]);
+    assert.deepEqual(seen, [`${testFile} > default export`, `${testFile} > default export only`]);
     assert.equal(module.test, module);
     assert.notEqual(module, original);
     assert.deepEqual({ ...original }, unwrapped);
@@ -298,11 +298,11 @@ describe('wrapNodeTest', () => {
     await runBodies(registrations, ['first', 'it.only', 'test.only', 'it.todo', 'test.todo']);
 
     assert.deepEqual(seen, [
-      `${TEST_FILE} > describe.only > first`,
-      `${TEST_FILE} > describe.only > it.only`,
-      `${TEST_FILE} > suite.only > test.only`,
-      `${TEST_FILE} > describe.todo > it.todo`,
-      `${TEST_FILE} > suite.todo > test.todo`,
+      `${testFile} > describe.only > first`,
+      `${testFile} > describe.only > it.only`,
+      `${testFile} > suite.only > test.only`,
+      `${testFile} > describe.todo > it.todo`,
+      `${testFile} > suite.todo > test.todo`,
     ]);
     assert.deepEqual(
       registrations.map(({ kind, name }) => `${kind} ${name}`),
@@ -346,11 +346,11 @@ describe('wrapNodeTest', () => {
     await callbackContext.end();
 
     assert.deepEqual(seen, [
-      `${TEST_FILE} > suite > parent`,
-      `${TEST_FILE} > suite > parent > child`,
-      `${TEST_FILE} > suite > parent`,
-      `${TEST_FILE} > suite > parent > child > grandchild`,
-      `${TEST_FILE} > calls back > callback child`,
+      `${testFile} > suite > parent`,
+      `${testFile} > suite > parent > child`,
+      `${testFile} > suite > parent`,
+      `${testFile} > suite > parent > child > grandchild`,
+      `${testFile} > calls back > callback child`,
     ]);
     assert.deepEqual(
       registrations.filter(({ kind }) => kind === 't.test').map(({ name, self }) => [name, self]),
@@ -361,7 +361,7 @@ describe('wrapNodeTest', () => {
       ],
     );
     assert.equal(ns.currentTestId, undefined);
-    assert.ok(!(ENV.current in env));
+    assert.ok(!(envNames.current in env));
   });
 
   it('keeps a subtest that its parent does not await current until it ends, after its parent ends', async () => {
@@ -387,10 +387,10 @@ describe('wrapNodeTest', () => {
     release();
     await child;
 
-    const childId = `${TEST_FILE} > parent > child`;
+    const childId = `${testFile} > parent > child`;
     assert.deepEqual(seen, [undefined, childId, childId]);
     assert.equal(ns.currentTestId, undefined);
-    assert.ok(!(ENV.current in env));
+    assert.ok(!(envNames.current in env));
   });
 
   it('names the suites and tests a running test registers with the module after it, as node:test nests them', async () => {
@@ -415,15 +415,15 @@ describe('wrapNodeTest', () => {
     await runBodies(registrations, ['inner', 'in suite', 'while a subtest runs', 'after an await']);
 
     assert.deepEqual(seen, [
-      `${TEST_FILE} > parent > inner`,
-      `${TEST_FILE} > parent > suite > in suite`,
-      `${TEST_FILE} > parent > while a subtest runs`,
-      `${TEST_FILE} > parent > after an await`,
+      `${testFile} > parent > inner`,
+      `${testFile} > parent > suite > in suite`,
+      `${testFile} > parent > while a subtest runs`,
+      `${testFile} > parent > after an await`,
     ]);
   });
 
   it('runs a test whose subtest the filter selects, and skips the subtests it does not select', async () => {
-    const { module, registrations, seen, see } = wrapped([`${TEST_FILE} > parent > wanted`]);
+    const { module, registrations, seen, see } = wrapped([`${testFile} > parent > wanted`]);
     module.it('parent', async (t: Subtests) => {
       see();
       t.test('wanted', see);
@@ -443,11 +443,11 @@ describe('wrapNodeTest', () => {
         ['unwanted', true],
       ],
     );
-    assert.deepEqual(seen, [`${TEST_FILE} > parent`, `${TEST_FILE} > parent > wanted`]);
+    assert.deepEqual(seen, [`${testFile} > parent`, `${testFile} > parent > wanted`]);
   });
 
   it('tells before each suite, test and hook goes to node:test, and whether it is a top-level suite or test', async () => {
-    const { module, registrations, registering } = wrapped([`${TEST_FILE} > runs`]);
+    const { module, registrations, registering } = wrapped([`${testFile} > runs`]);
     module.after(() => {});
     module.describe('suite', () => {
       module.it('nested', () => {});
@@ -498,12 +498,12 @@ describe('wrapNodeTest', () => {
 
     await runBodies(registrations, ['it.expectFailure', 'test.expectFailure']);
 
-    assert.deepEqual(seen, [`${TEST_FILE} > it.expectFailure`, `${TEST_FILE} > test.expectFailure`]);
+    assert.deepEqual(seen, [`${testFile} > it.expectFailure`, `${testFile} > test.expectFailure`]);
     assert.equal(module.describe.expectFailure, undefined);
 
     const node22 = wrapNodeTest({
       ns: {},
-      testFile: TEST_FILE,
+      testFile: testFile,
       tests: [],
       filter: undefined,
       bail: false,
@@ -522,10 +522,10 @@ describe('wrapNodeTest', () => {
   it('notes where the test file declares each suite and test, 0-based, from the innermost call in the test file', () => {
     const { module, positions, sites, registrations } = wrapped();
     const helper = join('/repo', 'helper.ts');
-    sites.push({ file: helper, line: 2, column: 3 }, { file: TEST_FILE, line: 8, column: 5 });
-    sites.push({ file: TEST_FILE, line: 20, column: 1 });
+    sites.push({ file: helper, line: 2, column: 3 }, { file: testFile, line: 8, column: 5 });
+    sites.push({ file: testFile, line: 20, column: 1 });
     module.it('through a helper', () => {});
-    sites.splice(0, Infinity, { file: TEST_FILE, line: 1, column: 1 });
+    sites.splice(0, Infinity, { file: testFile, line: 1, column: 1 });
     module.describe('suite', () => {
       module.test('directly', (t: { test: (name: string) => unknown }) => t.test('subtest'));
     });
@@ -534,10 +534,10 @@ describe('wrapNodeTest', () => {
     module.it('only in a helper', () => {});
 
     assert.deepEqual(Object.fromEntries(positions), {
-      [`${TEST_FILE} > through a helper`]: { line: 7, column: 4 },
-      [`${TEST_FILE} > suite`]: { line: 0, column: 0 },
-      [`${TEST_FILE} > suite > directly`]: { line: 0, column: 0 },
-      [`${TEST_FILE} > suite > directly > subtest`]: { line: 0, column: 0 },
+      [`${testFile} > through a helper`]: { line: 7, column: 4 },
+      [`${testFile} > suite`]: { line: 0, column: 0 },
+      [`${testFile} > suite > directly`]: { line: 0, column: 0 },
+      [`${testFile} > suite > directly > subtest`]: { line: 0, column: 0 },
     });
   });
 
@@ -545,7 +545,7 @@ describe('wrapNodeTest', () => {
     const { module, positions, sites, registrations } = wrapped();
     const body = () => {};
     const options = { timeout: 5 };
-    sites.push({ file: TEST_FILE, line: 3, column: 4 });
+    sites.push({ file: testFile, line: 3, column: 4 });
     module.describe('suite', () => {
       module.it.skip('nested', options, body);
     });
@@ -554,11 +554,11 @@ describe('wrapNodeTest', () => {
     module.suite.skip.call('suite this', 'skipped suite', body);
 
     assert.deepEqual(Object.fromEntries(positions), {
-      [`${TEST_FILE} > suite`]: { line: 2, column: 3 },
-      [`${TEST_FILE} > suite > nested`]: { line: 2, column: 3 },
-      [`${TEST_FILE} > test`]: { line: 2, column: 3 },
-      [`${TEST_FILE} > describe`]: { line: 2, column: 3 },
-      [`${TEST_FILE} > skipped suite`]: { line: 2, column: 3 },
+      [`${testFile} > suite`]: { line: 2, column: 3 },
+      [`${testFile} > suite > nested`]: { line: 2, column: 3 },
+      [`${testFile} > test`]: { line: 2, column: 3 },
+      [`${testFile} > describe`]: { line: 2, column: 3 },
+      [`${testFile} > skipped suite`]: { line: 2, column: 3 },
     });
     assert.deepEqual(registrations.slice(1), [
       { kind: 'test.skip', name: 'nested', rest: [options, body], self: module.it },
@@ -602,20 +602,20 @@ describe('wrapNodeTest', () => {
 
       assert.deepEqual(seen, [receiver, context]);
       assert.deepEqual(
-        [ns.currentTestId, env[ENV.current]],
-        [`${TEST_FILE} > calls back`, `${TEST_FILE} > calls back`],
+        [ns.currentTestId, env[envNames.current]],
+        [`${testFile} > calls back`, `${testFile} > calls back`],
       );
       assert.deepEqual(calls, []);
 
       await context.end();
 
-      assert.equal(ns.currentTestId, `${TEST_FILE} > calls back`);
+      assert.equal(ns.currentTestId, `${testFile} > calls back`);
 
       finish?.();
 
       assert.deepEqual(calls, [[undefined]]);
       assert.equal(ns.currentTestId, undefined);
-      assert.ok(!(ENV.current in env));
+      assert.ok(!(envNames.current in env));
       assert.equal(context.skipped, false);
     });
 
@@ -642,7 +642,7 @@ describe('wrapNodeTest', () => {
         (error) => error === 0,
       );
 
-      assert.equal(ns.currentTestId, `${TEST_FILE} > throws`);
+      assert.equal(ns.currentTestId, `${testFile} > throws`);
 
       await context.end();
 
@@ -665,7 +665,7 @@ describe('wrapNodeTest', () => {
 
       await bodyOf(registrations, 'parent')(testContext(registrations));
 
-      assert.deepEqual(seen, [`${TEST_FILE} > parent`]);
+      assert.deepEqual(seen, [`${testFile} > parent`]);
     });
   });
 
@@ -673,30 +673,30 @@ describe('wrapNodeTest', () => {
     const { module, registrations, ns, env } = wrapped();
     const seen: unknown[] = [];
     module.it('observes', () => {
-      seen.push(ns.currentTestId, env[ENV.current]);
+      seen.push(ns.currentTestId, env[envNames.current]);
     });
 
     await bodyOf(registrations, 'observes')(testContext());
 
-    assert.deepEqual(seen, [`${TEST_FILE} > observes`, `${TEST_FILE} > observes`]);
+    assert.deepEqual(seen, [`${testFile} > observes`, `${testFile} > observes`]);
   });
 
   it('activates the runtime mutant when a test starts and keeps it active, also for processes it starts', async () => {
     const { module, registrations, ns, env } = wrapped(undefined, false, '7');
     const seen: unknown[] = [];
     module.it('first', () => {
-      seen.push(ns.activeMutant, env[ACTIVE_MUTANT_ENV]);
+      seen.push(ns.activeMutant, env[activeMutantEnv]);
     });
     module.it('second', (_t: unknown, done: () => void) => {
       seen.push(ns.activeMutant);
       done();
     });
 
-    assert.deepEqual([ns.activeMutant, env[ACTIVE_MUTANT_ENV]], [undefined, undefined]);
+    assert.deepEqual([ns.activeMutant, env[activeMutantEnv]], [undefined, undefined]);
 
     await bodyOf(registrations, 'first')(testContext());
 
-    assert.deepEqual([ns.activeMutant, env[ACTIVE_MUTANT_ENV]], ['7', '7']);
+    assert.deepEqual([ns.activeMutant, env[activeMutantEnv]], ['7', '7']);
 
     delete ns.activeMutant;
     await bodyOf(registrations, 'second')(testContext(), () => {});
@@ -708,7 +708,7 @@ describe('wrapNodeTest', () => {
     const { module, registrations, ns, env } = wrapped(undefined, false, '7');
     const seen: unknown[] = [];
     const observe = function (this: unknown, ...args: unknown[]) {
-      seen.push(ns.activeMutant, env[ACTIVE_MUTANT_ENV], this, args);
+      seen.push(ns.activeMutant, env[activeMutantEnv], this, args);
 
       return 'hook result';
     };
@@ -732,7 +732,7 @@ describe('wrapNodeTest', () => {
       ],
     );
     assert.equal(hooks[0]?.rest[0], topLevelBefore);
-    assert.deepEqual([ns.activeMutant, env[ACTIVE_MUTANT_ENV]], [undefined, undefined]);
+    assert.deepEqual([ns.activeMutant, env[activeMutantEnv]], [undefined, undefined]);
 
     const results = [];
 
@@ -787,14 +787,14 @@ describe('wrapNodeTest', () => {
       const settled = promised(context);
 
       assert.deepEqual(received, [[context]]);
-      assert.equal(ns.currentTestId, `${TEST_FILE} > suite > second`);
+      assert.equal(ns.currentTestId, `${testFile} > suite > second`);
       assert.equal(await settled, 'promised');
       assert.equal(ns.currentTestId, undefined);
       assert.equal(
         callback(testContext([], 'first'), (...args: unknown[]) => calls.push(args)),
         'called back',
       );
-      assert.equal(ns.currentTestId, `${TEST_FILE} > first`);
+      assert.equal(ns.currentTestId, `${testFile} > first`);
 
       finish(failure);
 
@@ -803,10 +803,10 @@ describe('wrapNodeTest', () => {
       assert.throws(() => throwing(testContext([], 'first')), failure);
       assert.equal(ns.currentTestId, undefined);
       assert.deepEqual(seen, [
-        `${TEST_FILE} > suite > second`,
-        `${TEST_FILE} > suite > second`,
-        `${TEST_FILE} > first`,
-        `${TEST_FILE} > first`,
+        `${testFile} > suite > second`,
+        `${testFile} > suite > second`,
+        `${testFile} > first`,
+        `${testFile} > first`,
       ]);
     });
 
@@ -846,7 +846,7 @@ describe('wrapNodeTest', () => {
         seen,
         Array.from({ length: 8 }, () => undefined),
       );
-      assert.ok(!(ENV.current in env));
+      assert.ok(!(envNames.current in env));
     });
 
     it('keeps a test current after its body until its after hooks run, and through them while its body runs', async () => {
@@ -866,7 +866,7 @@ describe('wrapNodeTest', () => {
       const running = rawBodyOf(registrations, 'waits')(waits);
       await waits.end();
 
-      assert.equal(ns.currentTestId, `${TEST_FILE} > waits`);
+      assert.equal(ns.currentTestId, `${testFile} > waits`);
 
       release();
       await running;
@@ -875,12 +875,12 @@ describe('wrapNodeTest', () => {
 
       await rawBodyOf(registrations, 'returns')(returns);
 
-      assert.equal(ns.currentTestId, `${TEST_FILE} > returns`);
+      assert.equal(ns.currentTestId, `${testFile} > returns`);
 
       await returns.end();
 
       assert.equal(ns.currentTestId, undefined);
-      assert.deepEqual(seen, [`${TEST_FILE} > waits`]);
+      assert.deepEqual(seen, [`${testFile} > waits`]);
     });
 
     it("makes a test current while the hooks it registers run: after hooks, and subtests' beforeEach hooks", async () => {
@@ -906,10 +906,10 @@ describe('wrapNodeTest', () => {
       assert.deepEqual([beforeEach?.self, beforeEach?.rest[1]], [context, { timeout: 5 }]);
       assert.equal(ns.currentTestId, undefined);
       assert.deepEqual(seen, [
-        `${TEST_FILE} > parent`,
-        `${TEST_FILE} > parent`,
-        `${TEST_FILE} > parent > child`,
-        `${TEST_FILE} > parent`,
+        `${testFile} > parent`,
+        `${testFile} > parent`,
+        `${testFile} > parent > child`,
+        `${testFile} > parent`,
       ]);
     });
   });
@@ -922,7 +922,7 @@ describe('wrapNodeTest', () => {
     await bodyOf(registrations, 'runs')(testContext());
 
     assert.equal(ns.activeMutant, '3');
-    assert.ok(!(ACTIVE_MUTANT_ENV in env));
+    assert.ok(!(activeMutantEnv in env));
   });
 
   it('clears the current test id after a test, also after a failure', async () => {
@@ -935,16 +935,16 @@ describe('wrapNodeTest', () => {
     await bodyOf(registrations, 'passes')(testContext());
 
     assert.equal(ns.currentTestId, undefined);
-    assert.ok(!(ENV.current in env));
+    assert.ok(!(envNames.current in env));
 
     await assert.rejects(bodyOf(registrations, 'fails')(testContext()), { message: 'no' });
 
     assert.equal(ns.currentTestId, undefined);
-    assert.ok(!(ENV.current in env));
+    assert.ok(!(envNames.current in env));
   });
 
   it('registers the tests outside the filter as skipped, so node:test runs neither them nor their hooks', () => {
-    const filter = [`${TEST_FILE} > group > wanted`, `${TEST_FILE} > elsewhere`];
+    const filter = [`${testFile} > group > wanted`, `${testFile} > elsewhere`];
     const { module, registrations } = wrapped(filter);
     module.describe('group', () => {
       module.it('wanted', { skip: false }, () => {});
@@ -992,7 +992,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('wraps the functions that `it` carries, as `it` is `test` in node:test', async () => {
-    const { module, registrations, seen, see } = wrapped([`${TEST_FILE} > selected > wanted`]);
+    const { module, registrations, seen, see } = wrapped([`${testFile} > selected > wanted`]);
     const { it } = module;
     callMember(it, 'describe', 'unselected', () => {
       callMember(it, 'after', () => {});
@@ -1007,13 +1007,13 @@ describe('wrapNodeTest', () => {
       registrations.filter(({ kind }) => kind === 'after'),
       [],
     );
-    assert.deepEqual(seen, [`${TEST_FILE} > selected > wanted`]);
+    assert.deepEqual(seen, [`${testFile} > selected > wanted`]);
     assert.equal(it, module.test);
   });
 
   it('runs the bodies of the suites outside the filter, but registers none of their hooks', () => {
-    const { module, registrations, positions, sites } = wrapped([`${TEST_FILE} > selected > wanted`]);
-    sites.push({ file: TEST_FILE, line: 2, column: 3 });
+    const { module, registrations, positions, sites } = wrapped([`${testFile} > selected > wanted`]);
+    sites.push({ file: testFile, line: 2, column: 3 });
     const ran: string[] = [];
     const hook = () => {};
     const hooks = () => {
@@ -1022,7 +1022,7 @@ describe('wrapNodeTest', () => {
       }
     };
     module.after(hook);
-    sites.splice(0, Infinity, { file: TEST_FILE, line: 9, column: 1 });
+    sites.splice(0, Infinity, { file: testFile, line: 9, column: 1 });
     module.describe('selected', () => {
       ran.push('selected');
       hooks();
@@ -1050,11 +1050,11 @@ describe('wrapNodeTest', () => {
         ['afterEach', true, { timeout: 5 }],
       ],
     );
-    assert.deepEqual(positions.get(`${TEST_FILE} > "after" hook`), { line: 1, column: 2 });
+    assert.deepEqual(positions.get(`${testFile} > "after" hook`), { line: 1, column: 2 });
   });
 
   it('runs every test of the file when the filter names the file itself', async () => {
-    const { module, registrations, seen, see } = wrapped([TEST_FILE]);
+    const { module, registrations, seen, see } = wrapped([testFile]);
     module.describe('group', () => {
       module.it('first', see);
     });
@@ -1062,7 +1062,7 @@ describe('wrapNodeTest', () => {
 
     await runBodies(registrations, ['first', 'second']);
 
-    assert.deepEqual(seen, [`${TEST_FILE} > group > first`, `${TEST_FILE} > second`]);
+    assert.deepEqual(seen, [`${testFile} > group > first`, `${testFile} > second`]);
   });
 
   const bails = [true, false].map((bail) => ({ bail, verb: bail ? 'skips' : 'runs', mode: bail ? 'on' : 'off' }));
@@ -1082,10 +1082,10 @@ describe('wrapNodeTest', () => {
     });
     const calls: unknown[][] = [];
 
-    tests.push({ id: `${TEST_FILE} > passed`, status: 'passed', timeSpentMs: 1 });
-    tests.push({ id: `${TEST_FILE} > skipped`, status: 'skipped', timeSpentMs: 1 });
+    tests.push({ id: `${testFile} > passed`, status: 'passed', timeSpentMs: 1 });
+    tests.push({ id: `${testFile} > skipped`, status: 'skipped', timeSpentMs: 1 });
     await bodyOf(registrations, 'before the failure')(testContext());
-    tests.push({ id: `${TEST_FILE} > failed`, status: 'failed', timeSpentMs: 1 });
+    tests.push({ id: `${testFile} > failed`, status: 'failed', timeSpentMs: 1 });
     const later = testContext();
     await bodyOf(registrations, 'later')(later);
     const callsBackLater = testContext();

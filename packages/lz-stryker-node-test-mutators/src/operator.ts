@@ -20,17 +20,17 @@ export interface NodeMutatorLike {
   mutate(path: NodePath, context: { isExpressionContext: boolean }): Iterable<types.Node>;
 }
 
-export const OWN = Symbol.for('lz-stryker-node-test-mutators');
+export const own = Symbol.for('lz-stryker-node-test-mutators');
 
 export interface OwnMutator extends NodeMutatorLike {
-  readonly [OWN]: true;
+  readonly [own]: true;
 }
 
 /** Yields nothing where Stryker's instrumenter allows no statement, such as a Vue template's expression. */
 export function toNodeMutator(operator: Operator, t: BabelTypes): OwnMutator {
   return {
     name: operator.name,
-    [OWN]: true,
+    [own]: true,
     *mutate(path, { isExpressionContext }) {
       if (!isExpressionContext) {
         yield* operator.mutate(path, t);
@@ -40,5 +40,5 @@ export function toNodeMutator(operator: Operator, t: BabelTypes): OwnMutator {
 }
 
 export function isOwn(mutator: object): boolean {
-  return OWN in mutator;
+  return own in mutator;
 }

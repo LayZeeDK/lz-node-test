@@ -5,12 +5,12 @@ import { describe, it } from 'node:test';
 import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestFor } from '@layzee/lz-node-test';
-import { ENV } from '../../src/hook-core.ts';
+import { envNames } from '../../src/hook-core.ts';
 import {
   complete,
-  DRY_RUN,
+  dryRun,
   fixture,
-  GROWS,
+  grows,
   initRunner,
   logger,
   mutantRunOptions,
@@ -77,7 +77,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
 
   it('times out a mutant run whose process holds more memory than maxMemoryMB while a test blocks it', async (t) => {
     project(t, {
-      'a.test.mjs': fixture(`it('grows', () => { ${GROWS} });`),
+      'a.test.mjs': fixture(`it('grows', () => { ${grows} });`),
     });
     const runner = await initRunner(['a.test.mjs'], { maxMemoryMB: 200 });
 
@@ -88,14 +88,14 @@ describe('LzStrykerNodeTestRunner limits', () => {
   });
 
   it("limits each mutant run's processes to their file's dry-run peak, times 1.5, plus 1024 MB, in every runner", async (t) => {
-    const limit = `process.env.${ENV.memoryLimit}`;
+    const limit = `process.env.${envNames.memoryLimit}`;
     project(t, {
       'a.test.mjs': fixture(`it('fails with its memory limit', () => { if (${limit}) throw new Error(${limit}); });`),
     });
     const dryRunner = await initRunner(['a.test.mjs']);
 
     assert.deepEqual(
-      complete(await settle(dryRunner.dryRun(DRY_RUN))).tests.map((test) => test.status),
+      complete(await settle(dryRunner.dryRun(dryRun))).tests.map((test) => test.status),
       [TestStatus.Success],
     );
     const results = [];
@@ -128,7 +128,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
   ] as const)(
     'gives the processes of a file that the dry run did not run %s in every mutant run',
     async ([, maxMemoryMB, expected, warningCount], t) => {
-      const limit = `process.env.${ENV.memoryLimit}`;
+      const limit = `process.env.${envNames.memoryLimit}`;
       const dir = project(t, {
         'a.test.mjs': fixture(`it('fails with its memory limit', () => { throw new Error(${limit}); });`),
       });
@@ -168,7 +168,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
     const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
     await runner.init();
 
-    const result = await settle(runner.dryRun(DRY_RUN));
+    const result = await settle(runner.dryRun(dryRun));
 
     assert.strictEqual(result.status, DryRunStatus.Error, `expected an error, got ${JSON.stringify(result)}`);
     const rssMB = Number(/ held (\d+) MB /.exec(result.errorMessage)?.[1]);

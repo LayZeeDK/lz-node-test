@@ -7,8 +7,8 @@ import { TestStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
-import { ACTIVE_MUTANT_ENV, ENV } from '../../src/hook-core.ts';
-import { ACTIVE_MUTANT, callMember, construct, HOOK_URL, logger, member, strykerOptions } from '../index.fixtures.ts';
+import { activeMutantEnv, envNames } from '../../src/hook-core.ts';
+import { activeMutant, callMember, construct, hookUrl, logger, member, strykerOptions } from '../index.fixtures.ts';
 import {
   LzStrykerNodeTestRunner,
   lzFileError,
@@ -22,7 +22,7 @@ import {
   lzToTestResults,
 } from '../../src/index.ts';
 
-const FILE = join('/repo', 'a.test.mjs');
+const file = join('/repo', 'a.test.mjs');
 
 describe('lzMergeCoverage', () => {
   it('adds up the hits of every process and skips processes without coverage', () => {
@@ -58,30 +58,30 @@ describe('lzMergeCoverage', () => {
 });
 
 describe('lzToTestResults', () => {
-  const base = (id: string) => ({ id, name: id.slice(`${FILE} > `.length), fileName: FILE });
+  const base = (id: string) => ({ id, name: id.slice(`${file} > `.length), fileName: file });
 
   it('reports each recorded test with its status, failure message, and rounded time plus the time the file spent outside its tests', () => {
     assert.deepEqual(
       lzToTestResults(
-        FILE,
+        file,
         [
-          { id: `${FILE} > passes`, status: 'passed', timeSpentMs: 1.6 },
-          { id: `${FILE} > fails`, status: 'failed', failureMessage: 'boom', timeSpentMs: 2.4 },
-          { id: `${FILE} > fails silently`, status: 'failed', timeSpentMs: 0 },
-          { id: `${FILE} > skipped`, status: 'skipped', timeSpentMs: 0.4 },
+          { id: `${file} > passes`, status: 'passed', timeSpentMs: 1.6 },
+          { id: `${file} > fails`, status: 'failed', failureMessage: 'boom', timeSpentMs: 2.4 },
+          { id: `${file} > fails silently`, status: 'failed', timeSpentMs: 0 },
+          { id: `${file} > skipped`, status: 'skipped', timeSpentMs: 0.4 },
         ],
         10.4,
       ),
       [
-        { ...base(`${FILE} > passes`), timeSpentMs: 8, status: TestStatus.Success },
-        { ...base(`${FILE} > fails`), timeSpentMs: 8, status: TestStatus.Failed, failureMessage: 'boom' },
+        { ...base(`${file} > passes`), timeSpentMs: 8, status: TestStatus.Success },
+        { ...base(`${file} > fails`), timeSpentMs: 8, status: TestStatus.Failed, failureMessage: 'boom' },
         {
-          ...base(`${FILE} > fails silently`),
+          ...base(`${file} > fails silently`),
           timeSpentMs: 6,
           status: TestStatus.Failed,
           failureMessage: 'Test failed',
         },
-        { ...base(`${FILE} > skipped`), timeSpentMs: 6, status: TestStatus.Skipped },
+        { ...base(`${file} > skipped`), timeSpentMs: 6, status: TestStatus.Skipped },
       ],
     );
   });
@@ -89,13 +89,13 @@ describe('lzToTestResults', () => {
   it("counts a parent test's time once, as it includes the time of the subtests it runs", () => {
     assert.deepEqual(
       lzToTestResults(
-        FILE,
+        file,
         [
-          { id: `${FILE} > parent > first`, status: 'passed', timeSpentMs: 1 },
-          { id: `${FILE} > parent > second > third`, status: 'passed', timeSpentMs: 2 },
-          { id: `${FILE} > parent > second`, status: 'passed', timeSpentMs: 3 },
-          { id: `${FILE} > parent`, status: 'passed', timeSpentMs: 5 },
-          { id: `${FILE} > parenthood`, status: 'passed', timeSpentMs: 1 },
+          { id: `${file} > parent > first`, status: 'passed', timeSpentMs: 1 },
+          { id: `${file} > parent > second > third`, status: 'passed', timeSpentMs: 2 },
+          { id: `${file} > parent > second`, status: 'passed', timeSpentMs: 3 },
+          { id: `${file} > parent`, status: 'passed', timeSpentMs: 5 },
+          { id: `${file} > parenthood`, status: 'passed', timeSpentMs: 1 },
         ],
         10,
       ).map((result) => result.timeSpentMs),
@@ -107,15 +107,15 @@ describe('lzToTestResults', () => {
     const startPosition = { line: 4, column: 2 };
 
     assert.deepEqual(
-      lzToTestResults(FILE, [{ id: `${FILE} > passes`, status: 'passed', timeSpentMs: 1, startPosition }], 1),
-      [{ ...base(`${FILE} > passes`), timeSpentMs: 1, status: TestStatus.Success, startPosition }],
+      lzToTestResults(file, [{ id: `${file} > passes`, status: 'passed', timeSpentMs: 1, startPosition }], 1),
+      [{ ...base(`${file} > passes`), timeSpentMs: 1, status: TestStatus.Success, startPosition }],
     );
   });
 });
 
 describe('lzFileError', () => {
   const command =
-    `To reproduce it, run \`node "--no-deprecation" "${FILE}"\` in ${process.cwd()} ` +
+    `To reproduce it, run \`node "--no-deprecation" "${file}"\` in ${process.cwd()} ` +
     'with NODE_OPTIONS set to `--import "hook" --stack-size=900`.';
 
   lzTestFor([
@@ -148,20 +148,20 @@ describe('lzFileError', () => {
       })),
       exitCode,
       stderr,
-      args: ['--no-deprecation', FILE],
+      args: ['--no-deprecation', file],
       nodeOptions: '--import "hook" --stack-size=900',
     };
 
     assert.equal(
-      lzFileError(FILE, run),
-      [`Error running file "${FILE}": node exited with code ${exitCode} outside any test.`, command, ...end].join('\n'),
+      lzFileError(file, run),
+      [`Error running file "${file}": node exited with code ${exitCode} outside any test.`, command, ...end].join('\n'),
     );
   });
 });
 
 describe('lzParseRecord', () => {
   it('returns the record a process wrote', () => {
-    const record = { main: true, tests: [{ id: `${FILE} > t`, status: 'passed', timeSpentMs: 1 }], hitCount: 3 };
+    const record = { main: true, tests: [{ id: `${file} > t`, status: 'passed', timeSpentMs: 1 }], hitCount: 3 };
 
     assert.deepEqual(lzParseRecord(JSON.stringify(record)), record);
   });
@@ -170,12 +170,12 @@ describe('lzParseRecord', () => {
     const record = {
       main: true,
       tests: [
-        { id: `${FILE} > t`, status: 'passed', timeSpentMs: 1, startPosition: { line: 2, column: 3 } },
-        { id: `${FILE} > u`, status: 'failed', failureMessage: 'boom', timeSpentMs: 0 },
-        { id: `${FILE} > v`, status: 'skipped', timeSpentMs: 0 },
+        { id: `${file} > t`, status: 'passed', timeSpentMs: 1, startPosition: { line: 2, column: 3 } },
+        { id: `${file} > u`, status: 'failed', failureMessage: 'boom', timeSpentMs: 0 },
+        { id: `${file} > v`, status: 'skipped', timeSpentMs: 0 },
       ],
       hitCount: 3,
-      mutantCoverage: { static: { '1': 2 }, perTest: { [`${FILE} > t`]: { '3': 1 } } },
+      mutantCoverage: { static: { '1': 2 }, perTest: { [`${file} > t`]: { '3': 1 } } },
       peakMemoryMB: 40,
       memoryLimitReached: { rssMB: 300, limitMB: 200 },
       diagnostics: ['late error'],
@@ -190,7 +190,7 @@ describe('lzParseRecord', () => {
     assert.throws(() => lzParseRecord(json), { message: 'not a record of test results' });
   });
 
-  const test = { id: `${FILE} > t`, status: 'passed', timeSpentMs: 1 };
+  const test = { id: `${file} > t`, status: 'passed', timeSpentMs: 1 };
   const withFields = (fields: object) => JSON.stringify({ tests: [test], ...fields });
   const withTestFields = (fields: object) => JSON.stringify({ tests: [{ ...test, ...fields }] });
 
@@ -446,45 +446,45 @@ describe('lzTestRunnerConcurrency', () => {
 });
 
 describe('lzRunEnv', () => {
-  const OUT = join('/tmp', 'out');
-  const TMP = join('/tmp', 'tmp');
+  const out = join('/tmp', 'out');
+  const tmp = join('/tmp', 'tmp');
 
   it("names Stryker's active mutant variable as the hook does", () => {
-    assert.equal(ACTIVE_MUTANT_ENV, ACTIVE_MUTANT);
+    assert.equal(activeMutantEnv, activeMutant);
   });
 
   it('loads the hook before inherited options and drops the outer run state', () => {
     const base = {
       PATH: 'path',
       NODE_OPTIONS: '--max-old-space-size=100',
-      [ENV.out]: 'outer out',
+      [envNames.out]: 'outer out',
       NODE_TEST_CONTEXT: 'child-v8',
       TEMP: 'outer temp',
-      [ENV.current]: 'outer test',
-      [ENV.hitLimit]: '5',
-      [ENV.memoryLimit]: '500',
-      [ENV.filter]: JSON.stringify(['outer']),
-      [ENV.bail]: 'true',
-      [ENV.activeMutant]: '8',
-      [ACTIVE_MUTANT]: '9',
+      [envNames.current]: 'outer test',
+      [envNames.hitLimit]: '5',
+      [envNames.memoryLimit]: '500',
+      [envNames.filter]: JSON.stringify(['outer']),
+      [envNames.bail]: 'true',
+      [envNames.activeMutant]: '8',
+      [activeMutant]: '9',
     };
     const before = { ...base };
 
-    assert.deepEqual(lzRunEnv(base, FILE, OUT, TMP, { dryRun: false, disableBail: true }, undefined), {
+    assert.deepEqual(lzRunEnv(base, file, out, tmp, { dryRun: false, disableBail: true }, undefined), {
       PATH: 'path',
-      NODE_OPTIONS: `--import ${JSON.stringify(HOOK_URL)} --max-old-space-size=100`,
-      [ENV.out]: OUT,
-      [ENV.file]: FILE,
-      [ENV.dryRun]: 'false',
-      TMPDIR: TMP,
-      TEMP: TMP,
-      TMP,
+      NODE_OPTIONS: `--import ${JSON.stringify(hookUrl)} --max-old-space-size=100`,
+      [envNames.out]: out,
+      [envNames.file]: file,
+      [envNames.dryRun]: 'false',
+      TMPDIR: tmp,
+      TEMP: tmp,
+      TMP: tmp,
     });
     assert.deepEqual(base, before);
   });
 
   it('drops the node:test reporters and destinations of inherited options, also quoted ones', () => {
-    const NODE_OPTIONS = [
+    const nodeOptions = [
       '--test-reporter=spec',
       '--max-old-space-size=100',
       '--test-reporter dot',
@@ -496,8 +496,9 @@ describe('lzRunEnv', () => {
     const kept = ['--max-old-space-size=100', '--title="a \\" --test-reporter=b"', '--test-reporter-destinations=x'];
 
     assert.equal(
-      lzRunEnv({ NODE_OPTIONS }, FILE, OUT, TMP, { dryRun: false, disableBail: true }, undefined).NODE_OPTIONS,
-      [`--import ${JSON.stringify(HOOK_URL)}`, ...kept].join(' '),
+      lzRunEnv({ NODE_OPTIONS: nodeOptions }, file, out, tmp, { dryRun: false, disableBail: true }, undefined)
+        .NODE_OPTIONS,
+      [`--import ${JSON.stringify(hookUrl)}`, ...kept].join(' '),
     );
   });
 
@@ -506,40 +507,40 @@ describe('lzRunEnv', () => {
 
     const inherited = { NODE_COMPILE_CACHE: 'inherited' };
 
-    assert.equal(lzRunEnv({}, FILE, OUT, TMP, run, 'own')['NODE_COMPILE_CACHE'], 'own');
-    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, 'own')['NODE_COMPILE_CACHE'], 'inherited');
-    assert.equal(lzRunEnv(inherited, FILE, OUT, TMP, run, undefined)['NODE_COMPILE_CACHE'], 'inherited');
+    assert.equal(lzRunEnv({}, file, out, tmp, run, 'own')['NODE_COMPILE_CACHE'], 'own');
+    assert.equal(lzRunEnv(inherited, file, out, tmp, run, 'own')['NODE_COMPILE_CACHE'], 'inherited');
+    assert.equal(lzRunEnv(inherited, file, out, tmp, run, undefined)['NODE_COMPILE_CACHE'], 'inherited');
   });
 
   it('passes the run state and the memory limit on to the test file', () => {
     assert.deepEqual(
       lzRunEnv(
         {},
-        FILE,
-        OUT,
-        TMP,
+        file,
+        out,
+        tmp,
         {
           dryRun: false,
           disableBail: true,
           activeMutant: '12',
           hitLimit: 40,
-          testFilter: [`${FILE} > test`],
+          testFilter: [`${file} > test`],
         },
         undefined,
         1500,
       ),
       {
-        NODE_OPTIONS: `--import ${JSON.stringify(HOOK_URL)}`,
-        [ENV.out]: OUT,
-        [ENV.file]: FILE,
-        [ENV.dryRun]: 'false',
-        TMPDIR: TMP,
-        TEMP: TMP,
-        TMP,
-        [ACTIVE_MUTANT]: '12',
-        [ENV.hitLimit]: '40',
-        [ENV.memoryLimit]: '1500',
-        [ENV.filter]: JSON.stringify([`${FILE} > test`]),
+        NODE_OPTIONS: `--import ${JSON.stringify(hookUrl)}`,
+        [envNames.out]: out,
+        [envNames.file]: file,
+        [envNames.dryRun]: 'false',
+        TMPDIR: tmp,
+        TEMP: tmp,
+        TMP: tmp,
+        [activeMutant]: '12',
+        [envNames.hitLimit]: '40',
+        [envNames.memoryLimit]: '1500',
+        [envNames.filter]: JSON.stringify([`${file} > test`]),
       },
     );
   });
@@ -547,9 +548,9 @@ describe('lzRunEnv', () => {
   it('activates the mutant from the start of the process, or for the hook to activate once the tests start', () => {
     const run = { dryRun: false, disableBail: false, activeMutant: '12' } satisfies LzRunOptions;
     const active = (mutantActivation: 'runtime' | 'static') => {
-      const env = lzRunEnv({}, FILE, OUT, TMP, { ...run, mutantActivation }, undefined);
+      const env = lzRunEnv({}, file, out, tmp, { ...run, mutantActivation }, undefined);
 
-      return { atStart: env[ACTIVE_MUTANT], onceTestsStart: env[ENV.activeMutant] };
+      return { atStart: env[activeMutant], onceTestsStart: env[envNames.activeMutant] };
     };
 
     assert.deepEqual(active('static'), { atStart: '12', onceTestsStart: undefined });
@@ -564,7 +565,7 @@ describe('lzRunEnv', () => {
         { dryRun: true, disableBail: false, coverageAnalysis: 'perTest' },
         { dryRun: true, disableBail: true, coverageAnalysis: 'perTest' },
       ] satisfies LzRunOptions[]
-    ).map((run) => lzRunEnv({}, FILE, OUT, TMP, run, undefined)[ENV.bail]);
+    ).map((run) => lzRunEnv({}, file, out, tmp, run, undefined)[envNames.bail]);
 
     assert.deepEqual(bails, ['true', undefined, undefined, undefined]);
   });

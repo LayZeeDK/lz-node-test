@@ -1,7 +1,7 @@
 import { assertMethod } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
-const MESSAGE = 'Stryker';
+const message = 'Stryker';
 
 /**
  * Makes the code that `assert.throws` or `assert.rejects` checks throw an unrelated error, so a survivor is a
@@ -18,7 +18,7 @@ export const assertValidator: Operator = {
     }
 
     const method = assertMethod(path, call.callee);
-    const error = t.newExpression(t.identifier('Error'), [t.stringLiteral(MESSAGE)]);
+    const error = t.newExpression(t.identifier('Error'), [t.stringLiteral(message)]);
 
     if (method === 'throws') {
       yield t.arrowFunctionExpression([], t.blockStatement([t.throwStatement(error)]));

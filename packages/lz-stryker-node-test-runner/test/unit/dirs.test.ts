@@ -6,17 +6,17 @@ import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { isOwn, isRunning, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
-import { logger, NO_PROCESS } from '../index.fixtures.ts';
+import { logger, noProcess } from '../index.fixtures.ts';
 import { peakMemoryDir } from '../../src/memory-limits.ts';
 
 describe('removeDir', () => {
-  const DIR = join('/tmp', 'run');
+  const dir = join('/tmp', 'run');
 
   function removal(remove: () => Promise<void>) {
     const warnings: string[] = [];
     const removed: string[] = [];
     let state = 'pending';
-    void removeDir(DIR, logger([], false, warnings), {
+    void removeDir(dir, logger([], false, warnings), {
       waitMs: 1_000,
       remove: (path) => {
         removed.push(path);
@@ -41,7 +41,7 @@ describe('removeDir', () => {
 
     t.mock.timers.tick(1_000);
 
-    assert.deepEqual([removed, warnings], [[DIR], []]);
+    assert.deepEqual([removed, warnings], [[dir], []]);
   });
 
   it('leaves a directory it cannot remove, with a warning, and stops waiting', async (t) => {
@@ -52,7 +52,7 @@ describe('removeDir', () => {
 
     t.mock.timers.tick(1_000);
 
-    assert.deepEqual(warnings, [`Left ${DIR} for a later runner to remove: EPERM: operation not permitted`]);
+    assert.deepEqual(warnings, [`Left ${dir} for a later runner to remove: EPERM: operation not permitted`]);
   });
 
   it('names what the removal rejected with in the warning, also when it is no Error', async (t) => {
@@ -63,7 +63,7 @@ describe('removeDir', () => {
 
     t.mock.timers.tick(1_000);
 
-    assert.deepEqual(warnings, [`Left ${DIR} for a later runner to remove: EBUSY`]);
+    assert.deepEqual(warnings, [`Left ${dir} for a later runner to remove: EBUSY`]);
   });
 
   it('stops waiting for a directory still in use after `waitMs`, with a warning', async (t) => {
@@ -77,7 +77,7 @@ describe('removeDir', () => {
 
     assert.deepEqual(
       [await settled(), warnings],
-      ['done', [`Stopped waiting for ${DIR} to be removed after 1000 ms; a later runner removes what is left.`]],
+      ['done', [`Stopped waiting for ${dir} to be removed after 1000 ms; a later runner removes what is left.`]],
     );
   });
 
@@ -90,7 +90,7 @@ describe('removeDir', () => {
     await settled();
 
     assert.deepEqual(warnings, [
-      `Stopped waiting for ${DIR} to be removed after 1000 ms; a later runner removes what is left.`,
+      `Stopped waiting for ${dir} to be removed after 1000 ms; a later runner removes what is left.`,
     ]);
   });
 });
@@ -101,7 +101,7 @@ describe('isRunning', () => {
     const system = process.platform === 'win32' ? 4 : 1;
 
     assert.deepEqual(
-      [process.pid, system, NO_PROCESS].map((pid) => isRunning(pid)),
+      [process.pid, system, noProcess].map((pid) => isRunning(pid)),
       [true, true, false],
     );
   });

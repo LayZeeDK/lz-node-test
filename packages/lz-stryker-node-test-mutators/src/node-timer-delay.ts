@@ -3,9 +3,9 @@ import type { NodePath, types } from '@babel/core';
 import { importOf } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
-const TIMERS: ReadonlySet<string | undefined> = new Set(['setTimeout', 'setInterval']);
-const NODE_TIMERS: ReadonlySet<string> = new Set(['node:timers', 'timers']);
-const NODE_TIMERS_PROMISES: ReadonlySet<string> = new Set(['node:timers/promises', 'timers/promises']);
+const timers: ReadonlySet<string | undefined> = new Set(['setTimeout', 'setInterval']);
+const nodeTimers: ReadonlySet<string> = new Set(['node:timers', 'timers']);
+const nodeTimersPromises: ReadonlySet<string> = new Set(['node:timers/promises', 'timers/promises']);
 
 /**
  * Moves a timer's delay by 1 ms each way. Node.js runs a delay below 1 after 1 ms, so the moves that leave a delay of
@@ -42,10 +42,10 @@ function delayIndex(path: NodePath, callee: types.Node): number | undefined {
     const from = importOf(path, callee.name);
 
     if (from === undefined) {
-      return TIMERS.has(callee.name) && !path.scope.hasBinding(callee.name) ? 1 : undefined;
+      return timers.has(callee.name) && !path.scope.hasBinding(callee.name) ? 1 : undefined;
     }
 
-    return TIMERS.has(from.imported) ? timersDelayIndex(from.source) : undefined;
+    return timers.has(from.imported) ? timersDelayIndex(from.source) : undefined;
   }
 
   if (
@@ -60,12 +60,12 @@ function delayIndex(path: NodePath, callee: types.Node): number | undefined {
   const method = callee.property.name;
 
   if (from?.imported === undefined) {
-    return from !== undefined && TIMERS.has(method) ? timersDelayIndex(from.source) : undefined;
+    return from !== undefined && timers.has(method) ? timersDelayIndex(from.source) : undefined;
   }
 
-  return from.imported === 'scheduler' && method === 'wait' && NODE_TIMERS_PROMISES.has(from.source) ? 0 : undefined;
+  return from.imported === 'scheduler' && method === 'wait' && nodeTimersPromises.has(from.source) ? 0 : undefined;
 }
 
 function timersDelayIndex(source: string): number | undefined {
-  return NODE_TIMERS.has(source) ? 1 : NODE_TIMERS_PROMISES.has(source) ? 0 : undefined;
+  return nodeTimers.has(source) ? 1 : nodeTimersPromises.has(source) ? 0 : undefined;
 }

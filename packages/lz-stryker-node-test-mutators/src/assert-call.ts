@@ -3,8 +3,8 @@ import type { NodePath, types } from '@babel/core';
 import { assertMethod } from './bindings.ts';
 import type { BabelTypes, Operator } from './operator.ts';
 
-const MESSAGE = 'Stryker: assertion reached';
-const ASYNC_METHODS: ReadonlySet<string> = new Set(['rejects', 'doesNotReject']);
+const message = 'Stryker: assertion reached';
+const asyncMethods: ReadonlySet<string> = new Set(['rejects', 'doesNotReject']);
 
 /**
  * FailureAddition: makes an assertion fail, so a survivor is a check whose failure nothing sees. A check that never
@@ -36,11 +36,11 @@ export const assertCall: Operator = {
 };
 
 function error(t: BabelTypes): types.NewExpression {
-  return t.newExpression(t.identifier('Error'), [t.stringLiteral(MESSAGE)]);
+  return t.newExpression(t.identifier('Error'), [t.stringLiteral(message)]);
 }
 
 function failure(t: BabelTypes, method: string): types.CallExpression {
-  if (ASYNC_METHODS.has(method)) {
+  if (asyncMethods.has(method)) {
     return t.callExpression(t.memberExpression(t.identifier('Promise'), t.identifier('reject')), [error(t)]);
   }
 

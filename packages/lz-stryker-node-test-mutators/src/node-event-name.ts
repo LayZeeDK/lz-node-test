@@ -3,14 +3,14 @@ import type { NodePath, types } from '@babel/core';
 import { importOf } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
-const LISTEN: ReadonlySet<string> = new Set(['on', 'once', 'addListener', 'prependListener', 'prependOnceListener']);
-const NODE_EVENTS: ReadonlySet<string> = new Set(['node:events', 'events']);
-const NODE_PROCESS: ReadonlySet<string> = new Set(['node:process', 'process']);
-const PROCESS_SWAPS: ReadonlyMap<string, readonly string[]> = new Map([
+const listen: ReadonlySet<string> = new Set(['on', 'once', 'addListener', 'prependListener', 'prependOnceListener']);
+const nodeEvents: ReadonlySet<string> = new Set(['node:events', 'events']);
+const nodeProcess: ReadonlySet<string> = new Set(['node:process', 'process']);
+const processSwaps: ReadonlyMap<string, readonly string[]> = new Map([
   ['exit', ['beforeExit']],
   ['beforeExit', ['exit']],
 ]);
-const STREAM_SWAPS: ReadonlyMap<string, readonly string[]> = new Map([
+const streamSwaps: ReadonlyMap<string, readonly string[]> = new Map([
   ['close', ['exit']],
   ['exit', ['close']],
   ['finish', ['end', 'close']],
@@ -35,7 +35,7 @@ export const nodeEventName: Operator = {
       return;
     }
 
-    const swaps = isProcess(path, receiver) ? PROCESS_SWAPS : STREAM_SWAPS;
+    const swaps = isProcess(path, receiver) ? processSwaps : streamSwaps;
 
     for (const name of swaps.get(path.node.value) ?? []) {
       yield t.stringLiteral(name);
@@ -56,7 +56,7 @@ function receiverOf(path: NodePath): types.Node | undefined {
 
   const { callee } = call;
   const listens =
-    callee.type === 'MemberExpression' && callee.property.type === 'Identifier' && LISTEN.has(callee.property.name);
+    callee.type === 'MemberExpression' && callee.property.type === 'Identifier' && listen.has(callee.property.name);
 
   return listens && path.key === 0 ? callee.object : undefined;
 }
@@ -65,7 +65,7 @@ function isEventsFunction(path: NodePath, callee: types.Node): boolean {
   if (callee.type === 'Identifier') {
     const from = importOf(path, callee.name);
 
-    return from !== undefined && NODE_EVENTS.has(from.source) && isOnceOrOn(from.imported);
+    return from !== undefined && nodeEvents.has(from.source) && isOnceOrOn(from.imported);
   }
 
   if (
@@ -80,7 +80,7 @@ function isEventsFunction(path: NodePath, callee: types.Node): boolean {
 
   return (
     from !== undefined &&
-    NODE_EVENTS.has(from.source) &&
+    nodeEvents.has(from.source) &&
     (from.imported === undefined || from.imported === 'EventEmitter') &&
     isOnceOrOn(callee.property.name)
   );
@@ -99,5 +99,5 @@ function isProcess(path: NodePath, receiver: types.Node): boolean {
 
   return from === undefined
     ? receiver.name === 'process' && !path.scope.hasBinding('process')
-    : NODE_PROCESS.has(from.source) && from.imported === undefined;
+    : nodeProcess.has(from.source) && from.imported === undefined;
 }

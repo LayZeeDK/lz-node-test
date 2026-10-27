@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { parseArguments, templateRows } from '../../src/register.ts';
-import { report, SIGNATURES } from '../reported.fixtures.ts';
+import { report, signatures } from '../reported.fixtures.ts';
 import { lzTestEach } from '../../src/test-each.ts';
 import { lzTestFor } from '../../src/test-for.ts';
 
@@ -57,12 +57,12 @@ describe('the options of lzTestEach and lzTestFor', () => {
 
   it('throws before registering a test for options after a function, two functions, or null options', () => {
     // @ts-expect-error -- options after the function, which the types refuse and the check must catch
-    assert.throws(() => lzTestEach([1])('x', () => {}, {}), SIGNATURES);
+    assert.throws(() => lzTestEach([1])('x', () => {}, {}), signatures);
     const second = () => {};
     // @ts-expect-error -- a second function, which the types refuse and the check must catch
-    assert.throws(() => lzTestFor([1])('x', () => {}, second), SIGNATURES);
+    assert.throws(() => lzTestFor([1])('x', () => {}, second), signatures);
     // @ts-expect-error -- null options, which the types refuse and the check must catch
-    assert.throws(() => lzTestEach([1])('x', null, () => {}), SIGNATURES);
+    assert.throws(() => lzTestEach([1])('x', null, () => {}), signatures);
   });
 });
 
@@ -98,7 +98,7 @@ describe('parseArguments', () => {
     { shape: 'null options', args: [null, fn] },
   ])('rejects $shape', ({ args: [optionsOrFn, fnOrTimeout] }) => {
     // @ts-expect-error -- the shapes untyped callers can pass, which the types refuse
-    assert.throws(() => parseArguments(optionsOrFn, fnOrTimeout), SIGNATURES);
+    assert.throws(() => parseArguments(optionsOrFn, fnOrTimeout), signatures);
   });
 
   it('accepts a null after a function', () => {

@@ -12,7 +12,7 @@ export interface Registration {
   self: unknown;
 }
 
-export const TEST_FILE = join('/repo', 'a.test.ts');
+export const testFile = join('/repo', 'a.test.ts');
 
 /** Lets a test call a function it only holds as `unknown`, such as one the code under test registered. */
 export function callable(value: unknown): Fn {

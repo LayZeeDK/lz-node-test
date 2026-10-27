@@ -10,7 +10,7 @@ import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
-  ENV,
+  envNames,
   install,
   installed,
   recordEvents,
@@ -29,7 +29,7 @@ import {
   type TestEvent,
 } from '../../src/hook-core.ts';
 import { lzParseRecord } from '../../src/index.ts';
-import { bodyOf, callable, fakeNodeTest, rawBodyOf, TEST_FILE, testContext, type Fn } from '../hook-core.fixtures.ts';
+import { bodyOf, callable, fakeNodeTest, rawBodyOf, testFile, testContext, type Fn } from '../hook-core.fixtures.ts';
 import { member } from '../index.fixtures.ts';
 
 function reported(
@@ -51,7 +51,7 @@ function record(
   diagnostics: string[] = [],
 ): RecordedTest[] {
   const tests: RecordedTest[] = [];
-  const recordEvent = recordEvents(TEST_FILE, tests, positions, diagnostics);
+  const recordEvent = recordEvents(testFile, tests, positions, diagnostics);
 
   for (const event of events) {
     recordEvent(event);
@@ -62,20 +62,20 @@ function record(
 
 describe('testId', () => {
   lzTestFor([
-    ['a > b', `${TEST_FILE} > a \\> b`],
-    ['x > > y', `${TEST_FILE} > x \\> \\> y`],
-    ['> a', `${TEST_FILE} > \\> a`],
-    ['a >', `${TEST_FILE} > a \\>`],
-    ['>', `${TEST_FILE} > \\>`],
-    ['a \\ > b', `${TEST_FILE} > a \\\\ \\> b`],
+    ['a > b', `${testFile} > a \\> b`],
+    ['x > > y', `${testFile} > x \\> \\> y`],
+    ['> a', `${testFile} > \\> a`],
+    ['a >', `${testFile} > a \\>`],
+    ['>', `${testFile} > \\>`],
+    ['a \\ > b', `${testFile} > a \\\\ \\> b`],
   ] as const)('escapes `>` and `\\` in a name whose `>` could form the separator: %j', ([name, id]) => {
-    assert.equal(testId(TEST_FILE, name), id);
+    assert.equal(testId(testFile, name), id);
   });
 
   lzTestEach(['a name', 'a \\ b', 'a \\> b', '<anonymous>', 'a -> b', 'a >b', 'a> b', ' >b', 'b> '])(
     'leaves a name whose `>` cannot form the separator as it is: %j',
     (name) => {
-      assert.equal(testId(TEST_FILE, name), `${TEST_FILE} > ${name}`);
+      assert.equal(testId(testFile, name), `${testFile} > ${name}`);
     },
   );
 });
@@ -86,18 +86,18 @@ describe('uniqueIds', () => {
 
     assert.deepEqual(
       [
-        idOf(TEST_FILE, 'works'),
-        idOf(TEST_FILE, 'works'),
-        idOf(TEST_FILE, 'works (2)'),
-        idOf(TEST_FILE, 'works'),
-        idOf(testId(TEST_FILE, 's'), 'works'),
+        idOf(testFile, 'works'),
+        idOf(testFile, 'works'),
+        idOf(testFile, 'works (2)'),
+        idOf(testFile, 'works'),
+        idOf(testId(testFile, 's'), 'works'),
       ],
       [
-        `${TEST_FILE} > works`,
-        `${TEST_FILE} > works (2)`,
-        `${TEST_FILE} > works (2) (2)`,
-        `${TEST_FILE} > works (3)`,
-        `${TEST_FILE} > s > works`,
+        `${testFile} > works`,
+        `${testFile} > works (2)`,
+        `${testFile} > works (2) (2)`,
+        `${testFile} > works (3)`,
+        `${testFile} > s > works`,
       ],
     );
   });
@@ -123,11 +123,11 @@ describe('recordEvents', () => {
         { type: 'test:diagnostic', data: { name: 'tests 5', nesting: 0 } },
       ]),
       [
-        { id: `${TEST_FILE} > outer > first`, status: 'passed', timeSpentMs: 1.5 },
-        { id: `${TEST_FILE} > outer > parent > child`, status: 'passed', timeSpentMs: 1.5 },
-        { id: `${TEST_FILE} > outer > parent`, status: 'passed', timeSpentMs: 2 },
-        { id: `${TEST_FILE} > outer > second`, status: 'passed', timeSpentMs: 1.5 },
-        { id: `${TEST_FILE} > top`, status: 'passed', timeSpentMs: 0.25 },
+        { id: `${testFile} > outer > first`, status: 'passed', timeSpentMs: 1.5 },
+        { id: `${testFile} > outer > parent > child`, status: 'passed', timeSpentMs: 1.5 },
+        { id: `${testFile} > outer > parent`, status: 'passed', timeSpentMs: 2 },
+        { id: `${testFile} > outer > second`, status: 'passed', timeSpentMs: 1.5 },
+        { id: `${testFile} > top`, status: 'passed', timeSpentMs: 0.25 },
       ],
     );
   });
@@ -140,7 +140,7 @@ describe('recordEvents', () => {
         { type: 'test:fail', data: { name: 'not started', nesting: 1, details: testDetails } },
         ...reported('recorded', 0, 'pass', testDetails),
       ]),
-      [{ id: `${TEST_FILE} > recorded`, status: 'passed', timeSpentMs: 1.5 }],
+      [{ id: `${testFile} > recorded`, status: 'passed', timeSpentMs: 1.5 }],
     );
   });
 
@@ -159,17 +159,17 @@ describe('recordEvents', () => {
         ...reported('without cause', 0, 'fail', { ...testDetails, error: { message: 'no cause' } }),
       ]).map(({ id, status, failureMessage }) => ({ id, status, failureMessage })),
       [
-        { id: `${TEST_FILE} > throws`, status: 'failed', failureMessage: 'expected 1 to be 2' },
-        { id: `${TEST_FILE} > throws text`, status: 'failed', failureMessage: 'plain text' },
-        { id: `${TEST_FILE} > times out`, status: 'failed', failureMessage: 'test timed out after 5ms' },
-        { id: `${TEST_FILE} > hook`, status: 'failed', failureMessage: 'hook' },
-        { id: `${TEST_FILE} > without cause`, status: 'failed', failureMessage: 'no cause' },
+        { id: `${testFile} > throws`, status: 'failed', failureMessage: 'expected 1 to be 2' },
+        { id: `${testFile} > throws text`, status: 'failed', failureMessage: 'plain text' },
+        { id: `${testFile} > times out`, status: 'failed', failureMessage: 'test timed out after 5ms' },
+        { id: `${testFile} > hook`, status: 'failed', failureMessage: 'hook' },
+        { id: `${testFile} > without cause`, status: 'failed', failureMessage: 'no cause' },
       ],
     );
   });
 
   it('records where the wrapper found that a test is declared', () => {
-    const positions = new Map([[`${TEST_FILE} > declared`, { line: 2, column: 0 }]]);
+    const positions = new Map([[`${testFile} > declared`, { line: 2, column: 0 }]]);
 
     assert.deepEqual(
       record(
@@ -177,8 +177,8 @@ describe('recordEvents', () => {
         positions,
       ),
       [
-        { id: `${TEST_FILE} > declared`, status: 'passed', timeSpentMs: 1.5, startPosition: { line: 2, column: 0 } },
-        { id: `${TEST_FILE} > unknown`, status: 'passed', timeSpentMs: 1.5 },
+        { id: `${testFile} > declared`, status: 'passed', timeSpentMs: 1.5, startPosition: { line: 2, column: 0 } },
+        { id: `${testFile} > unknown`, status: 'passed', timeSpentMs: 1.5 },
       ],
     );
   });
@@ -194,10 +194,10 @@ describe('recordEvents', () => {
         ...reported('failing todo', 0, 'fail', { ...testDetails, error }, { todo: 'later' }),
       ]),
       [
-        { id: `${TEST_FILE} > skipped`, status: 'skipped', timeSpentMs: 1.5 },
-        { id: `${TEST_FILE} > skipped with a reason`, status: 'skipped', timeSpentMs: 1.5 },
-        { id: `${TEST_FILE} > todo`, status: 'skipped', timeSpentMs: 1.5 },
-        { id: `${TEST_FILE} > failing todo`, status: 'skipped', timeSpentMs: 1.5 },
+        { id: `${testFile} > skipped`, status: 'skipped', timeSpentMs: 1.5 },
+        { id: `${testFile} > skipped with a reason`, status: 'skipped', timeSpentMs: 1.5 },
+        { id: `${testFile} > todo`, status: 'skipped', timeSpentMs: 1.5 },
+        { id: `${testFile} > failing todo`, status: 'skipped', timeSpentMs: 1.5 },
       ],
     );
   });
@@ -217,9 +217,9 @@ describe('recordEvents', () => {
         ...reported('skipped with a reason', 0, 'pass', suiteDetails, { skip: 'not here' }),
       ]),
       [
-        { id: `${TEST_FILE} > before`, status: 'failed', failureMessage: 'before', timeSpentMs: 3 },
-        { id: `${TEST_FILE} > skipped`, status: 'skipped', timeSpentMs: 3 },
-        { id: `${TEST_FILE} > skipped with a reason`, status: 'skipped', timeSpentMs: 3 },
+        { id: `${testFile} > before`, status: 'failed', failureMessage: 'before', timeSpentMs: 3 },
+        { id: `${testFile} > skipped`, status: 'skipped', timeSpentMs: 3 },
+        { id: `${testFile} > skipped with a reason`, status: 'skipped', timeSpentMs: 3 },
       ],
     );
   });
@@ -230,11 +230,11 @@ describe('recordEvents', () => {
     assert.deepEqual(
       record([
         ...reported('passes', 0, 'pass', testDetails),
-        { type: 'test:fail', data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 4, error } } },
+        { type: 'test:fail', data: { name: testFile, nesting: 0, details: { duration_ms: 4, error } } },
       ]),
       [
-        { id: `${TEST_FILE} > passes`, status: 'passed', timeSpentMs: 1.5 },
-        { id: `${TEST_FILE} > "after" hook`, status: 'failed', failureMessage: 'after failure', timeSpentMs: 4 },
+        { id: `${testFile} > passes`, status: 'passed', timeSpentMs: 1.5 },
+        { id: `${testFile} > "after" hook`, status: 'failed', failureMessage: 'after failure', timeSpentMs: 4 },
       ],
     );
   });
@@ -253,10 +253,10 @@ describe('recordEvents', () => {
         ...reported('a > b', 0, 'pass', testDetails),
       ]).map(({ id }) => id),
       [
-        `${TEST_FILE} > s > works`,
-        `${TEST_FILE} > s > works (2)`,
-        `${TEST_FILE} > s (2) > works`,
-        `${TEST_FILE} > a \\> b`,
+        `${testFile} > s > works`,
+        `${testFile} > s > works (2)`,
+        `${testFile} > s (2) > works`,
+        `${testFile} > a \\> b`,
       ],
     );
   });
@@ -290,16 +290,16 @@ describe('recordEvents', () => {
 
   it("records where the wrapper found the test file's failing `after` hook", () => {
     const error = { failureType: 'hookFailed', message: 'after failure' };
-    const positions = new Map([[`${TEST_FILE} > "after" hook`, { line: 2, column: 4 }]]);
+    const positions = new Map([[`${testFile} > "after" hook`, { line: 2, column: 4 }]]);
 
     assert.deepEqual(
       record(
-        [{ type: 'test:fail', data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 4, error } } }],
+        [{ type: 'test:fail', data: { name: testFile, nesting: 0, details: { duration_ms: 4, error } } }],
         positions,
       ),
       [
         {
-          id: `${TEST_FILE} > "after" hook`,
+          id: `${testFile} > "after" hook`,
           status: 'failed',
           failureMessage: 'after failure',
           timeSpentMs: 4,
@@ -424,7 +424,7 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
   const resources = ['PipeWrap'];
   const deps: HookDependencies = {
     env,
-    mainFile: TEST_FILE,
+    mainFile: testFile,
     pid: 4321,
     threadId: 0,
     global: { globalThis: undefined },
@@ -500,7 +500,7 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
   };
 }
 
-const OUT = join('/tmp', 'out');
+const out = join('/tmp', 'out');
 
 /** The `after` hooks registered with node:test, in order; the hook's own comes first. */
 function afterHooks(fake: ReturnType<typeof fakeNodeTest>): (Fn | undefined)[] {
@@ -546,14 +546,14 @@ describe('writesAllowed', () => {
             },
           };
 
-    assert.equal(writesAllowed(permission, OUT), expected);
-    assert.deepEqual(asked, allowed === undefined ? [] : [['fs.write', OUT]]);
+    assert.equal(writesAllowed(permission, out), expected);
+    assert.deepEqual(asked, allowed === undefined ? [] : [['fs.write', out]]);
   });
 });
 
 describe('install', () => {
   it('does nothing when the runner did not start the process tree', () => {
-    const { deps, calls } = harness({ [ENV.file]: TEST_FILE });
+    const { deps, calls } = harness({ [envNames.file]: testFile });
 
     assert.equal(install(deps), false);
     assert.deepEqual(deps.global, { globalThis: undefined });
@@ -561,7 +561,7 @@ describe('install', () => {
   });
 
   it('does nothing when a hook is already installed in the process', () => {
-    const { deps, calls } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE });
+    const { deps, calls } = harness({ [envNames.out]: out, [envNames.file]: testFile });
 
     assert.equal(install(deps), true);
 
@@ -572,7 +572,7 @@ describe('install', () => {
   });
 
   it('marks the process with a symbol that every copy of the hook shares', () => {
-    const { deps } = harness({ [ENV.out]: OUT });
+    const { deps } = harness({ [envNames.out]: out });
     install(deps);
 
     assert.equal(deps.global[installed], true);
@@ -584,7 +584,7 @@ describe('install', () => {
 
   it('keeps an existing Stryker namespace', () => {
     const ns: InstrumenterContext = { mutantCoverage: { static: { 1: 1 }, perTest: {} } };
-    const { deps } = harness({ [ENV.out]: OUT });
+    const { deps } = harness({ [envNames.out]: out });
     deps.global.__stryker__ = ns;
     install(deps);
 
@@ -593,7 +593,7 @@ describe('install', () => {
   });
 
   it('sets the hit limit and starts counting when the limit is positive', () => {
-    const { deps } = harness({ [ENV.out]: OUT, [ENV.hitLimit]: '25' });
+    const { deps } = harness({ [envNames.out]: out, [envNames.hitLimit]: '25' });
     install(deps);
 
     assert.equal(deps.global.__stryker__?.hitLimit, 25);
@@ -601,11 +601,11 @@ describe('install', () => {
   });
 
   it("watches the process's memory when the memory limit is positive, with a record of its own in the out directory", () => {
-    const { deps, calls } = harness({ [ENV.out]: OUT, [ENV.memoryLimit]: '1500' });
+    const { deps, calls } = harness({ [envNames.out]: out, [envNames.memoryLimit]: '1500' });
     install(deps);
 
     const options = {
-      workerData: { limitMB: 1500, recordPath: join(OUT, '4321.memory.json') },
+      workerData: { limitMB: 1500, recordPath: join(out, '4321.memory.json') },
       execArgv: [],
       env: {},
     };
@@ -623,7 +623,7 @@ describe('install', () => {
   ] as const)("starts the memory watchdog without the process's environment%s", ([, env, expected]) => {
     const started: unknown[] = [];
     const { deps } = harness(
-      { [ENV.out]: OUT, [ENV.memoryLimit]: '1500', NODE_OPTIONS: '--require x.cjs', ...env },
+      { [envNames.out]: out, [envNames.memoryLimit]: '1500', NODE_OPTIONS: '--require x.cjs', ...env },
       { watchMemory: (options) => started.push(options.env) },
     );
     install(deps);
@@ -632,7 +632,7 @@ describe('install', () => {
   });
 
   it('watches no memory in a thread that may not start the watchdog', () => {
-    const { deps, calls } = harness({ [ENV.out]: OUT, [ENV.memoryLimit]: '1500' }, { canWatchMemory: false });
+    const { deps, calls } = harness({ [envNames.out]: out, [envNames.memoryLimit]: '1500' }, { canWatchMemory: false });
     install(deps);
 
     assert.deepEqual(calls, ['onExit']);
@@ -640,14 +640,14 @@ describe('install', () => {
   });
 
   lzTestEach([undefined, '0', 'none'])('watches no memory with the memory limit %s', (memoryLimit) => {
-    const { deps, calls } = harness({ [ENV.out]: OUT, [ENV.memoryLimit]: memoryLimit });
+    const { deps, calls } = harness({ [envNames.out]: out, [envNames.memoryLimit]: memoryLimit });
     install(deps);
 
     assert.deepEqual(calls, ['onExit']);
   });
 
   lzTestEach([undefined, '0', 'none'])('counts no hits with the hit limit %s', (hitLimit) => {
-    const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.hitLimit]: hitLimit });
+    const { deps, records, exit } = harness({ [envNames.out]: out, [envNames.hitLimit]: hitLimit });
     install(deps);
     exit();
 
@@ -657,14 +657,17 @@ describe('install', () => {
   });
 
   it('attributes the process to the test that started it', () => {
-    const { deps } = harness({ [ENV.out]: OUT, [ENV.current]: `${TEST_FILE} > spawns` }, { mainFile: '/other.mjs' });
+    const { deps } = harness(
+      { [envNames.out]: out, [envNames.current]: `${testFile} > spawns` },
+      { mainFile: '/other.mjs' },
+    );
     install(deps);
 
-    assert.equal(deps.global.__stryker__?.currentTestId, `${TEST_FILE} > spawns`);
+    assert.equal(deps.global.__stryker__?.currentTestId, `${testFile} > spawns`);
   });
 
   lzTestEach([undefined, ''])('attributes the process to no test when the current test is %j', (current) => {
-    const { deps } = harness({ [ENV.out]: OUT, [ENV.current]: current });
+    const { deps } = harness({ [envNames.out]: out, [envNames.current]: current });
     deps.global.__stryker__ = { currentTestId: 'stale' };
     install(deps);
 
@@ -672,7 +675,7 @@ describe('install', () => {
   });
 
   it('wraps node:test in the process that runs the test file, and makes imports of node:test give it', async () => {
-    const { deps, fake, calls, hooks, wrapped } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE });
+    const { deps, fake, calls, hooks, wrapped } = harness({ [envNames.out]: out, [envNames.file]: testFile });
     install(deps);
 
     assert.deepEqual(calls, ['nodeTest', 'registerHooks', 'onExit']);
@@ -688,16 +691,16 @@ describe('install', () => {
     });
     await bodyOf(fake.registrations, 'runs')(testContext());
 
-    assert.deepEqual(seen, [`${TEST_FILE} > runs`]);
+    assert.deepEqual(seen, [`${testFile} > runs`]);
   });
 
   lzTestFor([
-    ['a process the tests spawned', { [ENV.file]: TEST_FILE }, '/repo/child.mjs'],
-    ['a process without a main file', { [ENV.file]: TEST_FILE }, undefined],
+    ['a process the tests spawned', { [envNames.file]: testFile }, '/repo/child.mjs'],
+    ['a process without a main file', { [envNames.file]: testFile }, undefined],
     ['a run without a test file', {}, undefined],
-    ['a run without a test file, from a main file', {}, TEST_FILE],
+    ['a run without a test file, from a main file', {}, testFile],
   ] as const)('leaves node:test and its reporter alone in %s', ([, env, mainFile]) => {
-    const { deps, calls } = harness({ [ENV.out]: OUT, ...env }, { mainFile });
+    const { deps, calls } = harness({ [envNames.out]: out, ...env }, { mainFile });
 
     assert.equal(install(deps), true);
     assert.deepEqual(calls, ['onExit']);
@@ -706,7 +709,11 @@ describe('install', () => {
   });
 
   it("records the tests node:test reports in a file named after the process, marked as the test file's", () => {
-    const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE, [ENV.dryRun]: 'false' });
+    const { deps, records, exit } = harness({
+      [envNames.out]: out,
+      [envNames.file]: testFile,
+      [envNames.dryRun]: 'false',
+    });
     install(deps);
     report(deps, 'passes', 'pass');
     report(deps, 'fails', 'fail');
@@ -715,12 +722,12 @@ describe('install', () => {
 
     assert.deepEqual(records, [
       {
-        path: join(OUT, '4321.0.json'),
+        path: join(out, '4321.0.json'),
         record: {
           main: true,
           tests: [
-            { id: `${TEST_FILE} > passes`, status: 'passed', timeSpentMs: 2 },
-            { id: `${TEST_FILE} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
+            { id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 },
+            { id: `${testFile} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
           ],
         },
       },
@@ -728,19 +735,22 @@ describe('install', () => {
   });
 
   it("writes a worker thread's record to a file of its own, never as the test file's", () => {
-    const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE }, { threadId: 3 });
+    const { deps, records, exit } = harness({ [envNames.out]: out, [envNames.file]: testFile }, { threadId: 3 });
     install(deps);
 
     exit();
 
     assert.deepEqual(
       records.map(({ path, record }) => [path, record.main]),
-      [[join(OUT, '4321.3.json'), undefined]],
+      [[join(out, '4321.3.json'), undefined]],
     );
   });
 
   it('writes no record in a process that may not write one', () => {
-    const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE }, { canWriteRecords: false });
+    const { deps, records, exit } = harness(
+      { [envNames.out]: out, [envNames.file]: testFile },
+      { canWriteRecords: false },
+    );
     install(deps);
     report(deps, 'passes', 'pass');
 
@@ -753,7 +763,7 @@ describe('install', () => {
     ['after the exit listeners of the tests, when it ends by itself', true, { exit: 1 }],
     ['before the exit listeners of the tests, when it ends through process.exit()', false, {}],
   ] as const)('writes the record once, %s', ([, natural, exitHits]) => {
-    const { deps, records, calls, exit, onExit } = harness({ [ENV.out]: OUT, [ENV.dryRun]: 'true' });
+    const { deps, records, calls, exit, onExit } = harness({ [envNames.out]: out, [envNames.dryRun]: 'true' });
     install(deps);
     const coverage = { static: {}, perTest: {} };
     const ns = deps.global.__stryker__;
@@ -774,7 +784,7 @@ describe('install', () => {
   });
 
   it('writes the diagnostics of errors raised after a test ended', () => {
-    const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE });
+    const { deps, records, exit } = harness({ [envNames.out]: out, [envNames.file]: testFile });
     const message = 'Error: Test "t" at a.test.mjs:1:1 generated asynchronous activity after the test ended.';
     install(deps);
     deps.global[reporting]?.({ type: 'test:diagnostic', data: { name: '', nesting: 0, message } });
@@ -791,7 +801,7 @@ describe('install', () => {
     ['leaves the record as it is when it ends through process.exit() after', false, [summary], {}],
     ['leaves the record as it is when it ends by itself without', true, [], {}],
   ] as const)("%s node:test's summary", ([, natural, last, unfinished]) => {
-    const { deps, records, exit, wrapped } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE });
+    const { deps, records, exit, wrapped } = harness({ [envNames.out]: out, [envNames.file]: testFile });
     install(deps);
     wrapped().it('passes', () => {});
     report(deps, 'passes', 'pass');
@@ -804,17 +814,17 @@ describe('install', () => {
 
     assert.deepEqual(records[0]?.record, {
       main: true,
-      tests: [{ id: `${TEST_FILE} > passes`, status: 'passed', timeSpentMs: 2 }],
+      tests: [{ id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 }],
       ...unfinished,
     });
   });
 
   it('records where the test file declares a test, named by URL as an ES module or by path as CommonJS', () => {
-    const file = resolve(TEST_FILE);
+    const file = resolve(testFile);
     const other = pathToFileURL(resolve('/repo', 'other.ts')).href;
     const startPositions = [pathToFileURL(file).href, file, other].map((scriptName) => {
       const { deps, records, exit, wrapped } = harness(
-        { [ENV.out]: OUT, [ENV.file]: file },
+        { [envNames.out]: out, [envNames.file]: file },
         { mainFile: file, callSites: () => [{ scriptName, lineNumber: 3, columnNumber: 5 }] },
       );
       install(deps);
@@ -829,7 +839,7 @@ describe('install', () => {
   });
 
   lzTestFor([
-    ['the source-mapped call sites, when one is in the test file', TEST_FILE, [true], { line: 6, column: 6 }],
+    ['the source-mapped call sites, when one is in the test file', testFile, [true], { line: 6, column: 6 }],
     [
       'the call sites as they are, when no source-mapped one is',
       join('/repo', 'src', 'a.ts'),
@@ -839,7 +849,7 @@ describe('install', () => {
   ] as const)('records the position from %s', ([, mappedFile, reads, startPosition]) => {
     const sourceMaps: boolean[] = [];
     const { deps, records, exit, wrapped } = harness(
-      { [ENV.out]: OUT, [ENV.file]: TEST_FILE },
+      { [envNames.out]: out, [envNames.file]: testFile },
       {
         callSites: (frameCount, { sourceMap }) => {
           assert.equal(frameCount, 64);
@@ -850,7 +860,7 @@ describe('install', () => {
                 { scriptName: join('/repo', 'helper.ts'), lineNumber: 1, columnNumber: 1 },
                 { scriptName: mappedFile, lineNumber: 7, columnNumber: 7 },
               ]
-            : [{ scriptName: TEST_FILE, lineNumber: 3, columnNumber: 5 }];
+            : [{ scriptName: testFile, lineNumber: 3, columnNumber: 5 }];
         },
       },
     );
@@ -864,7 +874,11 @@ describe('install', () => {
   });
 
   it('activates the mutant the runner names for runtime activation once a test starts', async () => {
-    const { deps, fake, wrapped } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE, [ENV.activeMutant]: '5' });
+    const { deps, fake, wrapped } = harness({
+      [envNames.out]: out,
+      [envNames.file]: testFile,
+      [envNames.activeMutant]: '5',
+    });
     install(deps);
 
     assert.equal(deps.global.__stryker__?.activeMutant, undefined);
@@ -877,9 +891,9 @@ describe('install', () => {
 
   it('runs only the filtered tests', () => {
     const { deps, fake, wrapped } = harness({
-      [ENV.out]: OUT,
-      [ENV.file]: TEST_FILE,
-      [ENV.filter]: JSON.stringify([`${TEST_FILE} > wanted`]),
+      [envNames.out]: out,
+      [envNames.file]: testFile,
+      [envNames.filter]: JSON.stringify([`${testFile} > wanted`]),
     });
     install(deps);
     wrapped().it('wanted', () => {});
@@ -897,16 +911,16 @@ describe('install', () => {
   lzTestEach(['null', '{"0":"id"}', '["id",1]'])(
     'fails to install with the filter %s, which is no list of test ids',
     (filter) => {
-      const { deps } = harness({ [ENV.out]: OUT, [ENV.file]: TEST_FILE, [ENV.filter]: filter });
+      const { deps } = harness({ [envNames.out]: out, [envNames.file]: testFile, [envNames.filter]: filter });
 
-      assert.throws(() => install(deps), { message: `${ENV.filter} is no JSON array of test ids: ${filter}` });
+      assert.throws(() => install(deps), { message: `${envNames.filter} is no JSON array of test ids: ${filter}` });
     },
   );
 
   const bails = ['true', 'false', undefined].map((bail) => ({ bail, verb: bail === 'true' ? 'skips' : 'runs' }));
 
   lzTestEach(bails)('$verb later tests with bail $bail; children never bail', async ({ bail }) => {
-    const env = { [ENV.out]: OUT, [ENV.file]: TEST_FILE, [ENV.bail]: bail };
+    const env = { [envNames.out]: out, [envNames.file]: testFile, [envNames.bail]: bail };
     const { deps, fake, wrapped } = harness(env);
     const ran: string[] = [];
     install(deps);
@@ -917,11 +931,11 @@ describe('install', () => {
     await bodyOf(fake.registrations, 'later')(testContext());
 
     assert.deepEqual(ran, bail === 'true' ? [] : ['later']);
-    assert.ok(!(ENV.bail in env));
+    assert.ok(!(envNames.bail in env));
   });
 
   describe('a process that outlives its tests', () => {
-    const env = { [ENV.out]: OUT, [ENV.file]: TEST_FILE };
+    const env = { [envNames.out]: out, [envNames.file]: testFile };
 
     it("registers a root `after` hook with node:test itself at the test file's first registration, before it", () => {
       const h = harness(env);
@@ -957,8 +971,8 @@ describe('install', () => {
       assert.deepEqual(h.records[0]?.record, {
         main: true,
         tests: [
-          { id: `${TEST_FILE} > passes`, status: 'passed', timeSpentMs: 2 },
-          { id: `${TEST_FILE} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
+          { id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 },
+          { id: `${testFile} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
         ],
       });
     });
@@ -979,7 +993,7 @@ describe('install', () => {
       // A failing root hook, reported as a failure of the file itself.
       h.deps.global[reporting]?.({
         type: 'test:fail',
-        data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 1, error: { message: 'hook failed' } } },
+        data: { name: testFile, nesting: 0, details: { duration_ms: 1, error: { message: 'hook failed' } } },
       });
       // node:test reports that a suite completed before it reports its result.
       h.deps.global[reporting]?.({
@@ -1016,7 +1030,7 @@ describe('install', () => {
       ['the default of, for 0,', '0', 30_000],
       ['250 ms, as set in', '250', 250],
     ] as const)('waits %s the held-open variable', ([, heldOpen, ms]) => {
-      const h = harness({ ...env, [ENV.heldOpen]: heldOpen });
+      const h = harness({ ...env, [envNames.heldOpen]: heldOpen });
       install(h.deps);
       h.wrapped().it('passes', () => {});
       afterHooks(h.fake)[0]?.();
@@ -1050,7 +1064,7 @@ describe('install', () => {
         assert.deepEqual(h.exits, [undefined]);
         assert.deepEqual(h.records[0]?.record, {
           main: true,
-          tests: reported ? [{ id: `${TEST_FILE} > passes`, status: 'passed', timeSpentMs: 2 }] : [],
+          tests: reported ? [{ id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 }] : [],
           ...marks,
         });
       },
@@ -1155,7 +1169,7 @@ describe('install', () => {
 
     const fileFailure = {
       type: 'test:fail',
-      data: { name: TEST_FILE, nesting: 0, details: { duration_ms: 1 } },
+      data: { name: testFile, nesting: 0, details: { duration_ms: 1 } },
     } as const;
 
     lzTestFor([
@@ -1229,9 +1243,13 @@ describe('install', () => {
   });
 
   it('writes the hit count and, only in the dry run, the mutant coverage and the peak memory', () => {
-    const coverage = { static: { 1: 2 }, perTest: { [`${TEST_FILE} > t`]: { 3: 1 } } };
+    const coverage = { static: { 1: 2 }, perTest: { [`${testFile} > t`]: { 3: 1 } } };
     const written = ['true', 'false', undefined].map((dryRun) => {
-      const { deps, records, exit } = harness({ [ENV.out]: OUT, [ENV.dryRun]: dryRun, [ENV.hitLimit]: '9' });
+      const { deps, records, exit } = harness({
+        [envNames.out]: out,
+        [envNames.dryRun]: dryRun,
+        [envNames.hitLimit]: '9',
+      });
       install(deps);
       const ns = deps.global.__stryker__;
 
@@ -1255,7 +1273,7 @@ describe('install', () => {
 });
 
 describe('passing `done` as node:test does', () => {
-  const env = { [ENV.out]: OUT, [ENV.file]: TEST_FILE };
+  const env = { [envNames.out]: out, [envNames.file]: testFile };
   /** node:test passes a `done` callback only to a function whose length is exactly 2. */
   const callAsNodeTest = (fn: Fn | undefined, context: unknown): unknown => {
     assert.ok(fn);

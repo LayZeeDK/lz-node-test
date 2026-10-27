@@ -5,12 +5,7 @@ import { PluginKind } from '@stryker-mutator/api/plugin';
 import ajvModule from 'ajv';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import {
-  LZ_MIN_NODE_VERSION,
-  LzStrykerNodeTestRunner,
-  strykerPlugins,
-  strykerValidationSchema,
-} from '../../src/index.ts';
+import { lzMinNodeVersion, LzStrykerNodeTestRunner, strykerPlugins, strykerValidationSchema } from '../../src/index.ts';
 import pkg from '../../package.json' with { type: 'json' };
 
 /** Stryker validates its options with these settings, and merges the properties of each plugin's schema into its own. */
@@ -53,7 +48,7 @@ describe('plugin declaration', () => {
   });
 
   it('supports the Node.js versions that package.json supports', () => {
-    assert.equal(pkg.engines.node, `>=${LZ_MIN_NODE_VERSION.join('.')}`);
+    assert.equal(pkg.engines.node, `>=${lzMinNodeVersion.join('.')}`);
   });
 
   lzTestEach([

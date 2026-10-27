@@ -4,9 +4,9 @@ import { describe, it } from 'node:test';
 import { parseSync, traverse, types, type NodePath } from '@babel/core';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { OWN, isOwn, toNodeMutator, type Operator } from '../../src/operator.ts';
+import { own, isOwn, toNodeMutator, type Operator } from '../../src/operator.ts';
 
-const NODE = types.emptyStatement();
+const node = types.emptyStatement();
 
 function programPath(): NodePath {
   const file = parseSync('', { babelrc: false, configFile: false });
@@ -27,19 +27,19 @@ const operator: Operator = {
   name: 'Alpha',
   sample: '',
   *mutate() {
-    yield NODE;
+    yield node;
   },
 };
 
-describe('OWN', () => {
+describe('own', () => {
   it('is the same symbol in every copy of the package', () => {
-    assert.equal(OWN, Symbol.for('lz-stryker-node-test-mutators'));
+    assert.equal(own, Symbol.for('lz-stryker-node-test-mutators'));
   });
 });
 
 describe('toNodeMutator', () => {
   lzTestEach([
-    [false, [NODE]],
+    [false, [node]],
     [true, []],
   ])('gives, where isExpressionContext is %s, %j', (isExpressionContext, nodes) => {
     const mutator = toNodeMutator(operator, types);

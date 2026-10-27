@@ -21,9 +21,9 @@ import {
 
 import { LzStrykerNodeTestRunner, lzRunEnv, type LzStrykerNodeTestOptions } from '../src/index.ts';
 
-export const ACTIVE_MUTANT = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
-export const HOOK_URL = pathToFileURL(join(import.meta.dirname, '..', 'src', 'hook.ts')).href;
-export const REPORTER_ARG = `--test-reporter=${pathToFileURL(join(import.meta.dirname, '..', 'src', 'reporter.ts')).href}`;
+export const activeMutant = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
+export const hookUrl = pathToFileURL(join(import.meta.dirname, '..', 'src', 'hook.ts')).href;
+export const reporterArg = `--test-reporter=${pathToFileURL(join(import.meta.dirname, '..', 'src', 'reporter.ts')).href}`;
 
 export function runNodeOptions(): string {
   return lzRunEnv(process.env, '', '', '', { dryRun: false, disableBail: false }, undefined).NODE_OPTIONS;
@@ -33,9 +33,9 @@ export function runNodeOptions(): string {
  * A process id that no process has: above the largest that Linux (2^22) and macOS (99999) hand out, and one that
  * Windows reports as not running. The id of a process that ended can be handed out again at once.
  */
-export const NO_PROCESS = 2 ** 31 - 1;
+export const noProcess = 2 ** 31 - 1;
 
-export const COVER = [
+export const cover = [
   'const cover = (id) => {',
   '  const ns = globalThis.__stryker__;',
   '  const coverage = (ns.mutantCoverage ??= { static: {}, perTest: {} });',
@@ -44,25 +44,25 @@ export const COVER = [
   '};',
 ].join(' ');
 
-const FIXTURE_HEADER = [
+const fixtureHeader = [
   "import assert from 'node:assert/strict';",
   "import { spawnSync } from 'node:child_process';",
   "import { describe, it } from 'node:test';",
-  COVER,
+  cover,
 ];
 
-export const FIXTURE_HEADER_LINES = FIXTURE_HEADER.length;
+export const fixtureHeaderLines = fixtureHeader.length;
 
 export function fixture(...lines: string[]): string {
-  return [...FIXTURE_HEADER, ...lines, ''].join('\n');
+  return [...fixtureHeader, ...lines, ''].join('\n');
 }
 
-export const PASSING = fixture("it('passes', () => {});");
+export const passing = fixture("it('passes', () => {});");
 
-export const GROWS =
+export const grows =
   'const held = []; const end = Date.now() + 5_000; while (Date.now() < end) { ' +
   'if (held.length < 25) held.push(new Int32Array(4e6).fill(1)); const pause = Date.now() + 10; while (Date.now() < pause); }';
-export const FAILING = fixture("it('fails', () => { throw new Error('expected failure'); });");
+export const failing = fixture("it('fails', () => { throw new Error('expected failure'); });");
 
 export function project(t: TestContext, files: Record<string, string>): string {
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'node-test-runner-')));
@@ -159,7 +159,7 @@ export async function initRunner(
   return runner;
 }
 
-export const DRY_RUN: DryRunOptions = { timeout: 10_000, disableBail: false, coverageAnalysis: 'perTest' };
+export const dryRun: DryRunOptions = { timeout: 10_000, disableBail: false, coverageAnalysis: 'perTest' };
 
 export function mutantRunOptions(options: Partial<MutantRunOptions> = {}): MutantRunOptions {
   return {

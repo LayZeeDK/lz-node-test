@@ -24,8 +24,8 @@ import { Bench } from 'tinybench';
 import {
   callMember,
   construct,
-  COVER,
-  DRY_RUN,
+  cover,
+  dryRun,
   fixture,
   logger,
   member,
@@ -75,10 +75,10 @@ interface Stat {
   spread: number;
 }
 
-const FILES = 6;
-const TESTS_PER_FILE = 5;
-const SPAWNING_FILES = 2;
-const TEST_COUNT = FILES * TESTS_PER_FILE;
+const fileCount = 6;
+const testsPerFile = 5;
+const spawningFiles = 2;
+const testCount = fileCount * testsPerFile;
 
 const { values: args } = parseArgs({
   options: {
@@ -95,13 +95,13 @@ assert.ok(runs >= 1, 'runs must be >= 1');
 assert.ok(mutateRuns >= 0, 'mutate-runs must be >= 0');
 
 function fixtureFile(index: number): string {
-  const spawns = index < SPAWNING_FILES;
+  const spawns = index < spawningFiles;
   const tests: string[] = [];
 
-  for (let test = 0; test < TESTS_PER_FILE; test++) {
+  for (let test = 0; test < testsPerFile; test++) {
     const body =
       spawns && test === 0
-        ? `const child = spawnSync(process.execPath, ['-e', ${JSON.stringify(`${COVER} cover('child-${index}');`)}]); assert.equal(child.status, 0, String(child.stderr));`
+        ? `const child = spawnSync(process.execPath, ['-e', ${JSON.stringify(`${cover} cover('child-${index}');`)}]); assert.equal(child.status, 0, String(child.stderr));`
         : `assert.equal([${test}].length, 1);`;
     tests.push(`  it('test ${test}', () => { cover('m-${index}-${test}'); ${body} });`);
   }
@@ -114,15 +114,15 @@ function scenarios(files: string[]): Scenario[] {
 
   return [
     {
-      name: `dry run, ${FILES} files x ${TESTS_PER_FILE} tests`,
+      name: `dry run, ${fileCount} files x ${testsPerFile} tests`,
       run: async (runner) => {
-        const result = await runner.dryRun({ ...DRY_RUN, timeout: 60_000 });
+        const result = await runner.dryRun({ ...dryRun, timeout: 60_000 });
         const tests = member(result, 'tests');
         const perTest = member(member(result, 'mutantCoverage'), 'perTest');
         assert.equal(member(result, 'status'), DryRunStatus.Complete);
         assert.ok(Array.isArray(tests));
         assert.ok(tests.every((test) => member(test, 'status') === TestStatus.Success));
-        assert.equal(Object.keys(new Object(perTest)).length, TEST_COUNT);
+        assert.equal(Object.keys(new Object(perTest)).length, testCount);
         assert.equal(member(member(perTest, testId(0, 0)), 'child-0'), 1);
 
         return tests.length;
@@ -133,9 +133,9 @@ function scenarios(files: string[]): Scenario[] {
       run: async (runner) => {
         const result = await runner.mutantRun(mutantRunOptions({ timeout: 60_000 }));
         assert.equal(member(result, 'status'), MutantRunStatus.Survived);
-        assert.equal(member(result, 'nrOfTests'), TEST_COUNT);
+        assert.equal(member(result, 'nrOfTests'), testCount);
 
-        return TEST_COUNT;
+        return testCount;
       },
     },
     {
@@ -248,7 +248,7 @@ async function main(): Promise<void> {
   const runners: BenchRunner[] = [];
 
   try {
-    for (let index = 0; index < FILES; index++) {
+    for (let index = 0; index < fileCount; index++) {
       const file = join(dir, `file-${index}.test.mjs`);
       writeFileSync(file, fixtureFile(index));
       files.push(file);
@@ -260,7 +260,7 @@ async function main(): Promise<void> {
     const add = (label: string, ms: number) => samples.set(label, [...(samples.get(label) ?? []), ms]);
 
     console.log(`node ${process.version} on ${process.platform} ${process.arch}, ${availableParallelism()} cores`);
-    console.log(`fixtures: ${FILES} files x ${TESTS_PER_FILE} tests, ${SPAWNING_FILES} files spawn a child process`);
+    console.log(`fixtures: ${fileCount} files x ${testsPerFile} tests, ${spawningFiles} files spawn a child process`);
 
     for (const scenario of scenarios(files)) {
       const sides = runners.map((runner, index): [string, () => Promise<void>] => [

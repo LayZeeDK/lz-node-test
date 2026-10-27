@@ -1,4 +1,4 @@
-import { calleeRoot, importOf, NODE_ASSERT } from './bindings.ts';
+import { calleeRoot, importOf, nodeAssert } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 /**
@@ -22,7 +22,7 @@ export const assertStatement: Operator = {
     const root = call.type === 'CallExpression' ? calleeRoot(call.callee) : undefined;
     const source = root && importOf(path, root.name)?.source;
 
-    if (source !== undefined && NODE_ASSERT.has(source)) {
+    if (source !== undefined && nodeAssert.has(source)) {
       yield t.emptyStatement();
     }
   },

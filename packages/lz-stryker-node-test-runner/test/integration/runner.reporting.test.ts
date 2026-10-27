@@ -6,9 +6,9 @@ import { MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
 
 import {
   complete,
-  DRY_RUN,
+  dryRun,
   fixture,
-  FIXTURE_HEADER_LINES,
+  fixtureHeaderLines,
   fixtureCoverage,
   initRunner,
   mutantRunOptions,
@@ -35,13 +35,13 @@ describe('LzStrykerNodeTestRunner results', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, startPosition })),
       [
-        { id: `${a} > once > never runs`, startPosition: { line: FIXTURE_HEADER_LINES + 3, column: 2 } },
-        { id: `${a} > once`, startPosition: { line: FIXTURE_HEADER_LINES + 1, column: 0 } },
+        { id: `${a} > once > never runs`, startPosition: { line: fixtureHeaderLines + 3, column: 2 } },
+        { id: `${a} > once`, startPosition: { line: fixtureHeaderLines + 1, column: 0 } },
       ],
     );
   });
@@ -61,7 +61,7 @@ describe('LzStrykerNodeTestRunner results', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     // V8 places a call of a shorthand such as `it.skip` at the shorthand's name.
     assert.deepEqual(
@@ -99,7 +99,7 @@ describe('LzStrykerNodeTestRunner results', () => {
       startPosition: { line, column },
     });
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(
       tests.map(({ id, name, status, startPosition }) => ({ id, name, status, startPosition })),
@@ -131,7 +131,7 @@ describe('LzStrykerNodeTestRunner results', () => {
     const a = join(dir, 'a.test.mjs');
     const hook = `${a} > "after" hook`;
 
-    const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(
       tests.map(({ id, name, status, startPosition }) => ({ id, name, status, startPosition })),
@@ -165,7 +165,7 @@ describe('LzStrykerNodeTestRunner results', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       { id: `${a} > parent > child`, status: TestStatus.Success, failureMessage: undefined },
@@ -208,7 +208,7 @@ describe('LzStrykerNodeTestRunner results', () => {
       `${a} > outer > after await`,
     ];
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, line: startPosition?.line })),
@@ -245,14 +245,14 @@ describe('LzStrykerNodeTestRunner results', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, startPosition })),
       [
-        { id: `${a} > first`, startPosition: { line: FIXTURE_HEADER_LINES + 1, column: 0 } },
-        { id: `${a} > suite > nested`, startPosition: { line: FIXTURE_HEADER_LINES + 3, column: 2 } },
-        { id: `${a} > from a helper`, startPosition: { line: FIXTURE_HEADER_LINES + 5, column: 0 } },
+        { id: `${a} > first`, startPosition: { line: fixtureHeaderLines + 1, column: 0 } },
+        { id: `${a} > suite > nested`, startPosition: { line: fixtureHeaderLines + 3, column: 2 } },
+        { id: `${a} > from a helper`, startPosition: { line: fixtureHeaderLines + 5, column: 0 } },
       ],
     );
   });
@@ -267,7 +267,7 @@ describe('LzStrykerNodeTestRunner results', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(
       tests.map(({ id }) => id),
@@ -306,7 +306,7 @@ describe('LzStrykerNodeTestRunner results', () => {
       `${a} > a \\> b`,
     ];
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, line: startPosition?.line })),
@@ -341,7 +341,7 @@ describe('LzStrykerNodeTestRunner results', () => {
     const runner = await initRunner(['*.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       { id: `${a} > only suite > runs`, status: TestStatus.Success, failureMessage: undefined },

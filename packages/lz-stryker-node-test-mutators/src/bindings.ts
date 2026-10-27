@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-export const NODE_ASSERT: ReadonlySet<string> = new Set([
+export const nodeAssert: ReadonlySet<string> = new Set([
   'node:assert',
   'node:assert/strict',
   'assert',
@@ -45,7 +45,7 @@ export function assertMethod(path: NodePath, callee: types.Node): string | undef
     return isTestContextAssert(path, callee, root) ? propertyName(callee) : undefined;
   }
 
-  if (!NODE_ASSERT.has(from.source)) {
+  if (!nodeAssert.has(from.source)) {
     return undefined;
   }
 

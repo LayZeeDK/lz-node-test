@@ -5,10 +5,10 @@ import { assert, run, type EventData, type TestContext } from 'node:test';
 
 import ts from 'typescript';
 
-const TEST_EACH = new URL('../src/test-each.ts', import.meta.url).href;
-const TEST_FOR = new URL('../src/test-for.ts', import.meta.url).href;
+const testEach = new URL('../src/test-each.ts', import.meta.url).href;
+const testFor = new URL('../src/test-for.ts', import.meta.url).href;
 
-export const SIGNATURES = {
+export const signatures = {
   name: 'TypeError',
   message:
     'lzTestEach and lzTestFor tables take (name, fn), (name, fn, timeout) or (name, options, fn); ' +
@@ -68,8 +68,8 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
     writeFileSync(
       file,
       [
-        `import { lzTestEach } from ${JSON.stringify(TEST_EACH)};`,
-        `import { lzTestFor } from ${JSON.stringify(TEST_FOR)};`,
+        `import { lzTestEach } from ${JSON.stringify(testEach)};`,
+        `import { lzTestFor } from ${JSON.stringify(testFor)};`,
         String(report),
         `(${cases})();`,
       ].join('\n'),
@@ -105,14 +105,14 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
   }
 }
 
-const CASES_FILE = 'cases.ts';
-const COMPILER_OPTIONS: ts.CompilerOptions = {
+const casesFile = 'cases.ts';
+const compilerOptions: ts.CompilerOptions = {
   noEmit: true,
   target: ts.ScriptTarget.ES2023,
   lib: ['lib.es2023.d.ts'],
   types: ['node'],
 };
-const host = ts.createCompilerHost(COMPILER_OPTIONS);
+const host = ts.createCompilerHost(compilerOptions);
 const libraries = new Map<string, ts.SourceFile | undefined>();
 
 /**
@@ -121,10 +121,10 @@ const libraries = new Map<string, ts.SourceFile | undefined>();
  */
 function capturedNames(source: string): string[] {
   const text = `declare const lzTestEach: any, lzTestFor: any, report: any;\n(${source})();\n`;
-  const program = ts.createProgram([CASES_FILE], COMPILER_OPTIONS, {
+  const program = ts.createProgram([casesFile], compilerOptions, {
     ...host,
     getSourceFile: (name, version) => {
-      if (name === CASES_FILE) {
+      if (name === casesFile) {
         return ts.createSourceFile(name, text, ts.ScriptTarget.ES2023);
       }
 
@@ -136,7 +136,7 @@ function capturedNames(source: string): string[] {
     },
   });
   const unknown = program
-    .getSemanticDiagnostics(program.getSourceFile(CASES_FILE))
+    .getSemanticDiagnostics(program.getSourceFile(casesFile))
     // Cannot find name 'x', and the same with a suggestion.
     .filter((diagnostic) => diagnostic.code === 2304 || diagnostic.code === 2552);
 

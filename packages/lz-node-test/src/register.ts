@@ -31,7 +31,7 @@ export interface Case {
   body?: Body;
 }
 
-const SIGNATURES =
+const signatures =
   'lzTestEach and lzTestFor tables take (name, fn), (name, fn, timeout) or (name, options, fn); ' +
   'pass options as the second argument and a single function.';
 
@@ -63,7 +63,7 @@ export function parseArguments<F extends EachCallback>(
     (typeof fnOrTimeout === 'object' && fnOrTimeout !== null) ||
     (typeof optionsOrFn === 'function' && typeof fnOrTimeout === 'function')
   ) {
-    throw new TypeError(SIGNATURES);
+    throw new TypeError(signatures);
   }
 
   return {

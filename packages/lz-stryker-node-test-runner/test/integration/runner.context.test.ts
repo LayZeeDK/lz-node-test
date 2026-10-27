@@ -7,8 +7,8 @@ import { MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
 
 import {
   complete,
-  COVER,
-  DRY_RUN,
+  cover,
+  dryRun,
   fixture,
   fixtureCoverage,
   initRunner,
@@ -47,7 +47,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun({ ...DRY_RUN, disableBail: true })));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
     assert.deepEqual(summary(tests), [
       passed(`${a} > meets its plan`),
@@ -98,7 +98,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       passed(`${a} > hooks > child`),
@@ -122,7 +122,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const dir = project(t, {
       // fastify/test/helper.js:48
       'helper.mjs': [
-        COVER,
+        cover,
         'export function payload(method, t) {',
         '  const test = t.test;',
         '  test(`${method} can be created`, () => { cover(method); });',
@@ -149,7 +149,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const a = join(dir, 'a.test.mjs');
     const b = join(dir, 'b.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       passed(`${a} > put can be created`),
@@ -186,7 +186,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [passed(`${a} > serves`)]);
     assert.deepEqual(fixtureCoverage(mutantCoverage), { static: {}, perTest: { [`${a} > serves`]: { handled: 1 } } });
@@ -214,7 +214,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [passed(`${a} > mocks`), passed(`${a} > runs next`)]);
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
@@ -237,7 +237,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests } = complete(await settle(runner.dryRun({ ...DRY_RUN, disableBail: true })));
+    const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
     assert.deepEqual(summary(tests), [
       { id: `${a} > awaits`, status: TestStatus.Failed, failureMessage: 'thrown in a callback' },
@@ -257,7 +257,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [passed(`${a} > listens`)]);
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
@@ -277,7 +277,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { tests } = complete(await settle(runner.dryRun({ ...DRY_RUN, disableBail: true })));
+    const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
     assert.deepEqual(summary(tests), [
       passed(`${a} > writes`),

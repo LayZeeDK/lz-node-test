@@ -132,9 +132,9 @@ export type NodeTestTarget = TargetRegister & {
   afterEach: Target;
 };
 
-const AFTER_HOOK = '"after" hook';
+const afterHook = '"after" hook';
 
-export const ENV = Object.freeze({
+export const envNames = Object.freeze({
   out: 'LZ_STRYKER_NODE_TEST_OUT',
   file: 'LZ_STRYKER_NODE_TEST_FILE',
   dryRun: 'LZ_STRYKER_NODE_TEST_DRY_RUN',
@@ -149,12 +149,12 @@ export const ENV = Object.freeze({
 
 /**
  * How long a test file's process may stay alive after its tests and root `after` hooks when the ending does not end it
- * at once for a failed test. The tests shorten it through ENV.heldOpen; it is not an option.
+ * at once for a failed test. The tests shorten it through envNames.heldOpen; it is not an option.
  */
-export const HELD_OPEN_MS = 30_000;
+export const heldOpenMs = 30_000;
 
 /** Stryker's variable for the active mutant, which instrumented code reads when it loads. */
-export const ACTIVE_MUTANT_ENV = '__STRYKER_ACTIVE_MUTANT__';
+export const activeMutantEnv = '__STRYKER_ACTIVE_MUTANT__';
 
 export interface HookDependencies {
   env: Record<string, string | undefined>;
@@ -205,7 +205,7 @@ export interface HookDependencies {
  * How many calls of the stack the hook reads to find where the test file declares a suite or test. getCallSites reads
  * 10 by default, fewer than a declaration through a few helpers takes.
  */
-const CALL_SITE_FRAMES = 64;
+const callSiteFrames = 64;
 
 export const installed = Symbol.for('lz-stryker-node-test-runner.hook');
 
@@ -230,14 +230,14 @@ function testIds(json: string): Set<string> {
   const ids: unknown = JSON.parse(json);
 
   if (!Array.isArray(ids) || !ids.every((id): id is string => typeof id === 'string')) {
-    throw new Error(`${ENV.filter} is no JSON array of test ids: ${json}`);
+    throw new Error(`${envNames.filter} is no JSON array of test ids: ${json}`);
   }
 
   return new Set(ids);
 }
 
 export function install(deps: HookDependencies): boolean {
-  const outDir = deps.env[ENV.out];
+  const outDir = deps.env[envNames.out];
 
   if (!outDir || deps.global[installed]) {
     return false;
@@ -245,14 +245,14 @@ export function install(deps: HookDependencies): boolean {
 
   deps.global[installed] = true;
   const ns = (deps.global.__stryker__ ??= {});
-  const hitLimit = Number(deps.env[ENV.hitLimit]);
+  const hitLimit = Number(deps.env[envNames.hitLimit]);
 
   if (hitLimit > 0) {
     ns.hitLimit = hitLimit;
     ns.hitCount = 0;
   }
 
-  const memoryLimit = Number(deps.env[ENV.memoryLimit]);
+  const memoryLimit = Number(deps.env[envNames.memoryLimit]);
 
   if (memoryLimit > 0 && deps.canWatchMemory) {
     const { NODE_COMPILE_CACHE } = deps.env;
@@ -267,7 +267,7 @@ export function install(deps: HookDependencies): boolean {
     });
   }
 
-  const current = deps.env[ENV.current];
+  const current = deps.env[envNames.current];
 
   if (current) {
     ns.currentTestId = current;
@@ -275,12 +275,12 @@ export function install(deps: HookDependencies): boolean {
     delete ns.currentTestId;
   }
 
-  const bail = deps.env[ENV.bail] === 'true';
-  const dryRun = deps.env[ENV.dryRun] === 'true';
-  delete deps.env[ENV.bail];
+  const bail = deps.env[envNames.bail] === 'true';
+  const dryRun = deps.env[envNames.dryRun] === 'true';
+  delete deps.env[envNames.bail];
   const tests: RecordedTest[] = [];
   const diagnostics: string[] = [];
-  const testFile = deps.env[ENV.file];
+  const testFile = deps.env[envNames.file];
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
   let summarized = false;
   let natural = false;
@@ -295,12 +295,12 @@ export function install(deps: HookDependencies): boolean {
       (hook) => {
         Reflect.apply(nodeTest.after, nodeTest, [hook]);
       },
-      Number(deps.env[ENV.heldOpen]) || HELD_OPEN_MS,
+      Number(deps.env[envNames.heldOpen]) || heldOpenMs,
     );
     end = ends;
     // ES modules are named by their URL, CommonJS modules by their path.
     const callSites = (sourceMap: boolean) =>
-      deps.callSites(CALL_SITE_FRAMES, { sourceMap }).map(({ scriptName, lineNumber, columnNumber }) => ({
+      deps.callSites(callSiteFrames, { sourceMap }).map(({ scriptName, lineNumber, columnNumber }) => ({
         file: scriptName.startsWith('file:') ? fileURLToPath(scriptName) : scriptName,
         line: lineNumber,
         column: columnNumber,
@@ -314,7 +314,7 @@ export function install(deps: HookDependencies): boolean {
       recordEvent(event);
       ends.reported(event);
     };
-    const filterJson = deps.env[ENV.filter];
+    const filterJson = deps.env[envNames.filter];
     const filter = filterJson ? testIds(filterJson) : undefined;
     const wrapped = wrapNodeTest({
       ns,
@@ -322,7 +322,7 @@ export function install(deps: HookDependencies): boolean {
       tests,
       filter,
       bail,
-      activeMutant: deps.env[ENV.activeMutant],
+      activeMutant: deps.env[envNames.activeMutant],
       env: deps.env,
       positions,
       // A source map can point at another file, such as `src/` for a test in `dist/`; the test file's own position
@@ -522,7 +522,7 @@ export function ending(
  * reaches its `uncaughtException` or `unhandledRejection` handler (`createProcessEventHandler` in
  * `lib/internal/test_runner/harness.js`).
  */
-const LATE_ACTIVITY = 'generated asynchronous activity after the test ended';
+const lateActivity = 'generated asynchronous activity after the test ended';
 
 /** node:test reports an error raised after its test ended only as a diagnostic, which is kept in `diagnostics`. */
 export function recordEvents(
@@ -541,7 +541,7 @@ export function recordEvents(
       return;
     }
 
-    if (type === 'test:diagnostic' && data.message?.includes(LATE_ACTIVITY)) {
+    if (type === 'test:diagnostic' && data.message?.includes(lateActivity)) {
       diagnostics.push(data.message);
     }
 
@@ -562,7 +562,7 @@ export function recordEvents(
 
     // node:test reports a failing `after` hook of the test file as a failure of the file itself, which has no type.
     const fileHook = kind === undefined;
-    const id = fileHook ? testId(testFile, AFTER_HOOK) : ids.get(data.nesting);
+    const id = fileHook ? testId(testFile, afterHook) : ids.get(data.nesting);
 
     // node:test starts every test it reports; an event outside that order has no test to record.
     if (id === undefined) {
@@ -641,10 +641,10 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
     if (id === undefined) {
       delete ns.currentTestId;
-      delete env[ENV.current];
+      delete env[envNames.current];
     } else {
       ns.currentTestId = id;
-      env[ENV.current] = id;
+      env[envNames.current] = id;
     }
   };
   /**
@@ -655,7 +655,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const activate = () => {
     if (activeMutant !== undefined) {
       ns.activeMutant = activeMutant;
-      env[ACTIVE_MUTANT_ENV] = activeMutant;
+      env[activeMutantEnv] = activeMutant;
     }
   };
   /** Like node:test's own filters, a suite without a selected test runs its body and registers none of its hooks. */
@@ -939,7 +939,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         return attributed;
       }
 
-      declare(testId(testFile, AFTER_HOOK));
+      declare(testId(testFile, afterHook));
 
       return typeof attributed === 'function' ? rootAfter(attributed) : attributed;
     }),
@@ -952,7 +952,7 @@ export interface ModuleHooks {
   load: LoadHookSync;
 }
 
-const WRAPPED_URL = 'thermos-stryker-node-test:node-test/';
+const wrappedUrl = 'thermos-stryker-node-test:node-test/';
 
 /**
  * Module hooks that make `import 'node:test'` and `require('node:test')` give the wrapped module on
@@ -974,14 +974,14 @@ export function redirectNodeTest(names: string[]): ModuleHooks {
 
       const format = context.conditions.includes('require') ? 'commonjs' : 'module';
 
-      return { url: `${WRAPPED_URL}${format}`, format, shortCircuit: true };
+      return { url: `${wrappedUrl}${format}`, format, shortCircuit: true };
     },
     load: (url, context, nextLoad) => {
-      if (!url.startsWith(WRAPPED_URL)) {
+      if (!url.startsWith(wrappedUrl)) {
         return nextLoad(url, context);
       }
 
-      const format = url === `${WRAPPED_URL}commonjs` ? 'commonjs' : 'module';
+      const format = url === `${wrappedUrl}commonjs` ? 'commonjs' : 'module';
 
       return { format, source: sources[format], shortCircuit: true };
     },

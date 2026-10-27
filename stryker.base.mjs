@@ -3,7 +3,7 @@
 import '@layzee/lz-stryker-node-test-mutators';
 
 // The packages import each other and load the runner and the operators from their TypeScript source.
-export const SOURCE = '--conditions=@lz-node-test/source';
+export const source = '--conditions=@lz-node-test/source';
 
 /**
  * A package's config for its test code: `config` with the operators for test files installed in place of the
@@ -22,9 +22,9 @@ export async function testCode(config) {
 export default {
   plugins: ['@stryker-mutator/*', '@layzee/lz-stryker-node-test-runner'],
   testRunner: 'lz-stryker-node-test',
-  testRunnerNodeArgs: [SOURCE],
+  testRunnerNodeArgs: [source],
   checkers: ['typescript'],
-  checkerNodeArgs: [SOURCE],
+  checkerNodeArgs: [source],
   // The checker's schema calls grouped checks less accurate, and with a break of 100 a missed compile error fails the
   // run.
   typescriptChecker: { prioritizePerformanceOverAccuracy: false },

@@ -10,7 +10,7 @@ import { Worker } from 'node:worker_threads';
 
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
-  ENV,
+  envNames,
   installed,
   reporting,
   type HookDependencies,
@@ -18,7 +18,7 @@ import {
   type TestEvent,
   watchdog,
 } from '../../src/hook-core.ts';
-import { fixture, GROWS, HOOK_URL, REPORTER_ARG, shareCompileCache } from '../index.fixtures.ts';
+import { fixture, grows, hookUrl, reporterArg, shareCompileCache } from '../index.fixtures.ts';
 import { lzParseRecord } from '../../src/index.ts';
 import reporter from '../../src/reporter.ts';
 
@@ -34,8 +34,8 @@ async function loadRunnerStartedHook(
 ): Promise<Record<'exit' | 'beforeExit', ((code: number) => void)[]>> {
   const global: HookDependencies['global'] = globalThis;
   const previousMark = global[installed];
-  const previousEnv = Object.values(ENV)
-    .filter((key) => key !== ENV.current)
+  const previousEnv = Object.values(envNames)
+    .filter((key) => key !== envNames.current)
     .map((key) => [key, process.env[key]] as const);
   const listeners = {
     exit: new Set(process.listeners('exit')),
@@ -46,12 +46,12 @@ async function loadRunnerStartedHook(
     delete process.env[key];
   }
 
-  Object.assign(process.env, { [ENV.out]: outDir, ...env });
+  Object.assign(process.env, { [envNames.out]: outDir, ...env });
   delete global[installed];
 
   try {
     // A query of its own makes each load run the hook's module again.
-    await import(`${HOOK_URL}?runner-started-${randomUUID()}`);
+    await import(`${hookUrl}?runner-started-${randomUUID()}`);
   } finally {
     for (const [key, value] of previousEnv) {
       if (value === undefined) {
@@ -95,12 +95,12 @@ function tempDir(t: TestContext): string {
 function runWithHook(args: string[], env: Record<string, string>): Promise<{ code: number | null; pid: number }> {
   const base = { ...process.env };
 
-  for (const key of ['NODE_OPTIONS', 'NODE_TEST_CONTEXT', ...Object.values(ENV)]) {
+  for (const key of ['NODE_OPTIONS', 'NODE_TEST_CONTEXT', ...Object.values(envNames)]) {
     delete base[key];
   }
 
   return new Promise((done, fail) => {
-    const child = spawn(process.execPath, ['--import', HOOK_URL, REPORTER_ARG, ...args], {
+    const child = spawn(process.execPath, ['--import', hookUrl, reporterArg, ...args], {
       env: { ...base, ...env },
       stdio: 'ignore',
     });
@@ -124,16 +124,16 @@ function readRecords(outDir: string): Record<string, ProcessRecord> {
 describe('hook', () => {
   it('writes the record of a process the runner started when the process exits', async (t) => {
     const outDir = tempDir(t);
-    const bail = process.env[ENV.bail];
-    process.env[ENV.bail] = 'true';
+    const bail = process.env[envNames.bail];
+    process.env[envNames.bail] = 'true';
     t.after(() => {
       if (bail === undefined) {
-        delete process.env[ENV.bail];
+        delete process.env[envNames.bail];
       } else {
-        process.env[ENV.bail] = bail;
+        process.env[envNames.bail] = bail;
       }
     });
-    const hookEnv = () => Object.fromEntries(Object.values(ENV).map((key) => [key, process.env[key]]));
+    const hookEnv = () => Object.fromEntries(Object.values(envNames).map((key) => [key, process.env[key]]));
     const before = hookEnv();
     const added = await loadRunnerStartedHook(outDir);
 
@@ -175,7 +175,7 @@ describe('hook', () => {
     const global: HookDependencies['global'] = globalThis;
     const unref = t.mock.method(Worker.prototype, 'unref');
 
-    const added = await loadRunnerStartedHook(outDir, { [ENV.dryRun]: 'true', [ENV.memoryLimit]: '1000000' });
+    const added = await loadRunnerStartedHook(outDir, { [envNames.dryRun]: 'true', [envNames.memoryLimit]: '1000000' });
 
     const watching = global[watchdog];
     assert.ok(watching instanceof Worker, String(watching));
@@ -215,7 +215,7 @@ describe('hook', () => {
       ),
     );
 
-    const { code, pid } = await runWithHook([testFile], { [ENV.out]: outDir, [ENV.file]: testFile });
+    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
 
     assert.equal(code, 0);
     const records = readRecords(outDir);
@@ -287,9 +287,9 @@ describe('hook', () => {
       writeFileSync(testFile, fixture("import { createServer } from 'node:http';", leavesServer(name, then)));
 
       const { code, pid } = await runWithHook([testFile], {
-        [ENV.out]: outDir,
-        [ENV.file]: testFile,
-        [ENV.heldOpen]: heldOpenMs,
+        [envNames.out]: outDir,
+        [envNames.file]: testFile,
+        [envNames.heldOpen]: heldOpenMs,
       });
 
       assert.equal(code, exitCode);
@@ -311,9 +311,9 @@ describe('hook', () => {
       writeFileSync(testFile, fixture("it('passes', () => {});"));
 
       const { code, pid } = await runWithHook([testFile], {
-        [ENV.out]: outDir,
-        [ENV.file]: testFile,
-        [ENV.heldOpen]: '60000',
+        [envNames.out]: outDir,
+        [envNames.file]: testFile,
+        [envNames.heldOpen]: '60000',
       });
 
       assert.equal(code, 0);
@@ -328,9 +328,9 @@ describe('hook', () => {
     writeFileSync(testFile, fixture("it('covers', () => { cover('fixture-1'); });"));
 
     const { code, pid } = await runWithHook([testFile], {
-      [ENV.out]: outDir,
-      [ENV.file]: testFile,
-      [ENV.dryRun]: 'true',
+      [envNames.out]: outDir,
+      [envNames.file]: testFile,
+      [envNames.dryRun]: 'true',
     });
 
     assert.equal(code, 0);
@@ -372,9 +372,9 @@ describe('hook', () => {
     );
 
     const { code, pid } = await runWithHook([testFile], {
-      [ENV.out]: outDir,
-      [ENV.file]: testFile,
-      [ENV.dryRun]: 'true',
+      [envNames.out]: outDir,
+      [envNames.file]: testFile,
+      [envNames.dryRun]: 'true',
     });
 
     assert.equal(code, 0);
@@ -403,7 +403,7 @@ describe('hook', () => {
       const testFile = join(dir, 'fixture.test.mjs');
       writeFileSync(testFile, `import 'node:test';\n${exits}`);
 
-      const { code, pid } = await runWithHook([testFile], { [ENV.out]: outDir, [ENV.file]: testFile });
+      const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
 
       assert.equal(code, 0);
       assert.deepEqual(readRecords(outDir)[`${pid}.0.json`], { main: true, tests: [], ...unfinished });
@@ -416,7 +416,7 @@ describe('hook', () => {
     const testFile = join(dir, 'fixture.test.cjs');
     writeFileSync(testFile, "const { it } = require('node:test');\n\n  it('passes', () => {});\n");
 
-    const { code, pid } = await runWithHook([testFile], { [ENV.out]: outDir, [ENV.file]: testFile });
+    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
 
     assert.equal(code, 0);
     assert.deepEqual(readRecords(outDir)[`${pid}.0.json`]?.tests[0]?.startPosition, { line: 2, column: 2 });
@@ -461,7 +461,7 @@ describe('hook', () => {
     writeFileSync(testFile, source);
 
     const args = ['--import', pathToFileURL(maps).href, testFile];
-    const { code, pid } = await runWithHook(args, { [ENV.out]: outDir, [ENV.file]: testFile });
+    const { code, pid } = await runWithHook(args, { [envNames.out]: outDir, [envNames.file]: testFile });
 
     assert.equal(code, 0);
     assert.deepEqual(readRecords(outDir)[`${pid}.0.json`]?.tests[0]?.startPosition, position);
@@ -480,7 +480,7 @@ describe('hook', () => {
     const testFile = join(dir, 'fixture.test.mjs');
     writeFileSync(testFile, "import { level0 } from './helper.mjs';\n\n  level0();\n");
 
-    const { code, pid } = await runWithHook([testFile], { [ENV.out]: outDir, [ENV.file]: testFile });
+    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
 
     assert.equal(code, 0);
     assert.deepEqual(readRecords(outDir)[`${pid}.0.json`]?.tests[0]?.startPosition, { line: 2, column: 2 });
@@ -504,7 +504,7 @@ describe('hook', () => {
       ].join('\n'),
     );
 
-    const { code, pid } = await runWithHook([testFile], { [ENV.out]: outDir, [ENV.file]: testFile });
+    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
 
     assert.equal(code, 1);
     assert.deepEqual(
@@ -529,8 +529,8 @@ describe('hook', () => {
     const outDir = tempDir(t);
 
     const { code, pid } = await runWithHook(['-e', 'process.exitCode = 0'], {
-      [ENV.out]: outDir,
-      [ENV.file]: join(outDir, 'some.test.mjs'),
+      [envNames.out]: outDir,
+      [envNames.file]: join(outDir, 'some.test.mjs'),
     });
 
     assert.equal(code, 0);
@@ -546,9 +546,9 @@ describe('hook', () => {
     async ([, env], t) => {
       const outDir = tempDir(t);
 
-      const { code, pid } = await runWithHook(['-e', GROWS], {
-        [ENV.out]: outDir,
-        [ENV.memoryLimit]: '200',
+      const { code, pid } = await runWithHook(['-e', grows], {
+        [envNames.out]: outDir,
+        [envNames.memoryLimit]: '200',
         ...env,
       });
 
@@ -569,8 +569,8 @@ describe('hook', () => {
     const outDir = tempDir(t);
 
     const { pid } = await runWithHook(['-e', 'new Int32Array(25e6).fill(1);'], {
-      [ENV.out]: outDir,
-      [ENV.dryRun]: 'true',
+      [envNames.out]: outDir,
+      [envNames.dryRun]: 'true',
     });
 
     const peakMB = readRecords(outDir)[`${pid}.0.json`]?.peakMemoryMB;
@@ -608,8 +608,8 @@ describe('hook', () => {
     );
 
     const { code } = await runWithHook([join(dir, 'main.mjs')], {
-      [ENV.out]: outDir,
-      [ENV.memoryLimit]: '1500',
+      [envNames.out]: outDir,
+      [envNames.memoryLimit]: '1500',
     });
 
     assert.equal(code, 0);
@@ -626,8 +626,8 @@ describe('hook', () => {
     const script = ['-e', 'setTimeout(() => {}, 500);'];
 
     const { code } = await runWithHook(inArgs ? ['--require', preload, ...script] : script, {
-      [ENV.out]: outDir,
-      [ENV.memoryLimit]: '1500',
+      [envNames.out]: outDir,
+      [envNames.memoryLimit]: '1500',
       ...(!inArgs && { NODE_OPTIONS: `--require ${JSON.stringify(preload)}` }),
     });
 
@@ -642,9 +642,9 @@ describe('hook', () => {
     // does not load it.
     writeFileSync(join(dir, 'chdir.cjs'), 'process.chdir(__dirname);\n');
 
-    const { code, pid } = await runWithHook(['-e', GROWS], {
-      [ENV.out]: outDir,
-      [ENV.memoryLimit]: '200',
+    const { code, pid } = await runWithHook(['-e', grows], {
+      [envNames.out]: outDir,
+      [envNames.memoryLimit]: '200',
       NODE_OPTIONS: `--require ${JSON.stringify(join(dir, 'chdir.cjs'))}`,
     });
 
@@ -656,7 +656,7 @@ describe('hook', () => {
     const outDir = tempDir(t);
     const args = ['--permission', '--allow-fs-read=*', '--allow-fs-write=*', '-e', 'setTimeout(() => {}, 500);'];
 
-    const { code, pid } = await runWithHook(args, { [ENV.out]: outDir, [ENV.memoryLimit]: '1500' });
+    const { code, pid } = await runWithHook(args, { [envNames.out]: outDir, [envNames.memoryLimit]: '1500' });
 
     assert.equal(code, 0);
     assert.deepEqual(readRecords(outDir), { [`${pid}.0.json`]: { tests: [] } });
@@ -667,7 +667,7 @@ describe('hook', () => {
     // A script that sets process.exitCode would hide a throw from the exit listener: the process still exits 0.
     const args = ['--permission', '--allow-fs-read=*', '-e', 'void 0'];
 
-    const { code } = await runWithHook(args, { [ENV.out]: outDir });
+    const { code } = await runWithHook(args, { [envNames.out]: outDir });
 
     assert.equal(code, 0);
     assert.deepEqual(readRecords(outDir), {});

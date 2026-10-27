@@ -9,14 +9,14 @@ import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
   complete,
-  DRY_RUN,
+  dryRun,
   fixture,
   fixtureCoverage,
   initRunner,
   mutantRunOptions,
-  PASSING,
+  passing,
   project,
-  REPORTER_ARG,
+  reporterArg,
   runNodeOptions,
   settle,
   shareCompileCache,
@@ -69,7 +69,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
     project(t, { 'a.test.mjs': fixture("cover('s');") });
     const runner = await initRunner(['a.test.mjs']);
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(tests, []);
     assert.deepEqual(fixtureCoverage(mutantCoverage), { static: { s: 1 }, perTest: {} });
@@ -94,7 +94,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
     const dir = project(t, { 'a.test.mjs': fixture(...lines) });
     const runner = await initRunner(['a.test.mjs']);
 
-    assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), {
+    assert.deepEqual(await settle(runner.dryRun(dryRun)), {
       status: DryRunStatus.Error,
       errorMessage:
         `Unfinished test results for "${join(dir, 'a.test.mjs')}": its process exited before node:test reported ` +
@@ -112,7 +112,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
 
-    const { tests } = complete(await settle(runner.dryRun({ ...DRY_RUN, disableBail: true })));
+    const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
     assert.deepEqual(summary(tests), [
       { id: `${join(dir, 'a.test.mjs')} > fails`, status: TestStatus.Failed, failureMessage: 'x' },
@@ -121,10 +121,10 @@ describe('LzStrykerNodeTestRunner endings', () => {
   });
 
   it('reports a test file whose process exits without the record of its results as an error', async (t) => {
-    const dir = project(t, { 'a.test.mjs': PASSING, 'b.test.mjs': fixture('process.reallyExit(0);') });
+    const dir = project(t, { 'a.test.mjs': passing, 'b.test.mjs': fixture('process.reallyExit(0);') });
     const runner = await initRunner(['*.test.mjs']);
 
-    assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), {
+    assert.deepEqual(await settle(runner.dryRun(dryRun)), {
       status: DryRunStatus.Error,
       errorMessage:
         `Missing test results for "${join(dir, 'b.test.mjs')}": its process ended without writing them. ` +
@@ -146,13 +146,13 @@ describe('LzStrykerNodeTestRunner endings', () => {
 
     // A signal leaves no exit code on POSIX; Windows terminates the process with exit code 1.
     const exitCode = process.platform === 'win32' ? 1 : null;
-    assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), {
+    assert.deepEqual(await settle(runner.dryRun(dryRun)), {
       status: DryRunStatus.Error,
       errorMessage: lzFileError(a, {
         records: [],
         exitCode,
         stderr: '',
-        args: [REPORTER_ARG, a],
+        args: [reporterArg, a],
         nodeOptions: runNodeOptions(),
       }),
     });

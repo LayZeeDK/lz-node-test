@@ -4,20 +4,20 @@ import nodeTest from 'eslint-node-test';
 
 // Relative to the config ESLint loads: the root one or a package's, which spreads this one.
 // The workspace's ESLint rules keep their tests beside them, outside src/ and test/.
-const TOOL_TEST = ['tools/eslint-rules/*.test.ts'];
-const SRC = ['**/src/**/*.ts', 'tools/eslint-rules/*.ts'];
-const TEST = ['**/test/**/*.ts', ...TOOL_TEST];
+const toolTest = ['tools/eslint-rules/*.test.ts'];
+const src = ['**/src/**/*.ts', 'tools/eslint-rules/*.ts'];
+const test = ['**/test/**/*.ts', ...toolTest];
 // Code samples the operators' tests mutate, not tests.
-const SYNTHETIC = ['**/test/synthetic/**'];
+const synthetic = ['**/test/synthetic/**'];
 // Consumer projects the e2e suite installs; they break workspace rules on purpose.
-const E2E_FIXTURES = ['**/e2e/fixtures/**'];
+const e2eFixtures = ['**/e2e/fixtures/**'];
 
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '**/out-tsc', '**/.stryker-tmp', ...SYNTHETIC, ...E2E_FIXTURES],
+    ignores: ['**/dist', '**/out-tsc', '**/.stryker-tmp', ...synthetic, ...e2eFixtures],
   },
   {
     linterOptions: { reportUnusedDisableDirectives: 'error' },
@@ -49,7 +49,7 @@ export default [
     rules: { '@nx/workspace-require-windows-hide': 'error' },
   },
   {
-    files: [...SRC, ...TEST],
+    files: [...src, ...test],
     plugins: { n },
     languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
     settings: { n: { version: '^22.18.0 || >=24.0.0' } },
@@ -89,8 +89,8 @@ export default [
     },
   },
   {
-    files: SRC,
-    ignores: TOOL_TEST,
+    files: src,
+    ignores: toolTest,
     rules: {
       'n/no-process-exit': 'error',
       'n/no-extraneous-import': 'error',
@@ -114,7 +114,7 @@ export default [
     },
   },
   {
-    files: [...SRC, ...TEST],
+    files: [...src, ...test],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -129,7 +129,7 @@ export default [
   },
   {
     // Test rules stay off src: @layzee/lz-node-test's src imports node:test as a library.
-    files: TEST,
+    files: test,
     plugins: { 'node-test': nodeTest },
     rules: {
       ...nodeTest.configs.recommended.rules,
@@ -156,7 +156,7 @@ export default [
     },
   },
   {
-    files: ['**/test/**/*.test.ts', ...TOOL_TEST],
+    files: ['**/test/**/*.test.ts', ...toolTest],
     rules: { 'node-test/no-export': 'error' },
   },
   {
@@ -168,6 +168,21 @@ export default [
       '@typescript-eslint/non-nullable-type-assertion-style': 'off',
       // Deprecated in favour of no-empty-object-type, which reports the same node.
       '@typescript-eslint/no-empty-interface': 'off',
+    },
+  },
+  {
+    files: ['**/*.ts', '**/*.mjs'],
+    rules: {
+      '@typescript-eslint/naming-convention': [
+        'error',
+        // Environment variable names are strings, so they keep UPPER_SNAKE_CASE.
+        {
+          selector: 'variable',
+          format: ['camelCase', 'PascalCase'],
+          custom: { regex: '^[A-Z][A-Z0-9]+$', match: false },
+        },
+        { selector: 'variable', modifiers: ['destructured'], format: null },
+      ],
     },
   },
 ];

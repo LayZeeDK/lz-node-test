@@ -4,12 +4,12 @@ import { extname, resolve } from 'node:path';
 import { getCallSites } from 'node:util';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 
-import { ENV, install, writesAllowed, type HookDependencies } from './hook-core.ts';
+import { envNames, install, writesAllowed, type HookDependencies } from './hook-core.ts';
 import { workersAllowed } from './watchdog.ts';
 
 // The memory watchdog's thread runs this script, where Stryker sees no coverage, so it only starts watchdog.ts's watch,
 // whose code this process's tests reach.
-const WATCHDOG = `Promise.all([
+const watchdog = `Promise.all([
   import('node:worker_threads'),
   import(${JSON.stringify(new URL(`./watchdog${extname(import.meta.filename)}`, import.meta.url).href)}),
 ]).then(([{ workerData }, { watch }]) => watch(workerData));`;
@@ -45,11 +45,11 @@ install({
   exit,
   activeResources,
   later,
-  canWriteRecords: writesAllowed(process.permission, process.env[ENV.out]),
+  canWriteRecords: writesAllowed(process.permission, process.env[envNames.out]),
   peakMemoryMB: () => Math.round(process.resourceUsage().maxRSS / 1024),
   canWatchMemory: isMainThread && workersAllowed(process.permission),
   watchMemory: (options) => {
-    const worker = new Worker(WATCHDOG, { eval: true, ...options });
+    const worker = new Worker(watchdog, { eval: true, ...options });
     worker.on('error', () => {
       // Listening keeps a watchdog error from ending the process.
     });

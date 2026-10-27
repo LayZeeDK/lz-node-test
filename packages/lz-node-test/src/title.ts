@@ -3,13 +3,13 @@
 import { inspect } from 'node:util';
 
 /** The length past which a value in a title is cut short, as Vitest's default `taskTitleValueFormatTruncate`. */
-const LIMIT = 40;
+const limit = 40;
 
 /** A printf placeholder, kept by `split` so the parts alternate between text and placeholder. */
-const PLACEHOLDER = /(%[sdifjoOc%#$])/;
+const placeholder = /(%[sdifjoOc%#$])/;
 
 /** A `$` path into the case: names, `.` and `[index]`. */
-const ATTRIBUTE = /\$((?:[$\p{ID_Continue}.]|\[\d+\])+)/gu;
+const attributePattern = /\$((?:[$\p{ID_Continue}.]|\[\d+\])+)/gu;
 
 /** The name a test of the table starts from: a string as is, a function by its name, anything else as a string. */
 export function formatName(name: unknown): string {
@@ -29,7 +29,7 @@ export function formatTitle(template: string, items: readonly unknown[], index: 
   let next = 0;
 
   return template
-    .split(PLACEHOLDER)
+    .split(placeholder)
     .map((part, i) => {
       if (i % 2 === 0) {
         return interpolate(part, items);
@@ -130,11 +130,11 @@ function render(value: unknown): string {
 
 /** Cuts `text` short past the limit, before a character that the cut would split in two, as Vitest does. */
 function truncate(text: string): string {
-  if (text.length <= LIMIT) {
+  if (text.length <= limit) {
     return text;
   }
 
-  const end = LIMIT - 1;
+  const end = limit - 1;
   const last = text.charCodeAt(end - 1);
   const highSurrogate = last >= 0xd800 && last <= 0xdbff;
 
@@ -149,7 +149,7 @@ function interpolate(text: string, items: readonly unknown[]): string {
   const first = items[0];
   const fromObject = typeof first === 'object' && first !== null && !Array.isArray(first);
 
-  return text.replace(ATTRIBUTE, (match, path: string) => {
+  return text.replace(attributePattern, (match, path: string) => {
     const index = /^\d+$/.test(path);
 
     if (!fromObject && !index) {

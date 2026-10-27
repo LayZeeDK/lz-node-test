@@ -7,23 +7,23 @@ import { describe, it } from 'node:test';
 import { DryRunStatus, MutantRunStatus, TestStatus, type DryRunOptions } from '@stryker-mutator/api/test-runner';
 
 import { lzTestFor } from '@layzee/lz-node-test';
-import { ENV } from '../../src/hook-core.ts';
+import { envNames } from '../../src/hook-core.ts';
 import {
-  ACTIVE_MUTANT,
+  activeMutant,
   complete,
-  COVER,
-  DRY_RUN,
-  FAILING,
+  cover,
+  dryRun,
+  failing,
   fixture,
   fixtureCoverage,
   initRunner,
   logger,
   mutantRunOptions,
-  NO_PROCESS,
+  noProcess,
   ownCacheDirs,
-  PASSING,
+  passing,
   project,
-  REPORTER_ARG,
+  reporterArg,
   type RunnerOptions,
   runNodeOptions,
   settle,
@@ -34,7 +34,7 @@ import {
 } from '../index.fixtures.ts';
 import { lzFileError, LzStrykerNodeTestRunner } from '../../src/index.ts';
 
-const COMPILE_CACHE = shareCompileCache();
+const compileCache = shareCompileCache();
 
 describe('LzStrykerNodeTestRunner', () => {
   it('can reload the environment', () => {
@@ -46,7 +46,7 @@ describe('LzStrykerNodeTestRunner', () => {
   it('runs nothing before it is initialized', async () => {
     const runner = new LzStrykerNodeTestRunner(strykerOptions(), logger());
 
-    assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), {
+    assert.deepEqual(await settle(runner.dryRun(dryRun)), {
       status: DryRunStatus.Complete,
       tests: [],
       mutantCoverage: { static: {}, perTest: {} },
@@ -57,7 +57,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const runner = new LzStrykerNodeTestRunner(strykerOptions(), logger());
 
     // @ts-expect-error -- a test file that is no string, which makes the dry run fail before it runs a file
-    await assert.rejects(runner.dryRun({ ...DRY_RUN, testFiles: [42] }), TypeError);
+    await assert.rejects(runner.dryRun({ ...dryRun, testFiles: [42] }), TypeError);
   });
 
   it('can be disposed without being initialized', async () => {
@@ -70,7 +70,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('fails to initialize without test files', async (t) => {
-    project(t, { 'a.test.mjs': PASSING });
+    project(t, { 'a.test.mjs': passing });
     const options = { lzStrykerNodeTest: { testFiles: ['none/*.test.mjs'] } };
     const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
 
@@ -95,7 +95,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const value = process.versions.node;
     Object.defineProperty(process.versions, 'node', { value: version });
     t.after(() => Object.defineProperty(process.versions, 'node', { value }));
-    project(t, { 'a.test.mjs': PASSING });
+    project(t, { 'a.test.mjs': passing });
     const runner = new LzStrykerNodeTestRunner(
       strykerOptions({ lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } }),
       logger(),
@@ -110,7 +110,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it("warns and runs nothing without test files when Stryker's allowEmpty is set", async (t) => {
-    project(t, { 'a.test.mjs': FAILING });
+    project(t, { 'a.test.mjs': failing });
     const warnings: string[] = [];
     const options = { allowEmpty: true, lzStrykerNodeTest: { testFiles: ['none/*.test.mjs'] } };
     const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger([], false, warnings));
@@ -119,7 +119,7 @@ describe('LzStrykerNodeTestRunner', () => {
     await runner.init();
 
     assert.deepEqual(warnings, ['No test files match ["none/*.test.mjs"]; running none, as allowEmpty is set.']);
-    assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), {
+    assert.deepEqual(await settle(runner.dryRun(dryRun)), {
       status: DryRunStatus.Complete,
       tests: [],
       mutantCoverage: { static: {}, perTest: {} },
@@ -136,7 +136,7 @@ describe('LzStrykerNodeTestRunner', () => {
     });
     const before = ownCacheDirs();
     t.after(() => {
-      process.env['NODE_COMPILE_CACHE'] = COMPILE_CACHE;
+      process.env['NODE_COMPILE_CACHE'] = compileCache;
     });
     delete process.env['NODE_COMPILE_CACHE'];
     const runner = await initRunner(['a.test.mjs']);
@@ -169,13 +169,13 @@ describe('LzStrykerNodeTestRunner', () => {
 
     await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
 
-    assert.equal(readFileSync(join(dir, 'cache-dir.txt'), 'utf8'), COMPILE_CACHE);
+    assert.equal(readFileSync(join(dir, 'cache-dir.txt'), 'utf8'), compileCache);
     assert.deepEqual(ownCacheDirs(), before);
     await runner.dispose();
   });
 
   it('fails a run when node cannot start', async (t) => {
-    const dir = project(t, { 'a.test.mjs': PASSING });
+    const dir = project(t, { 'a.test.mjs': passing });
     const execPath = process.execPath;
     t.after(() => {
       process.execPath = execPath;
@@ -198,8 +198,8 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('removes the directories that runners of ended processes left behind when it is initialized', async (t) => {
-    project(t, { 'a.test.mjs': PASSING });
-    const left = join(tmpdir(), `lz-stryker-node-test-${NO_PROCESS}-left`);
+    project(t, { 'a.test.mjs': passing });
+    const left = join(tmpdir(), `lz-stryker-node-test-${noProcess}-left`);
     mkdirSync(join(left, 'out'), { recursive: true });
     t.after(() => rmSync(left, { recursive: true, force: true }));
 
@@ -212,7 +212,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import { writeFileSync } from 'node:fs';",
-        `writeFileSync('out-dir.txt', process.env.${ENV.out});`,
+        `writeFileSync('out-dir.txt', process.env.${envNames.out});`,
         "it('passes', () => {});",
       ),
     });
@@ -334,7 +334,7 @@ describe('LzStrykerNodeTestRunner', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
 
-    const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       { id: `${join(dir, 'a.test.mjs')} > passes`, status: TestStatus.Success, failureMessage: undefined },
@@ -359,7 +359,7 @@ describe('LzStrykerNodeTestRunner', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
 
-    const result = await settle(runner.dryRun(DRY_RUN));
+    const result = await settle(runner.dryRun(dryRun));
 
     assert.strictEqual(result.status, DryRunStatus.Error);
     const prefix = `Unreadable test results for "${join(dir, 'a.test.mjs')}": `;
@@ -376,7 +376,7 @@ describe('LzStrykerNodeTestRunner', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
 
-    const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       { id: `${join(dir, 'a.test.mjs')} > calls back`, status: TestStatus.Success, failureMessage: undefined },
@@ -392,16 +392,16 @@ describe('LzStrykerNodeTestRunner', () => {
     'runs the TypeScript test files outside node_modules by default, with the options %j',
     async (options, t) => {
       const dir = project(t, {
-        'a.test.ts': PASSING,
-        [join('sub', 'b.test.ts')]: PASSING,
-        [join('node_modules', 'pkg', 'c.test.ts')]: FAILING,
-        'd.test.mjs': FAILING,
+        'a.test.ts': passing,
+        [join('sub', 'b.test.ts')]: passing,
+        [join('node_modules', 'pkg', 'c.test.ts')]: failing,
+        'd.test.mjs': failing,
       });
       const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
       await runner.init();
       t.after(() => runner.dispose());
 
-      const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+      const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
       assert.deepEqual(summary(tests), [
         { id: `${join(dir, 'a.test.ts')} > passes`, status: TestStatus.Success, failureMessage: undefined },
@@ -436,12 +436,12 @@ describe('LzStrykerNodeTestRunner', () => {
     const reporters = ['--test-reporter', 'spec', '--test-reporter-destination=stdout'];
     const withReporters = { testFiles: ['a.test.mjs'], nodeArgs: [...reporters, ...nodeArgs] };
 
-    assert.deepEqual(await execArgv({ lzStrykerNodeTest: withReporters }), [REPORTER_ARG, ...nodeArgs]);
-    assert.deepEqual(await execArgv({ lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } }), [REPORTER_ARG]);
+    assert.deepEqual(await execArgv({ lzStrykerNodeTest: withReporters }), [reporterArg, ...nodeArgs]);
+    assert.deepEqual(await execArgv({ lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } }), [reporterArg]);
   });
 
   it('runs its own reporter only, whatever reporters NODE_OPTIONS and lzStrykerNodeTest.nodeArgs name', async (t) => {
-    const dir = project(t, { 'a.test.mjs': PASSING });
+    const dir = project(t, { 'a.test.mjs': passing });
     const nodeOptions = process.env['NODE_OPTIONS'];
     t.after(() => {
       if (nodeOptions === undefined) {
@@ -455,16 +455,16 @@ describe('LzStrykerNodeTestRunner', () => {
     const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
     await runner.init();
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(DRY_RUN))).tests), [
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
       { id: `${join(dir, 'a.test.mjs')} > passes`, status: TestStatus.Success, failureMessage: undefined },
     ]);
   });
 
   it('runs a test file once when several patterns match it', async (t) => {
-    const dir = project(t, { 'a.test.mjs': PASSING });
+    const dir = project(t, { 'a.test.mjs': passing });
     const runner = await initRunner(['a.test.mjs', '*.test.mjs', './a.test.mjs', join(dir, 'a.test.mjs')]);
 
-    const { tests } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       { id: `${join(dir, 'a.test.mjs')} > passes`, status: TestStatus.Success, failureMessage: undefined },
@@ -472,7 +472,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('reports the results and coverage of every test, including coverage of the processes a test starts', async (t) => {
-    const child = `${COVER} cover('f-shared'); cover('f-child');`;
+    const child = `${cover} cover('f-shared'); cover('f-child');`;
     const dir = project(t, {
       'a.test.mjs': fixture(
         "cover('f-static');",
@@ -490,7 +490,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const file = join(dir, 'a.test.mjs');
     const runner = await initRunner(['*.test.mjs']);
 
-    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { tests, mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(summary(tests), [
       { id: `${file} > suite > passes`, status: TestStatus.Success, failureMessage: undefined },
@@ -510,7 +510,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('logs the node command and directory of each test file, only when debug logging is on', async (t) => {
-    const dir = project(t, { 'a.test.mjs': PASSING });
+    const dir = project(t, { 'a.test.mjs': passing });
     const file = join(dir, 'a.test.mjs');
     const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], nodeArgs: ['--no-deprecation'] } };
     const debugOf = async (debugEnabled: boolean) => {
@@ -523,7 +523,7 @@ describe('LzStrykerNodeTestRunner', () => {
     };
 
     assert.deepEqual(await debugOf(true), [
-      `Running: \`node "${REPORTER_ARG}" "--no-deprecation" "${file}"\` in ${dir}`,
+      `Running: \`node "${reporterArg}" "--no-deprecation" "${file}"\` in ${dir}`,
     ]);
     assert.deepEqual(await debugOf(false), []);
   });
@@ -532,7 +532,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const dir = project(t, { 'a.test.mjs': fixture("cover('s');", "it('covers', () => { cover('t'); });") });
     const runner = await initRunner(['a.test.mjs']);
     const coverage = async (coverageAnalysis: DryRunOptions['coverageAnalysis']) =>
-      fixtureCoverage(complete(await settle(runner.dryRun({ ...DRY_RUN, coverageAnalysis }))).mutantCoverage);
+      fixtureCoverage(complete(await settle(runner.dryRun({ ...dryRun, coverageAnalysis }))).mutantCoverage);
 
     assert.deepEqual(await coverage('perTest'), {
       static: { s: 1 },
@@ -544,7 +544,7 @@ describe('LzStrykerNodeTestRunner', () => {
 
   it('reports a test file that fails outside any test as an error, after a passing file', async (t) => {
     const dir = project(t, {
-      'a.test.mjs': PASSING,
+      'a.test.mjs': passing,
       'b.test.mjs': fixture(
         "it('passes', () => {});",
         "process.stderr.write('first\\nsecond\\n');",
@@ -559,11 +559,11 @@ describe('LzStrykerNodeTestRunner', () => {
       records: [],
       exitCode: 3,
       stderr: 'first\nsecond\n',
-      args: [REPORTER_ARG, '--no-deprecation', b],
+      args: [reporterArg, '--no-deprecation', b],
       nodeOptions: runNodeOptions(),
     });
 
-    assert.deepEqual(await settle(runner.dryRun(DRY_RUN)), { status: DryRunStatus.Error, errorMessage });
+    assert.deepEqual(await settle(runner.dryRun(dryRun)), { status: DryRunStatus.Error, errorMessage });
     assert.deepEqual(await settle(runner.mutantRun(mutantRunOptions())), {
       status: MutantRunStatus.Error,
       errorMessage,
@@ -580,7 +580,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const result = await settle(runner.dryRun(DRY_RUN));
+    const result = await settle(runner.dryRun(dryRun));
 
     assert.strictEqual(result.status, DryRunStatus.Error);
     const [first, , ...rest] = result.errorMessage.split('\n');
@@ -603,7 +603,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(DRY_RUN))).tests), [
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
       { id: `${a} > passes`, status: TestStatus.Success, failureMessage: undefined },
       { id: `${a} > is not done`, status: TestStatus.Skipped, failureMessage: undefined },
       { id: `${a} > is skipped`, status: TestStatus.Skipped, failureMessage: undefined },
@@ -641,7 +641,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const b = join(dir, 'b.test.mjs');
     const failsInHook = `${a} > each > passes, then its hook fails`;
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...DRY_RUN, disableBail: true }))).tests), [
+    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
       { id: failsInHook, status: TestStatus.Failed, failureMessage: 'afterEach failure' },
       {
         id: `${b} > once > never runs`,
@@ -679,7 +679,7 @@ describe('LzStrykerNodeTestRunner', () => {
     // failed test once node:test has finished its tests, without waiting for the work they left behind.
     const cancelled = Number(process.versions.node.split('.')[0]) < 24;
 
-    const { mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
       static: {},
@@ -713,7 +713,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const a = join(dir, 'a.test.mjs');
     const hooks = { beforeEach: 1, afterEach: 1 };
 
-    const { mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
       static: { beforeEach: 2 },
@@ -745,7 +745,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const { mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
       static: {},
@@ -829,7 +829,7 @@ describe('LzStrykerNodeTestRunner', () => {
         "it('fails later', () => { throw new Error('later failure'); });",
         "it('calls back later', (t, done) => { done(new Error('callback failure')); });",
       ),
-      'b.test.mjs': PASSING,
+      'b.test.mjs': passing,
     });
     const runner = await initRunner(['b.test.mjs', 'a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
@@ -845,8 +845,8 @@ describe('LzStrykerNodeTestRunner', () => {
       failureMessage: undefined,
     };
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(DRY_RUN))).tests), [passedA, failedA, ...laterA]);
-    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...DRY_RUN, disableBail: true }))).tests), [
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [passedA, failedA, ...laterA]);
+    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
       passedA,
       failedA,
       ...laterA,
@@ -870,12 +870,12 @@ describe('LzStrykerNodeTestRunner', () => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         "it('sees the mutant', () => {",
-        `  assert.equal(process.env.${ACTIVE_MUTANT}, 'fixture-mutant');`,
-        `  assert.equal(process.env.${ENV.dryRun}, 'false');`,
+        `  assert.equal(process.env.${activeMutant}, 'fixture-mutant');`,
+        `  assert.equal(process.env.${envNames.dryRun}, 'false');`,
         '});',
         "it('is filtered out', () => { throw new Error('ran a filtered test'); });",
       ),
-      'b.test.mjs': FAILING,
+      'b.test.mjs': failing,
     });
     const runner = await initRunner(['*.test.mjs']);
     const testFilter = [`${join(dir, 'a.test.mjs')} > sees the mutant`];
@@ -889,7 +889,7 @@ describe('LzStrykerNodeTestRunner', () => {
   it("runs every test of a file that a mutant run's filter names, as Stryker does with --testFiles", async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture("it('passes', () => {});", "it('fails', () => { throw new Error('expected failure'); });"),
-      'b.test.mjs': FAILING,
+      'b.test.mjs': failing,
     });
     const runner = await initRunner(['*.test.mjs']);
     const a = join(dir, 'a.test.mjs');
@@ -903,14 +903,14 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it("runs only the files of Stryker's --testFiles in the dry run, also outside lzStrykerNodeTest.testFiles", async (t) => {
-    const dir = project(t, { 'a.test.mjs': PASSING, 'b.test.mjs': FAILING, 'c.spec.mjs': FAILING });
+    const dir = project(t, { 'a.test.mjs': passing, 'b.test.mjs': failing, 'c.spec.mjs': failing });
     const options = { lzStrykerNodeTest: { testFiles: ['*.test.mjs'] }, testFiles: ['c.spec.mjs'] };
     const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
     await runner.init();
     const b = join(dir, 'b.test.mjs');
     const c = join(dir, 'c.spec.mjs');
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...DRY_RUN, testFiles: ['b.test.mjs'] }))).tests), [
+    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, testFiles: ['b.test.mjs'] }))).tests), [
       { id: `${b} > fails`, status: TestStatus.Failed, failureMessage: 'expected failure' },
     ]);
     assert.deepEqual(
@@ -927,14 +927,14 @@ describe('LzStrykerNodeTestRunner', () => {
   it('reports a statically activated mutant that breaks loading the test file as a runtime error', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
-        `if (process.env.${ACTIVE_MUTANT} === 'fixture-mutant') throw new Error('module-level mutant');`,
+        `if (process.env.${activeMutant} === 'fixture-mutant') throw new Error('module-level mutant');`,
         "it('passes', () => {});",
       ),
     });
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(DRY_RUN))).tests), [
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
       { id: `${a} > passes`, status: TestStatus.Success, failureMessage: undefined },
     ]);
     const result = await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'static' })));
@@ -943,10 +943,10 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('activates a mutant once the tests start when activation is runtime, also in processes they start', async (t) => {
-    const child = `process.exitCode = process.env.${ACTIVE_MUTANT} === 'fixture-mutant' ? 0 : 1;`;
+    const child = `process.exitCode = process.env.${activeMutant} === 'fixture-mutant' ? 0 : 1;`;
     const dir = project(t, {
       'a.test.mjs': fixture(
-        `if (process.env.${ACTIVE_MUTANT} || globalThis.__stryker__.activeMutant) {`,
+        `if (process.env.${activeMutant} || globalThis.__stryker__.activeMutant) {`,
         "  throw new Error('module-level mutant');",
         '}',
         "it('sees the mutant', () => {",
@@ -971,7 +971,7 @@ describe('LzStrykerNodeTestRunner', () => {
     { hooks: 'the before hooks of suites', file: 'a.test.mjs', test: 'suite > runs' },
     { hooks: 'beforeEach hooks', file: 'b.test.mjs', test: 'runs' },
   ])('activates a runtime mutant before $hooks', async ({ file, test }, t) => {
-    const active = `const active = () => process.env.${ACTIVE_MUTANT} || globalThis.__stryker__.activeMutant;`;
+    const active = `const active = () => process.env.${activeMutant} || globalThis.__stryker__.activeMutant;`;
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import { before } from 'node:test';",

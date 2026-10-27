@@ -5,7 +5,7 @@ import { lzTestEach } from '@layzee/lz-node-test';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 import { nodeTimerDelay } from '../../src/node-timer-delay.ts';
 
-const PROMISES = "import { setTimeout as sleep } from 'node:timers/promises';\n";
+const promises = "import { setTimeout as sleep } from 'node:timers/promises';\n";
 
 describe('LzNodeTimerDelay', () => {
   lzTestEach([
@@ -14,7 +14,7 @@ describe('LzNodeTimerDelay', () => {
     ['setTimeout of node:timers', "import { setTimeout } from 'node:timers';\nsetTimeout(f, ms);", 'ms'],
     ['a renamed setInterval of timers', "import { setInterval as every } from 'timers';\nevery(f, ms);", 'ms'],
     ['a member of node:timers', "import timers from 'node:timers';\ntimers.setTimeout(f, ms);", 'ms'],
-    ['a renamed setTimeout of node:timers/promises', `${PROMISES}await sleep(ms, 'value');`, 'ms'],
+    ['a renamed setTimeout of node:timers/promises', `${promises}await sleep(ms, 'value');`, 'ms'],
     [
       'a member of a namespace import of node:timers/promises',
       "import * as timers from 'node:timers/promises';\nawait timers.setTimeout(ms);",

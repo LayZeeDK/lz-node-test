@@ -10,9 +10,9 @@ import { mutantsOf } from '../mutants-of.fixtures.ts';
 import { toNodeMutator, type Operator } from '../../src/operator.ts';
 import { productionOperators, testOperators } from '../../src/operators.ts';
 
-const OPERATORS = [...productionOperators, ...testOperators];
-const ALLOWED: ReadonlySet<string> = new Set(['Error', 'Promise.reject']);
-const KEYWORDS: ReadonlySet<string> = new Set([
+const operators = [...productionOperators, ...testOperators];
+const allowed: ReadonlySet<string> = new Set(['Error', 'Promise.reject']);
+const keywords: ReadonlySet<string> = new Set([
   'catch',
   'for',
   'function',
@@ -22,14 +22,14 @@ const KEYWORDS: ReadonlySet<string> = new Set([
   'typeof',
   'while',
 ]);
-const TARGETS = [
+const targets = [
   'process.kill(pid, 0);',
   "import { rmSync } from 'node:fs';\nrmSync(dir, { recursive: true });",
   "import { spawn } from 'node:child_process';\nspawn(cmd, args, { shell: false });",
 ];
-const CORPUS = [
-  ...OPERATORS.map(({ sample }) => sample),
-  ...TARGETS,
+const corpus = [
+  ...operators.map(({ sample }) => sample),
+  ...targets,
   'setTimeout(() => cleanup(), graceMs);',
   "import { setTimeout as sleep } from 'node:timers/promises';\nawait sleep(ms);",
   "child.on('exit', (code) => done(code));\nprocess.once('beforeExit', flush);",
@@ -48,7 +48,7 @@ const CORPUS = [
 function callees(code: string): Set<string> {
   const names = [...code.matchAll(/[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?=\s*\()/g)].map(([name]) => name);
 
-  return new Set(names.filter((name) => !KEYWORDS.has(name)));
+  return new Set(names.filter((name) => !keywords.has(name)));
 }
 
 function textAt(source: string, { start, end }: Location): string {
@@ -71,15 +71,15 @@ async function newCallees(operator: Operator, source: string): Promise<string[][
   return mutants.map(({ location, replacement }) => {
     const before = callees(textAt(source, location));
 
-    return [...callees(replacement)].filter((name) => !before.has(name) && !ALLOWED.has(name));
+    return [...callees(replacement)].filter((name) => !before.has(name) && !allowed.has(name));
   });
 }
 
 describe('safety', () => {
-  lzTestEach(OPERATORS.map((operator) => [operator.name, operator]))(
+  lzTestEach(operators.map((operator) => [operator.name, operator]))(
     '%s calls nothing new in its replacements but Error and Promise.reject',
     async (_name, operator) => {
-      const found = await Promise.all(CORPUS.map((source) => newCallees(operator, source)));
+      const found = await Promise.all(corpus.map((source) => newCallees(operator, source)));
 
       assert.deepEqual(found.flat().flat(), []);
       assert.ok(found.flat().length > 0, `${operator.name} made no mutant in the corpus`);
@@ -130,14 +130,14 @@ describe('safety', () => {
     assert.deepEqual(await newCallees(unsafe, source), expected);
   });
 
-  lzTestEach(OPERATORS.flatMap((operator) => TARGETS.map((source) => [operator.name, source, operator] as const)))(
+  lzTestEach(operators.flatMap((operator) => targets.map((source) => [operator.name, source, operator] as const)))(
     '%s leaves %j alone',
     async (_name, source, operator) => {
       assert.deepEqual(await mutantsOf(operator, source), []);
     },
   );
 
-  lzTestEach(OPERATORS.map((operator) => [operator.name, operator] as const))(
+  lzTestEach(operators.map((operator) => [operator.name, operator] as const))(
     '%s makes a mutant of its own sample',
     async (_name, operator) => {
       assert.notDeepEqual(await mutantsOf(operator, operator.sample), []);

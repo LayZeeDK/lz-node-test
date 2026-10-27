@@ -29,7 +29,7 @@ import {
 } from '@stryker-mutator/api/test-runner';
 
 import { removeDir, removeLeftDirs } from './dirs.ts';
-import { ENV, recordName, testId, within, type ProcessRecord, type RecordedTest } from './hook-core.ts';
+import { envNames, recordName, testId, within, type ProcessRecord, type RecordedTest } from './hook-core.ts';
 import { memoryLimits, peakMemoryDir, type MemoryLimits } from './memory-limits.ts';
 import { groupOptions, processEnd } from './process-end.ts';
 import type { MemoryLimitReached } from './watchdog.ts';
@@ -42,14 +42,14 @@ export interface LzStrykerNodeTestOptions {
   maxMemoryMB?: number;
 }
 
-const DEFAULTS = schema.properties.lzStrykerNodeTest.properties;
+const defaults = schema.properties.lzStrykerNodeTest.properties;
 
 /** The oldest Node.js the runner supports, as `engines` in package.json says, as major and minor version. */
-export const LZ_MIN_NODE_VERSION: readonly [major: number, minor: number] = [22, 18];
+export const lzMinNodeVersion: readonly [major: number, minor: number] = [22, 18];
 
 function supportsNode(version: string): boolean {
   const [major = 0, minor = 0] = version.split('.').map(Number);
-  const [minMajor, minMinor] = LZ_MIN_NODE_VERSION;
+  const [minMajor, minMinor] = lzMinNodeVersion;
 
   return major > minMajor || (major === minMajor && minor >= minMinor);
 }
@@ -85,10 +85,10 @@ export interface LzFileRun {
 }
 
 // .ts from the source, .js from the build.
-const EXT = extname(import.meta.filename);
-const HOOK_URL = pathToFileURL(resolve(import.meta.dirname, `hook${EXT}`)).href;
-const REPORTER_URL = pathToFileURL(resolve(import.meta.dirname, `reporter${EXT}`)).href;
-const CLOSE_GRACE_MS = 1_500;
+const ext = extname(import.meta.filename);
+const hookUrl = pathToFileURL(resolve(import.meta.dirname, `hook${ext}`)).href;
+const reporterUrl = pathToFileURL(resolve(import.meta.dirname, `reporter${ext}`)).href;
+const closeGraceMs = 1_500;
 
 /** Without `perTest`, the hits inside tests count as static, as Stryker's coverage analysis `all` expects. */
 export function lzMergeCoverage(coverages: (MutantCoverage | undefined)[], perTest: boolean): MutantCoverage {
@@ -489,13 +489,13 @@ export function lzRunEnv(
     ...base,
     // The hook comes first, so a copy of this runner under test takes precedence over the runner running it.
     NODE_OPTIONS: [
-      `--import ${JSON.stringify(HOOK_URL)}`,
+      `--import ${JSON.stringify(hookUrl)}`,
       // node splits NODE_OPTIONS at spaces outside double quotes.
       ...withoutReporters(base['NODE_OPTIONS']?.match(/(?:[^\s"]|"(?:[^"\\]|\\.)*")+/g) ?? []),
     ].join(' '),
-    [ENV.out]: outDir,
-    [ENV.file]: file,
-    [ENV.dryRun]: String(run.dryRun),
+    [envNames.out]: outDir,
+    [envNames.file]: file,
+    [envNames.dryRun]: String(run.dryRun),
     // os.tmpdir() reads TMPDIR first on POSIX and TEMP first on Windows, then TMP.
     TMPDIR: tmpDir,
     TEMP: tmpDir,
@@ -506,12 +506,12 @@ export function lzRunEnv(
     // Set when Stryker itself runs under `node --test`; node:test in the test file would then ignore `.only` and
     // write its report to stdout for an outer runner instead of using its reporters.
     'NODE_TEST_CONTEXT',
-    ENV.current,
-    ENV.hitLimit,
-    ENV.memoryLimit,
-    ENV.filter,
-    ENV.bail,
-    ENV.activeMutant,
+    envNames.current,
+    envNames.hitLimit,
+    envNames.memoryLimit,
+    envNames.filter,
+    envNames.bail,
+    envNames.activeMutant,
     INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE,
   ];
 
@@ -526,24 +526,24 @@ export function lzRunEnv(
   // At runtime activation the hook activates the mutant once the tests start, so module-level code runs unmutated.
   if (run.activeMutant !== undefined) {
     const runtime = run.mutantActivation === 'runtime';
-    env[runtime ? ENV.activeMutant : INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE] = run.activeMutant;
+    env[runtime ? envNames.activeMutant : INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE] = run.activeMutant;
   }
 
   if (run.hitLimit !== undefined) {
-    env[ENV.hitLimit] = String(run.hitLimit);
+    env[envNames.hitLimit] = String(run.hitLimit);
   }
 
   if (memoryLimitMB !== undefined) {
-    env[ENV.memoryLimit] = String(memoryLimitMB);
+    env[envNames.memoryLimit] = String(memoryLimitMB);
   }
 
   if (run.testFilter) {
-    env[ENV.filter] = JSON.stringify(run.testFilter);
+    env[envNames.filter] = JSON.stringify(run.testFilter);
   }
 
   // The dry run must run every test to collect each one's coverage.
   if (!run.dryRun && !run.disableBail) {
-    env[ENV.bail] = 'true';
+    env[envNames.bail] = 'true';
   }
 
   return env;
@@ -573,10 +573,10 @@ export class LzStrykerNodeTestRunner implements TestRunner {
 
   constructor(options: RunnerStrykerOptions, log: Logger) {
     const lzStrykerNodeTest = parseOptions(options.lzStrykerNodeTest);
-    const patterns = lzStrykerNodeTest.testFiles ?? DEFAULTS.testFiles.default;
+    const patterns = lzStrykerNodeTest.testFiles ?? defaults.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
     this.#patterns = [...patterns, ...options.testFiles];
-    this.#nodeArgs = withoutReporters(lzStrykerNodeTest.nodeArgs ?? DEFAULTS.nodeArgs.default);
+    this.#nodeArgs = withoutReporters(lzStrykerNodeTest.nodeArgs ?? defaults.nodeArgs.default);
     this.#dryRunConcurrency = lzTestRunnerConcurrency(
       options.concurrency,
       options.checkers.length > 0,
@@ -596,7 +596,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
 
     if (!supportsNode(node)) {
       throw new Error(
-        `The lz-stryker-node-test test runner needs Node.js ${LZ_MIN_NODE_VERSION.join('.')} or later, and this is Node.js ${node}.`,
+        `The lz-stryker-node-test test runner needs Node.js ${lzMinNodeVersion.join('.')} or later, and this is Node.js ${node}.`,
       );
     }
 
@@ -720,7 +720,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       mkdirSync(outDir);
       mkdirSync(tmpDir);
       const env = lzRunEnv(process.env, file, outDir, tmpDir, run, this.#cacheDir, memoryLimitMB);
-      const args = [`--test-reporter=${REPORTER_URL}`, ...this.#nodeArgs, file];
+      const args = [`--test-reporter=${reporterUrl}`, ...this.#nodeArgs, file];
 
       if (this.#log.isDebugEnabled()) {
         this.#log.debug(`Running: \`${nodeCommand(args)}\` in ${process.cwd()}`);
@@ -731,7 +731,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         stdio: ['ignore', 'ignore', 'pipe'],
         ...groupOptions(process.platform),
       });
-      const { exitCode, stderr } = await processEnd(child, CLOSE_GRACE_MS, process.platform);
+      const { exitCode, stderr } = await processEnd(child, closeGraceMs, process.platform);
       // processEnd rejects for a process that failed to start, the only kind without a pid.
       const mainRecord = child.pid === undefined ? undefined : recordName(child.pid, 0);
       let unreadable: string | undefined;

@@ -1,4 +1,4 @@
-import base, { SOURCE } from '../../stryker.base.mjs';
+import base, { source } from '../../stryker.base.mjs';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
@@ -10,5 +10,5 @@ export default {
     '!tools/eslint-rules/index.ts',
   ],
   tsconfigFile: 'tools/eslint-rules/tsconfig.stryker.json',
-  lzStrykerNodeTest: { testFiles: ['tools/eslint-rules/*.test.ts'], nodeArgs: [SOURCE] },
+  lzStrykerNodeTest: { testFiles: ['tools/eslint-rules/*.test.ts'], nodeArgs: [source] },
 };

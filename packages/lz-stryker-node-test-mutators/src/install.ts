@@ -10,12 +10,12 @@ import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
 import { isOwn, toNodeMutator, type BabelTypes, type Operator } from './operator.ts';
 
-const TESTED_VERSION = /^10\.1\./;
-const CORE_BIN = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
+const testedVersion = /^10\.1\./;
+const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
-const NAME = /^[A-Za-z]+$/;
+const namePattern = /^[A-Za-z]+$/;
 const nothing = () => undefined;
-const SILENT = { debug: nothing, info: nothing, warn: nothing, isDebugEnabled: nothing };
+const silent = { debug: nothing, info: nothing, warn: nothing, isDebugEnabled: nothing };
 
 export interface SourceFile {
   readonly name: string;
@@ -65,7 +65,7 @@ export async function install(
 
   await selfCheck(instrumenter, operators);
 
-  if (!TESTED_VERSION.test(instrumenter.version)) {
+  if (!testedVersion.test(instrumenter.version)) {
     warn(
       `lz-stryker-node-test-mutators was written for @stryker-mutator/instrumenter 10.1, not ${instrumenter.version}; ` +
         'its install check passed.',
@@ -75,7 +75,7 @@ export async function install(
 
 function checkNames(operators: readonly Operator[], present: readonly ListedMutator[]): void {
   const names = operators.map(({ name }) => name);
-  const invalid = names.filter((name) => !NAME.test(name));
+  const invalid = names.filter((name) => !namePattern.test(name));
 
   if (invalid.length > 0) {
     throw new Error(
@@ -139,7 +139,7 @@ function coreBin(script: string | undefined, realpath: (path: string) => string)
   try {
     const bin = realpath(script);
 
-    return CORE_BIN.test(bin) ? bin : undefined;
+    return coreBinPattern.test(bin) ? bin : undefined;
   } catch {
     // What `node --eval` passes on after its code is no script file either.
     return undefined;
@@ -178,7 +178,7 @@ export async function resolveFromCore(
         mutators &&
         ((ast: unknown, collector: unknown, context: unknown): unknown =>
           Reflect.apply(transformBabel, undefined, [ast, collector, context, mutators]));
-      const instance: unknown = Reflect.construct(instrumenterClass, [SILENT, undefined, undefined, transform]);
+      const instance: unknown = Reflect.construct(instrumenterClass, [silent, undefined, undefined, transform]);
       const instrument = member(instance, 'instrument', isFunction, `the Instrumenter of ${indexFile}`);
       const result: unknown = await Reflect.apply(instrument, instance, [
         files.map((file) => ({ ...file, mutate: true })),
