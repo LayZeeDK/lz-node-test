@@ -68,7 +68,6 @@ export async function lzFixture(name: string): Promise<LzFixture> {
     dir,
     '--no-audit',
     '--no-fund',
-    '--prefer-offline',
     ...tarballs,
     ...pinned(),
   ]);
