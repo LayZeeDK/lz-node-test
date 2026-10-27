@@ -1,4 +1,4 @@
-import { calleeRoot, importOf, nodeAssert } from './bindings.ts';
+import { awaited, calleeRoot, importOf, nodeAssert } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 /**
@@ -17,8 +17,7 @@ export const assertStatement: Operator = {
       return;
     }
 
-    const { expression } = path.node;
-    const call = expression.type === 'AwaitExpression' ? expression.argument : expression;
+    const call = awaited(path.node.expression);
     const root = call.type === 'CallExpression' ? calleeRoot(call.callee) : undefined;
     const source = root && importOf(path, root.name)?.source;
 

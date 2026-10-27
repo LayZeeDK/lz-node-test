@@ -68,6 +68,10 @@ function propertyName(member: types.Node): string | undefined {
     : undefined;
 }
 
+export function awaited(expression: types.Expression): types.Expression {
+  return expression.type === 'AwaitExpression' ? expression.argument : expression;
+}
+
 export function calleeRoot(callee: types.Node): types.Identifier | undefined {
   if (callee.type === 'MemberExpression') {
     return calleeRoot(callee.object);

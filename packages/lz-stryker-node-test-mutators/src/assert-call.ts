@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { assertMethod } from './bindings.ts';
+import { assertMethod, awaited } from './bindings.ts';
 import type { BabelTypes, Operator } from './operator.ts';
 
 const message = 'Stryker: assertion reached';
@@ -45,10 +45,6 @@ function failure(t: BabelTypes, method: string): types.CallExpression {
   }
 
   return t.callExpression(t.arrowFunctionExpression([], t.blockStatement([t.throwStatement(error(t))])), []);
-}
-
-function awaited(expression: types.Expression): types.Expression {
-  return expression.type === 'AwaitExpression' ? expression.argument : expression;
 }
 
 function isTail(path: NodePath): boolean {
