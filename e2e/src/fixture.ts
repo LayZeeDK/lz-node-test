@@ -141,17 +141,13 @@ async function stryker(dir: string, configFile: string, concurrency: number): Pr
   const tmp = join(dir, 'tmp');
   const report = join(dir, reportFile);
   const before = new Set(readdirSync(tmp));
-  const env: NodeJS.ProcessEnv = { ...process.env, TMPDIR: tmp, TEMP: tmp, TMP: tmp };
 
-  // The suite's own node --test sets these; a consumer's Stryker runs without them.
-  delete env.NODE_OPTIONS;
-  delete env.NODE_TEST_CONTEXT;
   // A second run on the same install must not read the first one's report.
   rmSync(report, { force: true });
   const { exitCode, stdout, stderr, timedOut } = await lzExec(
     process.execPath,
     [strykerBin, 'run', configFile, '--concurrency', String(concurrency), '--reporters', 'clear-text,json'],
-    { cwd: dir, env, timeoutMs: strykerTimeoutMs },
+    { cwd: dir, env: consumerEnv(tmp), timeoutMs: strykerTimeoutMs },
   );
   const outcome: LzStrykerOutcome = {
     exitCode,
@@ -165,6 +161,18 @@ async function stryker(dir: string, configFile: string, concurrency: number): Pr
   return existsSync(report)
     ? { ...outcome, reported: true, report: lzParseReport(readFileSync(report, 'utf8')) }
     : { ...outcome, reported: false };
+}
+
+/**
+ * This process's environment with `tmp` as the temporary directory, less what the suite's own `node --test` sets
+ * and a consumer's Stryker runs without.
+ */
+function consumerEnv(tmp: string): NodeJS.ProcessEnv {
+  const inherited = Object.entries(process.env).filter(
+    ([key]) => key !== 'NODE_OPTIONS' && key !== 'NODE_TEST_CONTEXT',
+  );
+
+  return { ...Object.fromEntries(inherited), TMPDIR: tmp, TEMP: tmp, TMP: tmp };
 }
 
 /** `npm pack` of each package under `packages/` into `into`; the tarball paths, as npm's JSON names them. */
