@@ -531,16 +531,22 @@ async function ranAndReported(h: Harness, name: string, outcome: 'pass' | 'fail'
   report(h.deps, name, outcome);
 }
 
-function report(deps: HookDependencies, name: string, outcome: 'pass' | 'fail'): void {
+/** Sends events to the hook's reporting function, which the test expects the hook to have installed. */
+function send(deps: HookDependencies, ...events: readonly TestEvent[]): void {
   const recordEvent = deps.global[reporting];
   assert.ok(recordEvent, 'the hook installed no reporting function');
+
+  for (const event of events) {
+    recordEvent(event);
+  }
+}
+
+function report(deps: HookDependencies, name: string, outcome: 'pass' | 'fail'): void {
   const error = { message: `${name} failed` };
 
   const details: TestDetails = { type: 'test', duration_ms: 2, ...(outcome === 'fail' && { error }) };
 
-  for (const event of reported(name, 0, outcome, details)) {
-    recordEvent(event);
-  }
+  send(deps, ...reported(name, 0, outcome, details));
 }
 
 describe('writesAllowed', () => {
@@ -784,7 +790,7 @@ describe('install', () => {
   it('writes the diagnostics of errors raised after a test ended', () => {
     const { deps, records, exit } = installedHarness(fileEnv);
     const message = 'Error: Test "t" at a.test.mjs:1:1 generated asynchronous activity after the test ended.';
-    deps.global[reporting]?.({ type: 'test:diagnostic', data: { name: '', nesting: 0, message } });
+    send(deps, { type: 'test:diagnostic', data: { name: '', nesting: 0, message } });
 
     exit();
 
@@ -802,9 +808,7 @@ describe('install', () => {
     wrapped().it('passes', () => {});
     report(deps, 'passes', 'pass');
 
-    for (const event of last) {
-      deps.global[reporting]?.(event);
-    }
+    send(deps, ...last);
 
     exit({ natural });
 
@@ -964,24 +968,24 @@ describe('install', () => {
       });
       afterHooks(h.fake)[0]?.();
       report(h.deps, 'fails', 'fail');
-      h.deps.global[reporting]?.({
+      send(h.deps, {
         type: 'test:pass',
         data: { name: 'inner', nesting: 1, details: { type: 'test', duration_ms: 1 } },
       });
       // A failing root hook, reported as a failure of the file itself.
-      h.deps.global[reporting]?.({
+      send(h.deps, {
         type: 'test:fail',
         data: { name: testFile, nesting: 0, details: { duration_ms: 1, error: { message: 'hook failed' } } },
       });
       // node:test reports that a suite completed before it reports its result.
-      h.deps.global[reporting]?.({
+      send(h.deps, {
         type: 'test:complete',
         data: { name: 'suite', nesting: 0, details: { type: 'suite', duration_ms: 1 } },
       });
 
       assert.deepEqual(h.exits, []);
 
-      h.deps.global[reporting]?.({
+      send(h.deps, {
         type: 'test:pass',
         data: { name: 'suite', nesting: 0, details: { type: 'suite', duration_ms: 1 } },
       });
@@ -1168,13 +1172,13 @@ describe('install', () => {
         const [finished] = afterHooks(h.fake);
 
         if (early) {
-          h.deps.global[reporting]?.(event);
+          send(h.deps, event);
         }
 
         finished?.();
 
         if (!early) {
-          h.deps.global[reporting]?.(event);
+          send(h.deps, event);
         }
 
         assert.equal(h.timers.length, timers);
