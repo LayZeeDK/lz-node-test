@@ -4,18 +4,18 @@ import { text } from 'node:stream/consumers';
 
 export interface LzExecResult {
   /** 1 for a process that a signal ended. */
-  exitCode: number;
-  stdout: string;
-  stderr: string;
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
   /** Whether the process ran past `timeoutMs` and was ended. */
-  timedOut: boolean;
+  readonly timedOut: boolean;
 }
 
 export interface LzExecOptions {
-  cwd: string;
-  env?: NodeJS.ProcessEnv;
+  readonly cwd: string;
+  readonly env?: NodeJS.ProcessEnv;
   /** Ends the process after this long; 0 waits for it however long it runs. */
-  timeoutMs?: number;
+  readonly timeoutMs?: number;
 }
 
 /**

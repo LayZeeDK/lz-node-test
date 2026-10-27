@@ -21,17 +21,17 @@ const statuses: readonly LzMutantStatus[] = [
 
 export interface LzMutantDetail {
   /** 1-based, as the report's `location.start` has it. */
-  line: number;
+  readonly line: number;
   /** 1-based, as the report's `location.start` has it. */
-  column: number;
-  mutator: string;
+  readonly column: number;
+  readonly mutator: string;
   /** Empty when the report leaves it out. */
-  replacement: string;
-  status: LzMutantStatus;
+  readonly replacement: string;
+  readonly status: LzMutantStatus;
   /** Empty when the report leaves it out. */
-  statusReason: string;
-  killedBy: string[];
-  coveredBy: string[];
+  readonly statusReason: string;
+  readonly killedBy: readonly string[];
+  readonly coveredBy: readonly string[];
 }
 
 /** Each mutated file's mutants, keyed by the report's path (relative, forward slashes), sorted by position. */

@@ -22,13 +22,13 @@ const dirPrefix = 'lz-node-test-e2e-';
 const concurrencyVariable = 'LZ_E2E_CONCURRENCY';
 
 interface LzStrykerOutcome {
-  exitCode: number;
+  readonly exitCode: number;
   /** stdout, then stderr. */
-  output: string;
+  readonly output: string;
   /** Names the run left in the fixture's temporary directory; empty when it cleaned up. */
-  leftover: string[];
+  readonly leftover: readonly string[];
   /** Whether the harness ended the run after 15 minutes. */
-  timedOut: boolean;
+  readonly timedOut: boolean;
 }
 
 export type LzStrykerRun =
