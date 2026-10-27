@@ -345,7 +345,7 @@ async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
     }
 
     const commonjs: { exports: unknown } = { exports: undefined };
-    new Function('module', sourceFor(['node', 'require']))(commonjs);
+    Reflect.apply(new Function('module', sourceFor(['node', 'require'])), undefined, [commonjs]);
 
     return { module, commonjs: commonjs.exports };
   } finally {

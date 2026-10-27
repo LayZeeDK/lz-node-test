@@ -25,5 +25,5 @@ lzTestFor`a | b ${1} | ${2}`('template', (row, t) => {
 lzTestFor([1])('timeout', () => {}, 100);
 lzTestFor([1])('options', { fails: true }, (n) => {
   // @ts-expect-error The case is a number.
-  n.toUpperCase();
+  n satisfies string;
 });
