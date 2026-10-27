@@ -68,10 +68,26 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, status, startPosition }) => ({ id, status, startPosition })),
       [
-        { id: `${a} > it.skip`, status: TestStatus.Skipped, startPosition: { line: 5, column: 3 } },
-        { id: `${a} > test.skip`, status: TestStatus.Skipped, startPosition: { line: 6, column: 5 } },
-        { id: `${a} > skip option`, status: TestStatus.Skipped, startPosition: { line: 7, column: 0 } },
-        { id: `${a} > suite > nested`, status: TestStatus.Skipped, startPosition: { line: 9, column: 5 } },
+        {
+          id: `${a} > it.skip`,
+          status: TestStatus.Skipped,
+          startPosition: { line: fixtureHeaderLines + 1, column: 3 },
+        },
+        {
+          id: `${a} > test.skip`,
+          status: TestStatus.Skipped,
+          startPosition: { line: fixtureHeaderLines + 2, column: 5 },
+        },
+        {
+          id: `${a} > skip option`,
+          status: TestStatus.Skipped,
+          startPosition: { line: fixtureHeaderLines + 3, column: 0 },
+        },
+        {
+          id: `${a} > suite > nested`,
+          status: TestStatus.Skipped,
+          startPosition: { line: fixtureHeaderLines + 5, column: 5 },
+        },
       ],
     );
   });
@@ -105,15 +121,15 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, name, status, startPosition }) => ({ id, name, status, startPosition })),
       [
-        skipped('describe.skip', 5, 9),
-        skipped('suite.skip', 6, 6),
-        skipped('skip option', 7, 0),
-        skipped('outer > nested', 9, 11),
+        skipped('describe.skip', fixtureHeaderLines + 1, 9),
+        skipped('suite.skip', fixtureHeaderLines + 2, 6),
+        skipped('skip option', fixtureHeaderLines + 3, 0),
+        skipped('outer > nested', fixtureHeaderLines + 5, 11),
         {
           id: `${a} > outer > passes`,
           name: 'outer > passes',
           status: TestStatus.Success,
-          startPosition: { line: 10, column: 2 },
+          startPosition: { line: fixtureHeaderLines + 6, column: 2 },
         },
       ],
     );
@@ -137,8 +153,18 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, name, status, startPosition }) => ({ id, name, status, startPosition })),
       [
-        { id: `${a} > passes`, name: 'passes', status: TestStatus.Success, startPosition: { line: 5, column: 0 } },
-        { id: hook, name: '"after" hook', status: TestStatus.Failed, startPosition: { line: 6, column: 0 } },
+        {
+          id: `${a} > passes`,
+          name: 'passes',
+          status: TestStatus.Success,
+          startPosition: { line: fixtureHeaderLines + 1, column: 0 },
+        },
+        {
+          id: hook,
+          name: '"after" hook',
+          status: TestStatus.Failed,
+          startPosition: { line: fixtureHeaderLines + 2, column: 0 },
+        },
       ],
     );
     assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions()))), {
@@ -212,10 +238,10 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, line: startPosition?.line })),
       [
-        { id: ids[0], line: 5 },
-        { id: ids[1], line: 6 },
-        { id: ids[2], line: 8 },
-        { id: `${a} > outer`, line: 4 },
+        { id: ids[0], line: fixtureHeaderLines + 1 },
+        { id: ids[1], line: fixtureHeaderLines + 2 },
+        { id: ids[2], line: fixtureHeaderLines + 4 },
+        { id: `${a} > outer`, line: fixtureHeaderLines },
       ],
     );
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {
@@ -310,10 +336,10 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, line: startPosition?.line })),
       [
-        { id: ids[0], line: 5 },
-        { id: ids[1], line: 6 },
-        { id: ids[2], line: 8 },
-        { id: ids[3], line: 9 },
+        { id: ids[0], line: fixtureHeaderLines + 1 },
+        { id: ids[1], line: fixtureHeaderLines + 2 },
+        { id: ids[2], line: fixtureHeaderLines + 4 },
+        { id: ids[3], line: fixtureHeaderLines + 5 },
       ],
     );
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {
