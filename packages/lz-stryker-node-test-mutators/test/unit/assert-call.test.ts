@@ -108,6 +108,7 @@ describe('LzAssertCall', () => {
 
   it('keeps the inferred return type of a returned rejects whose caller chains it', async () => {
     const [replacement] = await mutantsOf(assertCall, CHAINED);
+    assert.ok(replacement);
 
     assert.deepEqual(typeErrors(CHAINED), []);
     assert.deepEqual(typeErrors(CHAINED.replace('t.assert.rejects(p)', replacement)), []);

@@ -104,7 +104,7 @@ function negative(value: unknown): boolean {
   return (
     typeof value === 'number' &&
     (value === 0 || Number.isNaN(value)) &&
-    new Uint32Array(new Float64Array([value]).buffer)[1] >>> 31 === 1
+    new DataView(new Float64Array([value]).buffer).getUint32(4, true) >>> 31 === 1
   );
 }
 

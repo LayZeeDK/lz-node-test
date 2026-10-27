@@ -114,10 +114,13 @@ describe('LzStrykerNodeTestRunner limits', () => {
       result.status === MutantRunStatus.Killed ? Number(result.failureMessage) : NaN,
     );
 
+    const [first] = limits;
+    assert.ok(first, String(limits));
+
     // A Node.js process that runs one empty test holds well under 500 MB.
-    assert.ok(limits[0] > 1024, String(limits));
-    assert.ok(limits[0] < 1024 + 1.5 * 500, String(limits));
-    assert.deepEqual(limits, [limits[0], limits[0], limits[0]]);
+    assert.ok(first > 1024, String(limits));
+    assert.ok(first < 1024 + 1.5 * 500, String(limits));
+    assert.deepEqual(limits, [first, first, first]);
   });
   lzTestFor([
     ['the 1024 MB floor, with a warning once,', undefined, [1024, 1024], 1],

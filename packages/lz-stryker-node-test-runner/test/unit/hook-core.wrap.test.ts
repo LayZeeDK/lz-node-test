@@ -778,6 +778,9 @@ describe('wrapNodeTest', () => {
         module.it('second', see);
       });
       const [promised, callback, throwing] = hooksOf(registrations, 'beforeEach');
+      assert.ok(promised);
+      assert.ok(callback);
+      assert.ok(throwing);
       const calls: unknown[][] = [];
 
       const context = testContext([], 'suite > second');

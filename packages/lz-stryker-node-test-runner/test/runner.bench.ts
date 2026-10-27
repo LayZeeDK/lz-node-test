@@ -165,10 +165,11 @@ function scenarios(files: string[]): Scenario[] {
 
 function stat(ms: number[]): Stat {
   const sorted = [...ms].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const medianMs = sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  const minMs = sorted[0];
-  const maxMs = sorted[sorted.length - 1];
+  // One middle value for an odd count, two for an even one.
+  const middle = sorted.slice(Math.floor((sorted.length - 1) / 2), Math.floor(sorted.length / 2) + 1);
+  const medianMs = middle.reduce((sum, value) => sum + value, 0) / middle.length;
+  const minMs = Math.min(...sorted);
+  const maxMs = Math.max(...sorted);
 
   return { runs: sorted.length, medianMs, minMs, maxMs, spread: (maxMs - minMs) / medianMs };
 }
@@ -269,16 +270,22 @@ async function main(): Promise<void> {
         },
       ]);
       await round(sides);
+      const [first] = sides;
+
+      if (first === undefined) {
+        throw new Error('No runner to benchmark.');
+      }
+
+      const [firstLabel] = first;
 
       for (let run = 0; run < runs; run++) {
         const times = await round(run % 2 === 0 ? sides : [...sides].reverse());
-        const [first] = sides;
 
         for (const [label] of sides) {
           add(label, timeOf(times, label));
 
-          if (label !== first[0]) {
-            add(`${label} / first runner`, timeOf(times, label) / timeOf(times, first[0]));
+          if (label !== firstLabel) {
+            add(`${label} / first runner`, timeOf(times, label) / timeOf(times, firstLabel));
           }
         }
       }

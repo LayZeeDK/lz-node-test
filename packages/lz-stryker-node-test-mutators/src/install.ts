@@ -82,11 +82,13 @@ function checkNames(operators: readonly Operator[], present: readonly NodeMutato
 
   // Stryker's directives match mutator names ignoring case.
   const keys = names.map((name) => name.toLowerCase());
-  const taken = names.filter(
-    (_name, index) =>
-      keys.indexOf(keys[index]) !== index ||
-      present.some((mutator) => mutator.name.toLowerCase() === keys[index] && !isOwn(mutator)),
-  );
+  const taken = names.filter((name, index) => {
+    const key = name.toLowerCase();
+
+    return (
+      keys.indexOf(key) !== index || present.some((mutator) => mutator.name.toLowerCase() === key && !isOwn(mutator))
+    );
+  });
 
   if (taken.length > 0) {
     throw new Error(`lz-stryker-node-test-mutators: another mutator already has the name ${taken.join(', ')}.`);
@@ -114,22 +116,28 @@ async function selfCheck(instrumenter: Instrumenter, operators: readonly Operato
  * that this module resolves.
  */
 export function corePackageJson(
-  argv1: string = process.argv[1],
+  argv: readonly string[] = process.argv,
   realpath: (path: string) => string = realpathSync,
   resolveHere: (specifier: string) => string = createRequire(import.meta.url).resolve,
 ): string {
-  const bin = coreBin(argv1, realpath);
+  const [, script] = argv;
+  const bin = coreBin(script, realpath);
 
   return bin === undefined ? resolveHere('@stryker-mutator/core/package.json') : join(bin, '..', '..', 'package.json');
 }
 
-function coreBin(argv1: string, realpath: (path: string) => string): string | undefined {
+function coreBin(script: string | undefined, realpath: (path: string) => string): string | undefined {
+  // `node --eval` and the REPL run no script file.
+  if (script === undefined) {
+    return undefined;
+  }
+
   try {
-    const bin = realpath(argv1);
+    const bin = realpath(script);
 
     return CORE_BIN.test(bin) ? bin : undefined;
   } catch {
-    // `node --eval` and the REPL run no script file.
+    // What `node --eval` passes on after its code is no script file either.
     return undefined;
   }
 }

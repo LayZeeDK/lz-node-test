@@ -676,8 +676,10 @@ describe('install', () => {
     install(deps);
 
     assert.deepEqual(calls, ['nodeTest', 'registerHooks', 'onExit']);
-    assert.equal(hooks.length, 1);
-    const names = Object.keys((await importRedirected(hooks[0], wrapped())).module);
+    const [hook, ...more] = hooks;
+    assert.ok(hook);
+    assert.deepEqual(more, []);
+    const names = Object.keys((await importRedirected(hook, wrapped())).module);
     assert.deepEqual(names.sort(), ['default', ...Object.keys(fake.module)].sort());
 
     const seen: unknown[] = [];

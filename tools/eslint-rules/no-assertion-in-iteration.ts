@@ -1,5 +1,5 @@
 import type { Rule } from 'eslint';
-import type { Node } from 'estree';
+import type { CallExpression, Node } from 'estree';
 
 const loops = new Set(['ForStatement', 'ForInStatement', 'ForOfStatement', 'WhileStatement', 'DoWhileStatement']);
 const functions = new Set(['ArrowFunctionExpression', 'FunctionExpression']);
@@ -33,7 +33,7 @@ function isAssertion(callee: Node, imported: ReadonlySet<string>): boolean {
     : object.type === 'MemberExpression' && object.property.type === 'Identifier' && object.property.name === 'assert';
 }
 
-function isIterationCall(node: Node): boolean {
+function isIterationCall(node: Node): node is CallExpression {
   return (
     node.type === 'CallExpression' &&
     node.callee.type === 'MemberExpression' &&
@@ -69,17 +69,19 @@ const rule: Rule.RuleModule = {
         }
 
         const ancestors = context.sourceCode.getAncestors(node);
-        const boundary = ancestors.findLastIndex(
-          (ancestor) => loops.has(ancestor.type) || functions.has(ancestor.type),
-        );
+        const boundary = ancestors.findLast((ancestor) => loops.has(ancestor.type) || functions.has(ancestor.type));
 
-        if (boundary === -1) {
+        if (boundary === undefined) {
           return;
         }
 
-        if (loops.has(ancestors[boundary].type)) {
+        if (loops.has(boundary.type)) {
           context.report({ node, messageId: 'loop' });
-        } else if (isIterationCall(ancestors[boundary - 1])) {
+        } else if (
+          ancestors.some(
+            (ancestor) => isIterationCall(ancestor) && ancestor.arguments.some((argument) => argument === boundary),
+          )
+        ) {
           context.report({ node, messageId: 'callback' });
         }
       },

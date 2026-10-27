@@ -165,7 +165,7 @@ describe('corePackageJson', () => {
 
   function coreFor(real: string | undefined) {
     return corePackageJson(
-      '/usr/local/bin/stryker',
+      ['/usr/local/bin/node', '/usr/local/bin/stryker'],
       (path) => {
         assert.equal(path, '/usr/local/bin/stryker');
 
@@ -191,9 +191,19 @@ describe('corePackageJson', () => {
     ['another script', join('/repo', 'tools', 'corpus-diff.ts')],
     ['a file next to the bin', join(CORE, 'bin', 'stryker.js.map')],
     ["another package's bin", join('/global', 'node_modules', '@stryker-mutator', 'other', 'bin', 'stryker.js')],
-    ['no script', undefined],
+    ['a script that is no file', undefined],
   ])('takes the core this module resolves when the process runs %s', (_title, real) => {
     assert.equal(coreFor(real), HERE);
+  });
+
+  it('takes the core this module resolves when the process runs no script, as `node --eval` does', () => {
+    const core = corePackageJson(
+      ['/usr/local/bin/node'],
+      () => join(CORE, 'bin', 'stryker.js'),
+      () => HERE,
+    );
+
+    assert.equal(core, HERE);
   });
 });
 

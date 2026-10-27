@@ -202,7 +202,11 @@ describe('LzStrykerNodeTestRunner results', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
-    const ids = ['outer > inner', 'outer > suite > in suite', 'outer > after await'].map((name) => `${a} > ${name}`);
+    const ids: readonly [string, string, string] = [
+      `${a} > outer > inner`,
+      `${a} > outer > suite > in suite`,
+      `${a} > outer > after await`,
+    ];
 
     const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
 
@@ -295,7 +299,12 @@ describe('LzStrykerNodeTestRunner results', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
-    const ids = ['s > works', 's > works (2)', 'a > b', 'a \\> b'].map((name) => `${a} > ${name}`);
+    const ids: readonly [string, string, string, string] = [
+      `${a} > s > works`,
+      `${a} > s > works (2)`,
+      `${a} > a > b`,
+      `${a} > a \\> b`,
+    ];
 
     const { tests, mutantCoverage } = complete(await settle(runner.dryRun(DRY_RUN)));
 

@@ -555,7 +555,9 @@ describe('hook', () => {
       assert.notEqual(code, 0);
       const records = readRecords(outDir);
       assert.deepEqual(Object.keys(records), [`${pid}.memory.json`]);
-      const { tests, memoryLimitReached } = records[`${pid}.memory.json`];
+      const record = records[`${pid}.memory.json`];
+      assert.ok(record);
+      const { tests, memoryLimitReached } = record;
       assert.deepEqual(tests, []);
       assert.equal(memoryLimitReached?.limitMB, 200);
       assert.ok(memoryLimitReached.rssMB > 200, String(memoryLimitReached.rssMB));

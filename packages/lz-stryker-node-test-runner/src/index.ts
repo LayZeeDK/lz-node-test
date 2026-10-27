@@ -48,7 +48,7 @@ const DEFAULTS = schema.properties.lzStrykerNodeTest.properties;
 export const LZ_MIN_NODE_VERSION: readonly [major: number, minor: number] = [22, 18];
 
 function supportsNode(version: string): boolean {
-  const [major, minor] = version.split('.').map(Number);
+  const [major = 0, minor = 0] = version.split('.').map(Number);
   const [minMajor, minMinor] = LZ_MIN_NODE_VERSION;
 
   return major > minMajor || (major === minMajor && minor >= minMinor);
@@ -317,13 +317,18 @@ export async function lzRunInPool<T, R>(
   stops: (result: R) => boolean,
 ): Promise<R[]> {
   const results: R[] = [];
-  let next = 0;
+  // The lanes share one iterator, so each item goes to one lane; an array iterator has no `return` for a lane to close.
+  const queue = items.entries();
   let end = items.length;
   let failed = false;
   const lane = async () => {
-    for (let index = next++; !failed && index < end; index = next++) {
+    for (const [index, item] of queue) {
+      if (failed || index >= end) {
+        return;
+      }
+
       try {
-        const result = await work(items[index]);
+        const result = await work(item);
         results[index] = result;
 
         if (stops(result)) {

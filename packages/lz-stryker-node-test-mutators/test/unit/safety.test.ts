@@ -46,17 +46,19 @@ const CORPUS = [
 ];
 
 function callees(code: string): Set<string> {
-  const names = [...code.matchAll(/([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/g)].map(([, name]) => name);
+  const names = [...code.matchAll(/[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?=\s*\()/g)].map(([name]) => name);
 
   return new Set(names.filter((name) => !KEYWORDS.has(name)));
 }
 
 function textAt(source: string, { start, end }: Location): string {
-  const lines = source.split('\n').slice(start.line, end.line + 1);
-  lines[lines.length - 1] = lines[lines.length - 1].slice(0, end.column);
-  lines[0] = lines[0].slice(start.column);
-
-  return lines.join('\n');
+  return source
+    .split('\n')
+    .slice(start.line, end.line + 1)
+    .map((line, index, lines) =>
+      line.slice(index === 0 ? start.column : 0, index === lines.length - 1 ? end.column : line.length),
+    )
+    .join('\n');
 }
 
 async function newCallees(operator: Operator, source: string): Promise<string[][]> {
