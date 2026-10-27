@@ -6,7 +6,7 @@ import { inspect } from 'node:util';
 const limit = 40;
 
 /** A printf placeholder, kept by `split` so the parts alternate between text and placeholder. */
-const placeholder = /(%[sdifjoOc%#$])/;
+const placeholderPattern = /(%[sdifjoOc%#$])/;
 
 /** A `$` path into the case: names, `.` and `[index]`. */
 const attributePattern = /\$((?:[$\p{ID_Continue}.]|\[\d+\])+)/gu;
@@ -29,7 +29,7 @@ export function formatTitle(template: string, items: readonly unknown[], index: 
   let next = 0;
 
   return template
-    .split(placeholder)
+    .split(placeholderPattern)
     .map((part, i) => {
       if (i % 2 === 0) {
         return interpolate(part, items);
