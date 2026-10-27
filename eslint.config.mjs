@@ -79,6 +79,10 @@ export default [
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
+      // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature
+      // refuses; this one allows it under that flag.
+      'dot-notation': 'off',
+      '@typescript-eslint/dot-notation': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       // Augmenting node:test's types takes a namespace inside `declare module`.
       '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
