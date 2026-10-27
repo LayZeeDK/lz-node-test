@@ -5,9 +5,10 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type { Mutant } from '@stryker-mutator/api/core';
+import { types as babelTypes } from '@babel/core';
+import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
-import { isOwn, toNodeMutator, type BabelTypes, type NodeMutatorLike, type Operator } from './operator.ts';
+import { isOwn, toNodeMutator, type BabelTypes, type Operator } from './operator.ts';
 
 const TESTED_VERSION = /^10\.1\./;
 const CORE_BIN = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
@@ -23,17 +24,20 @@ export interface SourceFile {
 
 export type InstrumentedMutant = Pick<Mutant, 'mutatorName' | 'replacement' | 'location'>;
 
+/** A mutator of the instrumenter's list, Stryker's or this module's, as far as this module checks it. */
+export interface ListedMutator {
+  readonly name: string;
+  readonly mutate: (...args: never) => unknown;
+}
+
 export interface Instrumenter {
   readonly dir: string;
   readonly version: string;
   /** The list that the instrumenter reads its mutators from each time it transforms a file. */
-  readonly allMutators: NodeMutatorLike[];
+  readonly allMutators: ListedMutator[];
   /** The Babel types of the instrumenter's own @babel/core, to build the nodes it places. */
   readonly types: BabelTypes;
-  instrument(
-    files: readonly SourceFile[],
-    mutators?: readonly NodeMutatorLike[],
-  ): Promise<readonly InstrumentedMutant[]>;
+  instrument(files: readonly SourceFile[], mutators?: readonly ListedMutator[]): Promise<readonly InstrumentedMutant[]>;
 }
 
 export type Mode = 'add' | 'replace';
@@ -69,7 +73,7 @@ export async function install(
   }
 }
 
-function checkNames(operators: readonly Operator[], present: readonly NodeMutatorLike[]): void {
+function checkNames(operators: readonly Operator[], present: readonly ListedMutator[]): void {
   const names = operators.map(({ name }) => name);
   const invalid = names.filter((name) => !NAME.test(name));
 
@@ -142,28 +146,41 @@ function coreBin(script: string | undefined, realpath: (path: string) => string)
   }
 }
 
-export async function resolveFromCore(corePackage: string = corePackageJson()): Promise<Instrumenter> {
+/**
+ * `load` imports a file of the instrumenter or of its @babel/core. The instrumenter exports only its index, so these
+ * modules have no importable types, and their members are checked before use.
+ */
+export async function resolveFromCore(
+  corePackage: string = corePackageJson(),
+  load: (path: string) => Promise<unknown> = importFile,
+): Promise<Instrumenter> {
   const fromCore = createRequire(corePackage);
   const packageJson = fromCore.resolve('@stryker-mutator/instrumenter/package.json');
   const dir = dirname(packageJson);
-  const [{ allMutators }, { transformBabel }, { Instrumenter }, { types }] = await Promise.all([
-    importFile(join(dir, 'dist', 'src', 'mutators', 'mutate.js')),
-    importFile(join(dir, 'dist', 'src', 'transformers', 'babel-transformer.js')),
-    importFile(join(dir, 'dist', 'src', 'index.js')),
-    importFile(createRequire(packageJson).resolve('@babel/core')),
-  ]);
+  const mutateFile = join(dir, 'dist', 'src', 'mutators', 'mutate.js');
+  const transformerFile = join(dir, 'dist', 'src', 'transformers', 'babel-transformer.js');
+  const indexFile = join(dir, 'dist', 'src', 'index.js');
+  const babelFile = createRequire(packageJson).resolve('@babel/core');
+  const [mutate, transformer, index, babel] = await Promise.all(
+    [mutateFile, transformerFile, indexFile, babelFile].map(load),
+  );
+  const transformBabel = member(transformer, 'transformBabel', isFunction, transformerFile);
+  const instrumenterClass = member(index, 'Instrumenter', isFunction, indexFile);
 
   return {
     dir,
-    version: fromCore(packageJson).version,
-    allMutators,
-    types,
+    version: member(fromCore(packageJson), 'version', isString, packageJson),
+    allMutators: member(mutate, 'allMutators', isMutatorList, mutateFile),
+    types: member(babel, 'types', isBabelTypes, babelFile),
     async instrument(files, mutators) {
       // The instrumenter takes a transform of its own in place of the one that reads `allMutators`.
       const transform =
         mutators &&
-        ((ast: unknown, collector: unknown, context: unknown) => transformBabel(ast, collector, context, mutators));
-      const { mutants } = await new Instrumenter(SILENT, undefined, undefined, transform).instrument(
+        ((ast: unknown, collector: unknown, context: unknown): unknown =>
+          Reflect.apply(transformBabel, undefined, [ast, collector, context, mutators]));
+      const instance: unknown = Reflect.construct(instrumenterClass, [SILENT, undefined, undefined, transform]);
+      const instrument = member(instance, 'instrument', isFunction, `the Instrumenter of ${indexFile}`);
+      const result: unknown = await Reflect.apply(instrument, instance, [
         files.map((file) => ({ ...file, mutate: true })),
         {
           plugins: null,
@@ -171,14 +188,86 @@ export async function resolveFromCore(corePackage: string = corePackageJson()): 
           excludedMutations: [],
           ignorers: [],
         },
-      );
+      ]);
 
-      return mutants;
+      return member(result, 'mutants', isMutantList, `the instrument() result of the Instrumenter of ${indexFile}`);
     },
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the instrumenter exports only its index, so these modules have no importable types
-function importFile(path: string): Promise<any> {
+function importFile(path: string): Promise<unknown> {
   return import(pathToFileURL(path).href);
+}
+
+/** Every function is assignable to it, and `Reflect.apply` and `Reflect.construct` call it. */
+type AnyFunction = (...args: never) => unknown;
+
+function member<TKey extends string, T>(
+  value: unknown,
+  key: TKey,
+  check: (member: unknown) => member is T,
+  source: string,
+): T {
+  if (!hasMember(value, key, check)) {
+    throw new Error(`lz-stryker-node-test-mutators: ${source} has no ${key} of the shape this module reads.`);
+  }
+
+  return value[key];
+}
+
+function hasMember<TKey extends string, T>(
+  value: unknown,
+  key: TKey,
+  check: (member: unknown) => member is T,
+): value is Record<TKey, T> {
+  return typeof value === 'object' && value !== null && check(Reflect.get(value, key));
+}
+
+function isFunction(value: unknown): value is AnyFunction {
+  return typeof value === 'function';
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number';
+}
+
+function isMutatorList(value: unknown): value is ListedMutator[] {
+  return Array.isArray(value) && value.every(isListedMutator);
+}
+
+function isListedMutator(value: unknown): value is ListedMutator {
+  return hasMember(value, 'name', isString) && hasMember(value, 'mutate', isFunction);
+}
+
+/** Has every member of the @babel/core types this module is built against, each of the same kind. */
+function isBabelTypes(value: unknown): value is BabelTypes {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Object.entries(babelTypes).every(([key, own]) => typeof Reflect.get(value, key) === typeof own)
+  );
+}
+
+function isMutantList(value: unknown): value is InstrumentedMutant[] {
+  return Array.isArray(value) && value.every(isMutant);
+}
+
+function isMutant(value: unknown): value is InstrumentedMutant {
+  return (
+    hasMember(value, 'mutatorName', isString) &&
+    hasMember(value, 'replacement', isString) &&
+    hasMember(value, 'location', isLocation)
+  );
+}
+
+function isLocation(value: unknown): value is Location {
+  return hasMember(value, 'start', isPosition) && hasMember(value, 'end', isPosition);
+}
+
+function isPosition(value: unknown): value is Position {
+  return hasMember(value, 'line', isNumber) && hasMember(value, 'column', isNumber);
 }

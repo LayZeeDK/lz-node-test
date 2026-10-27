@@ -39,6 +39,6 @@ export function toNodeMutator(operator: Operator, t: BabelTypes): OwnMutator {
   };
 }
 
-export function isOwn(mutator: NodeMutatorLike): boolean {
+export function isOwn(mutator: object): boolean {
   return OWN in mutator;
 }

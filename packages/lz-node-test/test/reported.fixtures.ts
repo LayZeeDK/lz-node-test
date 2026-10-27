@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assert, run, type TestContext } from 'node:test';
+import { assert, run, type EventData, type TestContext } from 'node:test';
 
 import ts from 'typescript';
 
@@ -76,20 +76,24 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
     );
     delete process.env.NODE_TEST_CONTEXT;
     const tests: Reported[] = [];
-
-    for await (const event of run({ files: [file], only })) {
-      if (event.type === 'test:pass' || event.type === 'test:fail') {
-        const { name, skip, todo, details } = event.data;
-        const error = 'error' in details ? details.error : undefined;
-        tests.push({
-          name,
-          outcome: event.type === 'test:pass' ? 'pass' : 'fail',
-          ...(skip !== undefined && { skip: true }),
-          ...(todo !== undefined && { todo: true }),
-          ...(error && { error: error.cause instanceof Error ? error.cause.message : error.message }),
-        });
-      }
-    }
+    const record = (
+      outcome: Reported['outcome'],
+      { name, skip, todo, details }: EventData.TestPass | EventData.TestFail,
+    ) => {
+      const error = 'error' in details ? details.error : undefined;
+      tests.push({
+        name,
+        outcome,
+        ...(skip !== undefined && { skip: true }),
+        ...(todo !== undefined && { todo: true }),
+        ...(error && { error: error.cause instanceof Error ? error.cause.message : error.message }),
+      });
+    };
+    // The stream's iterator yields `any`; its named events carry typed data.
+    const stream = run({ files: [file], only });
+    stream.on('test:pass', (data) => record('pass', data));
+    stream.on('test:fail', (data) => record('fail', data));
+    await stream.toArray();
 
     return tests;
   } finally {

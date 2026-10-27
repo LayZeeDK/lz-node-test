@@ -167,7 +167,8 @@ async function pack(into: string): Promise<string[]> {
 /** npm 11 prints an array of packed packages, npm 12 an object keyed by package name. */
 function packedFile(stdout: string): string {
   const packed: unknown = JSON.parse(stdout);
-  const [entry]: unknown[] = Array.isArray(packed) ? packed : lzIsRecord(packed) ? Object.values(packed) : [];
+  const entries: readonly unknown[] = Array.isArray(packed) ? packed : lzIsRecord(packed) ? Object.values(packed) : [];
+  const [entry] = entries;
 
   if (!lzIsRecord(entry) || typeof entry.filename !== 'string') {
     throw new Error(`npm pack --json printed no filename:\n${stdout}`);

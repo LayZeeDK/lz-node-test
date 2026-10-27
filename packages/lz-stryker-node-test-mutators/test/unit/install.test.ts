@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 import { types } from '@babel/core';
 
@@ -228,6 +229,102 @@ describe('resolveFromCore', () => {
 
     assert.deepEqual([await mutants(), await mutants([own])], [[['StringLiteral', '""']], [['Own', '"y"']]]);
     assert.ok(instrumenter.allMutators.some(({ name }) => name === 'StringLiteral'));
+  });
+
+  function loadingWith(file: string, replacement: unknown) {
+    const replaced: string[] = [];
+    const load = async (path: string): Promise<unknown> => {
+      if (path.endsWith(file)) {
+        replaced.push(path);
+
+        return replacement;
+      }
+
+      const module: unknown = await import(pathToFileURL(path).href);
+
+      return module;
+    };
+
+    return { load, replaced };
+  }
+
+  const refusal = (source: string, key: string) =>
+    `lz-stryker-node-test-mutators: ${source} has no ${key} of the shape this module reads.`;
+  const mutateFile = join('mutators', 'mutate.js');
+  const babelFile = join('core', 'lib', 'index.js');
+  const indexFile = join('dist', 'src', 'index.js');
+
+  lzTestEach([
+    ['allMutators that is no array', mutateFile, { allMutators: {} }, 'allMutators'],
+    ['a listed mutator that is null', mutateFile, { allMutators: [null] }, 'allMutators'],
+    ['a listed mutator with no name', mutateFile, { allMutators: [{ mutate() {} }] }, 'allMutators'],
+    [
+      'a listed mutator whose name is no string',
+      mutateFile,
+      { allMutators: [{ name: 1, mutate() {} }] },
+      'allMutators',
+    ],
+    [
+      'a listed mutator with no mutate function',
+      mutateFile,
+      { allMutators: [{ name: 'Own', mutate: 'no' }] },
+      'allMutators',
+    ],
+    [
+      'no transformBabel function',
+      join('transformers', 'babel-transformer.js'),
+      { transformBabel: {} },
+      'transformBabel',
+    ],
+    ['no Instrumenter class', indexFile, { Instrumenter: {} }, 'Instrumenter'],
+    ['no Babel types', babelFile, {}, 'types'],
+    ['Babel types that are null', babelFile, { types: null }, 'types'],
+    ['Babel types without a builder', babelFile, { types: { ...types, stringLiteral: undefined } }, 'types'],
+  ])('refuses an instrumenter with %s', async (_title, file, module, key) => {
+    const { load, replaced } = loadingWith(file, module);
+    const resolving = resolveFromCore(corePackageJson(), load);
+
+    await assert.rejects(resolving, { message: refusal(replaced.join(), key) });
+  });
+
+  const resolvingTo = (result: unknown) =>
+    class {
+      async instrument() {
+        return result;
+      }
+    };
+  const located = (mutant: object) => ({
+    mutants: [{ mutatorName: 'Own', replacement: '""', location: LOCATION, ...mutant }],
+  });
+  const noMutants = (index: string) => refusal(`the instrument() result of the Instrumenter of ${index}`, 'mutants');
+
+  lzTestEach([
+    [
+      'an Instrumenter with no instrument method',
+      class {},
+      (index: string) => refusal(`the Instrumenter of ${index}`, 'instrument'),
+    ],
+    ['an instrument result of nothing', resolvingTo(undefined), noMutants],
+    ['an instrument result of null', resolvingTo(null), noMutants],
+    ['mutants that are no array', resolvingTo({ mutants: {} }), noMutants],
+    ['a mutant with no mutator name', resolvingTo(located({ mutatorName: undefined })), noMutants],
+    ['a mutant whose replacement is no string', resolvingTo(located({ replacement: 1 })), noMutants],
+    ['a mutant with no location', resolvingTo(located({ location: undefined })), noMutants],
+    ['a mutant with no start', resolvingTo(located({ location: { end: LOCATION.end } })), noMutants],
+    ['a mutant with no end', resolvingTo(located({ location: { start: LOCATION.start } })), noMutants],
+    [
+      'a mutant with no start line',
+      resolvingTo(located({ location: { ...LOCATION, start: { column: 0 } } })),
+      noMutants,
+    ],
+    ['a mutant with no end column', resolvingTo(located({ location: { ...LOCATION, end: { line: 0 } } })), noMutants],
+  ])('refuses %s', async (_title, instrumenterClass, message) => {
+    const { load, replaced } = loadingWith(indexFile, { Instrumenter: instrumenterClass });
+    const instrumenter = await resolveFromCore(corePackageJson(), load);
+
+    await assert.rejects(instrumenter.instrument([{ name: 'sample.ts', content: "f('x');" }]), {
+      message: message(replaced.join()),
+    });
   });
 
   it('instruments a file whose directive names a mutator it does not apply, which Stryker warns about', async () => {
