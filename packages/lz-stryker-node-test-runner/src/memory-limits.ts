@@ -23,7 +23,7 @@ export function peakMemoryDir(strykerPid: number): string {
  */
 export interface MemoryLimits {
   startDryRun(): number | undefined;
-  record(file: string, records: ProcessRecord[]): void;
+  record(file: string, records: readonly ProcessRecord[]): void;
   forMutantRun(file: string): number;
 }
 
@@ -53,7 +53,7 @@ class DryRunPeaks implements MemoryLimits {
     ownDir(this.#dir);
   }
 
-  record(file: string, records: ProcessRecord[]): void {
+  record(file: string, records: readonly ProcessRecord[]): void {
     const peakMB = Math.max(0, ...records.map((record) => record.peakMemoryMB ?? 0));
     writeFileSync(this.#path(file), String(peakMB));
   }

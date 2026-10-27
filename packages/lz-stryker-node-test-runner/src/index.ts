@@ -37,9 +37,9 @@ import schema from './schema/node-test-runner-options.json' with { type: 'json' 
 
 /** Options under `lzStrykerNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
 export interface LzStrykerNodeTestOptions {
-  testFiles?: string[];
-  nodeArgs?: string[];
-  maxMemoryMB?: number;
+  readonly testFiles?: readonly string[];
+  readonly nodeArgs?: readonly string[];
+  readonly maxMemoryMB?: number;
 }
 
 const defaults = schema.properties.lzStrykerNodeTest.properties;
@@ -56,32 +56,32 @@ function supportsNode(version: string): boolean {
 
 export type LzRunOptions =
   | {
-      dryRun: true;
-      disableBail: boolean;
-      coverageAnalysis: CoverageAnalysis;
-      activeMutant?: undefined;
-      mutantActivation?: undefined;
-      hitLimit?: undefined;
-      testFilter?: undefined;
+      readonly dryRun: true;
+      readonly disableBail: boolean;
+      readonly coverageAnalysis: CoverageAnalysis;
+      readonly activeMutant?: undefined;
+      readonly mutantActivation?: undefined;
+      readonly hitLimit?: undefined;
+      readonly testFilter?: undefined;
     }
   | {
-      dryRun: false;
-      disableBail: boolean;
-      coverageAnalysis?: undefined;
-      activeMutant?: string;
-      mutantActivation?: MutantActivation;
+      readonly dryRun: false;
+      readonly disableBail: boolean;
+      readonly coverageAnalysis?: undefined;
+      readonly activeMutant?: string;
+      readonly mutantActivation?: MutantActivation;
       // undefined as Stryker's MutantRunOptions give them: no hit limit, every test.
-      hitLimit?: number | undefined;
-      testFilter?: string[] | undefined;
+      readonly hitLimit?: number | undefined;
+      readonly testFilter?: readonly string[] | undefined;
     };
 
 export interface LzFileRun {
-  records: ProcessRecord[];
-  exitCode: number | null;
-  stderr: string;
-  args: string[];
-  nodeOptions: string;
-  unreadable?: string;
+  readonly records: readonly ProcessRecord[];
+  readonly exitCode: number | null;
+  readonly stderr: string;
+  readonly args: readonly string[];
+  readonly nodeOptions: string;
+  readonly unreadable?: string;
 }
 
 // .ts from the source, .js from the build.
@@ -145,7 +145,7 @@ export function lzToTestResults(testFile: string, recorded: RecordedTest[], file
   });
 }
 
-function nodeCommand(args: string[]): string {
+function nodeCommand(args: readonly string[]): string {
   return ['node', ...args.map((arg) => `"${arg}"`)].join(' ');
 }
 
@@ -174,7 +174,7 @@ export function lzFileError(testFile: string, { records, exitCode, stderr, args,
  * runner's reporter is the only one; node refuses more reporters than destinations. An argument may be quoted, as in
  * NODE_OPTIONS.
  */
-function withoutReporters(args: string[]): string[] {
+function withoutReporters(args: readonly string[]): string[] {
   const reporterOption = (arg: string) => /^--test-reporter(?:-destination)?(=|$)/.exec(arg.replaceAll('"', ''));
 
   // A reporter option without `=` takes the next argument as its value.
@@ -310,8 +310,12 @@ function parseOptions(value: unknown): LzStrykerNodeTestOptions {
 }
 
 type FileOutcome =
-  | { end: DryRunResult }
-  | { results: TestResult[]; coverages: (MutantCoverage | undefined)[]; failed: boolean };
+  | { readonly end: DryRunResult }
+  | {
+      readonly results: readonly TestResult[];
+      readonly coverages: readonly (MutantCoverage | undefined)[];
+      readonly failed: boolean;
+    };
 
 export async function lzRunInPool<T, TResult>(
   items: T[],
@@ -445,7 +449,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   return { results, coverages: records.map((record) => record.mutantCoverage), failed };
 }
 
-export function lzFilesFor(testFiles: string[], testFilter: string[] | undefined): string[] {
+export function lzFilesFor(testFiles: string[], testFilter: readonly string[] | undefined): string[] {
   if (!testFilter) {
     return testFiles;
   }
@@ -551,7 +555,7 @@ export function lzRunEnv(
 
 /** The Stryker options the runner reads, of all that Stryker passes it. */
 type RunnerStrykerOptions = Pick<StrykerOptions, 'allowEmpty' | 'checkers' | 'concurrency' | 'testFiles'> & {
-  lzStrykerNodeTest?: unknown;
+  readonly lzStrykerNodeTest?: unknown;
 };
 
 export class LzStrykerNodeTestRunner implements TestRunner {

@@ -79,8 +79,8 @@ export function processEnd(
 
 export interface EndingProcess {
   /** undefined for a process that failed to start, as on ChildProcess. */
-  pid?: number | undefined;
-  stderr: {
+  readonly pid?: number | undefined;
+  readonly stderr: {
     setEncoding(encoding: 'utf8'): unknown;
     on(event: 'data', listener: (chunk: string) => void): unknown;
     destroy(): unknown;

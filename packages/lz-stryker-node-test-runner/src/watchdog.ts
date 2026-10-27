@@ -6,8 +6,8 @@ import { writeFileSync } from 'node:fs';
 import type { ProcessRecord } from './hook-core.ts';
 
 export interface MemoryLimitReached {
-  rssMB: number;
-  limitMB: number;
+  readonly rssMB: number;
+  readonly limitMB: number;
 }
 
 export function workersAllowed(permission: { has(scope: string): boolean } | undefined): boolean {
@@ -15,8 +15,8 @@ export function workersAllowed(permission: { has(scope: string): boolean } | und
 }
 
 export interface WatchdogData {
-  limitMB: number;
-  recordPath: string;
+  readonly limitMB: number;
+  readonly recordPath: string;
 }
 
 /**
