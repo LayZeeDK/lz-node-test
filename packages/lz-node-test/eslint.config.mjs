@@ -1,4 +1,4 @@
-import baseConfig from '../../eslint.config.mjs';
+import baseConfig, { readonlyMembers } from '../../eslint.config.mjs';
 
 export default [
   ...baseConfig,
@@ -17,9 +17,9 @@ export default [
     },
   },
   {
-    // The modifier tests run lzTestEach.only and lzTestFor.only on purpose.
+    // The modifier tests run lzTestEach.only and lzTestFor.only on purpose, so only the .only selector goes.
     files: ['test/**/*.ts'],
-    rules: { 'no-restricted-syntax': 'off' },
+    rules: { 'no-restricted-syntax': ['error', ...readonlyMembers] },
   },
   {
     ignores: ['**/out-tsc'],

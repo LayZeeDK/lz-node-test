@@ -12,6 +12,19 @@ const synthetic = ['**/test/synthetic/**'];
 // Consumer projects the e2e suite installs; they break workspace rules on purpose.
 const e2eFixtures = ['**/e2e/fixtures/**'];
 
+const declared = ':matches(TSInterfaceDeclaration, TSTypeAliasDeclaration)';
+// Every block that sets no-restricted-syntax spreads these: a later block replaces the rule's options.
+export const readonlyMembers = [
+  {
+    selector: `${declared} TSPropertySignature:not([readonly=true])`,
+    message: 'Mark the member readonly.',
+  },
+  {
+    selector: `${declared} TSPropertySignature :not(TSTypeOperator[operator='readonly']) > TSArrayType`,
+    message: 'Use readonly T[] for an array in a declared type.',
+  },
+];
+
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
@@ -110,6 +123,7 @@ export default [
           message:
             'Stryker 10 mutates nothing inside an `as` expression. Annotate the binding, use `satisfies`, or Object.freeze() a literal table instead.',
         },
+        ...readonlyMembers,
       ],
     },
   },
@@ -152,6 +166,7 @@ export default [
           selector: 'CallExpression > MemberExpression.callee[object.name=/^test(Each|For)$/][property.name="only"]',
           message: 'Remove .only before committing: it makes node:test --test-only skip every other test.',
         },
+        ...readonlyMembers,
       ],
     },
   },
