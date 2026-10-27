@@ -76,7 +76,7 @@ async function newCallees(operator: Operator, source: string): Promise<string[][
 }
 
 describe('safety', () => {
-  lzTestEach(operators.map((operator) => [operator.name, operator]))(
+  lzTestEach(operators.map((operator): readonly [string, Operator] => [operator.name, operator]))(
     '%s calls nothing new in its replacements but Error and Promise.reject',
     async (_name, operator) => {
       const found = await Promise.all(corpus.map((source) => newCallees(operator, source)));
@@ -116,7 +116,7 @@ describe('safety', () => {
       (path: NodePath) => path.isCallExpression() && path.parent.type === 'ArrowFunctionExpression',
       [['process.getBuiltinModule', 'fail']],
     ],
-  ] as const)('reports %s', async (_title, source, replacement, where, expected) => {
+  ])('reports %s', async (_title, source, replacement, where, expected) => {
     const unsafe: Operator = {
       name: 'Unsafe',
       sample: '',
@@ -130,14 +130,15 @@ describe('safety', () => {
     assert.deepEqual(await newCallees(unsafe, source), expected);
   });
 
-  lzTestEach(operators.flatMap((operator) => targets.map((source) => [operator.name, source, operator] as const)))(
-    '%s leaves %j alone',
-    async (_name, source, operator) => {
-      assert.deepEqual(await mutantsOf(operator, source), []);
-    },
-  );
+  lzTestEach(
+    operators.flatMap((operator) =>
+      targets.map((source): readonly [string, string, Operator] => [operator.name, source, operator]),
+    ),
+  )('%s leaves %j alone', async (_name, source, operator) => {
+    assert.deepEqual(await mutantsOf(operator, source), []);
+  });
 
-  lzTestEach(operators.map((operator) => [operator.name, operator] as const))(
+  lzTestEach(operators.map((operator) => [operator.name, operator]))(
     '%s makes a mutant of its own sample',
     async (_name, operator) => {
       assert.notDeepEqual(await mutantsOf(operator, operator.sample), []);

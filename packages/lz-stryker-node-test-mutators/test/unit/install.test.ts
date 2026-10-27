@@ -106,7 +106,7 @@ describe('install', () => {
     });
   });
 
-  lzTestEach([
+  const refusals: readonly (readonly [string, 'add' | 'replace', readonly Operator[], string])[] = [
     ["a name of Stryker's", 'add', [operator('StringLiteral')], 'StringLiteral'],
     ["a name of Stryker's, also when it replaces them", 'replace', [operator('StringLiteral')], 'StringLiteral'],
     ['a name twice', 'add', [operator('Alpha'), operator('Beta'), operator('Alpha')], 'Alpha'],
@@ -118,7 +118,9 @@ describe('install', () => {
       [operator('CallExpression'), operator('StringLiteral')],
       'CallExpression, StringLiteral',
     ],
-  ] as const)('refuses %s before it changes the list', async (_title, mode, operators, name) => {
+  ];
+
+  lzTestEach(refusals)('refuses %s before it changes the list', async (_title, mode, operators, name) => {
     const { run, names, instrumented } = setup({ builtIns: ['StringLiteral', 'CallExpression'] });
 
     await assert.rejects(run(mode, [...operators]), {
