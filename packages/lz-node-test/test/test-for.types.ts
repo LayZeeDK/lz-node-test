@@ -4,6 +4,8 @@ import type { TestContext } from 'node:test';
 
 import { lzTestFor } from '../src/test-for.ts';
 
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
 lzTestFor([
   [1, 'a'],
   [2, 'b'],
@@ -17,7 +19,7 @@ lzTestFor([1, 2])('scalar', (n, t) => {
   t.diagnostic('');
 });
 lzTestFor`a | b ${1} | ${2}`('template', (row, t) => {
-  void row.anything;
+  true satisfies IsAny<typeof row>;
   t satisfies TestContext;
 });
 lzTestFor([1])('timeout', () => {}, 100);
