@@ -1,18 +1,30 @@
 import assert from 'node:assert/strict';
 import { lstatSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
-import { describe, it } from 'node:test';
+import { basename, join } from 'node:path';
+import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { isOwn, isRunning, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
 import { logger, noProcess } from '../index.fixtures.ts';
 import { peakMemoryDir } from '../../src/memory-limits.ts';
 
+function tempDirWith(t: TestContext, prefix: string, names: readonly string[] = []) {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+
+  for (const name of names) {
+    mkdirSync(join(dir, name));
+  }
+
+  return dir;
+}
+
 describe('removeDir', () => {
   const dir = join('/tmp', 'run');
 
-  function removal(remove: () => Promise<void>) {
+  function removal(t: TestContext, remove: () => Promise<void>) {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
     const warnings: string[] = [];
     const removed: string[] = [];
     let state = 'pending';
@@ -34,8 +46,7 @@ describe('removeDir', () => {
   }
 
   it('removes the directory without a warning, and stops waiting', async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { warnings, removed, settled } = removal(async () => {});
+    const { warnings, removed, settled } = removal(t, async () => {});
 
     assert.equal(await settled(), 'done');
 
@@ -45,8 +56,7 @@ describe('removeDir', () => {
   });
 
   it('leaves a directory it cannot remove, with a warning, and stops waiting', async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { warnings, settled } = removal(() => Promise.reject(new Error('EPERM: operation not permitted')));
+    const { warnings, settled } = removal(t, () => Promise.reject(new Error('EPERM: operation not permitted')));
 
     assert.equal(await settled(), 'done');
 
@@ -56,8 +66,7 @@ describe('removeDir', () => {
   });
 
   it('names what the removal rejected with in the warning, also when it is no Error', async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { warnings, settled } = removal(() => Promise.reject('EBUSY'));
+    const { warnings, settled } = removal(t, () => Promise.reject('EBUSY'));
 
     assert.equal(await settled(), 'done');
 
@@ -67,8 +76,7 @@ describe('removeDir', () => {
   });
 
   it('stops waiting for a directory still in use after `waitMs`, with a warning', async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { warnings, settled } = removal(() => new Promise(() => {}));
+    const { warnings, settled } = removal(t, () => new Promise(() => {}));
     t.mock.timers.tick(999);
 
     assert.deepEqual([await settled(), warnings], ['pending', []]);
@@ -82,9 +90,8 @@ describe('removeDir', () => {
   });
 
   it('warns once when the removal fails after it stopped waiting', async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
     let fail = (_error: Error) => {};
-    const { warnings, settled } = removal(() => new Promise((_, reject) => (fail = reject)));
+    const { warnings, settled } = removal(t, () => new Promise((_, reject) => (fail = reject)));
     t.mock.timers.tick(1_000);
     fail(new Error('EBUSY: resource busy or locked'));
     await settled();
@@ -138,8 +145,7 @@ describe('isRunning', () => {
 
 describe('ownDir', () => {
   it("creates the directory, and keeps one that is this user's", (t) => {
-    const dir = join(mkdtempSync(join(tmpdir(), 'own-dir-')), 'peaks');
-    t.after(() => rmSync(dirname(dir), { recursive: true, force: true }));
+    const dir = join(tempDirWith(t, 'own-dir-'), 'peaks');
 
     ownDir(dir, () => true);
     ownDir(dir, () => true);
@@ -148,8 +154,7 @@ describe('ownDir', () => {
   });
 
   it("refuses a directory that is another user's, and names it", (t) => {
-    const dir = mkdtempSync(join(tmpdir(), 'own-dir-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const dir = tempDirWith(t, 'own-dir-');
     const asked: string[] = [];
 
     assert.throws(
@@ -167,8 +172,6 @@ describe('ownDir', () => {
 
 describe('removeLeftDirs', () => {
   it('removes the run, cache and dry-run peak directories whose processes ended, and leaves everything else', (t) => {
-    const dir = mkdtempSync(join(tmpdir(), 'left-dirs-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
     const names = [
       'lz-stryker-node-test-111-a',
       'lz-stryker-node-test-cache-111-b',
@@ -180,11 +183,7 @@ describe('removeLeftDirs', () => {
       'other-111-f',
       'other-lz-stryker-node-test-111-g',
     ];
-
-    for (const name of names) {
-      mkdirSync(join(dir, name));
-    }
-
+    const dir = tempDirWith(t, 'left-dirs-', names);
     const asked: number[] = [];
     removeLeftDirs(dir, {
       running: (pid) => {
@@ -199,18 +198,12 @@ describe('removeLeftDirs', () => {
   });
 
   it("leaves the directories of other users' runners", (t) => {
-    const dir = mkdtempSync(join(tmpdir(), 'left-dirs-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
     const names = [
       'lz-stryker-node-test-111-mine',
       'lz-stryker-node-test-111-theirs',
       'lz-stryker-node-test-222-running',
     ];
-
-    for (const name of names) {
-      mkdirSync(join(dir, name));
-    }
-
+    const dir = tempDirWith(t, 'left-dirs-', names);
     const asked: string[] = [];
     removeLeftDirs(dir, {
       running: (pid) => pid === 222,
@@ -229,14 +222,8 @@ describe('removeLeftDirs', () => {
   });
 
   it('leaves a directory it cannot check or remove yet and goes on with the others', (t) => {
-    const dir = mkdtempSync(join(tmpdir(), 'left-dirs-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
     const names = ['lz-stryker-node-test-111-a', 'lz-stryker-node-test-111-b', 'lz-stryker-node-test-111-c'];
-
-    for (const name of names) {
-      mkdirSync(join(dir, name));
-    }
-
+    const dir = tempDirWith(t, 'left-dirs-', names);
     const removed: string[] = [];
 
     removeLeftDirs(dir, {
@@ -279,8 +266,7 @@ describe('isOwn', () => {
   });
 
   it('counts a directory this process created as owned', (t) => {
-    const dir = mkdtempSync(join(tmpdir(), 'own-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const dir = tempDirWith(t, 'own-');
 
     assert.equal(isOwn(dir), true);
   });
