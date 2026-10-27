@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseArguments, templateRows } from '../../src/register.ts';
+import { parseArguments, templateRows, type EachOptions } from '../../src/register.ts';
 import { report, signatures } from '../reported.fixtures.ts';
 import { lzTestEach } from '../../src/test-each.ts';
 import { lzTestFor } from '../../src/test-for.ts';
@@ -82,13 +82,19 @@ describe('t.assert.reports', () => {
 describe('parseArguments', () => {
   const fn = () => {};
 
-  lzTestFor([
+  const cases: readonly (readonly [
+    string,
+    readonly [(() => void) | EachOptions | undefined, (() => void) | number | undefined],
+    unknown,
+  ])[] = [
     ['(name, fn)', [fn, undefined], { options: {}, fn }],
     ['(name, fn, timeout)', [fn, 50], { options: { timeout: 50 }, fn }],
     ['(name, options, fn)', [{ skip: true }, fn], { options: { skip: true }, fn }],
     ['(name, options, timeout)', [{ skip: true }, 50], { options: { timeout: 50 } }],
     ['(name)', [undefined, undefined], { options: {} }],
-  ] as const)('reads %s', ([, args, expected]) => {
+  ];
+
+  lzTestFor(cases)('reads %s', ([, args, expected]) => {
     assert.deepEqual(parseArguments(args[0], args[1]), expected);
   });
 

@@ -6,10 +6,12 @@ import { lzTestEach } from '../src/test-each.ts';
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
-lzTestEach([
+const tupleRows: readonly [readonly [1, 'a'], readonly [2, 'b']] = [
   [1, 'a'],
   [2, 'b'],
-] as const)('tuple', (n, s) => {
+];
+
+lzTestEach(tupleRows)('tuple', (n, s) => {
   n satisfies 1 | 2;
   s satisfies 'a' | 'b';
 });

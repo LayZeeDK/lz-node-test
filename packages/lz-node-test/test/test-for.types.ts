@@ -6,10 +6,12 @@ import { lzTestFor } from '../src/test-for.ts';
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
-lzTestFor([
+const tupleRows: readonly [readonly [1, 'a'], readonly [2, 'b']] = [
   [1, 'a'],
   [2, 'b'],
-] as const)('tuple', ([n, s], t) => {
+];
+
+lzTestFor(tupleRows)('tuple', ([n, s], t) => {
   n satisfies 1 | 2;
   s satisfies 'a' | 'b';
   t satisfies TestContext;
