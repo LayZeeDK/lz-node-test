@@ -122,6 +122,30 @@ function readRecords(outDir: string): Record<string, ProcessRecord> {
   );
 }
 
+async function runTestFile(
+  t: TestContext,
+  source: string,
+  {
+    name = 'fixture.test.mjs',
+    dir = tempDir(t),
+    env = {},
+    args = [],
+  }: { name?: string; dir?: string; env?: Record<string, string>; args?: string[] } = {},
+) {
+  const outDir = tempDir(t);
+  const testFile = join(dir, name);
+  writeFileSync(testFile, source);
+
+  const { code, pid } = await runWithHook([...args, testFile], {
+    [envNames.out]: outDir,
+    [envNames.file]: testFile,
+    ...env,
+  });
+  const records = readRecords(outDir);
+
+  return { code, pid, testFile, records, record: records[`${pid}.0.json`] };
+}
+
 describe('hook', () => {
   it('writes the record of a process the runner started when the process exits', async (t) => {
     const outDir = tempDir(t);
@@ -202,11 +226,10 @@ describe('hook', () => {
 
   it("keeps a worker thread's record apart from the test file's, as a worker started from a file loads the hook too", async (t) => {
     const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.mjs');
     writeFileSync(join(dir, 'worker.mjs'), 'globalThis.__stryker__.hitCount = 999;\n');
-    writeFileSync(
-      testFile,
+
+    const { code, pid, records, record } = await runTestFile(
+      t,
       fixture(
         "import { Worker } from 'node:worker_threads';",
         "it('starts a worker', async () => {",
@@ -214,14 +237,12 @@ describe('hook', () => {
         "  await new Promise((resolve) => worker.on('exit', resolve));",
         '});',
       ),
+      { dir },
     );
 
-    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
-
     assert.equal(code, 0);
-    const records = readRecords(outDir);
     const workers = Object.keys(records).filter((name) => name !== `${pid}.0.json`);
-    assert.equal(records[`${pid}.0.json`]?.main, true);
+    assert.equal(record?.main, true);
     assert.deepEqual(
       workers.map((name) => [/^\d+\.[1-9]\d*\.json$/.test(name), records[name]?.main, records[name]?.hitCount]),
       [[true, undefined, 999]],
@@ -282,19 +303,14 @@ describe('hook', () => {
     'ends a test file whose test leaves a server listening %s',
     { timeout: 30_000 },
     async ([, name, then, heldOpenMs, exitCode, status, marks], t) => {
-      const dir = tempDir(t);
-      const outDir = tempDir(t);
-      const testFile = join(dir, 'fixture.test.mjs');
-      writeFileSync(testFile, fixture("import { createServer } from 'node:http';", leavesServer(name, then)));
-
-      const { code, pid } = await runWithHook([testFile], {
-        [envNames.out]: outDir,
-        [envNames.file]: testFile,
-        [envNames.heldOpen]: heldOpenMs,
-      });
+      const { code, record } = await runTestFile(
+        t,
+        fixture("import { createServer } from 'node:http';", leavesServer(name, then)),
+        { env: { [envNames.heldOpen]: heldOpenMs } },
+      );
 
       assert.equal(code, exitCode);
-      const { main, tests, unfinished, heldOpen } = readRecords(outDir)[`${pid}.0.json`] ?? {};
+      const { main, tests, unfinished, heldOpen } = record ?? {};
       assert.deepEqual(
         { main, statuses: tests?.map((test) => test.status), unfinished, heldOpen },
         { main: true, statuses: [status], unfinished: undefined, heldOpen: undefined, ...marks },
@@ -306,38 +322,24 @@ describe('hook', () => {
     'lets a test file whose tests leave nothing open end by itself, long before the held-open time',
     { timeout: 20_000 },
     async (t) => {
-      const dir = tempDir(t);
-      const outDir = tempDir(t);
-      const testFile = join(dir, 'fixture.test.mjs');
-      writeFileSync(testFile, fixture("it('passes', () => {});"));
-
-      const { code, pid } = await runWithHook([testFile], {
-        [envNames.out]: outDir,
-        [envNames.file]: testFile,
-        [envNames.heldOpen]: '60000',
+      const { code, record } = await runTestFile(t, fixture("it('passes', () => {});"), {
+        env: { [envNames.heldOpen]: '60000' },
       });
 
       assert.equal(code, 0);
-      assert.equal(readRecords(outDir)[`${pid}.0.json`]?.heldOpen, undefined);
+      assert.equal(record?.heldOpen, undefined);
     },
   );
 
   it('records the tests and coverage of the test file it runs in, in a file named after the process', async (t) => {
-    const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(testFile, fixture("it('covers', () => { cover('fixture-1'); });"));
-
-    const { code, pid } = await runWithHook([testFile], {
-      [envNames.out]: outDir,
-      [envNames.file]: testFile,
-      [envNames.dryRun]: 'true',
-    });
+    const { code, pid, testFile, records, record } = await runTestFile(
+      t,
+      fixture("it('covers', () => { cover('fixture-1'); });"),
+      { env: { [envNames.dryRun]: 'true' } },
+    );
 
     assert.equal(code, 0);
-    const records = readRecords(outDir);
     assert.deepEqual(Object.keys(records), [`${pid}.0.json`]);
-    const record = records[`${pid}.0.json`];
     assert.ok(record);
     const id = `${testFile} > covers`;
     assert.deepEqual(
@@ -350,11 +352,8 @@ describe('hook', () => {
   });
 
   it("attributes tests declared through node:test's default export and through require", async (t) => {
-    const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(
-      testFile,
+    const { code, testFile, record } = await runTestFile(
+      t,
       [
         "import test from 'node:test';",
         "import { createRequire } from 'node:module';",
@@ -370,16 +369,10 @@ describe('hook', () => {
         "required.it('required it', cover);",
         '',
       ].join('\n'),
+      { env: { [envNames.dryRun]: 'true' } },
     );
 
-    const { code, pid } = await runWithHook([testFile], {
-      [envNames.out]: outDir,
-      [envNames.file]: testFile,
-      [envNames.dryRun]: 'true',
-    });
-
     assert.equal(code, 0);
-    const record = readRecords(outDir)[`${pid}.0.json`];
     const ids = ['default export', 'suite > nested', 'required', 'required it'].map((name) => `${testFile} > ${name}`);
     assert.deepEqual(
       record?.tests.map(({ id, startPosition }) => ({ id, startPosition })),
@@ -397,27 +390,21 @@ describe('hook', () => {
     ['ends by itself', '', {}],
     ['ends through process.exit()', 'process.exit(0);\n', { unfinished: true }],
   ])('marks the record of a test file that %s without tests as unfinished or not', async ([, exits, unfinished], t) => {
-    const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(testFile, `import 'node:test';\n${exits}`);
-
-    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
+    const { code, record } = await runTestFile(t, `import 'node:test';\n${exits}`);
 
     assert.equal(code, 0);
-    assert.deepEqual(readRecords(outDir)[`${pid}.0.json`], { main: true, tests: [], ...unfinished });
+    assert.deepEqual(record, { main: true, tests: [], ...unfinished });
   });
 
   it('records where a CommonJS test file declares its tests', async (t) => {
-    const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.cjs');
-    writeFileSync(testFile, "const { it } = require('node:test');\n\n  it('passes', () => {});\n");
-
-    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
+    const { code, record } = await runTestFile(
+      t,
+      "const { it } = require('node:test');\n\n  it('passes', () => {});\n",
+      { name: 'fixture.test.cjs' },
+    );
 
     assert.equal(code, 0);
-    assert.deepEqual(readRecords(outDir)[`${pid}.0.json`]?.tests[0]?.startPosition, { line: 2, column: 2 });
+    assert.deepEqual(record?.tests[0]?.startPosition, { line: 2, column: 2 });
   });
 
   /** A test file whose source map sends line 2, the `it` call, to line 41, column 3 of `source`. */
@@ -451,23 +438,22 @@ describe('hook', () => {
     ],
   ])('records where the source declares a test that %s', async ([, name, source, position], t) => {
     const dir = tempDir(t);
-    const outDir = tempDir(t);
     // A loader such as tsx turns source maps on this way, so stack traces are mapped and raw call sites are not.
     const maps = join(dir, 'maps.mjs');
     writeFileSync(maps, 'process.setSourceMapsEnabled(true);\n');
-    const testFile = join(dir, name);
-    writeFileSync(testFile, source);
 
-    const args = ['--import', pathToFileURL(maps).href, testFile];
-    const { code, pid } = await runWithHook(args, { [envNames.out]: outDir, [envNames.file]: testFile });
+    const { code, record } = await runTestFile(t, source, {
+      name,
+      dir,
+      args: ['--import', pathToFileURL(maps).href],
+    });
 
     assert.equal(code, 0);
-    assert.deepEqual(readRecords(outDir)[`${pid}.0.json`]?.tests[0]?.startPosition, position);
+    assert.deepEqual(record?.tests[0]?.startPosition, position);
   });
 
   it('records where the test file declares a test through helpers many calls deep', async (t) => {
     const dir = tempDir(t);
-    const outDir = tempDir(t);
     const levels = Array.from({ length: 12 }, (_, level) => `export const level${level} = () => level${level + 1}();`);
     writeFileSync(
       join(dir, 'helper.mjs'),
@@ -475,21 +461,16 @@ describe('hook', () => {
         '\n',
       ),
     );
-    const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(testFile, "import { level0 } from './helper.mjs';\n\n  level0();\n");
 
-    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
+    const { code, record } = await runTestFile(t, "import { level0 } from './helper.mjs';\n\n  level0();\n", { dir });
 
     assert.equal(code, 0);
-    assert.deepEqual(readRecords(outDir)[`${pid}.0.json`]?.tests[0]?.startPosition, { line: 2, column: 2 });
+    assert.deepEqual(record?.tests[0]?.startPosition, { line: 2, column: 2 });
   });
 
   it('records the results node:test reports, also of hooks, runtime skips and todo tests', async (t) => {
-    const dir = tempDir(t);
-    const outDir = tempDir(t);
-    const testFile = join(dir, 'fixture.test.mjs');
-    writeFileSync(
-      testFile,
+    const { code, testFile, record } = await runTestFile(
+      t,
       [
         "import { afterEach, describe, it } from 'node:test';",
         "describe('suite', () => {",
@@ -502,11 +483,9 @@ describe('hook', () => {
       ].join('\n'),
     );
 
-    const { code, pid } = await runWithHook([testFile], { [envNames.out]: outDir, [envNames.file]: testFile });
-
     assert.equal(code, 1);
     assert.deepEqual(
-      readRecords(outDir)[`${pid}.0.json`]?.tests.map(({ id, status, failureMessage }) => ({
+      record?.tests.map(({ id, status, failureMessage }) => ({
         id,
         status,
         failureMessage,
