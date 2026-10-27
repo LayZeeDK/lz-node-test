@@ -160,8 +160,19 @@ export const heldOpenMs = 30_000;
 /** Stryker's variable for the active mutant, which instrumented code reads when it loads. */
 export const activeMutantEnv = '__STRYKER_ACTIVE_MUTANT__';
 
-/** What the hook takes from the process; `install` also takes the global object, whose slots it sets. */
-export interface HookServices {
+/** The global object's slots, which the hook sets for the modules it loads and for Stryker's instrumented code. */
+export interface GlobalSlots {
+  /** The one member every global object has, so that `globalThis` is assignable to this type. */
+  readonly globalThis: unknown;
+  readonly __stryker__?: InstrumenterContext;
+  readonly [installed]?: true;
+  readonly [reporting]?: (event: TestEvent) => void;
+  readonly [wrappedNodeTest]?: NodeTestModule;
+  readonly [watchdog]?: unknown;
+}
+
+/** What the hook takes from the process, and the global object whose slots it sets. */
+export interface HookDependencies {
   readonly env: Record<string, string | undefined>;
   readonly mainFile: string | undefined;
   readonly pid: number;
@@ -199,6 +210,7 @@ export interface HookServices {
     frameCount: number,
     options: { readonly sourceMap: boolean },
   ) => readonly { readonly scriptName: string; readonly lineNumber: number; readonly columnNumber: number }[];
+  readonly global: { -readonly [TKey in keyof GlobalSlots]: GlobalSlots[TKey] };
 }
 
 /**
@@ -236,20 +248,7 @@ function testIds(json: string): Set<string> {
   return new Set(ids);
 }
 
-export function install(
-  deps: HookServices & {
-    /** The global object, whose slots the hook sets for the modules it loads and for Stryker's instrumented code. */
-    readonly global: {
-      /** The one member every global object has, so that `globalThis` is assignable to this type. */
-      readonly globalThis: unknown;
-      __stryker__?: InstrumenterContext;
-      [installed]?: true;
-      [reporting]?: (event: TestEvent) => void;
-      [wrappedNodeTest]?: NodeTestModule;
-      [watchdog]?: unknown;
-    };
-  },
-): boolean {
+export function install(deps: HookDependencies): boolean {
   const outDir = deps.env[envNames.out];
 
   if (!outDir || deps.global[installed]) {
@@ -382,8 +381,6 @@ export function install(
 
   return true;
 }
-
-export type HookDependencies = Parameters<typeof install>[0];
 
 export interface Ending {
   /**

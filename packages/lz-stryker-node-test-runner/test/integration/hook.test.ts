@@ -13,6 +13,7 @@ import {
   envNames,
   installed,
   reporting,
+  type GlobalSlots,
   type HookDependencies,
   type ProcessRecord,
   type TestEvent,
@@ -172,7 +173,7 @@ describe('hook', () => {
 
   it('starts the memory watchdog, survives its failure, and records the peak memory, when the runner asks', async (t) => {
     const outDir = tempDir(t);
-    const global: HookDependencies['global'] = globalThis;
+    const global: GlobalSlots = globalThis;
     const unref = t.mock.method(Worker.prototype, 'unref');
 
     const added = await loadRunnerStartedHook(outDir, { [envNames.dryRun]: 'true', [envNames.memoryLimit]: '1000000' });

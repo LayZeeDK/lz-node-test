@@ -2,9 +2,9 @@
 // tests have run.
 import { Transform } from 'node:stream';
 
-import { reporting, type HookDependencies, type TestEvent } from './hook-core.ts';
+import { reporting, type GlobalSlots, type TestEvent } from './hook-core.ts';
 
-const global: HookDependencies['global'] = globalThis;
+const global: GlobalSlots = globalThis;
 
 export default new Transform({
   writableObjectMode: true,
