@@ -19,17 +19,15 @@ export function uniqueIds(): (parent: string, name: string) => string {
   return (parent, name) => {
     const base = testId(parent, name);
 
-    for (let count = 1; count <= used.size + 1; count++) {
-      const id = count === 1 ? base : `${base} (${count})`;
+    let id = base;
 
-      if (!used.has(id)) {
-        used.add(id);
-
-        return id;
-      }
+    for (let count = 2; used.has(id); count++) {
+      id = `${base} (${count})`;
     }
 
-    return base;
+    used.add(id);
+
+    return id;
   };
 }
 
