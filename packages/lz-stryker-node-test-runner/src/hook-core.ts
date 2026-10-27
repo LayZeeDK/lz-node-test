@@ -400,6 +400,62 @@ export interface Ending {
 }
 
 /**
+ * Runs `hook` as node:test would, in its callback or promise style, and calls what `begin` returns when it settles: with
+ * whether it failed. A `begin` that returns nothing leaves the call as it is.
+ */
+function settling(hook: Body, begin: (context: unknown) => ((failed: boolean) => void) | undefined): Body {
+  const call = (self: unknown, args: unknown[]): unknown => Reflect.apply(hook, self, args);
+  const callSettling = (self: unknown, args: unknown[], settle: (failed: boolean) => void) => {
+    try {
+      return call(self, args);
+    } catch (error) {
+      settle(true);
+      throw error;
+    }
+  };
+  const callingBack: HookFn = function (this: unknown, context, done) {
+    const settle = begin(context);
+
+    if (settle === undefined) {
+      return call(this, [context, done]);
+    }
+
+    return callSettling(
+      this,
+      [
+        context,
+        (error?: unknown) => {
+          settle(Boolean(error));
+          done(error);
+        },
+      ],
+      settle,
+    );
+  };
+  const promising = function (this: unknown, ...args: unknown[]) {
+    const settle = begin(args[0]);
+
+    if (settle === undefined) {
+      return call(this, args);
+    }
+
+    return Promise.resolve(callSettling(this, args, settle)).then(
+      (value) => {
+        settle(false);
+
+        return value;
+      },
+      (error: unknown) => {
+        settle(true);
+        throw error;
+      },
+    );
+  };
+
+  return hook.length === 2 ? callingBack : promising;
+}
+
+/**
  * Ends a test file's process that outlives its tests, as a server left listening makes it. Once node:test has
  * finished every top-level suite and test and the file's root `after` hooks have settled, or one of them threw or timed
  * out, which stops the rest, a file with a failed test ends with exit code 1 once node:test has reported each top-level
@@ -484,34 +540,8 @@ export function ending(
     },
     track: (hook) => {
       pending++;
-      const run = (self: unknown, args: unknown[]): unknown => {
-        try {
-          return Reflect.apply(hook, self, args);
-        } catch (error) {
-          settle(true);
-          throw error;
-        }
-      };
-      const callingBack: HookFn = function (this: unknown, context, done) {
-        return run(this, [
-          context,
-          (error?: unknown) => {
-            settle(Boolean(error));
-            done(error);
-          },
-        ]);
-      };
-      const promising = function (this: unknown, ...args: unknown[]) {
-        return Promise.resolve(run(this, args)).then(
-          () => settle(false),
-          (error: unknown) => {
-            settle(true);
-            throw error;
-          },
-        );
-      };
 
-      return hook.length === 2 ? callingBack : promising;
+      return settling(hook, () => settle);
     },
     reported: ({ type, data }) => {
       if (isResult(type) && data.nesting === 0 && !fileLevel(data.details)) {
@@ -699,7 +729,6 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       return hook;
     }
 
-    const call = (self: unknown, args: unknown[]): unknown => Reflect.apply(hook, self, args);
     /** Makes the test current and returns what ends that, or nothing when the hook runs as it is. */
     const attribute = (context: unknown) => {
       const id = find(context);
@@ -716,44 +745,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         setCurrent();
       };
     };
-    const callAttributed = (self: unknown, args: unknown[], end: () => void) => {
-      try {
-        return call(self, args);
-      } catch (error) {
-        end();
-        throw error;
-      }
-    };
-    const callingBack: HookFn = function (this: unknown, context, done) {
-      const end = attribute(context);
 
-      if (end === undefined) {
-        return call(this, [context, done]);
-      }
-
-      return callAttributed(
-        this,
-        [
-          context,
-          (error?: unknown) => {
-            end();
-            done(error);
-          },
-        ],
-        end,
-      );
-    };
-    const promising = function (this: unknown, ...args: unknown[]) {
-      const end = attribute(args[0]);
-
-      if (end === undefined) {
-        return call(this, args);
-      }
-
-      return Promise.resolve(callAttributed(this, args, end)).finally(end);
-    };
-
-    return hook.length === 2 ? callingBack : promising;
+    return settling(hook, attribute);
   };
   const activating = (hook: Body | undefined): Body | undefined => {
     // node:test registers a hook without a function, as one that does nothing.
