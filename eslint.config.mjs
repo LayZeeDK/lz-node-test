@@ -182,6 +182,11 @@ export default [
           custom: { regex: '^[A-Z][A-Z0-9]+$', match: false },
         },
         { selector: 'variable', modifiers: ['destructured'], format: null },
+        {
+          selector: 'typeParameter',
+          format: ['PascalCase'],
+          custom: { regex: '^T([A-Z][A-Za-z0-9]*)?$', match: true },
+        },
       ],
     },
   },

@@ -207,14 +207,14 @@ const isCoverage = (value: unknown): value is MutantCoverage =>
   Object.values(value['perTest']).every(isCounts);
 
 /** `value` under `key` when it is there and passes `check`, which `field` names; nothing when it is not there. */
-function optional<K extends string, T>(
-  key: K,
+function optional<TKey extends string, T>(
+  key: TKey,
   value: unknown,
   check: (value: unknown) => value is T,
   field: string = key,
   fail: (field: string) => never = notARecord,
-): { [P in K]?: T } {
-  const result: { [P in K]?: T } = {};
+): { [P in TKey]?: T } {
+  const result: { [P in TKey]?: T } = {};
 
   if (value === undefined) {
     return result;
@@ -313,13 +313,13 @@ type FileOutcome =
   | { end: DryRunResult }
   | { results: TestResult[]; coverages: (MutantCoverage | undefined)[]; failed: boolean };
 
-export async function lzRunInPool<T, R>(
+export async function lzRunInPool<T, TResult>(
   items: T[],
   limit: number,
-  work: (item: T) => Promise<R>,
-  stops: (result: R) => boolean,
-): Promise<R[]> {
-  const results: R[] = [];
+  work: (item: T) => Promise<TResult>,
+  stops: (result: TResult) => boolean,
+): Promise<TResult[]> {
+  const results: TResult[] = [];
   // The lanes share one iterator, so each item goes to one lane; an array iterator has no `return` for a lane to close.
   const queue = items.entries();
   let end = items.length;

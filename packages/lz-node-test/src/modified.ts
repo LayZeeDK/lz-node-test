@@ -5,23 +5,24 @@ import { templateRows, type Flags, type Register } from './register.ts';
  * flag on, so they compose in any order. `skipIf` and `runIf` set `skip` to true or false, as in Vitest, so they
  * override a `skip` before them and are overridden by one after them.
  */
-export type Modified<F> = F & {
-  readonly skip: Modified<F>;
-  readonly only: Modified<F>;
-  readonly todo: Modified<F>;
-  readonly fails: Modified<F>;
-  skipIf(condition: unknown): Modified<F>;
-  runIf(condition: unknown): Modified<F>;
+export type Modified<TFunction> = TFunction & {
+  readonly skip: Modified<TFunction>;
+  readonly only: Modified<TFunction>;
+  readonly todo: Modified<TFunction>;
+  readonly fails: Modified<TFunction>;
+  skipIf(condition: unknown): Modified<TFunction>;
+  runIf(condition: unknown): Modified<TFunction>;
 };
 
-type Table<F> = (cases: readonly unknown[], ...values: unknown[]) => Register<F>;
+type Table<TCallback> = (cases: readonly unknown[], ...values: unknown[]) => Register<TCallback>;
 
 /** The table function for `cases`, which turns a table into its tests' `Register`, with `flags` and the modifiers. */
-export function modified<F>(
-  cases: (flags: Flags, rows: readonly unknown[]) => Register<F>,
+export function modified<TCallback>(
+  cases: (flags: Flags, rows: readonly unknown[]) => Register<TCallback>,
   flags: Flags,
-): Modified<Table<F>> {
-  const table: Table<F> = (rows, ...values) => cases(flags, values.length > 0 ? templateRows(rows, values) : rows);
+): Modified<Table<TCallback>> {
+  const table: Table<TCallback> = (rows, ...values) =>
+    cases(flags, values.length > 0 ? templateRows(rows, values) : rows);
   const flag = (key: keyof Flags) => () => modified(cases, { ...flags, [key]: true });
   const withConditions = Object.assign(table, {
     skipIf: (condition: unknown) => modified(cases, { ...flags, skip: Boolean(condition) }),
@@ -38,10 +39,10 @@ export function modified<F>(
 }
 
 /** Defines a getter on `target` and types it there, as TypeScript does not type what Object.defineProperty adds. */
-function defineGetter<T extends object, K extends PropertyKey, V>(
+function defineGetter<T extends object, TKey extends PropertyKey, TValue>(
   target: T,
-  key: K,
-  get: () => V,
-): asserts target is T & { readonly [P in K]: V } {
+  key: TKey,
+  get: () => TValue,
+): asserts target is T & { readonly [P in TKey]: TValue } {
   Object.defineProperty(target, key, { get });
 }

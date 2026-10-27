@@ -23,7 +23,11 @@ export type EachCallback = (...args: any[]) => Awaitable<void>;
 type Body = (t: TestContext) => Awaitable<void>;
 
 /** What the table's returned function takes, in any of Vitest's call shapes. */
-export type Register<F> = (name: Name, optionsOrFn?: F | EachOptions, fnOrTimeout?: F | number) => void;
+export type Register<TCallback> = (
+  name: Name,
+  optionsOrFn?: TCallback | EachOptions,
+  fnOrTimeout?: TCallback | number,
+) => void;
 
 /** One test of the table: the values its name formats, and its body unless it is a todo test. */
 export interface Case {
@@ -54,10 +58,10 @@ export function templateRows(strings: readonly unknown[], values: readonly unkno
  * Reads Vitest's call shapes: `(name, fn)`, `(name, fn, timeout)` and `(name, options, fn)`. Untyped callers can pass
  * other shapes, which throw.
  */
-export function parseArguments<F extends EachCallback>(
-  optionsOrFn: F | EachOptions | undefined,
-  fnOrTimeout: F | number | undefined,
-): { options: EachOptions; fn?: F } {
+export function parseArguments<TCallback extends EachCallback>(
+  optionsOrFn: TCallback | EachOptions | undefined,
+  fnOrTimeout: TCallback | number | undefined,
+): { options: EachOptions; fn?: TCallback } {
   if (
     optionsOrFn === null ||
     (typeof fnOrTimeout === 'object' && fnOrTimeout !== null) ||
@@ -78,11 +82,11 @@ export function parseArguments<F extends EachCallback>(
 }
 
 /** Registers one test per case, each named after `name` and its case, with the table's options. */
-export function register<F extends EachCallback>(
+export function register<TCallback extends EachCallback>(
   flags: Flags,
   cases: readonly unknown[],
-  caseOf: (row: unknown, fn?: F) => Case,
-): Register<F> {
+  caseOf: (row: unknown, fn?: TCallback) => Case,
+): Register<TCallback> {
   return (name, optionsOrFn, fnOrTimeout) => {
     const template = formatName(name);
     const { options, fn } = parseArguments(optionsOrFn, fnOrTimeout);
