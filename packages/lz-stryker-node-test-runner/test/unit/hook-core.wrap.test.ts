@@ -19,12 +19,12 @@ import {
 import { callMember, member } from '../index.fixtures.ts';
 
 interface Subtests {
-  test: (name: string, body: Fn) => unknown;
+  readonly test: (name: string, body: Fn) => unknown;
 }
 
 interface SuiteCall {
-  self: unknown;
-  args: unknown[];
+  readonly self: unknown;
+  readonly args: readonly unknown[];
 }
 
 function wrapped(filter?: string[], bail = false, activeMutant?: string) {
@@ -746,7 +746,7 @@ describe('wrapNodeTest', () => {
   });
 
   describe('hooks', () => {
-    function hooksOf(registrations: { kind: string; rest: unknown[] }[], kind: string): Fn[] {
+    function hooksOf(registrations: { kind: string; rest: readonly unknown[] }[], kind: string): Fn[] {
       return registrations.filter((registration) => registration.kind === kind).map(({ rest }) => callable(rest[0]));
     }
 

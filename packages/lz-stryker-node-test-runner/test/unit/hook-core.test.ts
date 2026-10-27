@@ -394,34 +394,34 @@ describe('redirectNodeTest', () => {
 });
 
 interface Harness {
-  deps: HookDependencies;
-  fake: ReturnType<typeof fakeNodeTest>;
-  records: { path: string; record: ProcessRecord }[];
-  calls: string[];
-  hooks: ModuleHooks[];
-  wrapped: () => NodeTestModule;
+  readonly deps: HookDependencies;
+  readonly fake: ReturnType<typeof fakeNodeTest>;
+  readonly records: readonly { readonly path: string; readonly record: ProcessRecord }[];
+  readonly calls: readonly string[];
+  readonly hooks: readonly ModuleHooks[];
+  readonly wrapped: () => NodeTestModule;
   /** Adds an exit listener as the test file would, after the hook's. */
-  onExit: (listener: () => void) => void;
+  readonly onExit: (listener: () => void) => void;
   /** Runs the listeners as Node.js does: `beforeExit` on a natural end, then the exit listeners there are then. */
-  exit: (options?: { natural: boolean }) => void;
+  readonly exit: (options?: { readonly natural: boolean }) => void;
   /** The codes the hook ended the process with, `undefined` for node:test's own. */
-  exits: (number | undefined)[];
+  readonly exits: readonly (number | undefined)[];
   /** The timers the hook set, by delay, which a test fires by calling them. */
-  timers: { ms: number; fire: () => void }[];
-  /** What `process.getActiveResourcesInfo()` lists, to which a test adds what its tests open. */
-  resources: string[];
+  readonly timers: readonly { readonly ms: number; readonly fire: () => void }[];
+  /** Sets what `process.getActiveResourcesInfo()` lists from then on, as the tests open or close things; at first `PipeWrap`. */
+  readonly listResources: (resources: readonly string[]) => void;
 }
 
 function harness(env: Record<string, string | undefined>, overrides: Partial<HookDependencies> = {}): Harness {
   const fake = fakeNodeTest();
-  const records: Harness['records'] = [];
+  const records: Harness['records'][number][] = [];
   const calls: string[] = [];
   const hooks: ModuleHooks[] = [];
   const listeners: (() => void)[] = [];
   const beforeExitListeners: (() => void)[] = [];
-  const exits: Harness['exits'] = [];
-  const timers: Harness['timers'] = [];
-  const resources = ['PipeWrap'];
+  const exits: Harness['exits'][number][] = [];
+  const timers: Harness['timers'][number][] = [];
+  let resources: readonly string[] = ['PipeWrap'];
   const deps: HookDependencies = {
     env,
     mainFile: testFile,
@@ -454,7 +454,7 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
     exit: (code) => {
       exits.push(code);
     },
-    activeResources: () => [...resources],
+    activeResources: () => resources,
     later: (fire, ms) => {
       timers.push({ ms, fire });
     },
@@ -478,7 +478,9 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
     hooks,
     exits,
     timers,
-    resources,
+    listResources: (now) => {
+      resources = now;
+    },
     wrapped: () => {
       const wrapped = deps.global[wrappedNodeTest];
       assert.ok(wrapped, 'the hook published no wrapped node:test');
@@ -565,10 +567,10 @@ describe('install', () => {
 
     assert.equal(install(deps), true);
 
-    calls.length = 0;
+    const installCalls = calls.length;
 
     assert.equal(install(deps), false);
-    assert.deepEqual(calls, []);
+    assert.deepEqual(calls.slice(installCalls), []);
   });
 
   it('marks the process with a symbol that every copy of the hook shares', () => {
@@ -772,7 +774,7 @@ describe('install', () => {
     onExit(() => {
       Object.assign(coverage.static, { exit: 1 });
     });
-    calls.length = 0;
+    const installCalls = calls.length;
 
     exit({ natural });
 
@@ -780,7 +782,7 @@ describe('install', () => {
       records.map(({ record }) => record.mutantCoverage),
       [{ static: exitHits, perTest: {} }],
     );
-    assert.deepEqual(calls, natural ? ['offExit', 'onExit'] : []);
+    assert.deepEqual(calls.slice(installCalls), natural ? ['offExit', 'onExit'] : []);
   });
 
   it('writes the diagnostics of errors raised after a test ended', () => {
@@ -1057,7 +1059,7 @@ describe('install', () => {
         }
 
         afterHooks(h.fake)[0]?.();
-        h.resources.push('TCPServerWrap', 'PipeWrap');
+        h.listResources(['PipeWrap', 'TCPServerWrap', 'PipeWrap']);
         h.timers[0]?.fire();
         h.exit({ natural: false });
 
@@ -1075,7 +1077,7 @@ describe('install', () => {
       install(h.deps);
       h.wrapped().it('passes', () => {});
       afterHooks(h.fake)[0]?.();
-      h.resources.splice(0, h.resources.length, 'TCPServerWrap', 'Timeout');
+      h.listResources(['TCPServerWrap', 'Timeout']);
       h.timers[0]?.fire();
       h.exit({ natural: false });
 

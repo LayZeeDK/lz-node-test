@@ -6,10 +6,10 @@ import type { NodeTestModule } from '../src/hook-core.ts';
 export type Fn = (this: unknown, ...args: unknown[]) => unknown;
 
 export interface Registration {
-  kind: string;
-  name: string;
-  rest: unknown[];
-  self: unknown;
+  readonly kind: string;
+  readonly name: string;
+  readonly rest: readonly unknown[];
+  readonly self: unknown;
 }
 
 export const testFile = join('/repo', 'a.test.ts');
