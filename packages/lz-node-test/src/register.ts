@@ -29,10 +29,10 @@ export type Register<TCallback> = (
   fnOrTimeout?: TCallback | number,
 ) => void;
 
-/** One test of the table: the values its name formats, and its body unless it is a todo test. */
-export interface Case {
+/** One test of the table: the values its name formats, and how it calls the table's function. */
+export interface Case<TCallback> {
   readonly items: readonly unknown[];
-  readonly body?: Body;
+  readonly run: (fn: TCallback, t: TestContext) => Awaitable<void>;
 }
 
 const signatures =
@@ -82,7 +82,7 @@ export function parseArguments<TCallback extends EachCallback>(
 export function register<TCallback extends EachCallback>(
   flags: Flags,
   cases: readonly unknown[],
-  caseOf: (row: unknown, fn?: TCallback) => Case,
+  caseOf: (row: unknown) => Case<TCallback>,
 ): Register<TCallback> {
   return (name, optionsOrFn, fnOrTimeout) => {
     const template = formatName(name);
@@ -95,7 +95,8 @@ export function register<TCallback extends EachCallback>(
     }
 
     cases.forEach((row, index) => {
-      const { items, body } = caseOf(row, fn);
+      const { items, run } = caseOf(row);
+      const body = fn && ((t: TestContext) => run(fn, t));
 
       it(formatTitle(template, items, index), testOptions, fails ? body && failing(body) : body);
     });

@@ -69,9 +69,9 @@ export const lzTestEach: Modified<LzTestEachFunction> = modified(eachCases, {});
 function eachCases(flags: Flags, cases: readonly unknown[]): Register<EachCallback> {
   const spread = cases.every(Array.isArray);
 
-  return register<EachCallback>(flags, cases, (row, fn) => {
+  return register<EachCallback>(flags, cases, (row) => {
     const items: readonly unknown[] = Array.isArray(row) ? row : [row];
 
-    return { items, ...(fn && { body: () => (spread ? fn(...items) : fn(row)) }) };
+    return { items, run: (fn) => (spread ? fn(...items) : fn(row)) };
   });
 }

@@ -24,8 +24,8 @@ type ForCallback = (row: any, t: TestContext) => Awaitable<void>;
 export const lzTestFor: Modified<LzTestForFunction> = modified(forCases, {});
 
 function forCases(flags: Flags, cases: readonly unknown[]): Register<ForCallback> {
-  return register<ForCallback>(flags, cases, (row, fn) => ({
+  return register<ForCallback>(flags, cases, (row) => ({
     items: row == null ? [] : Array.isArray(row) ? row : [row],
-    ...(fn && { body: (t: TestContext) => fn(row, t) }),
+    run: (fn, t) => fn(row, t),
   }));
 }
