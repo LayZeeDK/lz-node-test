@@ -1,6 +1,8 @@
 import { resolveFromCore, type InstrumentedMutant } from '../src/install.ts';
 import { toNodeMutator, type Operator } from '../src/operator.ts';
 
+export const strict = "import assert from 'node:assert/strict';\n";
+
 export async function instrumentWith(operator: Operator, source: string): Promise<readonly InstrumentedMutant[]> {
   const instrumenter = await resolveFromCore();
 

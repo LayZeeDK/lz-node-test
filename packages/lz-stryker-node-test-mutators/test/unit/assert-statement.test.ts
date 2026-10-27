@@ -4,10 +4,8 @@ import { describe } from 'node:test';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { assertStatement } from '../../src/assert-statement.ts';
 import { resolveFromCore } from '../../src/install.ts';
-import { mutantsOf } from '../mutants-of.fixtures.ts';
+import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
 import { isOwn, toNodeMutator } from '../../src/operator.ts';
-
-const strict = "import assert from 'node:assert/strict';\n";
 
 describe('LzAssertStatement', () => {
   lzTestEach([

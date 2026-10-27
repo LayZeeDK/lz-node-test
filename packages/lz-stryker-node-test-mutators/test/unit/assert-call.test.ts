@@ -6,13 +6,12 @@ import ts from 'typescript';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { assertCall } from '../../src/assert-call.ts';
-import { mutantsOf } from '../mutants-of.fixtures.ts';
+import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
 
 const throwStatement = 'throw new Error("Stryker: assertion reached");';
 const throwingCall = '(() => { throw new Error("Stryker: assertion reached"); })()';
 const throwing = `true ? ${throwingCall}`;
 const rejected = 'true ? Promise.reject(new Error("Stryker: assertion reached"))';
-const strict = "import assert from 'node:assert/strict';\n";
 const test = "import { it } from 'node:test';\n";
 const chained = [
   "import type { TestContext } from 'node:test';",

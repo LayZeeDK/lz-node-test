@@ -3,11 +3,10 @@ import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { assertValidator } from '../../src/assert-validator.ts';
-import { mutantsOf } from '../mutants-of.fixtures.ts';
+import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
 
 const throws = '() => { throw new Error("Stryker"); }';
 const rejects = 'Promise.reject(new Error("Stryker"))';
-const strict = "import assert from 'node:assert/strict';\n";
 
 describe('LzAssertValidator', () => {
   lzTestEach([
