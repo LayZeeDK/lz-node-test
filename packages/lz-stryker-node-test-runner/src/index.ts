@@ -371,16 +371,14 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
         "its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's limit from " +
         'the dry run.';
 
-      return { end: { status: DryRunStatus.Error, errorMessage } };
+      return errorEnd(errorMessage);
     }
 
     return { end: { status: DryRunStatus.Timeout, reason: `Memory limit reached (${rssMB}/${limitMB} MB)` } };
   }
 
   if (unreadable !== undefined) {
-    return {
-      end: { status: DryRunStatus.Error, errorMessage: `Unreadable test results for "${file}": ${unreadable}` },
-    };
+    return errorEnd(`Unreadable test results for "${file}": ${unreadable}`);
   }
 
   for (const record of records) {
@@ -400,7 +398,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
 
   // Like Stryker's own runners, a failure that no test explains is an error, not a killed mutant.
   if (exitCode !== 0 && !failed) {
-    return { end: { status: DryRunStatus.Error, errorMessage: lzFileError(file, fileRun) } };
+    return errorEnd(lzFileError(file, fileRun));
   }
 
   const main = records.find((record) => record.main);
@@ -411,7 +409,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
       'did not run in it, it left without running exit listeners (process.reallyExit, process.abort), or it ran ' +
       'under the permission model without write access to the temporary directory.';
 
-    return { end: { status: DryRunStatus.Error, errorMessage } };
+    return errorEnd(errorMessage);
   }
 
   // The hook ended a file that something its tests opened kept alive, which `node --test` would wait for forever: in
@@ -428,7 +426,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
         'lzStrykerNodeTest.nodeArgs, as for node --test (NODE_OPTIONS does not allow it); node:test then loses errors ' +
         'raised after the tests and root after hooks end.';
 
-      return { end: { status: DryRunStatus.Error, errorMessage } };
+      return errorEnd(errorMessage);
     }
 
     return {
@@ -443,10 +441,14 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
       `Unfinished test results for "${file}": its process exited before node:test reported every test, as when ` +
       'a test calls process.exit().';
 
-    return { end: { status: DryRunStatus.Error, errorMessage } };
+    return errorEnd(errorMessage);
   }
 
   return { results, coverages: records.map((record) => record.mutantCoverage), failed };
+}
+
+function errorEnd(errorMessage: string): FileOutcome {
+  return { end: { status: DryRunStatus.Error, errorMessage } };
 }
 
 export function lzFilesFor(testFiles: string[], testFilter: readonly string[] | undefined): string[] {
