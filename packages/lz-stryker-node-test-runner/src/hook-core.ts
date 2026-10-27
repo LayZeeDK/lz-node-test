@@ -292,7 +292,9 @@ export function install(deps: HookDependencies): boolean {
     const ends = ending(
       deps,
       tests,
-      (hook) => Reflect.apply(nodeTest.after, nodeTest, [hook]),
+      (hook) => {
+        Reflect.apply(nodeTest.after, nodeTest, [hook]);
+      },
       Number(deps.env[ENV.heldOpen]) || HELD_OPEN_MS,
     );
     end = ends;
@@ -661,7 +663,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     register: Target,
     prepare: (hook: Body | undefined, suite: string | undefined) => Body | undefined = (hook) => hook,
   ): HookRegistrar =>
-    function (this: unknown, hook?: Body, ...rest: unknown[]) {
+    function (this: unknown, hook?: Body, ...rest: unknown[]): unknown {
       const suite = running.getStore();
 
       if (suite !== undefined && !selected(suite)) {
@@ -903,7 +905,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
   // The bodies of skipped suites and tests never run, so `skip` only notes where they are declared.
   const declareSkipped = (register: Target): Registrar =>
-    function (this: unknown, ...args: unknown[]) {
+    function (this: unknown, ...args: unknown[]): unknown {
       registering(parentId() === testFile);
       declare(idOf(parentId(), parse(args).name));
 
