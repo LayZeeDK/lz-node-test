@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 
-import { lzFixture, lzLeftover, lzMutants } from '../src/fixture.ts';
+import { lzDryRunPeaks, lzFixture, lzLeftover, lzMutants } from '../src/fixture.ts';
 
 const run = await (await lzFixture('processes')).stryker();
 
@@ -27,5 +27,5 @@ it('kills the mutants that only a worker thread a test starts reaches', () => {
 });
 
 it('leaves only the dry run memory peaks in its temporary directory', () => {
-  assert.deepEqual(lzLeftover(run), ['lz-stryker-node-test-peaks-<pid>-dry-run']);
+  assert.deepEqual(lzLeftover(run), [lzDryRunPeaks]);
 });

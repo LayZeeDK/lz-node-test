@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 
-import { lzFixture, lzLeftover, lzMutants } from '../src/fixture.ts';
+import { lzDryRunPeaks, lzFixture, lzLeftover, lzMutants } from '../src/fixture.ts';
 
 const fixture = await lzFixture('held-open');
 const strict = await fixture.stryker();
@@ -26,8 +26,5 @@ it('kills the mutants of the same project once nodeArgs passes --test-force-exit
 });
 
 it('leaves only the dry run memory peaks in its temporary directory after either run', () => {
-  assert.deepEqual(
-    [...lzLeftover(strict), ...lzLeftover(forced)],
-    ['lz-stryker-node-test-peaks-<pid>-dry-run', 'lz-stryker-node-test-peaks-<pid>-dry-run'],
-  );
+  assert.deepEqual([...lzLeftover(strict), ...lzLeftover(forced)], [lzDryRunPeaks, lzDryRunPeaks]);
 });
