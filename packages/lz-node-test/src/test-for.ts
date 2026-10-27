@@ -26,6 +26,6 @@ export const lzTestFor: Modified<LzTestForFunction> = modified(forCases, {});
 function forCases(flags: Flags, cases: readonly unknown[]): Register<ForCallback> {
   return register<ForCallback>(flags, cases, (row, fn) => ({
     items: row == null ? [] : Array.isArray(row) ? row : [row],
-    body: fn && ((t) => fn(row, t)),
+    ...(fn && { body: (t: TestContext) => fn(row, t) }),
   }));
 }

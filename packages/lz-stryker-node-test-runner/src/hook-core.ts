@@ -56,9 +56,10 @@ export interface CallSite {
 export interface ProcessRecord {
   main?: true;
   tests: RecordedTest[];
-  hitCount?: number;
-  mutantCoverage?: MutantCoverage;
-  peakMemoryMB?: number;
+  // undefined: the record goes through JSON.stringify, which leaves such a field out.
+  hitCount?: number | undefined;
+  mutantCoverage?: MutantCoverage | undefined;
+  peakMemoryMB?: number | undefined;
   memoryLimitReached?: MemoryLimitReached;
   diagnostics?: string[];
   /**
@@ -266,7 +267,14 @@ export function install(deps: HookDependencies): boolean {
     });
   }
 
-  ns.currentTestId = deps.env[ENV.current] || undefined;
+  const current = deps.env[ENV.current];
+
+  if (current) {
+    ns.currentTestId = current;
+  } else {
+    delete ns.currentTestId;
+  }
+
   const bail = deps.env[ENV.bail] === 'true';
   const dryRun = deps.env[ENV.dryRun] === 'true';
   delete deps.env[ENV.bail];
@@ -628,11 +636,12 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const active = new Set<string>();
   const setCurrent = () => {
     const id = [...active].at(-1);
-    ns.currentTestId = id;
 
     if (id === undefined) {
+      delete ns.currentTestId;
       delete env[ENV.current];
     } else {
+      ns.currentTestId = id;
       env[ENV.current] = id;
     }
   };

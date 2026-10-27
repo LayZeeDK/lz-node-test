@@ -698,7 +698,7 @@ describe('wrapNodeTest', () => {
 
     assert.deepEqual([ns.activeMutant, env[ACTIVE_MUTANT_ENV]], ['7', '7']);
 
-    ns.activeMutant = undefined;
+    delete ns.activeMutant;
     await bodyOf(registrations, 'second')(testContext(), () => {});
 
     assert.deepEqual(seen, ['7', '7', '7']);
@@ -738,7 +738,7 @@ describe('wrapNodeTest', () => {
 
     for (const index of [1, 3]) {
       results.push(callable(hooks[index]?.rest[0]).call('hook this', 'context'));
-      ns.activeMutant = undefined;
+      delete ns.activeMutant;
     }
 
     assert.deepEqual(results, ['hook result', 'hook result']);

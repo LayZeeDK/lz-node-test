@@ -130,7 +130,9 @@ describe('LzStrykerNodeTestRunner limits', () => {
         'a.test.mjs': fixture(`it('fails with its memory limit', () => { throw new Error(${limit}); });`),
       });
       const warnings: string[] = [];
-      const options = { lzStrykerNodeTest: { testFiles: ['a.test.mjs'], maxMemoryMB } };
+      const options = {
+        lzStrykerNodeTest: { testFiles: ['a.test.mjs'], ...(maxMemoryMB !== undefined && { maxMemoryMB }) },
+      };
       const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger([], true, warnings));
       await runner.init();
       const results = [];

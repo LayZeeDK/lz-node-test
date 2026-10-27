@@ -4,6 +4,7 @@
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "erasableSyntaxOnly": true,
+    "exactOptionalPropertyTypes": true,
     "importHelpers": true,
     "isolatedModules": true,
     "lib": ["es2024"],

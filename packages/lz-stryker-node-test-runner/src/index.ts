@@ -70,8 +70,9 @@ export type LzRunOptions =
       coverageAnalysis?: undefined;
       activeMutant?: string;
       mutantActivation?: MutantActivation;
-      hitLimit?: number;
-      testFilter?: string[];
+      // undefined as Stryker's MutantRunOptions give them: no hit limit, every test.
+      hitLimit?: number | undefined;
+      testFilter?: string[] | undefined;
     };
 
 export interface LzFileRun {

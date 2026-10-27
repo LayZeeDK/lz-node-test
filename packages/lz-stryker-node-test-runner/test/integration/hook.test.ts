@@ -688,7 +688,11 @@ describe('reporter', () => {
       delete global[reporting];
       reporter.write(event('elsewhere'));
     } finally {
-      global[reporting] = previous;
+      if (previous === undefined) {
+        delete global[reporting];
+      } else {
+        global[reporting] = previous;
+      }
     }
 
     assert.deepEqual(events, [event('first'), event('second')]);

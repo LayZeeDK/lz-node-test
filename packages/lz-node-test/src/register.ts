@@ -64,7 +64,11 @@ export function parseArguments<F extends EachCallback>(
   return {
     options:
       typeof fnOrTimeout === 'number' ? { timeout: fnOrTimeout } : typeof optionsOrFn === 'object' ? optionsOrFn : {},
-    fn: typeof optionsOrFn === 'function' ? optionsOrFn : typeof fnOrTimeout === 'function' ? fnOrTimeout : undefined,
+    ...(typeof optionsOrFn === 'function'
+      ? { fn: optionsOrFn }
+      : typeof fnOrTimeout === 'function'
+        ? { fn: fnOrTimeout }
+        : {}),
   };
 }
 
