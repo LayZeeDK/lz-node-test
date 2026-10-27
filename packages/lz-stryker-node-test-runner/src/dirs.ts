@@ -82,6 +82,11 @@ export function isOwn(
   return user.getuid === undefined || stat(path).uid === user.getuid();
 }
 
+/** The start of the name of a directory that the runners of process `pid` make, which `removeLeftDirs` recognizes. */
+export function lzDirPrefix(kind: 'run' | 'cache' | 'peaks', pid: number): string {
+  return `lz-stryker-node-test-${kind === 'run' ? '' : `${kind}-`}${pid}-`;
+}
+
 /**
  * Removes the directories in `dir` that runners of this user's processes that no longer run left behind; a shared
  * temporary directory holds other users' directories too. Stryker kills a worker whose run takes too long, and a

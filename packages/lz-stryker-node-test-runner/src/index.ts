@@ -28,7 +28,7 @@ import {
   type TestRunnerCapabilities,
 } from '@stryker-mutator/api/test-runner';
 
-import { removeDir, removeLeftDirs } from './dirs.ts';
+import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { envNames, recordName, testId, within, type ProcessRecord, type RecordedTest } from './hook-core.ts';
 import { memoryLimits, peakMemoryDir, type MemoryLimits } from './memory-limits.ts';
 import { groupOptions, processEnd } from './process-end.ts';
@@ -615,7 +615,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     removeLeftDirs(tmpdir());
 
     if (process.env['NODE_COMPILE_CACHE'] === undefined) {
-      this.#cacheDir = mkdtempSync(join(tmpdir(), `lz-stryker-node-test-cache-${process.pid}-`));
+      this.#cacheDir = mkdtempSync(join(tmpdir(), lzDirPrefix('cache', process.pid)));
     }
   }
 
@@ -708,7 +708,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   }
 
   async runFile(file: string, run: LzRunOptions, memoryLimitMB?: number): Promise<LzFileRun> {
-    const runDir = mkdtempSync(join(tmpdir(), `lz-stryker-node-test-${process.pid}-`));
+    const runDir = mkdtempSync(join(tmpdir(), lzDirPrefix('run', process.pid)));
     const outDir = join(runDir, 'out');
     const tmpDir = join(runDir, 'tmp');
 

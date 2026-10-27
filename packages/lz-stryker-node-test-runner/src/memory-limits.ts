@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import type { Logger } from '@stryker-mutator/api/logging';
 
-import { ownDir } from './dirs.ts';
+import { lzDirPrefix, ownDir } from './dirs.ts';
 import type { ProcessRecord } from './hook-core.ts';
 
 /**
@@ -14,7 +14,7 @@ import type { ProcessRecord } from './hook-core.ts';
  * may replace, so the directory is named after the process they share: Stryker's own.
  */
 export function peakMemoryDir(strykerPid: number): string {
-  return join(tmpdir(), `lz-stryker-node-test-peaks-${strykerPid}-dry-run`);
+  return join(tmpdir(), `${lzDirPrefix('peaks', strykerPid)}dry-run`);
 }
 
 /**
