@@ -98,8 +98,7 @@ describe('processEnd', () => {
     return { child, settled, kills };
   }
 
-  it("ends what is left of a POSIX process's group once the process ends, whether stderr closes or not", async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
+  it("ends what is left of a POSIX process's group once the process ends and stderr closes", async () => {
     const closes = ending(1_000, 'linux');
     closes.child.emit('exit', 0);
     await closes.settled();
@@ -108,6 +107,12 @@ describe('processEnd', () => {
 
     closes.child.emit('close', 0);
     await closes.settled();
+
+    assert.deepEqual(closes.kills, [[-123, 'SIGKILL']]);
+  });
+
+  it("ends what is left of a POSIX process's group once the process ends and stderr stays open", async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
     const staysOpen = ending(1_000, 'linux');
     staysOpen.child.emit('exit', 0);
     t.mock.timers.tick(1_000);
@@ -115,7 +120,7 @@ describe('processEnd', () => {
     staysOpen.child.emit('close', 0);
     await staysOpen.settled();
 
-    assert.deepEqual([closes.kills, staysOpen.kills], [[[-123, 'SIGKILL']], [[-123, 'SIGKILL']]]);
+    assert.deepEqual(staysOpen.kills, [[-123, 'SIGKILL']]);
   });
 
   it('ends no group of a process that failed to start, which has no pid', async () => {
