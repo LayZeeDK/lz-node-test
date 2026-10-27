@@ -5,9 +5,8 @@ import type { NodePath } from '@babel/core';
 import type { Location } from '@stryker-mutator/api/core';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { resolveFromCore } from '../../src/install.ts';
-import { mutantsOf } from '../mutants-of.fixtures.ts';
-import { toNodeMutator, type Operator } from '../../src/operator.ts';
+import { instrumentWith, mutantsOf } from '../mutants-of.fixtures.ts';
+import type { Operator } from '../../src/operator.ts';
 import { productionOperators, testOperators } from '../../src/operators.ts';
 
 const operators = [...productionOperators, ...testOperators];
@@ -62,11 +61,7 @@ function textAt(source: string, { start, end }: Location): string {
 }
 
 async function newCallees(operator: Operator, source: string): Promise<string[][]> {
-  const instrumenter = await resolveFromCore();
-  const mutants = await instrumenter.instrument(
-    [{ name: 'sample.ts', content: source }],
-    [toNodeMutator(operator, instrumenter.types)],
-  );
+  const mutants = await instrumentWith(operator, source);
 
   return mutants.map(({ location, replacement }) => {
     const before = callees(textAt(source, location));
