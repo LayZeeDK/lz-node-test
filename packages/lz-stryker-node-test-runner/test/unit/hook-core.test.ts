@@ -29,7 +29,16 @@ import {
   type TestEvent,
 } from '../../src/hook-core.ts';
 import { lzParseRecord } from '../../src/index.ts';
-import { bodyOf, callable, fakeNodeTest, rawBodyOf, testFile, testContext, type Fn } from '../hook-core.fixtures.ts';
+import {
+  bodyOf,
+  callable,
+  fakeNodeTest,
+  hooksOf,
+  rawBodyOf,
+  testFile,
+  testContext,
+  type Fn,
+} from '../hook-core.fixtures.ts';
 import { member } from '../index.fixtures.ts';
 
 type TestDetails = NonNullable<TestEvent['data']['details']>;
@@ -1275,9 +1284,9 @@ describe('passing `done` as node:test does', () => {
     const seen: unknown[] = [];
     h.wrapped().beforeEach(threeParameters(seen));
     h.wrapped().it('first', () => {});
-    const hook = h.fake.registrations.find(({ kind }) => kind === 'beforeEach')?.rest[0];
+    const [hook] = hooksOf(h.fake.registrations, 'beforeEach');
 
-    await callAsNodeTest(callable(hook), testContext([], 'first'));
+    await callAsNodeTest(hook, testContext([], 'first'));
 
     assert.deepEqual(seen, [undefined]);
   });

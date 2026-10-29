@@ -10,6 +10,7 @@ import {
   bodyOf,
   callable,
   fakeNodeTest,
+  hooksOf,
   rawBodyOf,
   runBodies,
   testFile,
@@ -743,10 +744,6 @@ describe('wrapNodeTest', () => {
   });
 
   describe('hooks', () => {
-    function hooksOf(registrations: { kind: string; rest: readonly unknown[] }[], kind: string): Fn[] {
-      return registrations.filter((registration) => registration.kind === kind).map(({ rest }) => callable(rest[0]));
-    }
-
     it('makes the test that a beforeEach hook runs for current until its promise settles or it calls `done`', async () => {
       const { module, registrations, ns, seen, see } = wrapped();
       const failure = new Error('hook failed');

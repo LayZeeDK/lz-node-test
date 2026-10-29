@@ -116,6 +116,10 @@ export function rawBodyOf(registrations: Registration[], name: string): Fn {
   return callable(registration.rest.find((arg) => typeof arg === 'function'));
 }
 
+export function hooksOf(registrations: { kind: string; rest: readonly unknown[] }[], kind: string): Fn[] {
+  return registrations.filter((registration) => registration.kind === kind).map(({ rest }) => callable(rest[0]));
+}
+
 export function bodyOf(
   registrations: Registration[],
   name: string,
