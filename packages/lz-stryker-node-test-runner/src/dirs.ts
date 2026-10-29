@@ -82,9 +82,13 @@ export function isOwn(
   return user.getuid === undefined || stat(path).uid === user.getuid();
 }
 
+const lzDirBase = 'lz-stryker-node-test-';
+const lzDirKinds = { run: '', cache: 'cache-', peaks: 'peaks-' };
+const lzDirPattern = new RegExp(`^${lzDirBase}(?:${Object.values(lzDirKinds).join('|')})(\\d+)-`);
+
 /** The start of the name of a directory that the runners of process `pid` make, which `removeLeftDirs` recognizes. */
-export function lzDirPrefix(kind: 'run' | 'cache' | 'peaks', pid: number): string {
-  return `lz-stryker-node-test-${kind === 'run' ? '' : `${kind}-`}${pid}-`;
+export function lzDirPrefix(kind: keyof typeof lzDirKinds, pid: number): string {
+  return `${lzDirBase}${lzDirKinds[kind]}${pid}-`;
 }
 
 /**
@@ -98,7 +102,7 @@ export function removeLeftDirs(
   { running = isRunning, owned = isOwn, remove = (path: string) => rmSync(path, { recursive: true }) } = {},
 ): void {
   for (const name of readdirSync(dir)) {
-    const pid = /^lz-stryker-node-test-(?:cache-|peaks-)?(\d+)-/.exec(name)?.[1];
+    const pid = lzDirPattern.exec(name)?.[1];
     const path = join(dir, name);
 
     if (pid !== undefined && !running(Number(pid))) {
