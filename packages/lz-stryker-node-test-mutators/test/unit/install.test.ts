@@ -267,6 +267,12 @@ describe('resolveFromCore', () => {
     ['a listed mutator that is null', mutateFile, { allMutators: [null] }, 'allMutators'],
     ['a listed mutator with no name', mutateFile, { allMutators: [{ mutate() {} }] }, 'allMutators'],
     [
+      'a listed mutator that is null after one it reads',
+      mutateFile,
+      { allMutators: [{ name: 'Own', mutate() {} }, null] },
+      'allMutators',
+    ],
+    [
       'a listed mutator whose name is no string',
       mutateFile,
       { allMutators: [{ name: 1, mutate() {} }] },
@@ -293,6 +299,20 @@ describe('resolveFromCore', () => {
     const resolving = resolveFromCore(corePackageJson(), load);
 
     await assert.rejects(resolving, { message: refusal(replaced.join(), key) });
+  });
+
+  it("replaces the contents of the instrumenter's own mutator list", async () => {
+    const listed: ListedMutator[] = [
+      { name: 'First', *mutate() {} },
+      { name: 'Second', *mutate() {} },
+    ];
+    const own: ListedMutator = { name: 'Own', *mutate() {} };
+    const { load } = loadingWith(mutateFile, { allMutators: listed });
+    const instrumenter = await resolveFromCore(corePackageJson(), load);
+
+    instrumenter.setMutators([own]);
+
+    assert.deepEqual(listed, [own]);
   });
 
   const resolvingTo = (result: unknown) =>
