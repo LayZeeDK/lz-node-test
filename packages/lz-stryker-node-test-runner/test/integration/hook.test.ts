@@ -178,9 +178,7 @@ describe('hook', () => {
     const [write] = exit;
     const later = () => {};
 
-    if (write === undefined) {
-      throw new Error('The hook added no exit listener.');
-    }
+    assert.ok(write, 'The hook added no exit listener.');
 
     process.on('exit', write);
     process.on('exit', later);
@@ -215,10 +213,7 @@ describe('hook', () => {
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);
     added.exit[0]?.(0);
     const peakMB = readRecords(outDir)[`${process.pid}.0.json`]?.peakMemoryMB;
-
-    if (peakMB === undefined) {
-      throw new Error('The record has no peak memory.');
-    }
+    assert.ok(peakMB, 'The record has no peak memory.');
 
     assert.ok(Number.isInteger(peakMB), String(peakMB));
     assert.ok(peakMB >= rssMB, `${peakMB} MB, below the ${rssMB} MB held`);
@@ -569,10 +564,7 @@ describe('hook', () => {
     });
 
     const peakMB = readRecords(outDir)[`${pid}.0.json`]?.peakMemoryMB;
-
-    if (peakMB === undefined) {
-      throw new Error('The record has no peak memory.');
-    }
+    assert.ok(peakMB, 'The record has no peak memory.');
 
     assert.ok(Number.isInteger(peakMB), String(peakMB));
     assert.ok(peakMB >= 100, String(peakMB));
