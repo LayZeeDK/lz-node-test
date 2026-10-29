@@ -30,6 +30,14 @@ import { LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../../sr
 
 const compileCache = shareCompileCache();
 
+function writesOnLoad(file: string, expression: string): string {
+  return fixture(
+    "import { writeFileSync } from 'node:fs';",
+    `writeFileSync('${file}', ${expression});`,
+    "it('passes', () => {});",
+  );
+}
+
 describe('LzStrykerNodeTestRunner', () => {
   it('can reload the environment', () => {
     assert.deepEqual(new LzStrykerNodeTestRunner(strykerOptions(), logger()).capabilities(), {
@@ -121,13 +129,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('keeps the compile cache of the processes a run starts in its own directory, until it is disposed', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "import { writeFileSync } from 'node:fs';",
-        "writeFileSync('cache-dir.txt', process.env.NODE_COMPILE_CACHE);",
-        "it('passes', () => {});",
-      ),
-    });
+    const dir = project(t, { 'a.test.mjs': writesOnLoad('cache-dir.txt', 'process.env.NODE_COMPILE_CACHE') });
     const before = ownCacheDirs();
     t.after(() => {
       process.env['NODE_COMPILE_CACHE'] = compileCache;
@@ -151,13 +153,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('creates no compile cache directory when the environment names one', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "import { writeFileSync } from 'node:fs';",
-        "writeFileSync('cache-dir.txt', process.env.NODE_COMPILE_CACHE);",
-        "it('passes', () => {});",
-      ),
-    });
+    const dir = project(t, { 'a.test.mjs': writesOnLoad('cache-dir.txt', 'process.env.NODE_COMPILE_CACHE') });
     const before = ownCacheDirs();
     const runner = await initRunner(['a.test.mjs']);
 
@@ -203,13 +199,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('removes its output directory after a run', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "import { writeFileSync } from 'node:fs';",
-        `writeFileSync('out-dir.txt', process.env.${envNames.out});`,
-        "it('passes', () => {});",
-      ),
-    });
+    const dir = project(t, { 'a.test.mjs': writesOnLoad('out-dir.txt', `process.env.${envNames.out}`) });
     const runner = await initRunner(['a.test.mjs']);
 
     const { records, exitCode, stderr } = await settle(
@@ -381,13 +371,7 @@ describe('LzStrykerNodeTestRunner', () => {
   );
 
   it('passes lzStrykerNodeTest.nodeArgs to the node process of each test file', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "import { writeFileSync } from 'node:fs';",
-        "writeFileSync('exec-argv.json', JSON.stringify(process.execArgv));",
-        "it('passes', () => {});",
-      ),
-    });
+    const dir = project(t, { 'a.test.mjs': writesOnLoad('exec-argv.json', 'JSON.stringify(process.execArgv)') });
     const execArgv = async (lzStrykerNodeTest: LzStrykerNodeTestOptions) => {
       const runner = await initRunner(undefined, lzStrykerNodeTest);
       await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
