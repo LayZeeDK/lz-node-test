@@ -686,6 +686,15 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       env[envNames.current] = id;
     }
   };
+  const makeCurrent = (id: string) => {
+    active.add(id);
+    setCurrent();
+
+    return () => {
+      active.delete(id);
+      setCurrent();
+    };
+  };
   /**
    * Whether the filter selects the test, or a subtest of it, which the test must run to register. Stryker names a
    * whole test file in the filter when --testFiles limits the run.
@@ -737,13 +746,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         return undefined;
       }
 
-      active.add(id);
-      setCurrent();
-
-      return () => {
-        active.delete(id);
-        setCurrent();
-      };
+      return makeCurrent(id);
     };
 
     return settling(hook, attribute);
@@ -830,13 +833,11 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
        */
       // The wrapper replaces these functions on node:test's own context, which the test body calls them on.
       const enter = (context: { test: Target; after: Target; beforeEach: Target }) => {
-        active.add(id);
-        setCurrent();
+        const endCurrent = makeCurrent(id);
         let open = 2;
         const leave = () => {
           if (--open === 0) {
-            active.delete(id);
-            setCurrent();
+            endCurrent();
           }
         };
         const { after, beforeEach } = context;
