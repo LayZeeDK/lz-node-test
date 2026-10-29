@@ -78,20 +78,16 @@ type HookRegistrar = (this: unknown, hook?: Body, ...rest: unknown[]) => unknown
  * A node:test function with its shorthands, which do not call the function itself. Tests have `expectFailure` from
  * Node.js 24.
  */
-type Register = Registrar & {
-  readonly skip: Registrar;
-  readonly todo: Registrar;
-  readonly only: Registrar;
-  readonly expectFailure?: Registrar;
+type Shorthands<TFn> = TFn & {
+  readonly skip: TFn;
+  readonly todo: TFn;
+  readonly only: TFn;
+  readonly expectFailure?: TFn;
 };
+type Register = Shorthands<Registrar>;
 /** A node:test function as the wrapper calls it: with the arguments it was given, which node:test checks itself. */
 type Target = (this: unknown, ...args: never[]) => unknown;
-type TargetRegister = Target & {
-  readonly skip: Target;
-  readonly todo: Target;
-  readonly only: Target;
-  readonly expectFailure?: Target;
-};
+type TargetRegister = Shorthands<Target>;
 
 export interface TestEvent {
   readonly type: string;
@@ -117,27 +113,20 @@ const isResult = (type: string): boolean => type === 'test:pass' || type === 'te
 /** node:test reports a failing `after` hook of the test file as a failure of the file itself, which has no type. */
 const fileLevel = (details: TestEvent['data']['details']): boolean => details?.type === undefined;
 
-export type NodeTestModule = Register & {
-  readonly describe: Register;
-  readonly suite: Register;
-  readonly it: Register;
-  readonly test: Register;
-  readonly before: HookRegistrar;
-  readonly beforeEach: HookRegistrar;
-  readonly after: HookRegistrar;
-  readonly afterEach: HookRegistrar;
+type NodeTestShape<TFn, THook> = Shorthands<TFn> & {
+  readonly describe: Shorthands<TFn>;
+  readonly suite: Shorthands<TFn>;
+  readonly it: Shorthands<TFn>;
+  readonly test: Shorthands<TFn>;
+  readonly before: THook;
+  readonly beforeEach: THook;
+  readonly after: THook;
+  readonly afterEach: THook;
 };
 
-export type NodeTestTarget = TargetRegister & {
-  readonly describe: TargetRegister;
-  readonly suite: TargetRegister;
-  readonly it: TargetRegister;
-  readonly test: TargetRegister;
-  readonly before: Target;
-  readonly beforeEach: Target;
-  readonly after: Target;
-  readonly afterEach: Target;
-};
+export type NodeTestModule = NodeTestShape<Registrar, HookRegistrar>;
+
+export type NodeTestTarget = NodeTestShape<Target, Target>;
 
 const afterHook = '"after" hook';
 
