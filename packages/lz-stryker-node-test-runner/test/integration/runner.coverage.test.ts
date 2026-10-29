@@ -162,12 +162,12 @@ describe('LzStrykerNodeTestRunner coverage', () => {
 
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
       static: {},
-      perTest: Object.fromEntries(
-        ['suite > first', 'suite > second', 'parent > child', 'parent > sibling'].map((name) => [
-          `${a} > ${name}`,
-          { [`${name.split(' > ')[1]} 1`]: 1, [`${name.split(' > ')[1]} 2`]: 1 },
-        ]),
-      ),
+      perTest: {
+        [`${a} > suite > first`]: { 'first 1': 1, 'first 2': 1 },
+        [`${a} > suite > second`]: { 'second 1': 1, 'second 2': 1 },
+        [`${a} > parent > child`]: { 'child 1': 1, 'child 2': 1 },
+        [`${a} > parent > sibling`]: { 'sibling 1': 1, 'sibling 2': 1 },
+      },
     });
   });
 });
