@@ -399,12 +399,11 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   const main = records.find((record) => record.main);
 
   if (!main) {
-    const errorMessage =
+    return errorEnd(
       `Missing test results for "${file}": its process ended without writing them. Either the Stryker hook ` +
-      'did not run in it, it left without running exit listeners (process.reallyExit, process.abort), or it ran ' +
-      'under the permission model without write access to the temporary directory.';
-
-    return errorEnd(errorMessage);
+        'did not run in it, it left without running exit listeners (process.reallyExit, process.abort), or it ran ' +
+        'under the permission model without write access to the temporary directory.',
+    );
   }
 
   // The hook ended a file that something its tests opened kept alive, which `node --test` would wait for forever: in
@@ -425,11 +424,10 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   // Stryker treats a test runner that exits during a run as crashed, whatever its exit code, and so do its runners
   // that run the tests in their own process; the tests that node:test did not report are unknown.
   if (!failed && main.unfinished) {
-    const errorMessage =
+    return errorEnd(
       `Unfinished test results for "${file}": its process exited before node:test reported every test, as when ` +
-      'a test calls process.exit().';
-
-    return errorEnd(errorMessage);
+        'a test calls process.exit().',
+    );
   }
 
   return { results, coverages: records.map((record) => record.mutantCoverage), failed };
