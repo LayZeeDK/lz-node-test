@@ -241,7 +241,7 @@ export function recordName(pid: number, threadId: number): string {
   return `${pid}.${threadId}.json`;
 }
 
-function testIds(json: string): Set<string> {
+function parseFilter(json: string): Set<string> {
   const ids: unknown = JSON.parse(json);
 
   if (!Array.isArray(ids) || !ids.every((id): id is string => typeof id === 'string')) {
@@ -330,7 +330,7 @@ export function install(deps: HookDependencies): boolean {
       ends.reported(event);
     };
     const filterJson = deps.env[envNames.filter];
-    const filter = filterJson ? testIds(filterJson) : undefined;
+    const filter = filterJson ? parseFilter(filterJson) : undefined;
     const wrapped = wrapNodeTest({
       ns,
       testFile,
