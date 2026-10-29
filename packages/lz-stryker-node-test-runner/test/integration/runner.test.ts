@@ -66,7 +66,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const debug: string[] = [];
     const warnings: string[] = [];
 
-    await new LzStrykerNodeTestRunner(strykerOptions(), logger(debug, true, warnings)).dispose();
+    await new LzStrykerNodeTestRunner(strykerOptions(), logger({ debug, warnings })).dispose();
 
     assert.deepEqual([debug, warnings], [[], []]);
   });
@@ -115,7 +115,7 @@ describe('LzStrykerNodeTestRunner', () => {
     project(t, { 'a.test.mjs': failing });
     const warnings: string[] = [];
     const options = { allowEmpty: true, lzStrykerNodeTest: { testFiles: ['none/*.test.mjs'] } };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger([], false, warnings));
+    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger({ debugEnabled: false, warnings }));
     t.after(() => runner.dispose());
 
     await runner.init();
@@ -428,7 +428,7 @@ describe('LzStrykerNodeTestRunner', () => {
       const runner = await initRunner(
         ['a.test.mjs'],
         { nodeArgs: ['--no-deprecation'] },
-        { log: logger(debug, debugEnabled) },
+        { log: logger({ debug, debugEnabled }) },
       );
       await settle(runner.runFile(file, { dryRun: false, disableBail: false }));
 

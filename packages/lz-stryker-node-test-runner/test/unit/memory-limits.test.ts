@@ -13,7 +13,7 @@ function setup(t: TestContext, maxMemoryMB?: number) {
   t.after(() => rmSync(parent, { recursive: true, force: true }));
   const dir = join(parent, 'peaks');
   const warnings: string[] = [];
-  const limits = () => memoryLimits(maxMemoryMB, dir, logger([], true, warnings));
+  const limits = () => memoryLimits(maxMemoryMB, dir, logger({ warnings }));
 
   return { dir, warnings, limits };
 }

@@ -134,7 +134,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
       const runner = await initRunner(
         ['a.test.mjs'],
         { ...(maxMemoryMB !== undefined && { maxMemoryMB }) },
-        { log: logger([], true, warnings) },
+        { log: logger({ warnings }) },
       );
       const results = [];
 

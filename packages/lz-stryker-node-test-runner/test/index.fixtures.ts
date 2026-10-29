@@ -84,7 +84,11 @@ export function project(t: TestContext, files: Record<string, string>): string {
   return dir;
 }
 
-export function logger(debug: string[] = [], debugEnabled = true, warnings: string[] = []): Logger {
+export function logger({
+  debug = [],
+  debugEnabled = true,
+  warnings = [],
+}: { readonly debug?: string[]; readonly debugEnabled?: boolean; readonly warnings?: string[] } = {}): Logger {
   const no = () => false;
   const ignore = () => {};
 

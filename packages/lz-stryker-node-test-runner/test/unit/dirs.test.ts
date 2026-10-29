@@ -28,7 +28,7 @@ describe('removeDir', () => {
     const warnings: string[] = [];
     const removed: string[] = [];
     let state = 'pending';
-    void removeDir(dir, logger([], false, warnings), {
+    void removeDir(dir, logger({ debugEnabled: false, warnings }), {
       waitMs: 1_000,
       remove: (path) => {
         removed.push(path);
