@@ -8,8 +8,8 @@ import {
   complete,
   dryRun,
   failed,
+  firstFixtureLine,
   fixture,
-  fixtureHeaderLines,
   fixtureCoverage,
   initRunner,
   mutantRunOptions,
@@ -43,8 +43,8 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, startPosition })),
       [
-        { id: `${a} > once > never runs`, startPosition: { line: fixtureHeaderLines + 3, column: 2 } },
-        { id: `${a} > once`, startPosition: { line: fixtureHeaderLines + 1, column: 0 } },
+        { id: `${a} > once > never runs`, startPosition: { line: firstFixtureLine + 3, column: 2 } },
+        { id: `${a} > once`, startPosition: { line: firstFixtureLine + 1, column: 0 } },
       ],
     );
   });
@@ -73,22 +73,22 @@ describe('LzStrykerNodeTestRunner results', () => {
         {
           id: `${a} > it.skip`,
           status: TestStatus.Skipped,
-          startPosition: { line: fixtureHeaderLines + 1, column: 3 },
+          startPosition: { line: firstFixtureLine + 1, column: 3 },
         },
         {
           id: `${a} > test.skip`,
           status: TestStatus.Skipped,
-          startPosition: { line: fixtureHeaderLines + 2, column: 5 },
+          startPosition: { line: firstFixtureLine + 2, column: 5 },
         },
         {
           id: `${a} > skip option`,
           status: TestStatus.Skipped,
-          startPosition: { line: fixtureHeaderLines + 3, column: 0 },
+          startPosition: { line: firstFixtureLine + 3, column: 0 },
         },
         {
           id: `${a} > suite > nested`,
           status: TestStatus.Skipped,
-          startPosition: { line: fixtureHeaderLines + 5, column: 5 },
+          startPosition: { line: firstFixtureLine + 5, column: 5 },
         },
       ],
     );
@@ -123,15 +123,15 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, name, status, startPosition }) => ({ id, name, status, startPosition })),
       [
-        skippedAt('describe.skip', fixtureHeaderLines + 1, 9),
-        skippedAt('suite.skip', fixtureHeaderLines + 2, 6),
-        skippedAt('skip option', fixtureHeaderLines + 3, 0),
-        skippedAt('outer > nested', fixtureHeaderLines + 5, 11),
+        skippedAt('describe.skip', firstFixtureLine + 1, 9),
+        skippedAt('suite.skip', firstFixtureLine + 2, 6),
+        skippedAt('skip option', firstFixtureLine + 3, 0),
+        skippedAt('outer > nested', firstFixtureLine + 5, 11),
         {
           id: `${a} > outer > passes`,
           name: 'outer > passes',
           status: TestStatus.Success,
-          startPosition: { line: fixtureHeaderLines + 6, column: 2 },
+          startPosition: { line: firstFixtureLine + 6, column: 2 },
         },
       ],
     );
@@ -159,13 +159,13 @@ describe('LzStrykerNodeTestRunner results', () => {
           id: `${a} > passes`,
           name: 'passes',
           status: TestStatus.Success,
-          startPosition: { line: fixtureHeaderLines + 1, column: 0 },
+          startPosition: { line: firstFixtureLine + 1, column: 0 },
         },
         {
           id: hook,
           name: '"after" hook',
           status: TestStatus.Failed,
-          startPosition: { line: fixtureHeaderLines + 2, column: 0 },
+          startPosition: { line: firstFixtureLine + 2, column: 0 },
         },
       ],
     );
@@ -240,10 +240,10 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, line: startPosition?.line })),
       [
-        { id: ids[0], line: fixtureHeaderLines + 1 },
-        { id: ids[1], line: fixtureHeaderLines + 2 },
-        { id: ids[2], line: fixtureHeaderLines + 4 },
-        { id: `${a} > outer`, line: fixtureHeaderLines },
+        { id: ids[0], line: firstFixtureLine + 1 },
+        { id: ids[1], line: firstFixtureLine + 2 },
+        { id: ids[2], line: firstFixtureLine + 4 },
+        { id: `${a} > outer`, line: firstFixtureLine },
       ],
     );
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {
@@ -277,9 +277,9 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, startPosition })),
       [
-        { id: `${a} > first`, startPosition: { line: fixtureHeaderLines + 1, column: 0 } },
-        { id: `${a} > suite > nested`, startPosition: { line: fixtureHeaderLines + 3, column: 2 } },
-        { id: `${a} > from a helper`, startPosition: { line: fixtureHeaderLines + 5, column: 0 } },
+        { id: `${a} > first`, startPosition: { line: firstFixtureLine + 1, column: 0 } },
+        { id: `${a} > suite > nested`, startPosition: { line: firstFixtureLine + 3, column: 2 } },
+        { id: `${a} > from a helper`, startPosition: { line: firstFixtureLine + 5, column: 0 } },
       ],
     );
   });
@@ -338,10 +338,10 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, startPosition }) => ({ id, line: startPosition?.line })),
       [
-        { id: ids[0], line: fixtureHeaderLines + 1 },
-        { id: ids[1], line: fixtureHeaderLines + 2 },
-        { id: ids[2], line: fixtureHeaderLines + 4 },
-        { id: ids[3], line: fixtureHeaderLines + 5 },
+        { id: ids[0], line: firstFixtureLine + 1 },
+        { id: ids[1], line: firstFixtureLine + 2 },
+        { id: ids[2], line: firstFixtureLine + 4 },
+        { id: ids[3], line: firstFixtureLine + 5 },
       ],
     );
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {

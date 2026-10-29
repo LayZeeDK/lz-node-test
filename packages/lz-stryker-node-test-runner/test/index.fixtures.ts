@@ -51,7 +51,8 @@ const fixtureHeader = [
   cover,
 ];
 
-export const fixtureHeaderLines = fixtureHeader.length;
+/** The 0-based line of `fixture(...)`'s first argument. */
+export const firstFixtureLine = fixtureHeader.length;
 
 export function fixture(...lines: string[]): string {
   return [...fixtureHeader, ...lines, ''].join('\n');
