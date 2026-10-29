@@ -509,7 +509,7 @@ export function ending(
   };
   // An `after` hook added inside another hook counts as a root one but runs when that hook ends, before the ending's own
   // root `after` hook says that node:test has finished the tests.
-  const settled = () => {
+  const armOnceSettled = () => {
     if (!finished || armed || (pending > 0 && !threw)) {
       return;
     }
@@ -521,7 +521,7 @@ export function ending(
   const settle = (failed: boolean) => {
     pending--;
     threw ||= failed;
-    settled();
+    armOnceSettled();
   };
 
   return {
@@ -530,7 +530,7 @@ export function ending(
         hooked = true;
         rootAfter(() => {
           finished = true;
-          settled();
+          armOnceSettled();
         });
       }
 
@@ -552,7 +552,7 @@ export function ending(
       // after it.
       if (finished && type === 'test:fail' && data.nesting === 0 && fileLevel(data.details)) {
         threw = true;
-        settled();
+        armOnceSettled();
       }
 
       check();
