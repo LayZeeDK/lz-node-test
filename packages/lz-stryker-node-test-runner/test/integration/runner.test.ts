@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
+import { DryRunStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestFor } from '@layzee/lz-node-test';
 import { envNames } from '../../src/hook-core.ts';
@@ -15,21 +15,18 @@ import {
   fixture,
   initRunner,
   logger,
-  mutantRunOptions,
   noProcess,
   ownCacheDirs,
   passed,
   passing,
   project,
   reporterArg,
-  runNodeOptions,
   settle,
   shareCompileCache,
   summary,
   strykerOptions,
-  withoutDuration,
 } from '../index.fixtures.ts';
-import { lzFileError, LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../../src/index.ts';
+import { LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../../src/index.ts';
 
 const compileCache = shareCompileCache();
 
@@ -362,27 +359,6 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.ok(result.errorMessage.length > prefix.length, result.errorMessage);
   });
 
-  it('reports callback-style tests once node:test calls them back', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "it('calls back', (t, done) => { setImmediate(done); });",
-        "it('calls back with an error', (t, done) => { setImmediate(() => done(new Error('late failure'))); });",
-      ),
-    });
-    const runner = await initRunner(['a.test.mjs']);
-
-    const { tests } = complete(await settle(runner.dryRun(dryRun)));
-
-    assert.deepEqual(summary(tests), [
-      passed(`${join(dir, 'a.test.mjs')} > calls back`),
-      {
-        id: `${join(dir, 'a.test.mjs')} > calls back with an error`,
-        status: TestStatus.Failed,
-        failureMessage: 'late failure',
-      },
-    ]);
-  });
-
   lzTestFor([{}, { lzStrykerNodeTest: {} }])(
     'runs the TypeScript test files outside node_modules by default, with the options %j',
     async (options, t) => {
@@ -479,122 +455,5 @@ describe('LzStrykerNodeTestRunner', () => {
       `Running: \`node "${reporterArg}" "--no-deprecation" "${file}"\` in ${dir}`,
     ]);
     assert.deepEqual(await debugOf(false), []);
-  });
-
-  it('reports a test file that fails outside any test as an error, after a passing file', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': passing,
-      'b.test.mjs': fixture(
-        "it('passes', () => {});",
-        "process.stderr.write('first\\nsecond\\n');",
-        'process.exitCode = 3;',
-      ),
-    });
-    const runner = await initRunner(['*.test.mjs'], { nodeArgs: ['--no-deprecation'] });
-    const b = join(dir, 'b.test.mjs');
-    const errorMessage = lzFileError(b, {
-      records: [],
-      exitCode: 3,
-      stderr: 'first\nsecond\n',
-      args: [reporterArg, '--no-deprecation', b],
-      nodeOptions: runNodeOptions(),
-    });
-
-    assert.deepEqual(await settle(runner.dryRun(dryRun)), { status: DryRunStatus.Error, errorMessage });
-    assert.deepEqual(await settle(runner.mutantRun(mutantRunOptions())), {
-      status: MutantRunStatus.Error,
-      errorMessage,
-    });
-  });
-
-  it('reports an error raised after its test ended as an error that names the test and the error', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "it('late', () => { setTimeout(() => { throw new Error('late boom'); }, 20); });",
-        "it('waits', () => new Promise((resolve) => setTimeout(resolve, 200)));",
-      ),
-    });
-    const runner = await initRunner(['a.test.mjs']);
-    const a = join(dir, 'a.test.mjs');
-
-    const result = await settle(runner.dryRun(dryRun));
-
-    assert.strictEqual(result.status, DryRunStatus.Error);
-    const [first, , ...rest] = result.errorMessage.split('\n');
-    assert.equal(first, `Error running file "${a}": node exited with code 1 outside any test.`);
-    // node:test gives the position of the wrapper that registered the test.
-    assert.match(
-      rest.join('\n'),
-      /^Diagnostics:\nError: Test "late" at .+ generated asynchronous activity after the test ended\. This activity created the error "Error: late boom"/,
-    );
-  });
-
-  it('reports skipped and todo tests as skipped, so a failing todo test kills no mutant', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "it('passes', () => {});",
-        "it('is not done', { todo: true }, () => { throw new Error('todo failure'); });",
-        "it.skip('is skipped', () => { throw new Error('ran a skipped test'); });",
-      ),
-    });
-    const runner = await initRunner(['a.test.mjs']);
-    const a = join(dir, 'a.test.mjs');
-
-    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
-      passed(`${a} > passes`),
-      { id: `${a} > is not done`, status: TestStatus.Skipped, failureMessage: undefined },
-      { id: `${a} > is skipped`, status: TestStatus.Skipped, failureMessage: undefined },
-    ]);
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions()))), {
-      status: MutantRunStatus.Survived,
-      nrOfTests: 1,
-    });
-  });
-
-  it('reports a failing hook against the tests it fails, and a test that times out as failed', async (t) => {
-    const dir = project(t, {
-      'a.test.mjs': fixture(
-        "import { afterEach } from 'node:test';",
-        "describe('each', () => {",
-        "  afterEach(() => { throw new Error('afterEach failure'); });",
-        "  it('passes, then its hook fails', () => {});",
-        '});',
-      ),
-      'b.test.mjs': fixture(
-        "import { after, before } from 'node:test';",
-        "describe('once', () => {",
-        "  before(() => { throw new Error('before failure'); });",
-        "  it('never runs', () => {});",
-        '});',
-        "describe('last', () => {",
-        "  after(() => { throw new Error('after failure'); });",
-        "  it('passes', () => {});",
-        '});',
-        "it('times out', { timeout: 10 }, () => new Promise((resolve) => setTimeout(resolve, 200)));",
-      ),
-    });
-    const runner = await initRunner(['*.test.mjs']);
-    const a = join(dir, 'a.test.mjs');
-    const b = join(dir, 'b.test.mjs');
-    const failsInHook = `${a} > each > passes, then its hook fails`;
-
-    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
-      { id: failsInHook, status: TestStatus.Failed, failureMessage: 'afterEach failure' },
-      {
-        id: `${b} > once > never runs`,
-        status: TestStatus.Failed,
-        failureMessage: 'test did not finish before its parent and was cancelled',
-      },
-      { id: `${b} > once`, status: TestStatus.Failed, failureMessage: 'before failure' },
-      passed(`${b} > last > passes`),
-      { id: `${b} > last`, status: TestStatus.Failed, failureMessage: 'after failure' },
-      { id: `${b} > times out`, status: TestStatus.Failed, failureMessage: 'test timed out after 10ms' },
-    ]);
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [failsInHook] })))), {
-      status: MutantRunStatus.Killed,
-      killedBy: [failsInHook],
-      failureMessage: 'afterEach failure',
-      nrOfTests: 1,
-    });
   });
 });

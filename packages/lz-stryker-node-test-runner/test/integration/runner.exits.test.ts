@@ -158,4 +158,52 @@ describe('LzStrykerNodeTestRunner endings', () => {
       }),
     });
   });
+
+  it('reports a test file that fails outside any test as an error, after a passing file', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': passing,
+      'b.test.mjs': fixture(
+        "it('passes', () => {});",
+        "process.stderr.write('first\\nsecond\\n');",
+        'process.exitCode = 3;',
+      ),
+    });
+    const runner = await initRunner(['*.test.mjs'], { nodeArgs: ['--no-deprecation'] });
+    const b = join(dir, 'b.test.mjs');
+    const errorMessage = lzFileError(b, {
+      records: [],
+      exitCode: 3,
+      stderr: 'first\nsecond\n',
+      args: [reporterArg, '--no-deprecation', b],
+      nodeOptions: runNodeOptions(),
+    });
+
+    assert.deepEqual(await settle(runner.dryRun(dryRun)), { status: DryRunStatus.Error, errorMessage });
+    assert.deepEqual(await settle(runner.mutantRun(mutantRunOptions())), {
+      status: MutantRunStatus.Error,
+      errorMessage,
+    });
+  });
+
+  it('reports an error raised after its test ended as an error that names the test and the error', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "it('late', () => { setTimeout(() => { throw new Error('late boom'); }, 20); });",
+        "it('waits', () => new Promise((resolve) => setTimeout(resolve, 200)));",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+    const a = join(dir, 'a.test.mjs');
+
+    const result = await settle(runner.dryRun(dryRun));
+
+    assert.strictEqual(result.status, DryRunStatus.Error);
+    const [first, , ...rest] = result.errorMessage.split('\n');
+    assert.equal(first, `Error running file "${a}": node exited with code 1 outside any test.`);
+    // node:test gives the position of the wrapper that registered the test.
+    assert.match(
+      rest.join('\n'),
+      /^Diagnostics:\nError: Test "late" at .+ generated asynchronous activity after the test ended\. This activity created the error "Error: late boom"/,
+    );
+  });
 });
