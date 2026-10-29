@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
+import { MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestFor } from '@layzee/lz-node-test';
 import { envNames } from '../../src/hook-core.ts';
@@ -10,6 +10,7 @@ import {
   activeMutant,
   complete,
   dryRun,
+  failed,
   failing,
   fixture,
   initRunner,
@@ -102,10 +103,10 @@ describe('LzStrykerNodeTestRunner filter, bail and mutant activation', () => {
     const runner = await initRunner(['b.test.mjs', 'a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
     const passedA = passed(`${a} > passes`);
-    const failedA = { id: `${a} > fails`, status: TestStatus.Failed, failureMessage: 'expected failure' };
+    const failedA = failed(`${a} > fails`, 'expected failure');
     const laterA = [
-      { id: `${a} > fails later`, status: TestStatus.Failed, failureMessage: 'later failure' },
-      { id: `${a} > calls back later`, status: TestStatus.Failed, failureMessage: 'callback failure' },
+      failed(`${a} > fails later`, 'later failure'),
+      failed(`${a} > calls back later`, 'callback failure'),
     ];
     const passedB = passed(`${join(dir, 'b.test.mjs')} > passes`);
 
@@ -173,7 +174,7 @@ describe('LzStrykerNodeTestRunner filter, bail and mutant activation', () => {
     const c = join(dir, 'c.spec.mjs');
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, testFiles: ['b.test.mjs'] }))).tests), [
-      { id: `${b} > fails`, status: TestStatus.Failed, failureMessage: 'expected failure' },
+      failed(`${b} > fails`, 'expected failure'),
     ]);
     assert.deepEqual(
       withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [`${c} > fails`] })))),

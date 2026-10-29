@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { TestStatus, type DryRunOptions } from '@stryker-mutator/api/test-runner';
+import type { DryRunOptions } from '@stryker-mutator/api/test-runner';
 
 import {
   complete,
   cover,
   dryRun,
+  failed,
   fixture,
   fixtureCoverage,
   initRunner,
@@ -44,7 +45,7 @@ describe('LzStrykerNodeTestRunner coverage', () => {
 
     assert.deepEqual(summary(tests), [
       passed(`${file} > suite > passes`),
-      { id: `${file} > suite > fails`, status: TestStatus.Failed, failureMessage: 'one is not two' },
+      failed(`${file} > suite > fails`, 'one is not two'),
       passed(`${file} > spawns`),
     ]);
     assert.deepEqual(

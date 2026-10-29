@@ -290,3 +290,11 @@ export function summary(tests: TestResult[]) {
 export function passed(id: string) {
   return { id, status: TestStatus.Success, failureMessage: undefined };
 }
+
+export function failed(id: string, failureMessage: string) {
+  return { id, status: TestStatus.Failed, failureMessage };
+}
+
+export function skipped(id: string) {
+  return { id, status: TestStatus.Skipped, failureMessage: undefined };
+}

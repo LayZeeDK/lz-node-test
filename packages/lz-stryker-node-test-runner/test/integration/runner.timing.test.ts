@@ -3,11 +3,12 @@ import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
+import { MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import {
   complete,
   dryRun,
+  failed,
   fixture,
   initRunner,
   mutantRunOptions,
@@ -87,7 +88,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
     const { runner, a, b } = await meetingFiles(t, 1);
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
-      { id: a, status: TestStatus.Failed, failureMessage: 'b never started' },
+      failed(a, 'b never started'),
       passed(b),
     ]);
   });

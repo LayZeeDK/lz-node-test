@@ -4,12 +4,13 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { DryRunStatus, MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
+import { DryRunStatus, MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
   complete,
   dryRun,
+  failed,
   fixture,
   fixtureCoverage,
   initRunner,
@@ -116,7 +117,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
     const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
     assert.deepEqual(summary(tests), [
-      { id: `${join(dir, 'a.test.mjs')} > fails`, status: TestStatus.Failed, failureMessage: 'x' },
+      failed(`${join(dir, 'a.test.mjs')} > fails`, 'x'),
       passed(`${join(dir, 'a.test.mjs')} > exits later`),
     ]);
   });

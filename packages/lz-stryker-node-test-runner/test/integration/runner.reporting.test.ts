@@ -7,6 +7,7 @@ import { MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
 import {
   complete,
   dryRun,
+  failed,
   fixture,
   fixtureHeaderLines,
   fixtureCoverage,
@@ -16,6 +17,7 @@ import {
   project,
   settle,
   shareCompileCache,
+  skipped,
   summary,
   withoutDuration,
 } from '../index.fixtures.ts';
@@ -109,7 +111,7 @@ describe('LzStrykerNodeTestRunner results', () => {
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
 
-    const skipped = (name: string, line: number, column: number) => ({
+    const skippedAt = (name: string, line: number, column: number) => ({
       id: `${a} > ${name}`,
       name,
       status: TestStatus.Skipped,
@@ -121,10 +123,10 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(
       tests.map(({ id, name, status, startPosition }) => ({ id, name, status, startPosition })),
       [
-        skipped('describe.skip', fixtureHeaderLines + 1, 9),
-        skipped('suite.skip', fixtureHeaderLines + 2, 6),
-        skipped('skip option', fixtureHeaderLines + 3, 0),
-        skipped('outer > nested', fixtureHeaderLines + 5, 11),
+        skippedAt('describe.skip', fixtureHeaderLines + 1, 9),
+        skippedAt('suite.skip', fixtureHeaderLines + 2, 6),
+        skippedAt('skip option', fixtureHeaderLines + 3, 0),
+        skippedAt('outer > nested', fixtureHeaderLines + 5, 11),
         {
           id: `${a} > outer > passes`,
           name: 'outer > passes',
@@ -196,8 +198,8 @@ describe('LzStrykerNodeTestRunner results', () => {
 
     assert.deepEqual(summary(tests), [
       passed(`${a} > parent > child`),
-      { id: `${a} > parent > failing child`, status: TestStatus.Failed, failureMessage: 'child failure' },
-      { id: `${a} > parent`, status: TestStatus.Failed, failureMessage: '1 subtest failed' },
+      failed(`${a} > parent > failing child`, 'child failure'),
+      failed(`${a} > parent`, '1 subtest failed'),
       ...(expectFailure ? [passed(`${a} > expects a failure`)] : []),
     ]);
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, {
@@ -370,7 +372,7 @@ describe('LzStrykerNodeTestRunner results', () => {
 
     assert.deepEqual(summary(tests), [
       passed(`${a} > only suite > runs`),
-      { id: `${join(dir, 'b.test.mjs')} > todo suite > fails`, status: TestStatus.Skipped, failureMessage: undefined },
+      skipped(`${join(dir, 'b.test.mjs')} > todo suite > fails`),
     ]);
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, { [`${a} > only suite > runs`]: { only: 1 } });
   });
@@ -388,8 +390,8 @@ describe('LzStrykerNodeTestRunner results', () => {
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
       passed(`${a} > passes`),
-      { id: `${a} > is not done`, status: TestStatus.Skipped, failureMessage: undefined },
-      { id: `${a} > is skipped`, status: TestStatus.Skipped, failureMessage: undefined },
+      skipped(`${a} > is not done`),
+      skipped(`${a} > is skipped`),
     ]);
     assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions()))), {
       status: MutantRunStatus.Survived,
@@ -425,16 +427,12 @@ describe('LzStrykerNodeTestRunner results', () => {
     const failsInHook = `${a} > each > passes, then its hook fails`;
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
-      { id: failsInHook, status: TestStatus.Failed, failureMessage: 'afterEach failure' },
-      {
-        id: `${b} > once > never runs`,
-        status: TestStatus.Failed,
-        failureMessage: 'test did not finish before its parent and was cancelled',
-      },
-      { id: `${b} > once`, status: TestStatus.Failed, failureMessage: 'before failure' },
+      failed(failsInHook, 'afterEach failure'),
+      failed(`${b} > once > never runs`, 'test did not finish before its parent and was cancelled'),
+      failed(`${b} > once`, 'before failure'),
       passed(`${b} > last > passes`),
-      { id: `${b} > last`, status: TestStatus.Failed, failureMessage: 'after failure' },
-      { id: `${b} > times out`, status: TestStatus.Failed, failureMessage: 'test timed out after 10ms' },
+      failed(`${b} > last`, 'after failure'),
+      failed(`${b} > times out`, 'test timed out after 10ms'),
     ]);
     assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ testFilter: [failsInHook] })))), {
       status: MutantRunStatus.Killed,
@@ -457,11 +455,7 @@ describe('LzStrykerNodeTestRunner results', () => {
 
     assert.deepEqual(summary(tests), [
       passed(`${join(dir, 'a.test.mjs')} > calls back`),
-      {
-        id: `${join(dir, 'a.test.mjs')} > calls back with an error`,
-        status: TestStatus.Failed,
-        failureMessage: 'late failure',
-      },
+      failed(`${join(dir, 'a.test.mjs')} > calls back with an error`, 'late failure'),
     ]);
   });
 });

@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { MutantRunStatus, TestStatus } from '@stryker-mutator/api/test-runner';
+import { MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import {
   complete,
   cover,
   dryRun,
+  failed,
   fixture,
   fixtureCoverage,
   initRunner,
@@ -50,11 +51,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
 
     assert.deepEqual(summary(tests), [
       passed(`${a} > meets its plan`),
-      {
-        id: `${a} > misses its plan`,
-        status: TestStatus.Failed,
-        failureMessage: 'plan expected 2 assertions but received 1',
-      },
+      failed(`${a} > misses its plan`, 'plan expected 2 assertions but received 1'),
       passed(`${a} > plans its subtests > one`),
       passed(`${a} > plans its subtests > two`),
       passed(`${a} > plans its subtests`),
@@ -238,10 +235,7 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
 
     const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
-    assert.deepEqual(summary(tests), [
-      { id: `${a} > awaits`, status: TestStatus.Failed, failureMessage: 'thrown in a callback' },
-      passed(`${a} > runs next`),
-    ]);
+    assert.deepEqual(summary(tests), [failed(`${a} > awaits`, 'thrown in a callback'), passed(`${a} > runs next`)]);
   });
 
   it("counts the work of the test file's own exit listeners as static coverage", async (t) => {
@@ -278,9 +272,6 @@ describe('LzStrykerNodeTestRunner with the test context', () => {
 
     const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
-    assert.deepEqual(summary(tests), [
-      passed(`${a} > writes`),
-      { id: `${a} > fails`, status: TestStatus.Failed, failureMessage: 'expected failure' },
-    ]);
+    assert.deepEqual(summary(tests), [passed(`${a} > writes`), failed(`${a} > fails`, 'expected failure')]);
   });
 });
