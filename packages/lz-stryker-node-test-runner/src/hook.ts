@@ -49,6 +49,7 @@ install({
   peakMemoryMB: () => Math.round(process.resourceUsage().maxRSS / 1024),
   canWatchMemory: isMainThread && workersAllowed(process.permission),
   watchMemory: (options) => {
+    // Stryker disable next-line ArrayDeclaration: equivalent, as hook-core always passes execArgv: []
     const worker = new Worker(watchdog, { eval: true, ...options, execArgv: [...options.execArgv] });
     worker.on('error', () => {
       // Listening keeps a watchdog error from ending the process.
