@@ -31,6 +31,13 @@ shareCompileCache();
 
 describe('LzStrykerNodeTestRunner endings', () => {
   it('ends the processes that the tests of a test file leave running once its run is over', async (t) => {
+    let pidFile = '';
+    // Before project()'s cleanup, which after hooks run in order: a child left running would hold the directory.
+    t.after(() => {
+      if (existsSync(pidFile) && isRunning(Number(readFileSync(pidFile, 'utf8')))) {
+        process.kill(Number(readFileSync(pidFile, 'utf8')));
+      }
+    });
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import { spawn } from 'node:child_process';",
@@ -45,12 +52,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
         '});',
       ),
     });
-    const pidFile = join(dir, 'child.pid');
-    t.after(() => {
-      if (existsSync(pidFile) && isRunning(Number(readFileSync(pidFile, 'utf8')))) {
-        process.kill(Number(readFileSync(pidFile, 'utf8')));
-      }
-    });
+    pidFile = join(dir, 'child.pid');
     const runner = await initRunner(['a.test.mjs']);
 
     assert.equal((await settle(runner.mutantRun(mutantRunOptions()))).status, MutantRunStatus.Survived);
