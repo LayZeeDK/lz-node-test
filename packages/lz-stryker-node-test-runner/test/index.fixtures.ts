@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { TestContext } from 'node:test';
@@ -75,10 +76,11 @@ export function project(t: TestContext, files: Record<string, string>): string {
   }
 
   process.chdir(dir);
-  t.after(() => {
+  t.after(async () => {
     process.chdir(previous);
-    // Windows refuses to remove a directory that a process the test just ended still works in.
-    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    // Windows refuses to remove a directory that a process the test just ended still works in. rm, not rmSync: from
+    // Node.js 24, rmSync on Windows retries neither that refusal nor any error with a pause.
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   return dir;
