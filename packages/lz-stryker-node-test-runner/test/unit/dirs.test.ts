@@ -5,7 +5,7 @@ import { basename, join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { isOwn, isRunning, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
+import { isOwn, isRunning, lzDirPrefix, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
 import { logger, noProcess } from '../index.fixtures.ts';
 import { peakMemoryDir } from '../../src/memory-limits.ts';
 
@@ -167,6 +167,18 @@ describe('ownDir', () => {
       { message: `"${dir}" belongs to another user; remove it, or run Stryker as that user.` },
     );
     assert.deepEqual(asked, [dir]);
+  });
+});
+
+describe('lzDirPrefix', () => {
+  const rows: [Parameters<typeof lzDirPrefix>[0], string][] = [
+    ['run', 'lz-stryker-node-test-111-'],
+    ['cache', 'lz-stryker-node-test-cache-111-'],
+    ['peaks', 'lz-stryker-node-test-peaks-111-'],
+  ];
+
+  lzTestEach(rows)('names the %s directories of a process %s', (kind, prefix) => {
+    assert.equal(lzDirPrefix(kind, 111), prefix);
   });
 });
 
