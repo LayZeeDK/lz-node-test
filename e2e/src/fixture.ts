@@ -110,7 +110,7 @@ export function lzMutant(run: LzStrykerRun, { at, replacement }: { at: string; r
 function reportOf(run: LzStrykerRun): LzReport {
   if (!run.reported) {
     throw new Error(
-      `Stryker wrote no report (exit code ${run.exitCode}${run.timedOut ? ', ended after 15 minutes' : ''}):\n` +
+      `Stryker wrote no report (exit code ${run.exitCode}${run.timedOut ? `, ended after ${strykerTimeoutMs / 60_000} minutes` : ''}):\n` +
         run.output,
     );
   }
