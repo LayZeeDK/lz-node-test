@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseArguments, templateRows, type EachOptions } from '../../src/register.ts';
+import { parseArguments, templateRows, type LzEachOptions } from '../../src/register.ts';
 import { lzTestEach } from '../../src/test-each.ts';
 import { signatures } from '../reported.fixtures.ts';
 
@@ -10,7 +10,7 @@ describe('parseArguments', () => {
 
   const cases: readonly (readonly [
     string,
-    readonly [(() => void) | EachOptions | undefined, (() => void) | number | undefined],
+    readonly [(() => void) | LzEachOptions | undefined, (() => void) | number | undefined],
     unknown,
   ])[] = [
     ['(name, fn)', [fn, undefined], { options: {}, fn }],

@@ -68,6 +68,19 @@ Both functions take the options as the second argument instead of a timeout: `(n
 `node:test`'s test options (`timeout`, `skip`, `only`, `todo`, and the others), plus `fails`, which makes a test pass
 only when its body fails.
 
+### Types
+
+The package exports a type for each value its functions take or return:
+
+| Type                          | Describes                                                              |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `LzName`                      | a test's name: a string, or a function, which names it by its own name |
+| `LzEachOptions`               | the options, with `fails`                                              |
+| `LzTestEachFunction`          | `lzTestEach`, without its modifiers                                    |
+| `LzTestEachFunctionReturn<T>` | what `lzTestEach(cases)` returns, for `fn`'s arguments `T`             |
+| `LzTestForFunction`           | `lzTestFor`, without its modifiers                                     |
+| `LzTestForFunctionReturn<T>`  | what `lzTestFor(cases)` returns, for the case type `T`                 |
+
 ### Modifiers
 
 Chain modifiers before the table, in any order: `lzTestEach.skip`, `.only`, `.todo` and `.fails` turn their flag on.

@@ -2,13 +2,10 @@
 import type { TestContext } from 'node:test';
 
 import { modified, type Modified } from './modified.ts';
-import { register, type Awaitable, type EachOptions, type Flags, type Name, type Register } from './register.ts';
+import { register, type Awaitable, type Flags, type Register, type TableReturn } from './register.ts';
 
 /** Registers the tests of a `lzTestFor` table. Without `fn`, each test is a todo test. */
-export interface LzTestForFunctionReturn<TArg> {
-  (name: Name, fn?: (arg: TArg, context: TestContext) => Awaitable<void>, timeout?: number): void;
-  (name: Name, options: EachOptions, fn?: (arg: TArg, context: TestContext) => Awaitable<void>): void;
-}
+export type LzTestForFunctionReturn<TArg> = TableReturn<(arg: TArg, context: TestContext) => Awaitable<void>>;
 
 export interface LzTestForFunction {
   <T>(cases: ReadonlyArray<T>): LzTestForFunctionReturn<T>;
