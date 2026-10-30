@@ -45,21 +45,6 @@ const signatures =
   'lzTestEach and lzTestFor tables take (name, fn), (name, fn, timeout) or (name, options, fn); ' +
   'pass options as the second argument and a single function.';
 
-/** The rows of a template literal table: one object per row, keyed by the column names of its first line. */
-export function templateRows(strings: readonly unknown[], values: readonly unknown[]): Record<string, unknown>[] {
-  const columns = strings
-    .join('')
-    .trim()
-    .replaceAll(' ', '')
-    .split('\n', 1)
-    .flatMap((line) => line.split('|'));
-
-  // Array.from rounds the length down, which drops the values of an incomplete last row.
-  return Array.from({ length: values.length / columns.length }, (_, row) =>
-    Object.fromEntries(columns.map((column, i) => [column, values[row * columns.length + i]])),
-  );
-}
-
 /**
  * Reads Vitest's call shapes: `(name, fn)`, `(name, fn, timeout)` and `(name, options, fn)`. Untyped callers can pass
  * other shapes, which throw.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseArguments, templateRows, type LzEachOptions } from '../../src/register.ts';
+import { parseArguments, type LzEachOptions } from '../../src/register.ts';
 import { lzTestEach } from '../../src/test-each.ts';
 import { signatures } from '../reported.fixtures.ts';
 
@@ -36,23 +36,5 @@ describe('parseArguments', () => {
   it('accepts a null after a function', () => {
     // @ts-expect-error -- null in place of a timeout, which untyped callers can pass
     assert.deepEqual(parseArguments(fn, null), { options: {}, fn });
-  });
-});
-
-describe('templateRows', () => {
-  lzTestEach([
-    [
-      ['\n  a | b\n  ', ' | ', '\n  ', ' | ', '\n'],
-      [1, 2, 3, 4],
-      [
-        { a: 1, b: 2 },
-        { a: 3, b: 4 },
-      ],
-    ],
-    [['first name|x\n', '|', ''], [1, 2, 3], [{ firstname: 1, x: 2 }]],
-    [['a|b', '|', ''], [1], []],
-    [['a\tb ', ''], [1], [{ 'a\tb': 1 }]],
-  ])('reads %o with %o', (strings, values, rows) => {
-    assert.deepEqual(templateRows(strings, values), rows);
   });
 });
