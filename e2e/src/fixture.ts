@@ -251,7 +251,11 @@ function isRunning(pid: number): boolean {
   }
 }
 
-/** Windows refuses to remove a directory that a lingering child process still works in, so removal retries. */
+/**
+ * Windows refuses to remove a directory that a lingering child process still works in, so removal retries, and a
+ * directory still refused is reported, not failed. Node.js 24.18.1 and earlier 24.x releases retry neither that
+ * refusal nor with a pause in rmSync, which an exit listener must use.
+ */
 function removeOnExit(dir: string): void {
   process.on('exit', () => {
     try {
