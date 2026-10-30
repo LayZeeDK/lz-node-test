@@ -20,7 +20,7 @@ import {
   type LzRunOptions,
   lzTestRunnerConcurrency,
   lzToTestResults,
-} from '../../src/index.ts';
+} from '../../src/runner.ts';
 
 const file = join('/repo', 'a.test.mjs');
 

@@ -20,7 +20,7 @@ import {
   type TestResult,
 } from '@stryker-mutator/api/test-runner';
 
-import { LzStrykerNodeTestRunner, lzRunEnv, type LzStrykerNodeTestOptions } from '../src/index.ts';
+import { LzStrykerNodeTestRunner, lzRunEnv, type LzStrykerNodeTestOptions } from '../src/runner.ts';
 
 export const activeMutant = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
 export const hookUrl = pathToFileURL(join(import.meta.dirname, '..', 'src', 'hook.ts')).href;

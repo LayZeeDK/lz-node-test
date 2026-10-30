@@ -20,7 +20,7 @@ import {
   watchdog,
 } from '../../src/hook-core.ts';
 import { fixture, grows, hookUrl, reporterArg, shareCompileCache } from '../index.fixtures.ts';
-import { lzParseRecord } from '../../src/index.ts';
+import { lzParseRecord } from '../../src/runner.ts';
 import reporter from '../../src/reporter.ts';
 
 // Loaded here, outside any test, the hook stays inactive (the runner did not start this process, or its own hook is

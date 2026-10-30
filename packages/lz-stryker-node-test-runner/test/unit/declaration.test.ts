@@ -5,7 +5,8 @@ import { PluginKind } from '@stryker-mutator/api/plugin';
 import ajvModule from 'ajv';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { lzMinNodeVersion, LzStrykerNodeTestRunner, strykerPlugins, strykerValidationSchema } from '../../src/index.ts';
+import { LzStrykerNodeTestRunner, strykerPlugins, strykerValidationSchema } from '../../src/index.ts';
+import { lzMinNodeVersion } from '../../src/runner.ts';
 import pkg from '../../package.json' with { type: 'json' };
 
 /** Stryker validates its options with these settings, and merges the properties of each plugin's schema into its own. */

@@ -28,7 +28,7 @@ import {
   type RecordedTest,
   type TestEvent,
 } from '../../src/hook-core.ts';
-import { lzParseRecord } from '../../src/index.ts';
+import { lzParseRecord } from '../../src/runner.ts';
 import {
   bodyOf,
   callable,

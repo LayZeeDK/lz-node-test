@@ -25,7 +25,7 @@ import {
   summary,
 } from '../index.fixtures.ts';
 import { isRunning } from '../../src/dirs.ts';
-import { lzFileError } from '../../src/index.ts';
+import { lzFileError } from '../../src/runner.ts';
 
 shareCompileCache();
 
