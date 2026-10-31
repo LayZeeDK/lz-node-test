@@ -36,6 +36,7 @@ interface LzOssHeader {
   readonly node: string;
   readonly platform: string;
   readonly concurrency: number;
+  readonly timeLimitMinutes: number;
   readonly tarballs: readonly string[];
   readonly startedAt: string;
 }
@@ -129,6 +130,7 @@ const header: LzOssHeader = {
   node: process.version,
   platform: `${process.platform}-${process.arch}`,
   concurrency: options.concurrency,
+  timeLimitMinutes: options.timeLimitMinutes,
   tarballs: tarballs.map((tarball) => basename(tarball)),
   startedAt: new Date().toISOString(),
 };
@@ -152,7 +154,9 @@ async function runSide(side: LzSide): Promise<LzSideRun> {
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
   const started = performance.now();
-  const run = await settled('Stryker run', () => lzStryker(dir, configFile(side), options.concurrency, runTmp));
+  const run = await settled('Stryker run', () =>
+    lzStryker(dir, configFile(side), options.concurrency, runTmp, options.timeLimitMinutes * 60_000),
+  );
   const wallMs = Math.round(performance.now() - started);
   const stopped = await settled('Sampler', () => sampler.stop());
   const samples = stopped.ok ? stopped.value.map((sample) => lzDescendants(sample, process.pid, excluded)) : [];

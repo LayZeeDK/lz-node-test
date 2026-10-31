@@ -125,6 +125,7 @@ export async function lzStryker(
   configFile: string,
   concurrency: number,
   tmp = join(dir, 'tmp'),
+  timeoutMs = lzStrykerTimeoutMs,
 ): Promise<LzStrykerRun> {
   const report = join(dir, lzReportFile);
   const before = new Set(readdirSync(tmp));
@@ -134,7 +135,7 @@ export async function lzStryker(
   const { exitCode, stdout, stderr, timedOut } = await lzExec(
     process.execPath,
     [strykerBin, 'run', configFile, '--concurrency', String(concurrency), '--reporters', 'clear-text,json'],
-    { cwd: dir, env: consumerEnv(tmp), timeoutMs: lzStrykerTimeoutMs },
+    { cwd: dir, env: consumerEnv(tmp), timeoutMs },
   );
   const outcome: LzStrykerOutcome = {
     exitCode,

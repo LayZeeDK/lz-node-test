@@ -48,6 +48,7 @@ describe('lzParseOptions', () => {
         concurrency: 5,
         tarballs: undefined,
         prepareOnly: false,
+        timeLimitMinutes: 15,
       },
     );
   });
@@ -56,6 +57,16 @@ describe('lzParseOptions', () => {
     const options = lzParseOptions([...required, '--tarballs', 'D:/tgz', '--prepare-only']);
 
     assert.deepEqual([options.tarballs, options.prepareOnly], ['D:/tgz', true]);
+  });
+
+  it('reads the time limit of each side in minutes', () => {
+    assert.equal(lzParseOptions([...required, '--time-limit-minutes', '40']).timeLimitMinutes, 40);
+  });
+
+  it('refuses a time limit of 0', () => {
+    assert.throws(() => lzParseOptions([...required, '--time-limit-minutes', '0']), {
+      message: /--time-limit-minutes is a positive integer\.$/,
+    });
   });
 
   it('refuses a project it has no settings for, and names those it has', () => {

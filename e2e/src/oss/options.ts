@@ -20,6 +20,8 @@ export interface LzOssOptions {
   readonly tarballs: string | undefined;
   /** Install and write the configurations, keep the copy, and run no Stryker. */
   readonly prepareOnly: boolean;
+  /** How long each side's `stryker run` may take before the driver ends it. */
+  readonly timeLimitMinutes: number;
 }
 
 export type LzStrykerOptions =
@@ -66,7 +68,8 @@ const projects: readonly LzOssProject[] = [
 
 export const lzOssUsage =
   'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
-  '[--tarballs <folder>] [--prepare-only] [--help]';
+  '[--tarballs <folder>] [--prepare-only] [--time-limit-minutes <n>, default 15] [--help]';
+const positiveInteger = /^[1-9]\d*$/;
 
 export function lzWantsHelp(args: readonly string[]): boolean {
   return args.includes('--help') || args.includes('-h');
@@ -82,11 +85,12 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
       concurrency: { type: 'string' },
       tarballs: { type: 'string' },
       'prepare-only': { type: 'boolean', default: false },
+      'time-limit-minutes': { type: 'string', default: '15' },
     },
     strict: true,
     allowPositionals: false,
   });
-  const { source, out, concurrency, tarballs } = values;
+  const { source, out, concurrency, tarballs, 'time-limit-minutes': timeLimitMinutes } = values;
   const project = projects.find(({ name }) => name === values.project);
 
   if (project === undefined) {
@@ -97,11 +101,23 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     throw new Error(`${lzOssUsage}\n--source and --out are required.`);
   }
 
-  if (concurrency === undefined || !/^[1-9]\d*$/.test(concurrency)) {
+  if (concurrency === undefined || !positiveInteger.test(concurrency)) {
     throw new Error(`${lzOssUsage}\n--concurrency is a positive integer; size it to the machine's current load.`);
   }
 
-  return { project, source, out, concurrency: Number(concurrency), tarballs, prepareOnly: values['prepare-only'] };
+  if (!positiveInteger.test(timeLimitMinutes)) {
+    throw new Error(`${lzOssUsage}\n--time-limit-minutes is a positive integer.`);
+  }
+
+  return {
+    project,
+    source,
+    out,
+    concurrency: Number(concurrency),
+    tarballs,
+    prepareOnly: values['prepare-only'],
+    timeLimitMinutes: Number(timeLimitMinutes),
+  };
 }
 
 /**
