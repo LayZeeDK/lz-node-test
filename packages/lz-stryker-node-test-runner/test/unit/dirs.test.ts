@@ -89,6 +89,15 @@ describe('removeDir', () => {
     );
   });
 
+  it('leaves no timer holding the process open once the removal settles', async () => {
+    const timers = () => process.getActiveResourcesInfo().filter((resource) => resource === 'Timeout').length;
+    const before = timers();
+
+    await removeDir(dir, logger({ debugEnabled: false, warnings: [] }), { waitMs: 5_000, remove: async () => {} });
+
+    assert.equal(timers(), before);
+  });
+
   it('warns once when the removal fails after it stopped waiting', async (t) => {
     let fail = (_error: Error) => {};
     const { warnings, settled } = removal(t, () => new Promise((_, reject) => (fail = reject)));

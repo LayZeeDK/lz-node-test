@@ -1,6 +1,7 @@
 import { lstatSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import timers from 'node:timers/promises';
 
 import type { Logger } from '@stryker-mutator/api/logging';
 
@@ -24,7 +25,7 @@ export function ownDir(dir: string, owned: (path: string) => boolean = isOwn): v
  * itself, but waits until the process ends when it works in a directory inside it, as in the run's temporary
  * directory.
  */
-export function removeDir(
+export async function removeDir(
   dir: string,
   log: Logger,
   {
@@ -32,31 +33,22 @@ export function removeDir(
     remove = (path: string) => rm(path, { recursive: true, maxRetries: 10, retryDelay: 20 }),
   } = {},
 ): Promise<void> {
-  return new Promise((done) => {
-    let waiting = true;
-    const timer = setTimeout(() => {
-      waiting = false;
-      log.warn(`Stopped waiting for ${dir} to be removed after ${waitMs} ms; a later runner removes what is left.`);
-      done();
-    }, waitMs);
-
+  const warning = await Promise.race([
     remove(dir).then(
-      () => {
-        clearTimeout(timer);
-        done();
-      },
-      (error: unknown) => {
-        clearTimeout(timer);
+      () => undefined,
+      (error: unknown) =>
+        `Left ${dir} for a later runner to remove: ${error instanceof Error ? error.message : String(error)}`,
+    ),
+    timers.setTimeout(
+      waitMs,
+      `Stopped waiting for ${dir} to be removed after ${waitMs} ms; a later runner removes what is left.`,
+      { ref: false },
+    ),
+  ]);
 
-        if (waiting) {
-          log.warn(
-            `Left ${dir} for a later runner to remove: ${error instanceof Error ? error.message : String(error)}`,
-          );
-          done();
-        }
-      },
-    );
-  });
+  if (warning !== undefined) {
+    log.warn(warning);
+  }
 }
 
 /** Whether a process with this id runs; one that exists but may not be signalled runs too. */
