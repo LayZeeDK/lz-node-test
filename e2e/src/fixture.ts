@@ -42,11 +42,16 @@ export async function lzFixture(name: string): Promise<LzFixture> {
   removeDeadRunDirs(tmpdir());
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${process.pid}-`)));
 
-  removeOnExit(dir);
+  lzRemoveOnExit(dir);
   cpSync(join(fixturesDir, name), dir, { recursive: true });
   mkdirSync(join(dir, 'tmp'));
-  const tarballs = await pack(join(dir, 'tarballs'));
+  await lzInstall(dir, await lzPack(join(dir, 'tarballs')));
 
+  return { stryker: (configFile = 'stryker.config.mjs') => lzStryker(dir, configFile, concurrency) };
+}
+
+/** Installs the packed packages and the workspace's pinned Stryker, TypeScript and Node.js types into `dir`. */
+export async function lzInstall(dir: string, tarballs: readonly string[]): Promise<void> {
   // npx and npm exec hand npm_config_prefix and npm_config_local_prefix (the workspace) on to this process.
   await npm(dir, [
     'install',
@@ -59,8 +64,6 @@ export async function lzFixture(name: string): Promise<LzFixture> {
     ...tarballs,
     ...pinned(),
   ]);
-
-  return { stryker: (configFile = 'stryker.config.mjs') => stryker(dir, configFile, concurrency) };
 }
 
 /** Required, so that no run falls back to Stryker's default of all cores but one on a machine that other work shares. */
@@ -116,7 +119,8 @@ function reportOf(run: LzStrykerRun): LzReport {
   return run.report;
 }
 
-async function stryker(dir: string, configFile: string, concurrency: number): Promise<LzStrykerRun> {
+/** Runs `stryker run` in `dir`, whose `tmp` folder must exist: the run gets it as its temporary directory. */
+export async function lzStryker(dir: string, configFile: string, concurrency: number): Promise<LzStrykerRun> {
   const tmp = join(dir, 'tmp');
   const report = join(dir, reportFile);
   const before = new Set(readdirSync(tmp));
@@ -151,7 +155,8 @@ function consumerEnv(tmp: string): NodeJS.ProcessEnv {
   return { ...Object.fromEntries(inherited), TMPDIR: tmp, TEMP: tmp, TMP: tmp };
 }
 
-async function pack(into: string): Promise<string[]> {
+/** Packs each workspace package from its built `dist` into `into`, and returns the tarballs' paths. */
+export async function lzPack(into: string): Promise<string[]> {
   mkdirSync(into);
   const tarballs: string[] = [];
 
@@ -254,7 +259,7 @@ function isRunning(pid: number): boolean {
  * directory still refused is reported, not failed. Node.js 24.18.1 and earlier 24.x releases retry neither that
  * refusal nor with a pause in rmSync, which an exit listener must use.
  */
-function removeOnExit(dir: string): void {
+export function lzRemoveOnExit(dir: string): void {
   process.on('exit', () => {
     try {
       rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
