@@ -122,13 +122,15 @@ export function lzMergeCoverage(coverages: (MutantCoverage | undefined)[], perTe
 }
 
 /**
- * A process or thread that a test starts reads its current test once, when it starts, so its hits belong to that test
- * only while the test is current. Its per-test hits count as static unless it lived inside that test's window, which
- * makes Stryker run every test against those mutants: slower, but never a false Survived.
+ * A process or thread reads its current test once, when it starts, so it puts all its hits under that test. They go to
+ * every test that was current while it lived instead, which can add tests to a mutant's run but not drop the one that
+ * reaches it, and to static as well when it lived while no test was current. Its life counts from the start of the
+ * span of the test it read, as it starts before its hook runs. Without its lifetime or the file's spans, its hits
+ * count as static.
  */
-export function lzWindowedCoverage(
+export function lzOverlapCoverage(
   record: ProcessRecord,
-  testWindows: ProcessRecord['testWindows'],
+  testSpans: ProcessRecord['testSpans'],
 ): MutantCoverage | undefined {
   const { mutantCoverage: coverage, lifetime } = record;
 
@@ -136,20 +138,29 @@ export function lzWindowedCoverage(
     return coverage;
   }
 
-  const inside = (test: string) => {
-    const window = testWindows?.[test];
+  if (!lifetime || !testSpans) {
+    return lzMergeCoverage([coverage], false);
+  }
 
-    return (
-      lifetime !== undefined && window !== undefined && window.start <= lifetime.start && lifetime.end <= window.end
+  const spans = Object.entries(testSpans);
+  const timeline = spans.flatMap(([, ofTest]) => ofTest).toSorted((a, b) => a.start - b.start);
+  const attributed = Object.entries(coverage.perTest).map(([test, hits]): MutantCoverage => {
+    const start = testSpans[test]?.findLast((span) => span.start <= lifetime.start)?.start ?? lifetime.start;
+    const overlapped = spans
+      .filter(([, ofTest]) => ofTest.some((span) => span.start <= lifetime.end && start < span.end))
+      .map(([id]) => id);
+    const coveredUntil = timeline.reduce(
+      (until, span) => (span.start <= until && until < span.end ? span.end : until),
+      start,
     );
-  };
-  const entries = Object.entries(coverage.perTest);
-  const outside = entries.filter(([test]) => !inside(test));
 
-  return {
-    static: lzMergeCoverage([{ static: coverage.static, perTest: Object.fromEntries(outside) }], false).static,
-    perTest: Object.fromEntries(entries.filter(([test]) => inside(test))),
-  };
+    return {
+      static: coveredUntil > lifetime.end ? {} : hits,
+      perTest: Object.fromEntries(overlapped.map((id) => [id, hits])),
+    };
+  });
+
+  return lzMergeCoverage([{ static: coverage.static, perTest: {} }, ...attributed], true);
 }
 
 /**
@@ -365,7 +376,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
     );
   }
 
-  return { results, coverages: records.map((record) => lzWindowedCoverage(record, main.testWindows)), failed };
+  return { results, coverages: records.map((record) => lzOverlapCoverage(record, main.testSpans)), failed };
 }
 
 function errorEnd(errorMessage: string): FileOutcome {

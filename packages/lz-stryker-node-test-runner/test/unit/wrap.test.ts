@@ -605,8 +605,8 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(seen, [`${testFile} > observes`, `${testFile} > observes`]);
   });
 
-  it("notes each test's window, from when it first becomes current to when it last stops being current", async () => {
-    const { module, registrations, testWindows } = wrapped();
+  it('notes the spans during which each test is current, one span across a pause in which no other test is', async () => {
+    const { module, registrations, testSpans } = wrapped();
     module.it('first', (t: { after: (hook: () => void) => void }) => {
       t.after(() => {});
     });
@@ -614,9 +614,27 @@ describe('wrapNodeTest', () => {
 
     await runBodies(registrations, ['first', 'second']);
 
-    assert.deepEqual(Object.fromEntries(testWindows), {
-      [`${testFile} > first`]: { start: 1, end: 4 },
-      [`${testFile} > second`]: { start: 5, end: 6 },
+    assert.deepEqual(Object.fromEntries(testSpans), {
+      [`${testFile} > first`]: [{ start: 1, end: 4 }],
+      [`${testFile} > second`]: [{ start: 5, end: 6 }],
+    });
+  });
+
+  it("ends a test's span while its subtest is current, and starts another when the subtest ends", async () => {
+    const { module, registrations, testSpans } = wrapped();
+    module.it('parent', async (t: Subtests) => {
+      t.test('child', () => {});
+      await bodyOf(registrations, 'child')(testContext());
+    });
+
+    await bodyOf(registrations, 'parent')(testContext(registrations));
+
+    assert.deepEqual(Object.fromEntries(testSpans), {
+      [`${testFile} > parent`]: [
+        { start: 1, end: 2 },
+        { start: 3, end: 4 },
+      ],
+      [`${testFile} > parent > child`]: [{ start: 2, end: 3 }],
     });
   });
 

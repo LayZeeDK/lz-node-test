@@ -147,7 +147,7 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
 
 /** The harness's clock stays at 0. */
 const lifetime = { start: 0, end: 0 };
-const windows = (...ran: string[]) => Object.fromEntries(ran.map((name) => [`${testFile} > ${name}`, lifetime]));
+const spans = (...ran: string[]) => Object.fromEntries(ran.map((name) => [`${testFile} > ${name}`, [lifetime]]));
 
 /** The environment of the process that runs the test file. */
 const fileEnv = { [envNames.out]: out, [envNames.file]: testFile };
@@ -358,7 +358,7 @@ describe('install', () => {
             { id: `${testFile} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
           ],
           lifetime,
-          testWindows: windows(),
+          testSpans: spans(),
         },
       },
     ]);
@@ -419,7 +419,7 @@ describe('install', () => {
       tests: [],
       diagnostics: [message],
       lifetime,
-      testWindows: windows(),
+      testSpans: spans(),
     });
   });
 
@@ -443,7 +443,7 @@ describe('install', () => {
       tests: [{ id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 }],
       ...unfinished,
       lifetime,
-      testWindows: windows(),
+      testSpans: spans(),
     });
   });
 
@@ -586,7 +586,7 @@ describe('install', () => {
           { id: `${testFile} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
         ],
         lifetime,
-        testWindows: windows('passes', 'fails'),
+        testSpans: spans('passes', 'fails'),
       });
     });
 
@@ -676,7 +676,7 @@ describe('install', () => {
           tests: reported ? [{ id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 }] : [],
           ...marks,
           lifetime,
-          testWindows: windows('passes'),
+          testSpans: spans('passes'),
         });
       },
     );
@@ -846,7 +846,7 @@ describe('install', () => {
     });
   });
 
-  it("writes when the hook ran and when it wrote, and in the test file's record each test's window", async () => {
+  it("writes when the hook ran and when it wrote, and in the test file's record each test's spans", async () => {
     let time = 10;
     const now = () => ++time;
     const descendant = installedHarness({ [envNames.out]: out }, { now });
@@ -857,9 +857,9 @@ describe('install', () => {
     descendant.exit();
 
     assert.deepEqual(
-      [main, descendant].map(({ records }) => [records[0]?.record.lifetime, records[0]?.record.testWindows]),
+      [main, descendant].map(({ records }) => [records[0]?.record.lifetime, records[0]?.record.testSpans]),
       [
-        [{ start: 12, end: 15 }, { [`${testFile} > runs`]: { start: 13, end: 14 } }],
+        [{ start: 12, end: 15 }, { [`${testFile} > runs`]: [{ start: 13, end: 14 }] }],
         [{ start: 11, end: 16 }, undefined],
       ],
     );

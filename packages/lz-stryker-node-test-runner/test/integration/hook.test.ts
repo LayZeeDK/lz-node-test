@@ -116,16 +116,18 @@ function readRecords(outDir: string): Record<string, ProcessRecord> {
   );
 }
 
-/** The record without its lifetime, once that runs from when the hook ran up to now. */
+/** The record without its lifetime, once that runs from when the hook ran up to now on the clock this process reads. */
 function untimed(record: ProcessRecord | undefined): Omit<ProcessRecord, 'lifetime'> | undefined {
   if (record === undefined) {
     return undefined;
   }
 
   const { lifetime, ...rest } = record;
+  const now = Number(process.hrtime.bigint()) / 1e6;
   assert.ok(lifetime, 'The record has no lifetime.');
   assert.ok(lifetime.start <= lifetime.end, JSON.stringify(lifetime));
-  assert.ok(lifetime.end <= Date.now(), JSON.stringify(lifetime));
+  assert.ok(lifetime.end <= now, JSON.stringify({ lifetime, now }));
+  assert.ok(now - lifetime.start < 60_000, JSON.stringify({ lifetime, now }));
 
   return rest;
 }
@@ -413,7 +415,7 @@ describe('hook', () => {
     const { code, record } = await runTestFile(t, `import 'node:test';\n${exits}`);
 
     assert.equal(code, 0);
-    assert.deepEqual(untimed(record), { main: true, tests: [], testWindows: {}, ...unfinished });
+    assert.deepEqual(untimed(record), { main: true, tests: [], testSpans: {}, ...unfinished });
   });
 
   it('records where a CommonJS test file declares its tests', async (t) => {

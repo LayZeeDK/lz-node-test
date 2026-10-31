@@ -172,7 +172,7 @@ export function install(deps: HookDependencies): boolean {
   const dryRun = deps.env[envNames.dryRun] === 'true';
   delete deps.env[envNames.bail];
   const tests: RecordedTest[] = [];
-  const testWindows = new Map<string, LzTimeWindow>();
+  const testSpans = new Map<string, readonly LzTimeWindow[]>();
   const diagnostics: string[] = [];
   const testFile = deps.env[envNames.file];
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
@@ -229,7 +229,7 @@ export function install(deps: HookDependencies): boolean {
       nodeTest,
       registering: ends.registering,
       rootAfter: ends.track,
-      testWindows,
+      testSpans,
       now: deps.now,
     });
     deps.global[wrappedNodeTest] = wrapped;
@@ -252,7 +252,7 @@ export function install(deps: HookDependencies): boolean {
       ...(main && !summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
       lifetime: { start: started, end: deps.now() },
-      ...(main && { testWindows: Object.fromEntries(testWindows) }),
+      ...(main && { testSpans: Object.fromEntries(testSpans) }),
     });
   };
 

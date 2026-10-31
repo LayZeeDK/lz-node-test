@@ -21,7 +21,7 @@ import {
   type LzRunOptions,
   lzTestRunnerConcurrency,
   lzToTestResults,
-  lzWindowedCoverage,
+  lzOverlapCoverage,
 } from '../../src/runner.ts';
 
 const file = join('/repo', 'a.test.mjs');
@@ -59,48 +59,75 @@ describe('lzMergeCoverage', () => {
   });
 });
 
-describe('lzWindowedCoverage', () => {
-  const window = { start: 10, end: 20 };
-  const coverage = { static: { 1: 1 }, perTest: { first: { 1: 2, 2: 1 } } };
+describe('lzOverlapCoverage', () => {
+  const hits = { 1: 2, 2: 1 };
+  const own = { 9: 1 };
+  /** `a`, then no test, then `b`, `c`; later `p`, its subtest `p > x`, and `p` again. */
+  const testSpans = {
+    a: [{ start: 0, end: 10 }],
+    b: [{ start: 12, end: 20 }],
+    c: [{ start: 22, end: 30 }],
+    p: [
+      { start: 40, end: 50 },
+      { start: 60, end: 70 },
+    ],
+    'p > x': [{ start: 50, end: 60 }],
+  };
+  const descendant = (test: string, lifetime?: { start: number; end: number }) => ({
+    tests: [],
+    mutantCoverage: { static: own, perTest: { [test]: hits } },
+    ...(lifetime && { lifetime }),
+  });
+  const attributed = (perTest: readonly string[], outside = false) => ({
+    static: outside ? { 1: 2, 2: 1, 9: 1 } : own,
+    perTest: Object.fromEntries(perTest.map((test) => [test, hits])),
+  });
 
-  lzTestEach([window, { start: 11, end: 19 }])(
-    "keeps a descendant's hits per test when it lived inside that test's window, ends included: %j",
-    (lifetime) => {
-      assert.deepEqual(
-        lzWindowedCoverage({ tests: [], mutantCoverage: coverage, lifetime }, { first: window }),
-        coverage,
-      );
+  lzTestFor<readonly [string, string, { start: number; end: number }, readonly string[]]>([
+    ['one span of its test', 'a', { start: 3, end: 8 }, ['a']],
+    ["its subtest's span", 'p > x', { start: 52, end: 58 }, ['p > x']],
+  ])("keeps a descendant's hits per test when it lives inside %s", ([, test, lifetime, tests]) => {
+    assert.deepEqual(lzOverlapCoverage(descendant(test, lifetime), testSpans), attributed(tests));
+  });
+
+  lzTestFor<readonly [string, { start: number; end: number }]>([
+    ['ends during the subtest', { start: 52, end: 58 }],
+    ['ends after the subtest', { start: 52, end: 65 }],
+  ])('gives the hits of a descendant that a test starts and its subtest uses to both, when it %s', ([, lifetime]) => {
+    assert.deepEqual(lzOverlapCoverage(descendant('p', lifetime), testSpans), attributed(['p', 'p > x']));
+  });
+
+  lzTestFor<readonly [string, { start: number; end: number }]>([
+    ['starts during that test', { start: 5, end: 15 }],
+    ['starts only after that test', { start: 11, end: 15 }],
+  ])(
+    'gives the hits of a descendant that outlives the test that started it to that test, every later test it overlapped and static, when it %s',
+    ([, lifetime]) => {
+      assert.deepEqual(lzOverlapCoverage(descendant('a', lifetime), testSpans), attributed(['a', 'b'], true));
     },
   );
 
-  lzTestFor<readonly [string, object]>([
-    ['ended after the window', { lifetime: { start: 11, end: 21 } }],
-    ['started before the window', { lifetime: { start: 9, end: 19 } }],
-    ['has no lifetime', {}],
-  ])("counts a descendant's hits as static when it %s", ([, fields]) => {
-    assert.deepEqual(lzWindowedCoverage({ tests: [], mutantCoverage: coverage, ...fields }, { first: window }), {
-      static: { 1: 3, 2: 1 },
-      perTest: {},
-    });
+  it('gives the hits of a descendant that outlives every test to the tests it overlapped and to static', () => {
+    assert.deepEqual(lzOverlapCoverage(descendant('c', { start: 25, end: 35 }), testSpans), attributed(['c'], true));
   });
 
-  it("counts a descendant's hits as static for a test without a window, and keeps those of a test with one", () => {
+  it('gives the hits a descendant puts under a test without spans to the tests it overlapped', () => {
     assert.deepEqual(
-      lzWindowedCoverage(
-        { tests: [], mutantCoverage: { static: {}, perTest: { first: { 1: 1 }, second: { 2: 1 } } }, lifetime: window },
-        { first: window },
-      ),
-      { static: { 2: 1 }, perTest: { first: { 1: 1 } } },
+      lzOverlapCoverage(descendant('gone', { start: 3, end: 15 }), testSpans),
+      attributed(['a', 'b'], true),
     );
-    assert.deepEqual(lzWindowedCoverage({ tests: [], mutantCoverage: coverage, lifetime: window }, undefined), {
-      static: { 1: 3, 2: 1 },
-      perTest: {},
-    });
+  });
+
+  it("counts a descendant's hits as static without its lifetime or the file's spans", () => {
+    assert.deepEqual(lzOverlapCoverage(descendant('a'), testSpans), attributed([], true));
+    assert.deepEqual(lzOverlapCoverage(descendant('a', { start: 3, end: 8 }), undefined), attributed([], true));
   });
 
   it("leaves the test file's own coverage per test, and a record without coverage without it", () => {
-    assert.deepEqual(lzWindowedCoverage({ main: true, tests: [], mutantCoverage: coverage }, {}), coverage);
-    assert.equal(lzWindowedCoverage({ tests: [], lifetime: window }, { first: window }), undefined);
+    const coverage = { static: own, perTest: { a: hits } };
+
+    assert.deepEqual(lzOverlapCoverage({ main: true, tests: [], mutantCoverage: coverage }, {}), coverage);
+    assert.equal(lzOverlapCoverage({ tests: [], lifetime: { start: 3, end: 8 } }, testSpans), undefined);
   });
 });
 

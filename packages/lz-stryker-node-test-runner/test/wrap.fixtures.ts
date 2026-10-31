@@ -32,7 +32,7 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
   /** Each call of `registering`: whether top-level, and how many registrations node:test had then. */
   const registering: [boolean, number][] = [];
   const rootAfters: unknown[] = [];
-  const testWindows = new Map<string, LzTimeWindow>();
+  const testSpans = new Map<string, readonly LzTimeWindow[]>();
   let time = 0;
   const module = wrapNodeTest({
     ns,
@@ -53,7 +53,7 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
 
       return hook;
     },
-    testWindows,
+    testSpans,
     now: () => ++time,
   });
 
@@ -72,6 +72,6 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
     see,
     registering,
     rootAfters,
-    testWindows,
+    testSpans,
   };
 }

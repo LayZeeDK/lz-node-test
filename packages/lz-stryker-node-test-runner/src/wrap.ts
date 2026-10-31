@@ -125,11 +125,8 @@ interface WrapOptions {
   readonly registering: (topLevel: boolean) => void;
   /** Wraps a function registered as an `after` hook outside any suite, a root `after` hook of the test file. */
   readonly rootAfter: (hook: Body) => Body;
-  /**
-   * Each test's window, by id. The wrapper widens it just before the test becomes current and just after it stops, so
-   * it holds every moment a process the test starts can read the test as current.
-   */
-  readonly testWindows: Map<string, LzTimeWindow>;
+  /** The spans during which each test is current, by id, as `ProcessRecord.testSpans` describes them. */
+  readonly testSpans: Map<string, readonly LzTimeWindow[]>;
   readonly now: () => number;
 }
 
@@ -152,7 +149,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     nodeTest,
     registering,
     rootAfter,
-    testWindows,
+    testSpans,
     now,
   } = options;
   const idOf = uniqueIds();
@@ -165,6 +162,35 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const bailed = () => bail && tests.some((test) => test.status === 'failed');
   // The last is current, also when a subtest that its parent does not await outlives the parent's body.
   const active = new Set<string>();
+  /** The test whose span is open, and the test of the span opened last. */
+  let spanning: string | undefined;
+  let latest: string | undefined;
+  const closeSpan = (id: string, time: number) => {
+    const spans = testSpans.get(id) ?? [];
+    const open = spans.at(-1);
+
+    if (open) {
+      testSpans.set(id, [...spans.slice(0, -1), { start: open.start, end: time }]);
+    }
+  };
+  const moveSpan = (id: string | undefined) => {
+    if (id === spanning) {
+      return;
+    }
+
+    const time = now();
+
+    if (spanning !== undefined) {
+      closeSpan(spanning, time);
+    }
+
+    if (id !== undefined && id !== latest) {
+      testSpans.set(id, [...(testSpans.get(id) ?? []), { start: time, end: time }]);
+      latest = id;
+    }
+
+    spanning = id;
+  };
   const setCurrent = () => {
     const id = [...active].at(-1);
 
@@ -175,20 +201,16 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       ns.currentTestId = id;
       env[envNames.current] = id;
     }
-  };
-  const widenWindow = (id: string) => {
-    const time = now();
-    testWindows.set(id, { start: testWindows.get(id)?.start ?? time, end: time });
+
+    moveSpan(id);
   };
   const makeCurrent = (id: string) => {
-    widenWindow(id);
     active.add(id);
     setCurrent();
 
     return () => {
       active.delete(id);
       setCurrent();
-      widenWindow(id);
     };
   };
   /**

@@ -154,12 +154,17 @@ describe('LzStrykerNodeTestRunner coverage', () => {
       "it('covers later', async () => { cover('b'); outlives.send('late'); await once(outlives, 'exit'); });",
       "it('waits', async () => { const inside = start(); inside.send('inside'); await once(inside, 'exit'); });",
     );
+  /** The time between two tests, when no test is current, makes `late` static as well. */
   const outlivingCoverage = (file: string) => ({
     static: { late: 1 },
-    perTest: { [`${file} > covers later`]: { b: 1 }, [`${file} > waits`]: { inside: 1 } },
+    perTest: {
+      [`${file} > starts`]: { late: 1 },
+      [`${file} > covers later`]: { b: 1, late: 1 },
+      [`${file} > waits`]: { inside: 1 },
+    },
   });
 
-  it('counts the coverage of a worker thread that outlives the test that started it as static', async (t) => {
+  it('gives the coverage of a worker thread that outlives the test that started it to every test it overlapped', async (t) => {
     const dir = project(t, {
       'worker.mjs': [
         "import { parentPort } from 'node:worker_threads';",
@@ -178,7 +183,7 @@ describe('LzStrykerNodeTestRunner coverage', () => {
     assert.deepEqual(fixtureCoverage(mutantCoverage), outlivingCoverage(join(dir, 'a.test.mjs')));
   });
 
-  it('counts the coverage of a child process that outlives the test that started it as static', async (t) => {
+  it('gives the coverage of a child process that outlives the test that started it to every test it overlapped', async (t) => {
     const child = `${cover} process.once('message', (id) => { cover(id); process.disconnect(); });`;
     const dir = project(t, {
       'a.test.mjs': outliving(
@@ -191,6 +196,59 @@ describe('LzStrykerNodeTestRunner coverage', () => {
     const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(fixtureCoverage(mutantCoverage), outlivingCoverage(join(dir, 'a.test.mjs')));
+  });
+
+  it('gives the coverage of a worker thread that a test starts and its awaited subtest uses to that subtest', async (t) => {
+    const dir = project(t, {
+      'worker.mjs': [
+        "import { parentPort } from 'node:worker_threads';",
+        cover,
+        "parentPort.once('message', (id) => { cover(id); parentPort.close(); });",
+      ].join('\n'),
+      'a.test.mjs': fixture(
+        "import { once } from 'node:events';",
+        "import { Worker } from 'node:worker_threads';",
+        "it('server', async (t) => {",
+        "  const worker = new Worker(new URL('./worker.mjs', import.meta.url));",
+        "  await t.test('talks', async () => { worker.postMessage('m'); await once(worker, 'exit'); });",
+        '});',
+      ),
+    });
+    const a = join(dir, 'a.test.mjs');
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), {
+      static: {},
+      perTest: { [`${a} > server`]: { m: 1 }, [`${a} > server > talks`]: { m: 1 } },
+    });
+  });
+
+  it('gives the coverage of a child process that covers a line during the test that started it, and ends during a later test, to both tests', async (t) => {
+    const child = `${cover} process.on('message', (id) => { if (id === 'end') { process.disconnect(); } else { cover(id); process.send(id); } });`;
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "import { once } from 'node:events';",
+        "import { spawn } from 'node:child_process';",
+        'let child;',
+        "it('starts', async () => {",
+        `  child = spawn(process.execPath, ['-e', ${JSON.stringify(child)}], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });`,
+        "  child.send('m');",
+        "  await once(child, 'message');",
+        '});',
+        "it('covers too', async () => { cover('m'); child.send('end'); await once(child, 'exit'); });",
+      ),
+    });
+    const a = join(dir, 'a.test.mjs');
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), {
+      static: { m: 1 },
+      perTest: { [`${a} > starts`]: { m: 1 }, [`${a} > covers too`]: { m: 2 } },
+    });
   });
 
   it('runs the tests of a suite or test asking for concurrency one at a time, for coverage of their own', async (t) => {

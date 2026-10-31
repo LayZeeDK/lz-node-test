@@ -60,5 +60,5 @@ install({
     return worker;
   },
   callSites: getCallSites,
-  now: Date.now,
+  now: () => Number(process.hrtime.bigint()) / 1e6,
 });

@@ -43,8 +43,9 @@ export interface RecordedTest {
 }
 
 /**
- * A span of time in milliseconds since the epoch, as `Date.now()` gives it: the system clock, which every process on
- * the machine reads alike.
+ * A span of time in milliseconds on the machine's monotonic clock, as `process.hrtime` reads it: it does not step, and
+ * every process and thread of the machine reads the same clock, which the wall clock and `performance.timeOrigin` do
+ * not to the millisecond.
  */
 export interface LzTimeWindow {
   readonly start: number;
@@ -76,10 +77,11 @@ export interface ProcessRecord {
   /** From when the hook ran in the process or thread to when it wrote this record. */
   readonly lifetime?: LzTimeWindow;
   /**
-   * The test file's own record: by test id, from when each test first became current to when it last stopped being
-   * current, which is when a process or thread it starts reads it as its current test.
+   * The test file's own record: by test id, the spans during which the test is current, so a process or thread started
+   * then reads it as its current test. A span ends when another test becomes current; a pause in which no test is
+   * current between two spans of one test joins them.
    */
-  readonly testWindows?: Readonly<Record<string, LzTimeWindow>>;
+  readonly testSpans?: Readonly<Record<string, readonly LzTimeWindow[]>>;
 }
 
 export const envNames = Object.freeze({
@@ -127,8 +129,8 @@ const isMemoryLimit = (value: unknown): value is MemoryLimitReached =>
   isObject(value) && isNumber(value['rssMB']) && isNumber(value['limitMB']);
 const isWindow = (value: unknown): value is LzTimeWindow =>
   isObject(value) && isNumber(value['start']) && isNumber(value['end']);
-const isWindows = (value: unknown): value is Record<string, LzTimeWindow> =>
-  isObject(value) && Object.values(value).every(isWindow);
+const isSpans = (value: unknown): value is Record<string, LzTimeWindow[]> =>
+  isObject(value) && Object.values(value).every((spans) => Array.isArray(spans) && spans.every(isWindow));
 const isCoverage = (value: unknown): value is MutantCoverage =>
   isObject(value) &&
   isCounts(value['static']) &&
@@ -181,7 +183,7 @@ export function lzParseRecord(json: string): ProcessRecord {
     unfinished,
     heldOpen,
     lifetime,
-    testWindows,
+    testSpans,
   } = record;
 
   if (!Array.isArray(tests)) {
@@ -199,6 +201,6 @@ export function lzParseRecord(json: string): ProcessRecord {
     ...optional('unfinished', unfinished, isTrue, notARecord),
     ...optional('heldOpen', heldOpen, isStrings, notARecord),
     ...optional('lifetime', lifetime, isWindow, notARecord),
-    ...optional('testWindows', testWindows, isWindows, notARecord),
+    ...optional('testSpans', testSpans, isSpans, notARecord),
   };
 }

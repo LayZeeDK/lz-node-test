@@ -53,10 +53,12 @@ All options sit under `lzStrykerNodeTest`.
   into another. Processes that a test starts, such as child processes and worker threads, load the runner's hook
   through `NODE_OPTIONS`, so the code under test that they run counts too.
 - **Coverage analysis.** The runner supports Stryker's `coverageAnalysis` values `off`, `all` and `perTest`. With
-  `perTest`, a mutant runs only the tests that reach it. A child process or worker thread counts toward the test that
-  started it only if it ends before that test does. One that keeps running after its test, such as a worker that the
-  next test talks to, counts as reaching its mutants from outside any test, so those mutants run every test of the
-  run: slower, but no later test is missed.
+  `perTest`, a mutant runs only the tests that reach it. A child process or worker thread that ends before the test
+  that started it counts toward that test alone. One that keeps running after its test, such as a worker that the
+  next test talks to, counts toward every test that ran while it lived, so its mutants run all of those tests. If it
+  also lived while no test ran, such as between two tests, its mutants count as reached from outside any test as
+  well: by default they then run every test of the run, and with Stryker's `ignoreStatic` they run the tests it
+  lived through.
 - **Bail.** Unless you set `disableBail`, a mutant run stops at the first failing test.
 - **Node.js version.** On a Node.js older than 22.18, the runner stops with an error before the dry run.
 
