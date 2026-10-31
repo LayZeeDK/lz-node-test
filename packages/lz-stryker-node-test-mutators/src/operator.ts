@@ -1,6 +1,25 @@
 import type { NodePath, types } from '@babel/core';
 
-export type BabelTypes = typeof types;
+/** The members of the Babel types that the operators may call; the install checks the instrumenter's for each. */
+export const operatorBuilders = Object.freeze([
+  'arrowFunctionExpression',
+  'binaryExpression',
+  'blockStatement',
+  'booleanLiteral',
+  'callExpression',
+  'cloneNode',
+  'conditionalExpression',
+  'emptyStatement',
+  'identifier',
+  'memberExpression',
+  'newExpression',
+  'numericLiteral',
+  'parenthesizedExpression',
+  'stringLiteral',
+  'throwStatement',
+] satisfies (keyof typeof types)[]);
+
+export type BabelTypes = Pick<typeof types, (typeof operatorBuilders)[number]>;
 
 /** A mutation operator, free of Stryker: it maps a Babel path to replacement nodes. */
 export interface Operator {

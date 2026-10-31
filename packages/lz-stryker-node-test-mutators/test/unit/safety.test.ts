@@ -86,13 +86,11 @@ describe('safety', () => {
       'an operator that signals a process',
       'f();',
       (t: Parameters<Operator['mutate']>[1]) =>
-        t.expressionStatement(
-          t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('kill')), [
-            t.memberExpression(t.identifier('process'), t.identifier('pid')),
-            t.stringLiteral('SIGKILL'),
-          ]),
-        ),
-      (path: NodePath) => path.isExpressionStatement(),
+        t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('kill')), [
+          t.memberExpression(t.identifier('process'), t.identifier('pid')),
+          t.stringLiteral('SIGKILL'),
+        ]),
+      (path: NodePath) => path.isCallExpression(),
       [['process.kill']],
     ],
     [

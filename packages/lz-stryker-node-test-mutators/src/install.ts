@@ -7,31 +7,13 @@ import { pathToFileURL } from 'node:url';
 
 import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
-import { isOwn, toNodeMutator, type BabelTypes, type Operator } from './operator.ts';
+import { isOwn, operatorBuilders, toNodeMutator, type BabelTypes, type Operator } from './operator.ts';
 
 /** The first release of the peer range, which takes the later releases of the same major too. */
 const testedFloor = { major: 10, minor: 1, patch: 1 };
 const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
 const namePattern = /^[A-Za-z]+$/;
-/** The members of the instrumenter's Babel types that the operators call. */
-export const operatorBuilders: readonly (keyof BabelTypes)[] = [
-  'arrowFunctionExpression',
-  'binaryExpression',
-  'blockStatement',
-  'booleanLiteral',
-  'callExpression',
-  'cloneNode',
-  'conditionalExpression',
-  'emptyStatement',
-  'identifier',
-  'memberExpression',
-  'newExpression',
-  'numericLiteral',
-  'parenthesizedExpression',
-  'stringLiteral',
-  'throwStatement',
-];
 const nothing = () => undefined;
 const silent = { debug: nothing, info: nothing, warn: nothing, isDebugEnabled: nothing };
 
@@ -305,8 +287,8 @@ function isListedMutator(value: unknown): value is ListedMutator {
 }
 
 /**
- * Has a function for each member of the Babel types that the operators call. The other members can differ, as when the
- * consumer's @babel/core is a newer patch than the instrumenter's.
+ * Has a function for each member of the Babel types that the operators may call. The other members can differ, as when
+ * the consumer's @babel/core is a newer patch than the instrumenter's.
  */
 function isBabelTypes(value: unknown): value is BabelTypes {
   return (

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -11,7 +11,6 @@ import { lzTestEach } from '@layzee/lz-node-test';
 import {
   corePackageJson,
   install,
-  operatorBuilders,
   resolveFromCore,
   type Instrumenter,
   type ListedMutator,
@@ -384,16 +383,6 @@ describe('resolveFromCore', () => {
     const instrumenter = await resolveFromCore(corePackageJson(), load);
 
     assert.equal(instrumenter.types, older);
-  });
-
-  it('checks the Babel types for exactly the members the operators call', () => {
-    const src = new URL('../../src/', import.meta.url);
-    const called = readdirSync(src)
-      .filter((file) => file.endsWith('.ts'))
-      .flatMap((file) => [...readFileSync(new URL(file, src), 'utf8').matchAll(/\bt\.(\w+)\(/g)])
-      .map(([, name]) => name);
-
-    assert.deepEqual([...new Set(called)].sort(), [...operatorBuilders].sort());
   });
 
   it("replaces the contents of the instrumenter's own mutator list", async () => {
