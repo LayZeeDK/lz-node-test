@@ -87,8 +87,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
   it("runs the dry run's test files one at a time when Stryker runs one test runner", async (t) => {
     const { runner, a, b } = await meetingFiles(t, 1);
 
-    // a waits its full 3 s for b before b's process starts, which leaves the usual 5 s too little under load.
-    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }), 10_000)).tests), [
+    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
       failed(a, 'b never started'),
       passed(b),
     ]);

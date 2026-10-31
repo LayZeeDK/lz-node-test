@@ -243,7 +243,9 @@ export function ownCacheDirs(): string[] {
     .sort();
 }
 
-export async function settle<T>(run: Promise<T>, ms = 5_000): Promise<T> {
+// A deadline for a run that hangs, not a timing check: a run that only meets other files and starts processes takes
+// over 5 s when lint and other suites share the machine.
+export async function settle<T>(run: Promise<T>, ms = 15_000): Promise<T> {
   assert.ok(!stalled, 'an earlier run never ended');
   let timer: NodeJS.Timeout | undefined;
 
