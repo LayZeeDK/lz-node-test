@@ -67,6 +67,17 @@ describe('checkMemory', () => {
     assert.deepEqual(kills, [[process.pid, 'SIGKILL']]);
   });
 
+  it('ends the process through process.kill by default', (t) => {
+    const kill = t.mock.method(process, 'kill', () => true);
+
+    checkMemory(data, 200.6 * mb, () => {});
+
+    assert.deepEqual(
+      kill.mock.calls.map((call) => call.arguments),
+      [[process.pid, 'SIGKILL']],
+    );
+  });
+
   lzTestFor<readonly [string, number]>([
     ['at the limit', 200 * mb],
     ['just below the limit after rounding', 200.4 * mb],
