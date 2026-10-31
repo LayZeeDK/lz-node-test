@@ -6,30 +6,49 @@ export function groupOptions(platform: NodeJS.Platform): { detached: boolean; wi
   return { detached: platform !== 'win32', windowsHide: true };
 }
 
-/** A process that detached itself has a group of its own and stays. */
-export function endGroup(
+const termGraceMs = 200;
+
+/** Sends `signal` to the group; false when no process of the group is left. */
+function signalGroup(
+  pid: number,
+  signal: NodeJS.Signals,
+  kill: (pid: number, signal: NodeJS.Signals) => void,
+): boolean {
+  try {
+    kill(-pid, signal);
+
+    return true;
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ESRCH') {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Sends the group SIGTERM and, `termGraceMs` later, SIGKILL, so a process that listens for SIGTERM gets to run its
+ * listener. A process that detached itself has a group of its own and stays.
+ */
+export async function endGroup(
   pid: number,
   platform: NodeJS.Platform,
   kill: (pid: number, signal: NodeJS.Signals) => void,
-): void {
-  if (!groupOptions(platform).detached) {
+): Promise<void> {
+  if (!groupOptions(platform).detached || !signalGroup(pid, 'SIGTERM', kill)) {
     return;
   }
 
-  try {
-    kill(-pid, 'SIGKILL');
-  } catch (error) {
-    // The group no longer exists once every process in it has ended.
-    if (!(error instanceof Error && 'code' in error && error.code === 'ESRCH')) {
-      throw error;
-    }
-  }
+  await new Promise((resolve) => setTimeout(resolve, termGraceMs));
+  signalGroup(pid, 'SIGKILL', kill);
 }
 
 /**
  * Waits for a process to end and collects its stderr. Processes it started inherit stderr and can keep it open after
  * it exits; the records of those that end soon arrive by the time stderr closes, so this waits for that, but at most
- * `graceMs` after the exit, and then lets go of stderr. Then it ends what is left of the process's group on `platform`.
+ * `graceMs` after the exit, and then lets go of stderr. Then it ends what is left of the process's group on `platform`,
+ * and settles once that is done.
  */
 export function processEnd(
   child: EndingProcess,
@@ -47,19 +66,9 @@ export function processEnd(
       }
 
       ended = true;
-
-      try {
-        // A process that failed to start has no pid, and no group to end.
-        if (child.pid !== undefined) {
-          endGroup(child.pid, platform, kill);
-        }
-      } catch (error) {
-        fail(error);
-
-        return;
-      }
-
-      done({ exitCode: code, stderr: errors });
+      // A process that failed to start has no pid, and no group to end.
+      const grouped = child.pid === undefined ? Promise.resolve() : endGroup(child.pid, platform, kill);
+      grouped.then(() => done({ exitCode: code, stderr: errors }), fail);
     };
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk: string) => (errors += chunk));

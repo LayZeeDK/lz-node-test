@@ -4,7 +4,7 @@ import { PassThrough } from 'node:stream';
 import { describe, it } from 'node:test';
 import timers from 'node:timers/promises';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach, lzTestFor } from '@layzee/lz-node-test';
 import { endGroup, groupOptions, processEnd } from '../../src/process-end.ts';
 
 describe('groupOptions', () => {
@@ -17,14 +17,22 @@ describe('groupOptions', () => {
   });
 });
 
+/** What ending the group of process 123 sends while the group lasts. */
+const groupEnded = [
+  [-123, 'SIGTERM'],
+  [-123, 'SIGKILL'],
+];
+
 describe('endGroup', () => {
-  function setup(platform: NodeJS.Platform, error?: unknown) {
+  const gone = Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
+
+  function setup(platform: NodeJS.Platform, error?: unknown, failing: NodeJS.Signals = 'SIGTERM') {
     const calls: unknown[][] = [];
     const end = () =>
       endGroup(123, platform, (pid, signal) => {
         calls.push([pid, signal]);
 
-        if (error) {
+        if (error && signal === failing) {
           throw error;
         }
       });
@@ -32,39 +40,62 @@ describe('endGroup', () => {
     return { calls, end };
   }
 
-  it("kills a POSIX test file's whole process group", () => {
+  it("asks a POSIX test file's process group to end, then kills it 200 ms later", async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
     const { calls, end } = setup('linux');
 
-    end();
+    const ended = end();
+    t.mock.timers.tick(199);
 
-    assert.deepEqual(calls, [[-123, 'SIGKILL']]);
+    assert.deepEqual(calls, [[-123, 'SIGTERM']]);
+
+    t.mock.timers.tick(1);
+    await ended;
+
+    assert.deepEqual(calls, groupEnded);
   });
 
-  it('leaves Windows, where the processes end with the test file, alone', () => {
+  it('leaves Windows, where the processes end with the test file, alone', async () => {
     const { calls, end } = setup('win32');
 
-    end();
+    await end();
 
     assert.deepEqual(calls, []);
   });
 
-  it('takes a group that no longer exists as ended, and throws any other error', () => {
-    const gone = Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
-    const denied = Object.assign(new Error('kill EPERM'), { code: 'EPERM' });
+  it('neither waits nor kills when no group is left to ask', async (t) => {
+    // eslint-disable-next-line node-test/require-mock-timers-advance -- time stands still, so a wait would never end
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { calls, end } = setup('linux', gone);
 
-    setup('linux', gone).end();
-    assert.throws(() => setup('linux', denied).end(), denied);
+    await end();
+
+    assert.deepEqual(calls, [[-123, 'SIGTERM']]);
   });
 
-  lzTestEach([
-    ['an Error without a code', new Error('kill failed')],
-    ['an object with the code ESRCH that is no Error', { code: 'ESRCH' }],
-    ['a string', 'ESRCH'],
-  ])('throws %s that killing the group throws', (_title, thrown) => {
-    assert.throws(
-      () => setup('linux', thrown).end(),
-      (error) => error === thrown,
-    );
+  it('takes a group that ended while it waited as ended', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { calls, end } = setup('linux', gone, 'SIGKILL');
+    const ended = end();
+    t.mock.timers.tick(200);
+
+    await ended;
+
+    assert.deepEqual(calls, groupEnded);
+  });
+
+  lzTestFor<readonly [string, NodeJS.Signals, unknown]>([
+    ['an Error with another code', 'SIGTERM', Object.assign(new Error('kill EPERM'), { code: 'EPERM' })],
+    ['an Error without a code', 'SIGTERM', new Error('kill failed')],
+    ['an object with the code ESRCH that is no Error', 'SIGTERM', { code: 'ESRCH' }],
+    ['a string', 'SIGTERM', 'ESRCH'],
+    ['an Error with another code', 'SIGKILL', Object.assign(new Error('kill EPERM'), { code: 'EPERM' })],
+  ])('rejects with %s that sending %s throws', async ([, failing, thrown], t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const ended = setup('linux', thrown, failing).end();
+    t.mock.timers.tick(200);
+
+    await assert.rejects(ended, (error) => error === thrown);
   });
 });
 
@@ -99,7 +130,8 @@ describe('processEnd', () => {
     return { child, settled, kills };
   }
 
-  it("ends what is left of a POSIX process's group once the process ends and stderr closes", async () => {
+  it("ends what is left of a POSIX process's group once the process ends and stderr closes, before it ends", async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
     const closes = ending(1_000, 'linux');
     closes.child.emit('exit', 0);
     await closes.settled();
@@ -107,9 +139,13 @@ describe('processEnd', () => {
     assert.deepEqual(closes.kills, []);
 
     closes.child.emit('close', 0);
-    await closes.settled();
 
-    assert.deepEqual(closes.kills, [[-123, 'SIGKILL']]);
+    assert.equal(await closes.settled(), 'pending');
+
+    t.mock.timers.tick(200);
+
+    assert.deepEqual(await closes.settled(), { exitCode: 0, stderr: '' });
+    assert.deepEqual(closes.kills, groupEnded);
   });
 
   it("ends what is left of a POSIX process's group once the process ends and stderr stays open", async (t) => {
@@ -119,9 +155,10 @@ describe('processEnd', () => {
     t.mock.timers.tick(1_000);
     // Node.js closes the process once the grace period lets go of stderr.
     staysOpen.child.emit('close', 0);
+    t.mock.timers.tick(200);
     await staysOpen.settled();
 
-    assert.deepEqual(staysOpen.kills, [[-123, 'SIGKILL']]);
+    assert.deepEqual(staysOpen.kills, groupEnded);
   });
 
   it('ends no group of a process that failed to start, which has no pid', async () => {
