@@ -7,6 +7,28 @@ later, and is tested on Node.js 22 and 24.
 - Stryker plugin name: `lz-stryker-node-test`
 - Stryker options key: `lzStrykerNodeTest`
 
+## Quick start
+
+Run StrykerJS's initializer, which installs Stryker and the runner and writes the configuration. Then run Stryker:
+
+```sh
+npm init stryker@latest
+npx stryker run
+```
+
+Answer the initializer's questions as follows:
+
+1. For the preset, pick `None/other`.
+2. For the test runner, pick `@layzee/lz`. The initializer names each runner after its package: it removes
+   `@stryker-mutator/` and the first `stryker-` from the package name, then keeps the text before the first hyphen.
+   The configuration that it writes still names the runner `lz-stryker-node-test` and loads this package through
+   `appendPlugins`.
+3. For the build command, keep the default, `none`, unless your tests need a build.
+
+The other questions ask for the reporters, the package manager, and the configuration file type. Answer them as you
+like. Then read the configuration file that the initializer wrote. When the default pattern does not match your test
+files, add `lzStrykerNodeTest.testFiles`, as [Configure Stryker](#configure-stryker) describes.
+
 ## Install
 
 ```sh
@@ -102,13 +124,21 @@ once per run as under `node --test`.
   also lived while no test ran, such as between two tests, its mutants count as reached from outside any test as
   well: by default they then run every test of the run, and with Stryker's `ignoreStatic` they run the tests it
   lived through.
+- **Static mutants.** Stryker calls a mutant static when code outside every test reaches it, such as the code that
+  sets a module-level constant. A static mutant runs every test file, each in a fresh process. The mutant is active
+  from the start of each process, also when Stryker's `--testFiles` limits the run. To skip static mutants, set
+  Stryker's `ignoreStatic: true`. `ignoreStatic` needs `coverageAnalysis: 'perTest'`. Stryker reports the skipped
+  mutants as `Ignored` and leaves them out of the mutation score. With `ignoreStatic`, a static mutant that tests also
+  reach is not skipped: it runs those tests.
 - **Bail.** Unless you set `disableBail`, a mutant run stops at the first failing test.
 - **Node.js version.** On a Node.js older than 22.18, the runner stops with an error before the dry run.
 
 ## What each status means
 
-The runner reports each test file's run to Stryker by the first row of this table that applies. A mutant run that
-Stryker's own timeout ends first is a `Timeout`.
+The runner reports each test file's run to Stryker by the first row of this table that applies. When Stryker's own
+timer ends a mutant run first, the mutant is a `Timeout` with no reason, and Stryker restarts the worker process that
+ran it. A `Timeout` from this table names its reason, and the worker keeps running. In a mutant run, a test file that
+stays alive after its tests usually meets Stryker's timer before the runner's 30-second wait ends.
 
 | What happened in the test file's run                                                                               | Dry run                       | Mutant run     |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------- | -------------- |
