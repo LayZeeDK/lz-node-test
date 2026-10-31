@@ -58,6 +58,7 @@ export const now: HookDependencies['now'] = () => Number(hrtime()) / 1e6;
 
 install({
   env: process.env,
+  execArgv: process.execArgv,
   mainFile: process.argv[1] ? resolve(process.argv[1]) : undefined,
   pid: process.pid,
   nonce: lzRecordNonce(),

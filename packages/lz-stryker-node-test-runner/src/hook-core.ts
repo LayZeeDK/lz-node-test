@@ -57,6 +57,8 @@ export interface GlobalSlots {
 /** What the hook takes from the process, and the global object whose slots it sets. */
 export interface HookDependencies extends LzRecordDependencies {
   readonly env: Record<string, string | undefined>;
+  /** `process.execArgv`, node's options outside NODE_OPTIONS. */
+  readonly execArgv: readonly string[];
   readonly mainFile: string | undefined;
   readonly pid: number;
   /** `lzRecordNonce()` once per process or thread. */
@@ -214,6 +216,7 @@ export function install(deps: HookDependencies): boolean {
       tests,
       filter,
       bail,
+      testOnly: [...deps.execArgv, ...(deps.env['NODE_OPTIONS']?.split(/\s+/) ?? [])].includes('--test-only'),
       activeMutant: deps.env[envNames.activeMutant],
       env: deps.env,
       positions,

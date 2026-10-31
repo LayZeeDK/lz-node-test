@@ -17,11 +17,12 @@ export interface Subtests {
 interface WrappedOptions {
   readonly filter?: readonly string[];
   readonly bail?: boolean;
+  readonly testOnly?: boolean;
   readonly activeMutant?: string;
   readonly expectFailure?: boolean;
 }
 
-export function wrapped({ filter, bail = false, activeMutant, expectFailure }: WrappedOptions = {}) {
+export function wrapped({ filter, bail = false, testOnly = true, activeMutant, expectFailure }: WrappedOptions = {}) {
   const fake = fakeNodeTest(expectFailure);
   const ns: InstrumenterContext = {};
   const env: Record<string, string | undefined> = {};
@@ -40,6 +41,7 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
     tests,
     filter: filter && new Set(filter),
     bail,
+    testOnly,
     activeMutant,
     env,
     positions,

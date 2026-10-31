@@ -199,6 +199,7 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
   let resources: readonly string[] = ['PipeWrap'];
   const deps: HookDependencies = {
     env,
+    execArgv: [],
     mainFile: testFile,
     pid: 4321,
     nonce: lzRecordNonce(),

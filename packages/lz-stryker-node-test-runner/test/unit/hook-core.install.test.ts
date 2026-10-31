@@ -429,6 +429,20 @@ describe('install', () => {
     assert.equal(deps.global.__stryker__?.activeMutant, '5');
   });
 
+  lzTestFor<readonly [string, readonly string[], string | undefined, string]>([
+    ['without --test-only', ['--no-deprecation'], '--no-warnings', 'test'],
+    ['with --test-only in its options', ['--test-only'], undefined, 'test.only'],
+    ['with --test-only in NODE_OPTIONS', [], '--import x  --test-only', 'test.only'],
+  ])('registers an only test as one %s', ([, execArgv, nodeOptions, kind]) => {
+    const { fake, wrapped } = installedHarness({ ...fileEnv(), NODE_OPTIONS: nodeOptions }, { execArgv });
+    wrapped().it.only('only', () => {});
+
+    assert.deepEqual(
+      fake.registrations.map((registration) => registration.kind).filter((registered) => registered !== 'after'),
+      [kind],
+    );
+  });
+
   it('runs only the filtered tests', () => {
     const { fake, wrapped } = installedHarness({
       ...fileEnv(),

@@ -116,6 +116,8 @@ interface WrapOptions {
   readonly tests: readonly RecordedTest[];
   readonly filter: Set<string> | undefined;
   readonly bail: boolean;
+  /** Whether node runs with --test-only; without it `only` marks nothing, as under `node --test`. */
+  readonly testOnly: boolean;
   readonly activeMutant: string | undefined;
   readonly env: Record<string, string | undefined>;
   readonly positions: Map<string, Position>;
@@ -142,6 +144,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     tests,
     filter,
     bail,
+    testOnly,
     activeMutant,
     env,
     positions,
@@ -321,12 +324,22 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   /**
    * Registers a suite or test with node:test. Every one is registered with `concurrency: false`, so the tests inside
    * it run one at a time, as node:test does without `concurrency`, and coverage goes to the one current test.
+   * Without --test-only, `only` is dropped: the runner starts node on the test file alone, where Node.js 24 runs only
+   * the `only` tests, and skips one whose `only` is false, while `node --test` runs them all.
    */
   const registerWith = (
     register: Body,
     self: unknown,
     { name, options, body }: { name: string; options: object | null | undefined; body: Body | undefined },
-  ): unknown => Reflect.apply(register, self, [name, { ...options, concurrency: false }, ...(body ? [body] : [])]);
+  ): unknown => {
+    const kept = Object.entries(options ?? {}).filter(([key]) => testOnly || key !== 'only');
+
+    return Reflect.apply(register, self, [
+      name,
+      { ...Object.fromEntries(kept), concurrency: false },
+      ...(body ? [body] : []),
+    ]);
+  };
 
   const wrapSuite = (register: Body): Registrar =>
     function (this: unknown, ...args: unknown[]) {
@@ -437,7 +450,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     Object.assign(wrap(original), original, {
       skip: declareSkipped(original.skip),
       todo: wrap(original.todo),
-      only: wrap(original.only),
+      only: wrap(testOnly ? original.only : original),
       ...(original.expectFailure && { expectFailure: wrap(original.expectFailure) }),
     });
   // The module is node:test's `test` function, which also carries the other functions; `it` is the same function.

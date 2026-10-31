@@ -260,6 +260,25 @@ describe('wrapNodeTest', () => {
     );
   });
 
+  it('registers only suites and tests as plain ones without --test-only, as node --test runs them all', () => {
+    const { module, registrations } = wrapped({ testOnly: false });
+    module.describe.only('describe.only', () => {
+      module.it.only('it.only', () => {});
+    });
+    module.suite.only('suite.only', () => {});
+    module.test('only option', { only: true }, () => {});
+
+    assert.deepEqual(
+      registrations.map(({ kind, name, rest }) => [kind, name, rest[0]]),
+      [
+        ['describe', 'describe.only', { concurrency: false }],
+        ['test', 'it.only', { concurrency: false }],
+        ['suite', 'suite.only', { concurrency: false }],
+        ['test', 'only option', { concurrency: false }],
+      ],
+    );
+  });
+
   it('names subtests after the test that registers them, which is current again once they end', async () => {
     const { module, registrations, ns, env, seen, see } = wrapped();
     const context = testContext(registrations);

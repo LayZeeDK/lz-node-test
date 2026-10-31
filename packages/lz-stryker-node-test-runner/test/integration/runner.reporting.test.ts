@@ -377,6 +377,41 @@ describe('LzStrykerNodeTestRunner results', () => {
     assert.deepEqual(fixtureCoverage(mutantCoverage)?.perTest, { [`${a} > only suite > runs`]: { only: 1 } });
   });
 
+  it('runs every test of a file with only tests, as node --test does without --test-only', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "it.only('only shorthand', () => {});",
+        "it('only option', { only: true }, () => {});",
+        "it('other', () => {});",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+    const a = join(dir, 'a.test.mjs');
+
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
+      passed(`${a} > only shorthand`),
+      passed(`${a} > only option`),
+      passed(`${a} > other`),
+    ]);
+  });
+
+  it('runs only the only tests of a file under --test-only', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "it.only('only shorthand', () => {});",
+        "it('only option', { only: true }, () => {});",
+        "it('other', () => {});",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs'], { nodeArgs: ['--test-only'] });
+    const a = join(dir, 'a.test.mjs');
+
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
+      passed(`${a} > only shorthand`),
+      passed(`${a} > only option`),
+    ]);
+  });
+
   it('reports skipped and todo tests as skipped, so a failing todo test kills no mutant', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
