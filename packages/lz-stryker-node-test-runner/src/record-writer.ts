@@ -70,30 +70,33 @@ export function lzPersistRecord(
   const write = () => {
     deps.writeRecord(path, record(natural));
   };
-  const writeAtExit = main
-    ? write
-    : () => {
-        try {
-          write();
-        } catch {
-          // A process the tests started exits as it would without the hook when its record cannot be written, as when
-          // the run that reads it is over.
-        }
-      };
-
-  // Node.js runs no exit listener that is added while the process exits, so the record goes behind the exit listeners
-  // of the tests here, where a process that ends by itself still runs code. process.exit() skips `beforeExit`.
-  deps.onBeforeExit(() => {
-    natural = true;
-    deps.offExit(writeAtExit);
-    deps.onExit(writeAtExit);
-  });
-  deps.onExit(writeAtExit);
+  const atExit = (listener: () => void) => {
+    // Node.js runs no exit listener that is added while the process exits, so the record goes behind the exit
+    // listeners of the tests here, where a process that ends by itself still runs code. process.exit() skips
+    // `beforeExit`.
+    deps.onBeforeExit(() => {
+      natural = true;
+      deps.offExit(listener);
+      deps.onExit(listener);
+    });
+    deps.onExit(listener);
+  };
 
   // The runner reads the test file's own record once that process has exited, and nothing signals it while it runs.
   if (main) {
+    atExit(write);
+
     return;
   }
+
+  atExit(() => {
+    try {
+      write();
+    } catch {
+      // A process the tests started exits as it would without the hook when its record cannot be written, as when the
+      // run that reads it is over.
+    }
+  });
 
   if (deps.signals) {
     writeOnEndingSignals(deps.signals, write);
