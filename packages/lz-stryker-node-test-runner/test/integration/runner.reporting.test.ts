@@ -395,6 +395,22 @@ describe('LzStrykerNodeTestRunner results', () => {
     ]);
   });
 
+  it('runs the plain subtests of a test that calls t.runOnly(true), as node --test does without --test-only', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "it('runs only', async (t) => { t.runOnly(true); await t.test('plain', () => {}); await t.test('only', { only: true }, () => {}); });",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+    const a = join(dir, 'a.test.mjs');
+
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
+      passed(`${a} > runs only > plain`),
+      passed(`${a} > runs only > only`),
+      passed(`${a} > runs only`),
+    ]);
+  });
+
   it('runs only the only tests of a file under --test-only', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(

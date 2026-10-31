@@ -279,6 +279,26 @@ describe('wrapNodeTest', () => {
     );
   });
 
+  lzTestEach([
+    ['makes t.runOnly do nothing without --test-only', false, []],
+    ['leaves t.runOnly to node:test under --test-only', true, [[true]]],
+  ])('%s', async (_title, testOnly, expected) => {
+    const { module, registrations } = wrapped({ testOnly });
+    const calls: unknown[][] = [];
+    const context = Object.assign(testContext(), {
+      runOnly: (...args: unknown[]) => {
+        calls.push(args);
+      },
+    });
+    module.it('runs only', (t: { readonly runOnly: (only: boolean) => void }) => {
+      t.runOnly(true);
+    });
+
+    await bodyOf(registrations, 'runs only')(context);
+
+    assert.deepEqual(calls, expected);
+  });
+
   it('names subtests after the test that registers them, which is current again once they end', async () => {
     const { module, registrations, ns, env, seen, see } = wrapped();
     const context = testContext(registrations);

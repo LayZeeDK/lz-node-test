@@ -61,6 +61,8 @@ interface LzTestContext {
   readonly after: Body;
   readonly beforeEach: Body;
   readonly skip: Body;
+  /** Replaced only, so a context without it passes the guard. */
+  readonly runOnly?: Body;
 }
 
 const lzTestContextKeys: readonly (keyof LzTestContext)[] = ['test', 'after', 'beforeEach', 'skip'];
@@ -202,6 +204,14 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const running = new AsyncLocalStorage<string>();
   const parentId = () => running.getStore() ?? testFile;
   const bailed = () => bail && tests.some((test) => test.status === 'failed');
+  /**
+   * `withOnly` under --test-only, else `without`: without it `only` marks nothing, as under `node --test`, while
+   * Node.js 24, which the runner starts on the test file alone, runs only the `only` tests and subtests of a
+   * `t.runOnly(true)` test, and skips one whose `only` is false.
+   */
+  const ignoringOnly = <T>(withOnly: T, without: T): T => (testOnly ? withOnly : without);
+  const withoutOnly = (options: object | null | undefined): object =>
+    ignoringOnly(options ?? {}, Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only')));
   // The last is current, also when a subtest that its parent does not await outlives the parent's body.
   const active = new Set<string>();
   /** The test whose span is open, and the test of the span opened last. */
@@ -362,22 +372,13 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   /**
    * Registers a suite or test with node:test. Every one is registered with `concurrency: false`, so the tests inside
    * it run one at a time, as node:test does without `concurrency`, and coverage goes to the one current test.
-   * Without --test-only, `only` is dropped: the runner starts node on the test file alone, where Node.js 24 runs only
-   * the `only` tests, and skips one whose `only` is false, while `node --test` runs them all.
    */
   const registerWith = (
     register: Body,
     self: unknown,
     { name, options, body }: { name: string; options: object | null | undefined; body: Body | undefined },
-  ): unknown => {
-    const kept = Object.entries(options ?? {}).filter(([key]) => testOnly || key !== 'only');
-
-    return Reflect.apply(register, self, [
-      name,
-      { ...Object.fromEntries(kept), concurrency: false },
-      ...(body ? [body] : []),
-    ]);
-  };
+  ): unknown =>
+    Reflect.apply(register, self, [name, { ...withoutOnly(options), concurrency: false }, ...(body ? [body] : [])]);
 
   const wrapSuite = (register: Body): Registrar =>
     function (this: unknown, ...args: unknown[]) {
@@ -418,6 +419,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
             Reflect.apply(after, context, [attributing(hook, () => id), ...rest]),
           beforeEach: (hook?: Body, ...rest: unknown[]): unknown =>
             Reflect.apply(beforeEach, context, [attributing(hook, testOf), ...rest]),
+          ...ignoringOnly<Partial<LzTestContext>>({}, { runOnly: () => undefined }),
         } satisfies Partial<LzTestContext>);
         activate();
 
@@ -456,7 +458,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     Object.assign(wrap(original), original, {
       skip: declareSkipped(original.skip),
       todo: wrap(original.todo),
-      only: wrap(testOnly ? original.only : original),
+      only: wrap(ignoringOnly(original.only, original)),
       ...(original.expectFailure && { expectFailure: wrap(original.expectFailure) }),
     });
   // The module is node:test's `test` function, which also carries the other functions; `it` is the same function.
