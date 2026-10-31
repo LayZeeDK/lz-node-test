@@ -2,88 +2,23 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
-
 import { lzTestEach } from '@layzee/lz-node-test';
-import { activeMutantEnv, envNames, type RecordedTest } from '../../src/record.ts';
-import { wrapNodeTest, type CallSite } from '../../src/wrap.ts';
+import { activeMutantEnv, envNames } from '../../src/record.ts';
 import {
   bodyOf,
   callable,
-  fakeNodeTest,
-  hooksOf,
   rawBodyOf,
   runBodies,
   testFile,
   testContext,
-  type Fn,
+  wrapped,
+  type Subtests,
 } from '../hook-core.fixtures.ts';
 import { callMember, member } from '../reflect.fixtures.ts';
-
-interface Subtests {
-  readonly test: (name: string, body: Fn) => unknown;
-}
 
 interface SuiteCall {
   readonly self: unknown;
   readonly args: readonly unknown[];
-}
-
-interface WrappedOptions {
-  readonly filter?: readonly string[];
-  readonly bail?: boolean;
-  readonly activeMutant?: string;
-  readonly expectFailure?: boolean;
-}
-
-function wrapped({ filter, bail = false, activeMutant, expectFailure }: WrappedOptions = {}) {
-  const fake = fakeNodeTest(expectFailure);
-  const ns: InstrumenterContext = {};
-  const env: Record<string, string | undefined> = {};
-  const tests: RecordedTest[] = [];
-  const seen: (string | undefined)[] = [];
-  const positions = new Map<string, Position>();
-  const sites: CallSite[] = [];
-  /** Each call of `registering`: whether top-level, and how many registrations node:test had then. */
-  const registering: [boolean, number][] = [];
-  const rootAfters: unknown[] = [];
-  const module = wrapNodeTest({
-    ns,
-    testFile: testFile,
-    tests,
-    filter: filter && new Set(filter),
-    bail,
-    activeMutant,
-    env,
-    positions,
-    callSites: () => sites,
-    nodeTest: fake.module,
-    registering: (topLevel) => {
-      registering.push([topLevel, fake.registrations.length]);
-    },
-    rootAfter: (hook) => {
-      rootAfters.push(hook);
-
-      return hook;
-    },
-  });
-
-  const see = () => seen.push(ns.currentTestId);
-
-  return {
-    ...fake,
-    original: fake.module,
-    module,
-    ns,
-    env,
-    tests,
-    positions,
-    sites,
-    seen,
-    see,
-    registering,
-    rootAfters,
-  };
 }
 
 describe('wrapNodeTest', () => {
@@ -742,171 +677,6 @@ describe('wrapNodeTest', () => {
 
     assert.deepEqual(results, ['hook result', 'hook result']);
     assert.deepEqual(seen, ['7', '7', 'hook this', ['context'], '7', '7', 'hook this', ['context']]);
-  });
-
-  describe('hooks', () => {
-    it('makes the test that a beforeEach hook runs for current until its promise settles or it calls `done`', async () => {
-      const { module, registrations, ns, seen, see } = wrapped();
-      const failure = new Error('hook failed');
-      let finish: (error?: unknown) => void = () => {};
-      const received: unknown[][] = [];
-      module.beforeEach(async (...args: unknown[]) => {
-        received.push(args);
-        see();
-        await Promise.resolve();
-        see();
-
-        return 'promised';
-      });
-      module.beforeEach((_t: unknown, done: unknown) => {
-        see();
-        finish = callable(done);
-
-        return 'called back';
-      });
-      module.beforeEach(() => {
-        see();
-        throw failure;
-      });
-      module.it('first', see);
-      module.describe('suite', () => {
-        module.it('second', see);
-      });
-      const [promised, callback, throwing] = hooksOf(registrations, 'beforeEach');
-      assert.ok(promised);
-      assert.ok(callback);
-      assert.ok(throwing);
-      const calls: unknown[][] = [];
-
-      const context = testContext([], 'suite > second');
-      const settled = promised(context);
-
-      assert.deepEqual(received, [[context]]);
-      assert.equal(ns.currentTestId, `${testFile} > suite > second`);
-      assert.equal(await settled, 'promised');
-      assert.equal(ns.currentTestId, undefined);
-      assert.equal(
-        callback(testContext([], 'first'), (...args: unknown[]) => calls.push(args)),
-        'called back',
-      );
-      assert.equal(ns.currentTestId, `${testFile} > first`);
-
-      finish(failure);
-
-      assert.deepEqual(calls, [[failure]]);
-      assert.equal(ns.currentTestId, undefined);
-      assert.throws(() => throwing(testContext([], 'first')), failure);
-      assert.equal(ns.currentTestId, undefined);
-      assert.deepEqual(seen, [
-        `${testFile} > suite > second`,
-        `${testFile} > suite > second`,
-        `${testFile} > first`,
-        `${testFile} > first`,
-      ]);
-    });
-
-    it('leaves the hooks of a suite, of a name several tests share, and of no test as they are', () => {
-      const { module, registrations, ns, env, seen } = wrapped();
-      const hook = (..._args: unknown[]) => {
-        seen.push(ns.currentTestId);
-
-        return 'hook result';
-      };
-      module.beforeEach(hook);
-      module.after(hook);
-      module.describe('suite', () => {
-        module.it('inner', () => {});
-      });
-      module.it('same', () => {});
-      module.it('same', () => {});
-
-      const results = [];
-
-      for (const registered of [...hooksOf(registrations, 'beforeEach'), ...hooksOf(registrations, 'after')]) {
-        for (const context of [
-          testContext([], 'suite'),
-          testContext([], 'same'),
-          testContext([], 'inner'),
-          undefined,
-        ]) {
-          results.push(registered(context));
-        }
-      }
-
-      assert.deepEqual(
-        results,
-        Array.from({ length: 8 }, () => 'hook result'),
-      );
-      assert.deepEqual(
-        seen,
-        Array.from({ length: 8 }, () => undefined),
-      );
-      assert.ok(!(envNames.current in env));
-    });
-
-    it('keeps a test current after its body until its after hooks run, and through them while its body runs', async () => {
-      const { module, registrations, ns, seen, see } = wrapped();
-      let release = () => {};
-      const gate = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      module.it('waits', async (t: { after: (hook: Fn) => void }) => {
-        t.after(see);
-        await gate;
-      });
-      module.it('returns', () => {});
-      const waits = testContext([], 'waits');
-      const returns = testContext([], 'returns');
-
-      const running = rawBodyOf(registrations, 'waits')(waits);
-      await waits.end();
-
-      assert.equal(ns.currentTestId, `${testFile} > waits`);
-
-      release();
-      await running;
-
-      assert.equal(ns.currentTestId, undefined);
-
-      await rawBodyOf(registrations, 'returns')(returns);
-
-      assert.equal(ns.currentTestId, `${testFile} > returns`);
-
-      await returns.end();
-
-      assert.equal(ns.currentTestId, undefined);
-      assert.deepEqual(seen, [`${testFile} > waits`]);
-    });
-
-    it("makes a test current while the hooks it registers run: after hooks, and subtests' beforeEach hooks", async () => {
-      const { module, registrations, ns, seen, see } = wrapped();
-      let context: unknown;
-      module.it('parent', (t: Subtests & { after: (hook: Fn) => void; beforeEach: (...args: unknown[]) => void }) => {
-        context = t;
-        t.after(async () => {
-          see();
-          await Promise.resolve();
-          see();
-        });
-        module.after(see);
-        t.beforeEach(see, { timeout: 5 });
-        t.test('child', () => {});
-      });
-
-      await bodyOf(registrations, 'parent')(testContext(registrations, 'parent'));
-      const [beforeEach] = registrations.filter(({ kind }) => kind === 't.beforeEach');
-      await callable(beforeEach?.rest[0])(testContext([], 'parent > child'));
-      await hooksOf(registrations, 'after')[0]?.(testContext([], 'parent'));
-
-      assert.deepEqual([beforeEach?.self, beforeEach?.rest[1]], [context, { timeout: 5 }]);
-      assert.equal(ns.currentTestId, undefined);
-      assert.deepEqual(seen, [
-        `${testFile} > parent`,
-        `${testFile} > parent`,
-        `${testFile} > parent > child`,
-        `${testFile} > parent`,
-      ]);
-    });
   });
 
   it('leaves a statically activated mutant alone', async () => {

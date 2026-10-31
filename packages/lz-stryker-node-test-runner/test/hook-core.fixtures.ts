@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import type { LoadHookContext, ResolveHookContext } from 'node:module';
 import { join } from 'node:path';
 
-import type { NodeTestModule } from '../src/wrap.ts';
+import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
+
+import { wrappedNodeTest, type ModuleHooks, type TestEvent } from '../src/hook-core.ts';
+import type { RecordedTest } from '../src/record.ts';
+import { wrapNodeTest, type CallSite, type NodeTestModule } from '../src/wrap.ts';
 
 export type Fn = (this: unknown, ...args: unknown[]) => unknown;
 
@@ -143,4 +149,125 @@ export async function runBodies(registrations: Registration[], names: string[]):
   for (const name of names) {
     await bodyOf(registrations, name)(testContext());
   }
+}
+
+export type TestDetails = NonNullable<TestEvent['data']['details']>;
+
+export const out = join('/tmp', 'out');
+
+export function reported(
+  name: string,
+  nesting: number,
+  outcome: 'pass' | 'fail',
+  details: TestDetails,
+  flags: { skip?: unknown; todo?: unknown } = {},
+): TestEvent[] {
+  return [
+    { type: 'test:start', data: { name, nesting } },
+    { type: `test:${outcome}`, data: { name, nesting, ...flags, details } },
+  ];
+}
+
+export function resolveContext(conditions: string[]): ResolveHookContext {
+  return { conditions, importAttributes: {}, parentURL: undefined };
+}
+
+export function loadContext(conditions: string[]): LoadHookContext {
+  return { conditions, format: undefined, importAttributes: {} };
+}
+
+/** Imports and requires node:test through `hooks`, with `wrapped`, which may be any fake, as the wrapped module. */
+export async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
+  const slots: Record<symbol, unknown> = globalThis;
+  const previous = slots[wrappedNodeTest];
+  const passOn = () => assert.fail('passed node:test on');
+  const sourceFor = (conditions: string[]) => {
+    const { url } = hooks.resolve('node:test', resolveContext(conditions), passOn);
+    const { source } = hooks.load(url, loadContext(conditions), passOn);
+
+    if (typeof source !== 'string') {
+      throw new TypeError(`Loaded no source text: ${String(source)}`);
+    }
+
+    return source;
+  };
+
+  try {
+    slots[wrappedNodeTest] = wrapped;
+    // A comment of its own keeps the import from coming from the module cache.
+    const source = `${sourceFor(['node', 'import'])}\n// ${randomUUID()}`;
+    const module: unknown = await import(`data:text/javascript,${encodeURIComponent(source)}`);
+
+    if (typeof module !== 'object' || module === null) {
+      throw new TypeError('The redirected import gave no module.');
+    }
+
+    const commonjs: { exports: unknown } = { exports: undefined };
+    Reflect.apply(new Function('module', sourceFor(['node', 'require'])), undefined, [commonjs]);
+
+    return { module, commonjs: commonjs.exports };
+  } finally {
+    slots[wrappedNodeTest] = previous;
+  }
+}
+
+export interface Subtests {
+  readonly test: (name: string, body: Fn) => unknown;
+}
+
+interface WrappedOptions {
+  readonly filter?: readonly string[];
+  readonly bail?: boolean;
+  readonly activeMutant?: string;
+  readonly expectFailure?: boolean;
+}
+
+export function wrapped({ filter, bail = false, activeMutant, expectFailure }: WrappedOptions = {}) {
+  const fake = fakeNodeTest(expectFailure);
+  const ns: InstrumenterContext = {};
+  const env: Record<string, string | undefined> = {};
+  const tests: RecordedTest[] = [];
+  const seen: (string | undefined)[] = [];
+  const positions = new Map<string, Position>();
+  const sites: CallSite[] = [];
+  /** Each call of `registering`: whether top-level, and how many registrations node:test had then. */
+  const registering: [boolean, number][] = [];
+  const rootAfters: unknown[] = [];
+  const module = wrapNodeTest({
+    ns,
+    testFile: testFile,
+    tests,
+    filter: filter && new Set(filter),
+    bail,
+    activeMutant,
+    env,
+    positions,
+    callSites: () => sites,
+    nodeTest: fake.module,
+    registering: (topLevel) => {
+      registering.push([topLevel, fake.registrations.length]);
+    },
+    rootAfter: (hook) => {
+      rootAfters.push(hook);
+
+      return hook;
+    },
+  });
+
+  const see = () => seen.push(ns.currentTestId);
+
+  return {
+    ...fake,
+    original: fake.module,
+    module,
+    ns,
+    env,
+    tests,
+    positions,
+    sites,
+    seen,
+    see,
+    registering,
+    rootAfters,
+  };
 }
