@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import { MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestFor } from '@layzee/lz-node-test';
-import { envNames } from '../../src/hook-core.ts';
+import { envNames } from '../../src/record.ts';
 import {
   activeMutant,
   complete,

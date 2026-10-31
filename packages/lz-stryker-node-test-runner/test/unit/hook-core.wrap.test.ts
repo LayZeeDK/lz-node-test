@@ -5,7 +5,8 @@ import { describe, it } from 'node:test';
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { activeMutantEnv, envNames, wrapNodeTest, type CallSite, type RecordedTest } from '../../src/hook-core.ts';
+import { wrapNodeTest, type CallSite } from '../../src/hook-core.ts';
+import { activeMutantEnv, envNames, type RecordedTest } from '../../src/record.ts';
 import {
   bodyOf,
   callable,

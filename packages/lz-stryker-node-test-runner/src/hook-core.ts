@@ -4,70 +4,27 @@ import { join } from 'node:path';
 import type { HookFn, TestContext as NodeTestContext, TestFn } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import type { InstrumenterContext, MutantCoverage, Position } from '@stryker-mutator/api/core';
+import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
-import type { MemoryLimitReached, WatchdogData } from './watchdog.ts';
-
-export function testId(parent: string, name: string): string {
-  return `${parent} > ${/(^| )>( |$)/.test(name) ? name.replace(/[\\>]/g, '\\$&') : name}`;
-}
-
-/** node:test reports in declaration order, so the wrapper and the reporter number alike. */
-export function uniqueIds(): (parent: string, name: string) => string {
-  const used = new Set<string>();
-
-  return (parent, name) => {
-    const base = testId(parent, name);
-
-    let id = base;
-
-    for (let count = 2; used.has(id); count++) {
-      id = `${base} (${count})`;
-    }
-
-    used.add(id);
-
-    return id;
-  };
-}
-
-export function within(id: string, scope: string): boolean {
-  return id === scope || id.startsWith(`${scope} > `);
-}
-
-export interface RecordedTest {
-  readonly id: string;
-  /** Skipped tests include todo tests, which run but whose outcome node:test ignores. */
-  readonly status: 'passed' | 'failed' | 'skipped';
-  readonly failureMessage?: string;
-  readonly timeSpentMs: number;
-  readonly startPosition?: Position;
-}
+import {
+  activeMutantEnv,
+  afterHookId,
+  envNames,
+  heldOpenMs,
+  memoryRecordName,
+  recordName,
+  uniqueIds,
+  within,
+  type ProcessRecord,
+  type RecordedTest,
+} from './record.ts';
+import type { WatchdogData } from './watchdog.ts';
 
 /** A function call on the stack: its file path and its 1-based position. */
 export interface CallSite {
   readonly file: string;
   readonly line: number;
   readonly column: number;
-}
-
-export interface ProcessRecord {
-  readonly main?: true;
-  readonly tests: readonly RecordedTest[];
-  // undefined: the record goes through JSON.stringify, which leaves such a field out.
-  readonly hitCount?: number | undefined;
-  readonly mutantCoverage?: MutantCoverage | undefined;
-  readonly peakMemoryMB?: number | undefined;
-  readonly memoryLimitReached?: MemoryLimitReached;
-  readonly diagnostics?: readonly string[];
-  /**
-   * Set when the test file's process exited before node:test's summary through process.exit() or an uncaught
-   * exception, which skip `beforeExit`, unless the hook ended it once node:test had reported every top-level suite and
-   * test.
-   */
-  readonly unfinished?: true;
-  /** What kept the test file's process alive after its tests and root `after` hooks, when the hook ended it for that. */
-  readonly heldOpen?: readonly string[];
 }
 
 /** A function node:test calls, which every function is assignable to; the wrappers call it through `Reflect.apply`. */
@@ -127,30 +84,6 @@ type NodeTestShape<TFn, THook> = WithShorthands<TFn> & {
 export type NodeTestModule = NodeTestShape<Registrar, HookRegistrar>;
 
 export type NodeTestTarget = NodeTestShape<Target, Target>;
-
-const afterHook = '"after" hook';
-
-export const envNames = Object.freeze({
-  out: 'LZ_STRYKER_NODE_TEST_OUT',
-  file: 'LZ_STRYKER_NODE_TEST_FILE',
-  dryRun: 'LZ_STRYKER_NODE_TEST_DRY_RUN',
-  hitLimit: 'LZ_STRYKER_NODE_TEST_HIT_LIMIT',
-  memoryLimit: 'LZ_STRYKER_NODE_TEST_MEMORY_LIMIT_MB',
-  current: 'LZ_STRYKER_NODE_TEST_CURRENT',
-  filter: 'LZ_STRYKER_NODE_TEST_FILTER',
-  bail: 'LZ_STRYKER_NODE_TEST_BAIL',
-  activeMutant: 'LZ_STRYKER_NODE_TEST_ACTIVE_MUTANT',
-  heldOpen: 'LZ_STRYKER_NODE_TEST_HELD_OPEN_MS',
-});
-
-/**
- * How long a test file's process may stay alive after its tests and root `after` hooks when the ending does not end it
- * at once for a failed test. The tests shorten it through envNames.heldOpen; it is not an option.
- */
-export const heldOpenMs = 30_000;
-
-/** Stryker's variable for the active mutant, which instrumented code reads when it loads. */
-export const activeMutantEnv = '__STRYKER_ACTIVE_MUTANT__';
 
 /** The global object's slots, which the hook sets for the modules it loads and for Stryker's instrumented code. */
 export interface GlobalSlots {
@@ -226,10 +159,6 @@ export function writesAllowed(
   return permission?.has('fs.write', dir) !== false;
 }
 
-export function recordName(pid: number, threadId: number): string {
-  return `${pid}.${threadId}.json`;
-}
-
 function parseFilter(json: string): Set<string> {
   const ids: unknown = JSON.parse(json);
 
@@ -261,7 +190,7 @@ export function install(deps: HookDependencies): boolean {
   if (memoryLimit > 0 && deps.canWatchMemory) {
     const { NODE_COMPILE_CACHE } = deps.env;
     deps.global[watchdog] = deps.watchMemory({
-      workerData: { limitMB: memoryLimit, recordPath: join(outDir, `${deps.pid}.memory.json`) },
+      workerData: { limitMB: memoryLimit, recordPath: join(outDir, memoryRecordName(deps.pid)) },
       // Without the process's options, such as --require ts-node/register, which would load in the thread again, and
       // without its environment, whose NODE_OPTIONS Node.js would read for the thread: its --require preloads would
       // run there too, and --input-type=module would make the thread an ES module, which also loads the --import
@@ -594,7 +523,7 @@ export function recordEvents(
     }
 
     const fileHook = fileLevel(data.details);
-    const id = fileHook ? testId(testFile, afterHook) : ids.get(data.nesting);
+    const id = fileHook ? afterHookId(testFile) : ids.get(data.nesting);
 
     // node:test starts every test it reports; an event outside that order has no test to record.
     if (id === undefined) {
@@ -932,7 +861,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         return attributed;
       }
 
-      declare(testId(testFile, afterHook));
+      declare(afterHookId(testFile));
 
       return typeof attributed === 'function' ? rootAfter(attributed) : attributed;
     }),

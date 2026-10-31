@@ -3,12 +3,7 @@
 // square of the lines it compares (nodejs/node#62792). node-assert-diff.test.ts fails once a Node.js release fixes it.
 import { writeFileSync } from 'node:fs';
 
-import type { ProcessRecord } from './hook-core.ts';
-
-export interface MemoryLimitReached {
-  readonly rssMB: number;
-  readonly limitMB: number;
-}
+import type { ProcessRecord } from './record.ts';
 
 export function workersAllowed(permission: { has(scope: string): boolean } | undefined): boolean {
   return permission?.has('worker') !== false;

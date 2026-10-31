@@ -4,7 +4,7 @@ import { describe, it, type TestContext } from 'node:test';
 
 import { DryRunStatus, MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
-import { envNames } from '../../src/hook-core.ts';
+import { envNames } from '../../src/record.ts';
 import {
   dryRun,
   fixture,

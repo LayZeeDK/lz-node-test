@@ -4,7 +4,8 @@ import { extname, resolve } from 'node:path';
 import { getCallSites } from 'node:util';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 
-import { envNames, install, writesAllowed, type HookDependencies } from './hook-core.ts';
+import { install, writesAllowed, type HookDependencies } from './hook-core.ts';
+import { envNames } from './record.ts';
 import { workersAllowed } from './watchdog.ts';
 
 // The memory watchdog's thread runs this script, where Stryker sees no coverage, so it only starts watchdog.ts's watch,

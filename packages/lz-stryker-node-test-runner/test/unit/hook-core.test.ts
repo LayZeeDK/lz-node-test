@@ -10,25 +10,20 @@ import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
-  envNames,
   install,
   installed,
   recordEvents,
   redirectNodeTest,
   reporting,
-  testId,
-  uniqueIds,
   watchdog,
   wrappedNodeTest,
   writesAllowed,
   type HookDependencies,
   type ModuleHooks,
   type NodeTestModule,
-  type ProcessRecord,
-  type RecordedTest,
   type TestEvent,
 } from '../../src/hook-core.ts';
-import { lzParseRecord } from '../../src/runner.ts';
+import { envNames, lzParseRecord, testId, uniqueIds, type ProcessRecord, type RecordedTest } from '../../src/record.ts';
 import {
   bodyOf,
   callable,

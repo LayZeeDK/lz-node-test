@@ -7,14 +7,13 @@ import { TestStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
-import { activeMutantEnv, envNames } from '../../src/hook-core.ts';
+import { activeMutantEnv, envNames, lzParseRecord } from '../../src/record.ts';
 import { activeMutant, callMember, construct, hookUrl, logger, member, strykerOptions } from '../index.fixtures.ts';
 import {
   LzStrykerNodeTestRunner,
   lzFileError,
   lzFilesFor,
   lzMergeCoverage,
-  lzParseRecord,
   lzRunEnv,
   lzRunInPool,
   type LzRunOptions,

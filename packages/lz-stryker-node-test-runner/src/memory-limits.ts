@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { Logger } from '@stryker-mutator/api/logging';
 
 import { lzDirPrefix, ownDir } from './dirs.ts';
-import type { ProcessRecord } from './hook-core.ts';
+import type { ProcessRecord } from './record.ts';
 
 /**
  * Where the runners of one Stryker run keep the most memory a process of each test file held in the dry run, one file
