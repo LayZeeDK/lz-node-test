@@ -90,15 +90,18 @@ export function lzPersistRecord(
   });
   deps.onExit(writeAtExit);
 
-  // Nothing signals the test file's own process while it runs: the runner reads its record once it has exited.
-  if (deps.signals && !main) {
+  // The runner reads the test file's own record once that process has exited, and nothing signals it while it runs.
+  if (main) {
+    return;
+  }
+
+  if (deps.signals) {
     writeOnEndingSignals(deps.signals, write);
   }
 
   // A process the tests started can end without its exit listeners, as `worker.terminate()` and every kill on Windows
-  // end it, so in the one run that reads coverage its record follows the coverage while it runs. The test file's own
-  // process does not need it: the runner reads its record only once it has exited.
-  if (dryRun && !main) {
+  // end it, so in the one run that reads coverage its record follows the coverage while it runs.
+  if (dryRun) {
     writeOnNewHits(
       deps.every,
       () => record(natural),
