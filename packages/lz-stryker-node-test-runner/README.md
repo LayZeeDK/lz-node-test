@@ -54,7 +54,9 @@ All options sit under `lzStrykerNodeTest`.
 | `maxMemoryMB` | `number`   | from the dry run                      | The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. The default is the most memory that a process of the test file held in the dry run, times 1.5, plus 1024.                                                                             |
 
 `nodeArgs` reach the process of each test file. Stryker's own `testRunnerNodeArgs` reach Stryker's worker process,
-which runs the runner but not the tests. To debug a test file, pass `--inspect-brk` in `nodeArgs`.
+which runs the runner but not the tests. To debug a test file, set `testFiles` to that file, run Stryker with
+`--concurrency 1`, and pass `--inspect-brk` in `nodeArgs`. Each process of that file then waits for a debugger, one at
+a time.
 
 On Node.js 24, `--test-global-setup` in `nodeArgs` runs its setup and teardown once in each test file's process, not
 once per run as under `node --test`.
@@ -77,9 +79,9 @@ once per run as under `node --test`.
   - A process started with `detached: true` keeps running on every platform. On Windows, so does a process started
     through a shell, such as with `shell: true` or through a `.cmd` file.
 - **The hook in every process.** Each `node` process that a test starts loads the runner's hook before its own code.
-  On a Windows arm64 machine where `node -e 0` took 80 ms, the hook added about 30 ms to that start with the
-  runner's compile cache, about 40 ms with the thread that watches memory, and about 95 ms without a compile cache.
-  The thread runs in each process of a mutant run, and of the dry run when `maxMemoryMB` is set. To start a process
+  In one measurement on a Windows arm64 machine where `node -e 0` took 80 ms, the hook added a few tens of
+  milliseconds to that start with the runner's compile cache, a little more with the thread that watches memory, and
+  about three times as much without a compile cache. The thread runs in each process of a mutant run, and of the dry run when `maxMemoryMB` is set. To start a process
   without the hook, give it an environment whose `NODE_OPTIONS` leaves out the runner's `--import`. What that process
   covers then counts for no test, so a mutant that only it reaches comes out as `NoCoverage`.
 - **Tests run one at a time.** The runner registers every suite and test with `concurrency: false`, so that coverage
@@ -88,7 +90,7 @@ once per run as under `node --test`.
   the mutants, so the test times include the slowdown of processes that share the cores. Each mutant run runs its
   test files one after another.
 - **Test times include the start of the process.** Each test's time includes the time its file's process spent
-  outside the file's tests, such as starting `node` and loading modules, as running one test of a file runs the
+  outside the file's tests, such as starting `node` and loading modules, because running one test of a file runs the
   file's whole process. Stryker sizes a mutant's timeout from the times of the tests it runs, so the timeout grows
   with that start-up time too.
 - **Output.** The runner discards each test file's stdout. It keeps the last 8 KiB of stderr and shows it when a file

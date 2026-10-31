@@ -70,12 +70,12 @@ Both functions take the options as the second argument instead of a timeout: `(n
 `node:test`'s test options (`timeout`, `skip`, `only`, `todo`, and the others), plus `fails`, which makes a test pass
 only when its body fails.
 
-### Differences from Vitest
+### Outcomes that come from `node:test`
 
-The tests run on `node:test`, which makes two outcomes differ from Vitest's:
+The tests run on `node:test`, which decides two outcomes that a Vitest user may not expect:
 
 - A todo test that has a body runs it, and `node:test` ignores its outcome.
-- A `fails` test that times out fails, as `node:test`'s timeout applies outside the body that `fails` inverts.
+- A `fails` test that times out fails. The timeout of `node:test` applies outside the body that `fails` inverts.
 
 ### Types
 

@@ -48,8 +48,9 @@ or `stryker.config.js` in a package with `"type": "module"`, as a JSON configura
 `LzNodeExitCode` suits code that a test runs in a child process and whose exit code the test reads, such as a CLI.
 Code that sets `process.exitCode` in the test's own process sets the exit code of the test run instead. With
 `@layzee/lz-stryker-node-test-runner`, the mutant that turns 0 into 1 then makes the test file exit with code 1 while
-no test fails, which Stryker reports as a `RuntimeError`, not as `Survived`. A mutant of an assignment that an
-uncaught exception follows is equivalent, as Node.js then exits with code 1 whatever `process.exitCode` holds.
+no test fails. Stryker reports that mutant as a `RuntimeError`, not as `Survived`. A mutant of an assignment that an
+uncaught exception follows is an equivalent mutant, because Node.js then exits with code 1 whatever
+`process.exitCode` holds.
 
 ## Mutate test files
 
