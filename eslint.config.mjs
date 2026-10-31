@@ -255,6 +255,7 @@ export default [
       '@nx/workspace-no-assertion-in-iteration': 'error',
       // A test rejects with a value typed unknown that is no Error, to cover src that takes any rejection.
       '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],
+      '@typescript-eslint/only-throw-error': 'error',
       'no-restricted-syntax': [
         'error',
         {

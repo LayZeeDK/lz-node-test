@@ -78,7 +78,7 @@ describe('formatTitle', () => {
   });
 
   it('throws what a toJSON method throws for %j, also when it is no Error', () => {
-    const thrown = 'circular structure';
+    const thrown: unknown = 'circular structure';
     const value = {
       toJSON() {
         throw thrown;

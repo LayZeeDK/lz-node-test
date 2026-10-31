@@ -29,14 +29,20 @@ const sent = (calls: readonly unknown[][]) => calls.filter(([, signal]) => signa
 describe('endGroup', () => {
   const gone = Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
 
-  function setup(platform: NodeJS.Platform, error?: unknown, failing: NodeJS.Signals | 0 = 'SIGTERM') {
+  /** Sending `signal` (default SIGTERM) throws `error`. */
+  interface Failure {
+    readonly error: unknown;
+    readonly signal?: NodeJS.Signals | 0;
+  }
+
+  function setup(platform: NodeJS.Platform, failure?: Failure) {
     const calls: unknown[][] = [];
     const end = () =>
       endGroup(123, platform, (pid, signal) => {
         calls.push([pid, signal]);
 
-        if (error && signal === failing) {
-          throw error;
+        if (failure && signal === (failure.signal ?? 'SIGTERM')) {
+          throw failure.error;
         }
       });
 
@@ -61,7 +67,7 @@ describe('endGroup', () => {
 
   it('stops waiting, and kills nothing, once the group is gone after it was asked to end', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
-    const { calls, end } = setup('linux', gone, 0);
+    const { calls, end } = setup('linux', { error: gone, signal: 0 });
     let ended = false;
     void end().then(() => (ended = true));
 
@@ -78,7 +84,10 @@ describe('endGroup', () => {
 
   it('stops asking once asking whether the group is there throws', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
-    const { calls, end } = setup('linux', Object.assign(new Error('kill EPERM'), { code: 'EPERM' }), 0);
+    const { calls, end } = setup('linux', {
+      error: Object.assign(new Error('kill EPERM'), { code: 'EPERM' }),
+      signal: 0,
+    });
     const ended = end();
     t.mock.timers.tick(10);
     await assert.rejects(ended, { code: 'EPERM' });
@@ -101,7 +110,7 @@ describe('endGroup', () => {
   it('neither waits nor kills when no group is left to ask', async (t) => {
     // eslint-disable-next-line node-test/require-mock-timers-advance -- time stands still, so a wait would never end
     t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { calls, end } = setup('linux', gone);
+    const { calls, end } = setup('linux', { error: gone });
 
     await end();
 
@@ -110,7 +119,7 @@ describe('endGroup', () => {
 
   it('takes a group that ended between the last ask and the kill as ended', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
-    const { calls, end } = setup('linux', gone, 'SIGKILL');
+    const { calls, end } = setup('linux', { error: gone, signal: 'SIGKILL' });
     const ended = end();
     t.mock.timers.tick(200);
 
@@ -128,7 +137,7 @@ describe('endGroup', () => {
     ['an Error with another code', 'SIGKILL', Object.assign(new Error('kill EPERM'), { code: 'EPERM' })],
   ])('rejects with %s that sending %s throws', async ([, failing, thrown], t) => {
     t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
-    const ended = setup('linux', thrown, failing).end();
+    const ended = setup('linux', { error: thrown, signal: failing }).end();
     t.mock.timers.tick(200);
 
     await assert.rejects(ended, (error) => error === thrown);

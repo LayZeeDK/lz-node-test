@@ -9,6 +9,8 @@ import { bodyOf, callable, rawBodyOf, testFile, testContext } from '../hook-core
 import { callMember, member } from '../reflect.fixtures.ts';
 import { runBodies, wrapped, type Subtests } from '../wrap.fixtures.ts';
 
+const notAnError: unknown = 0;
+
 interface SuiteCall {
   readonly self: unknown;
   readonly args: readonly unknown[];
@@ -535,11 +537,11 @@ describe('wrapNodeTest', () => {
       throw failure;
     });
     module.it('rejects with 0', async () => {
-      throw 0;
+      throw notAnError;
     });
 
     await assert.rejects(bodyOf(registrations, 'fails')(testContext()), (error) => error === failure);
-    await assert.rejects(bodyOf(registrations, 'rejects with 0')(testContext()), (error) => error === 0);
+    await assert.rejects(bodyOf(registrations, 'rejects with 0')(testContext()), (error) => error === notAnError);
   });
 
   it('fails a test body that node:test runs without a test context', () => {
@@ -630,12 +632,12 @@ describe('wrapNodeTest', () => {
       const { module, registrations, ns } = wrapped();
       const context = testContext();
       module.it('throws', (_t: unknown, _done: unknown) => {
-        throw 0;
+        throw notAnError;
       });
 
       assert.throws(
         () => rawBodyOf(registrations, 'throws')(context, () => {}),
-        (error) => error === 0,
+        (error) => error === notAnError,
       );
 
       assert.equal(ns.currentTestId, `${testFile} > throws`);
@@ -650,11 +652,11 @@ describe('wrapNodeTest', () => {
       module.it('parent', async (t: Subtests) => {
         t.test('child', (_t: unknown, done: unknown) => {
           callable(done)();
-          throw 0;
+          throw notAnError;
         });
         assert.throws(
           () => rawBodyOf(registrations, 'child')(testContext(), () => {}),
-          (error) => error === 0,
+          (error) => error === notAnError,
         );
         see();
       });

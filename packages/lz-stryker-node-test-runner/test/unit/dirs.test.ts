@@ -146,7 +146,7 @@ describe('isRunning', () => {
     ['an Error without a code', new Error('kill failed')],
     ['an object with the code ESRCH that is no Error', { code: 'ESRCH' }],
     ['a string', 'ESRCH'],
-  ])('takes a process as running when signalling it throws %s', (_title, thrown) => {
+  ])('takes a process as running when signalling it throws %s', (_title, thrown: unknown) => {
     const kill = () => {
       throw thrown;
     };
