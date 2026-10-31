@@ -93,7 +93,7 @@ function groupLasts(pid: number, kill: Kill): Promise<boolean> {
 export function processEnd(
   child: EndingProcess,
   platform: NodeJS.Platform,
-  kill: Kill = process.kill.bind(process),
+  kill: Kill = (pid, signal) => process.kill(pid, signal),
 ): Promise<{ exitCode: number | null; stderr: string }> {
   return new Promise((done, fail) => {
     let errors = Buffer.alloc(0);

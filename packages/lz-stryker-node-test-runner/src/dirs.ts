@@ -52,7 +52,10 @@ export async function removeDir(
 }
 
 /** Whether a process with this id runs; one that exists but may not be signalled runs too. */
-export function isRunning(pid: number, kill: (pid: number, signal: 0) => void = process.kill.bind(process)): boolean {
+export function isRunning(
+  pid: number,
+  kill: (pid: number, signal: 0) => void = (target, signal) => process.kill(target, signal),
+): boolean {
   try {
     kill(pid, 0);
 
