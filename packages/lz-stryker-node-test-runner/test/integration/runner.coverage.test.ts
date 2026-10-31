@@ -344,6 +344,7 @@ describe('LzStrykerNodeTestRunner coverage', () => {
 
       const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
+      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.deepEqual(fixtureCoverage(mutantCoverage), {
         static: {},
         perTest: { [`${join(dir, 'a.test.mjs')} > kills`]: { killed: 1 } },
