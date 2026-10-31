@@ -9,5 +9,6 @@ export default {
     'packages/lz-stryker-node-test-mutators/test/synthetic/node-apis.ts',
   ],
   tsconfigFile: 'packages/lz-stryker-node-test-mutators/tsconfig.stryker.json',
+  incrementalFile: 'reports/stryker-incremental/lz-stryker-node-test-mutators.src.json',
   lzStrykerNodeTest: { testFiles: ['packages/lz-stryker-node-test-mutators/test/**/*.test.ts'], nodeArgs: [source] },
 };

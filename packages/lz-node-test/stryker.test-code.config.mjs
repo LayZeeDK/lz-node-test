@@ -9,4 +9,5 @@ export default await testCode({
     // instrumentation adds Stryker's.
     '!packages/lz-node-test/test/integration/register.test.ts',
   ],
+  incrementalFile: 'reports/stryker-incremental/lz-node-test.test-code.json',
 });

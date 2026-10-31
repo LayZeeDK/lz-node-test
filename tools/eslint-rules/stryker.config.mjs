@@ -10,5 +10,6 @@ export default {
     '!tools/eslint-rules/index.ts',
   ],
   tsconfigFile: 'tools/eslint-rules/tsconfig.stryker.json',
+  incrementalFile: 'reports/stryker-incremental/eslint-rules.src.json',
   lzStrykerNodeTest: { testFiles: ['tools/eslint-rules/*.test.ts'], nodeArgs: [source] },
 };

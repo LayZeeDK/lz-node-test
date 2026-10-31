@@ -11,6 +11,9 @@ node_modules
 # Stryker sandboxes, at the root and in each package
 .stryker-tmp/
 
+# Stryker incremental results, one file per config
+/reports/stryker-incremental/
+
 # IDEs and editors
 /.idea
 .project
