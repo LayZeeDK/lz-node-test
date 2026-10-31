@@ -462,7 +462,14 @@ describe('resolveFromCore', () => {
 
     await resolveFromCore(join(root, 'package.json'), load);
 
-    assert.ok(loaded.includes(join(root, 'node_modules', '@stryker-mutator', 'instrumenter', 'dist', 'bundle.js')));
+    const instrumenter = join(root, 'node_modules', '@stryker-mutator', 'instrumenter');
+
+    assert.deepEqual(loaded, [
+      join(instrumenter, 'dist', 'src', 'mutators', 'mutate.js'),
+      join(instrumenter, 'dist', 'src', 'transformers', 'babel-transformer.js'),
+      join(instrumenter, 'dist', 'bundle.js'),
+      join(root, 'node_modules', '@babel', 'core', 'index.js'),
+    ]);
   });
 
   const resolvingTo = (result: unknown) =>
