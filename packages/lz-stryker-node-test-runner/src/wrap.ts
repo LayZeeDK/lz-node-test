@@ -187,6 +187,51 @@ interface WrapOptions {
   readonly now: () => number;
 }
 
+/** `hook` calling `first` with its context before it runs. */
+function lzPreceded(hook: Body | undefined, first: (context: unknown) => void): Body | undefined {
+  // node:test registers a hook without a function, as one that does nothing.
+  if (typeof hook !== 'function') {
+    return hook;
+  }
+
+  const wrapped = function (this: unknown, ...args: unknown[]): unknown {
+    first(args[0]);
+
+    return Reflect.apply(hook, this, args);
+  };
+  // node:test passes a `done` callback to a hook that declares a parameter for it.
+  Object.defineProperty(wrapped, 'length', { value: hook.length });
+
+  return wrapped;
+}
+
+/**
+ * What `only` does, by whether node runs with --test-only: without it `only` marks nothing, as under `node --test`,
+ * while Node.js 24, which the runner starts on the test file alone, runs only the `only` tests and subtests of a
+ * `t.runOnly(true)` test, and skips one whose `only` is false.
+ */
+function lzOnlyRules(testOnly: boolean) {
+  const ignoringOnly = <T>(withOnly: T, without: T): T => (testOnly ? withOnly : without);
+  /** Makes `t.runOnly` do nothing on a context node:test passes to a test body or hook, without --test-only. */
+  const turnOffRunOnly = ignoringOnly(
+    (_context: unknown) => undefined,
+    (context: unknown) => {
+      if (isObject(context) && typeof context['runOnly'] === 'function') {
+        Object.assign(context, { runOnly: () => undefined });
+      }
+    },
+  );
+
+  return {
+    /** The register function for `only`: node:test's own, or its plain one without --test-only. */
+    only: (register: WithShorthands<Body>): Body => ignoringOnly(register.only, register),
+    withoutOnly: (options: object | null | undefined): object =>
+      ignoringOnly(options ?? {}, Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only'))),
+    turnOffRunOnly,
+    ignoringRunOnly: (hook: Body | undefined) => ignoringOnly(hook, lzPreceded(hook, turnOffRunOnly)),
+  };
+}
+
 /**
  * Tracks which test is current, in the instrumenter's context and the environment, and the spans during which each
  * test is current. `makeCurrent` returns the function that ends it.
@@ -278,23 +323,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const running = new AsyncLocalStorage<string>();
   const parentId = () => running.getStore() ?? testFile;
   const bailed = () => bail && tests.some((test) => test.status === 'failed');
-  /**
-   * `withOnly` under --test-only, else `without`: without it `only` marks nothing, as under `node --test`, while
-   * Node.js 24, which the runner starts on the test file alone, runs only the `only` tests and subtests of a
-   * `t.runOnly(true)` test, and skips one whose `only` is false.
-   */
-  const ignoringOnly = <T>(withOnly: T, without: T): T => (testOnly ? withOnly : without);
-  const withoutOnly = (options: object | null | undefined): object =>
-    ignoringOnly(options ?? {}, Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only')));
-  /** Makes `t.runOnly` do nothing on a context node:test passes to a test body or hook, as `ignoringOnly` says. */
-  const turnOffRunOnly = ignoringOnly(
-    (_context: unknown) => undefined,
-    (context: unknown) => {
-      if (isObject(context) && typeof context['runOnly'] === 'function') {
-        Object.assign(context, { runOnly: () => undefined });
-      }
-    },
-  );
+  const { only, withoutOnly, turnOffRunOnly, ignoringRunOnly } = lzOnlyRules(testOnly);
   const { makeCurrent, isActive } = lzCurrentTests(options);
   /**
    * Whether the filter selects the test, or a subtest of it, which the test must run to register. Stryker names a
@@ -351,25 +380,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
     return settling(hook, attribute);
   };
-  /** `hook` calling `first` with its context before it runs. */
-  const preceded = (hook: Body | undefined, first: (context: unknown) => void): Body | undefined => {
-    // node:test registers a hook without a function, as one that does nothing.
-    if (typeof hook !== 'function') {
-      return hook;
-    }
-
-    const wrapped = function (this: unknown, ...args: unknown[]): unknown {
-      first(args[0]);
-
-      return Reflect.apply(hook, this, args);
-    };
-    // node:test passes a `done` callback to a hook that declares a parameter for it.
-    Object.defineProperty(wrapped, 'length', { value: hook.length });
-
-    return wrapped;
-  };
-  const activating = (hook: Body | undefined) => preceded(hook, activate);
-  const ignoringRunOnly = (hook: Body | undefined) => ignoringOnly(hook, preceded(hook, turnOffRunOnly));
+  const activating = (hook: Body | undefined) => lzPreceded(hook, activate);
 
   /** node:test takes the position from its caller, which is a wrapper, so the wrapper finds it itself. */
   const declare = (id: string) => {
@@ -498,7 +509,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     Object.assign(wrap(original), original, {
       skip: declareSkipped(original.skip),
       todo: wrap(original.todo),
-      only: wrap(ignoringOnly(original.only, original)),
+      only: wrap(only(original)),
       ...(original.expectFailure && { expectFailure: wrap(original.expectFailure) }),
     });
   // The module is node:test's `test` function, which also carries the other functions; `it` is the same function.
