@@ -68,6 +68,13 @@ function propertyName(member: types.Node): string | undefined {
     : undefined;
 }
 
+export function isNodeAssertCall(path: NodePath, expression: types.Expression): boolean {
+  const root = expression.type === 'CallExpression' ? calleeRoot(expression.callee) : undefined;
+  const source = root && importOf(path, root.name)?.source;
+
+  return source !== undefined && nodeAssert.has(source);
+}
+
 export function awaited(expression: types.Expression): types.Expression {
   return expression.type === 'AwaitExpression' ? expression.argument : expression;
 }

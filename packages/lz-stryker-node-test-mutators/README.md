@@ -39,6 +39,7 @@ load, while a failed import stops the run.
 | `LzNodeTimerDelay`  | Moves the delay of `setTimeout` and `setInterval`, from the globals, `node:timers` or `node:timers/promises`, by 1 ms each way. Moves that leave a delay of 0 or 1 are left out, because Node.js runs a delay below 1 after 1 ms. |
 | `LzNodeEventName`   | Swaps a lifecycle event that a listener waits for with one that fires at another time, such as a child process's `exit` and `close`, or a stream's `finish`, `end` and `close`.                                                   |
 | `LzAssertStatement` | Removes a `node:assert` statement. A survivor is an invariant that no test breaks.                                                                                                                                                |
+| `LzAwaitStatement`  | Removes a statement that only awaits a call, such as `await flush();`. Stryker removes a call statement but not an awaited one, so a lint rule that adds `await` to a floating promise would hide the call from mutation testing. |
 
 ## Mutate test files
 
