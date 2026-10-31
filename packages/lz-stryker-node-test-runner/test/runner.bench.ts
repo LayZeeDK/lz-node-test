@@ -310,10 +310,10 @@ async function main(): Promise<void> {
     for (let run = 0; run < mutateRuns; run++) {
       for (const suite of mutateSuites()) {
         const label = `${suite}, wall`;
-        const run = () => {
+        const mutateOnce = () => {
           mutate(suite);
         };
-        add(label, timeOf(await round([[label, run]]), label));
+        add(label, timeOf(await round([[label, mutateOnce]]), label));
       }
     }
 
