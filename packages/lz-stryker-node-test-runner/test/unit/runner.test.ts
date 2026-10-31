@@ -105,6 +105,21 @@ describe('lzOverlapCoverage', () => {
     },
   );
 
+  it("starts a descendant's life at the span of its test that starts with it, not at an earlier span", () => {
+    assert.deepEqual(lzOverlapCoverage(descendant('p', { start: 60, end: 65 }), testSpans), attributed(['p']));
+  });
+
+  it('gives the hits of a descendant that ends as a test starts to that test too', () => {
+    assert.deepEqual(
+      lzOverlapCoverage(descendant('b', { start: 15, end: 22 }), testSpans),
+      attributed(['b', 'c'], true),
+    );
+  });
+
+  it('gives the hits of a descendant that ends as the span of its test ends to static too, as no test is current then', () => {
+    assert.deepEqual(lzOverlapCoverage(descendant('a', { start: 3, end: 10 }), testSpans), attributed(['a'], true));
+  });
+
   it('gives the hits of a descendant that outlives every test to the tests it overlapped and to static', () => {
     assert.deepEqual(lzOverlapCoverage(descendant('c', { start: 25, end: 35 }), testSpans), attributed(['c'], true));
   });
