@@ -27,9 +27,11 @@ export interface LzRecordDependencies {
   readonly offExit: (listener: () => void) => void;
   /** Registers a `beforeExit` listener, which a process that ends by itself calls and `process.exit()` skips. */
   readonly onBeforeExit: (listener: () => void) => void;
+  /**
+   * Writes the record to `lzTempRecordPath(path)` and renames that over `path`, so that a reader finds the record whole,
+   * and a kill during the write leaves the one before.
+   */
   readonly writeRecord: (path: string, record: ProcessRecord) => void;
-  /** Writes the record to `lzTempRecordPath(path)` and renames that over `path`, so a reader finds either record whole. */
-  readonly replaceRecord: (path: string, record: ProcessRecord) => void;
   /** Calls `callback` every `ms` without keeping the process alive. */
   readonly every: (callback: () => void, ms: number) => void;
   /**
@@ -89,33 +91,33 @@ export function lzPersistRecord(
   // end it, so in the one run that reads coverage its record follows the coverage while it runs. The test file's own
   // process does not need it: the runner reads its record only once it has exited.
   if (dryRun && !main) {
-    replaceOnNewHits(
+    writeOnNewHits(
       deps.every,
       () => record(natural),
-      (current) => deps.replaceRecord(path, current),
+      (current) => deps.writeRecord(path, current),
     );
   }
 }
 
-/** Calls `replace` every `recordIntervalMs` once the record counts more hits than at its last call. */
-function replaceOnNewHits(
+/** Calls `write` every `recordIntervalMs` once the record counts more hits than at its last call. */
+function writeOnNewHits(
   every: LzRecordDependencies['every'],
   record: () => ProcessRecord,
-  replace: (record: ProcessRecord) => void,
+  write: (record: ProcessRecord) => void,
 ): void {
-  let replacedHits = 0;
+  let writtenHits = 0;
   every(() => {
     const current = record();
     const hits = lzHits(current.mutantCoverage);
 
-    if (hits === replacedHits) {
+    if (hits === writtenHits) {
       return;
     }
 
-    replacedHits = hits;
+    writtenHits = hits;
 
     try {
-      replace(current);
+      write(current);
     } catch {
       // The run that reads the record can be over, with its directory removed, while the process still runs.
     }

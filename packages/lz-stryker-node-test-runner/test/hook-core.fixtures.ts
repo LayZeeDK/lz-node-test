@@ -226,7 +226,6 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     writeRecord: (path, record) => {
       records.push({ path, record: lzParseRecord(JSON.stringify(record)) });
     },
-    replaceRecord: () => {},
     every: () => {},
     exit: (code) => {
       exits.push(code);

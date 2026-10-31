@@ -42,8 +42,7 @@ install({
   onExit: (listener) => process.on('exit', listener),
   offExit: (listener) => process.off('exit', listener),
   onBeforeExit: (listener) => process.on('beforeExit', listener),
-  writeRecord: (path, record) => writeFileSync(path, JSON.stringify(record)),
-  replaceRecord: (path, record) => {
+  writeRecord: (path, record) => {
     writeFileSync(lzTempRecordPath(path), JSON.stringify(record));
     renameSync(lzTempRecordPath(path), path);
   },

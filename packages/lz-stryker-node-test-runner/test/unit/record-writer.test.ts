@@ -28,7 +28,6 @@ function fakeProcess(overrides: Partial<LzRecordDependencies>) {
   let signalExitEmitters: readonly unknown[] = [];
   const raised: LzEndingSignal[] = [];
   const records: Written[] = [];
-  const replaced: Written[] = [];
   const intervals: { readonly ms: number; readonly fire: () => void }[] = [];
   const deps: LzRecordDependencies = {
     onExit: (listener) => {
@@ -40,9 +39,6 @@ function fakeProcess(overrides: Partial<LzRecordDependencies>) {
     onBeforeExit: () => {},
     writeRecord: (to, record) => {
       records.push({ path: to, record });
-    },
-    replaceRecord: (to, record) => {
-      replaced.push({ path: to, record });
     },
     every: (fire, ms) => {
       intervals.push({ ms, fire });
@@ -67,7 +63,6 @@ function fakeProcess(overrides: Partial<LzRecordDependencies>) {
   return {
     deps,
     records,
-    replaced,
     intervals,
     raised,
     exit: () => [...exitListeners].forEach((listener) => listener()),
@@ -176,7 +171,7 @@ describe('lzHits', () => {
 describe('lzPersistRecord, in the dry run, for a process that ends without running its exit listeners', () => {
   const descendant = { main: false, dryRun: true };
 
-  it('replaces the record of a process the tests started every 250 ms, once its coverage has grown', () => {
+  it('writes the record of a process the tests started every 250 ms, once its coverage has grown, as it writes every record', () => {
     const p = persisted(descendant);
     const tick = () => p.intervals.forEach(({ fire }) => fire());
 
@@ -193,7 +188,7 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
     tick();
 
     assert.deepEqual(
-      p.replaced.map(({ path: to, record }) => [to, record.mutantCoverage]),
+      p.records.map(({ path: to, record }) => [to, record.mutantCoverage]),
       [
         [path, { static: { 1: 1 }, perTest: {} }],
         [path, { static: { 1: 2 }, perTest: {} }],
@@ -204,15 +199,15 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
   lzTestFor<readonly [string, { readonly main: boolean; readonly dryRun: boolean }]>([
     ['outside the dry run', { main: false, dryRun: false }],
     ["in the test file's own process, whose record the runner ends it to write", { main: true, dryRun: true }],
-  ])('replaces no record %s', ([, options]) => {
+  ])('writes no record while the process runs %s', ([, options]) => {
     const { intervals } = persisted(options);
 
     assert.deepEqual(intervals, []);
   });
 
-  it('keeps the process running when its record can no longer be replaced, as when the run is over', () => {
+  it('keeps the process running when its record can no longer be written, as when the run is over', () => {
     const p = persisted(descendant, {
-      replaceRecord: () => {
+      writeRecord: () => {
         throw new Error('ENOENT: no such file or directory');
       },
     });
