@@ -29,8 +29,11 @@ const windowsReader: LzProcessReader = {
   parse: lzParseSamples,
 };
 
-// A process that ends between the glob and the read makes cat complain, so its stderr is dropped.
-const procSample = 'cat /proc/[0-9]*/stat 2>/dev/null; echo --';
+// Each stat line, a tab and the command line with its NULs, newlines and tabs turned into spaces. A process that
+// ends between the glob and the reads is skipped, and its read errors are dropped.
+const procSample =
+  'for d in /proc/[0-9]*; do { read -r s < "$d/stat" && c=$(tr \'\\0\\n\\t\' \'   \' < "$d/cmdline") && ' +
+  'printf \'%s\\t%s\\n\' "$s" "$c"; } 2>/dev/null; done; echo --';
 
 const linuxReader: LzProcessReader = {
   command: 'sh',

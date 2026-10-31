@@ -52,9 +52,16 @@ function parseSamples(text: string, parse: (line: string) => LzProcessRow): LzPr
     );
 }
 
-/** See proc_pid_stat(5): the name sits in the last parentheses, and fields 4, 22 and 24 are ppid, starttime, rss. */
+/**
+ * See proc_pid_stat(5): the name sits in the last parentheses, and fields 4, 22 and 24 are ppid, starttime, rss. That
+ * name is the main thread's, `MainThread` for every Node.js process, so a command line after a tab names the process
+ * instead; the sampler turns its NULs, newlines and tabs into spaces, so the last tab starts it.
+ */
 function parseProcStat(line: string, pageSize: number): LzProcessRow {
-  const match = /^(\d+) \((.*)\) \S+ (\d+)(?: \S+){17} (\d+) \d+ (\d+)(?: \S+)*$/.exec(line);
+  const tab = line.lastIndexOf('\t');
+  const stat = tab === -1 ? line : line.slice(0, tab);
+  const commandLine = tab === -1 ? '' : line.slice(tab + 1).trim();
+  const match = /^(\d+) \((.*)\) \S+ (\d+)(?: \S+){17} (\d+) \d+ (\d+)(?: \S+)*$/.exec(stat);
 
   if (match === null) {
     throw new Error(`Not a /proc/<pid>/stat line: "${line}"`);
@@ -67,7 +74,7 @@ function parseProcStat(line: string, pageSize: number): LzProcessRow {
     ppid: Number(ppid),
     workingSetBytes: Number(rssPages) * pageSize,
     created: BigInt(startTime),
-    name,
+    name: commandLine === '' ? name : commandLine,
   };
 }
 

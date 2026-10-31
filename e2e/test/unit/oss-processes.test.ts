@@ -53,6 +53,15 @@ describe('lzParseProcSamples', () => {
     ]);
   });
 
+  it('names a process by its command line after the tab, and by its stat name when that is empty', () => {
+    const [sample] = lzParseProcSamples(`4096\n${init}\tnode --test test/a.test.js \n${tool}\t\n--\n`);
+
+    assert.deepEqual(
+      sample?.map(({ name }) => name),
+      ['node --test test/a.test.js', 'my (tool) x'],
+    );
+  });
+
   it('drops a sample that the stop cut short', () => {
     assert.equal(lzParseProcSamples(`4096\n${init}\n--\n${init}`).length, 1);
   });
