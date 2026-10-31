@@ -36,6 +36,11 @@ export type LzStrykerOptions =
       readonly coverageAnalysis: 'off';
     };
 
+/** The run folder's prefix, which the next run's dead-run sweep matches. */
+export const lzOssRunPrefix = 'lz-oss-driver-';
+/** A prepared folder stays for manual runs, so its prefix is one the sweep never matches. */
+export const lzOssPreparedPrefix = 'lz-oss-prepared-';
+
 const projects: readonly LzOssProject[] = [
   { name: 'env-schema', mutate: ['index.js'], testFiles: ['test/**/*.test.js'], command: 'node --test' },
   {

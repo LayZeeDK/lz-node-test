@@ -23,7 +23,7 @@ import {
   lzStryker,
   type LzStrykerRun,
 } from '../fixture.ts';
-import { lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
+import { lzOssPreparedPrefix, lzOssRunPrefix, lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
 import {
   lzDescendants,
   lzLeftovers,
@@ -92,7 +92,6 @@ interface LzSideRun {
 }
 
 const sides: readonly LzSide[] = ['lz', 'command'];
-const dirPrefix = 'lz-oss-driver-';
 const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
 /** How long processes that a run left get to end by themselves before they count as left behind. */
 const settleMs = 2_000;
@@ -101,8 +100,10 @@ const options = lzParseOptions(process.argv.slice(2));
 const out = resolve(options.out);
 
 mkdirSync(out, { recursive: true });
-lzRemoveDeadRunDirs(tmpdir(), dirPrefix);
-const root = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${process.pid}-`)));
+lzRemoveDeadRunDirs(tmpdir(), lzOssRunPrefix);
+const root = realpathSync.native(
+  mkdtempSync(join(tmpdir(), `${options.prepareOnly ? lzOssPreparedPrefix : lzOssRunPrefix}${process.pid}-`)),
+);
 // Beside the copy, not in it, so that no folder of the project can collide with them.
 const dir = join(root, 'project');
 const runTmp = join(root, 'tmp');

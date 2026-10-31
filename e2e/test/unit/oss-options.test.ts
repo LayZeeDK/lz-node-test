@@ -1,7 +1,37 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { lzParseOptions, lzStrykerConfig, lzStrykerOptions, type LzOssProject } from '../../src/oss/options.ts';
+import { lzRemoveDeadRunDirs } from '../../src/fixture.ts';
+import {
+  lzOssPreparedPrefix,
+  lzOssRunPrefix,
+  lzParseOptions,
+  lzStrykerConfig,
+  lzStrykerOptions,
+  type LzOssProject,
+} from '../../src/oss/options.ts';
+
+describe('run folder prefixes', () => {
+  it("lets the dead-run sweep remove a dead run's folder and keep a dead prepared run's", (t) => {
+    const dir = mkdtempSync(join(tmpdir(), 'lz-oss-prefixes-'));
+    const deadPid = spawnSync(process.execPath, ['-e', ''], { windowsHide: true }).pid;
+
+    t.after(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    [lzOssRunPrefix, lzOssPreparedPrefix].forEach((prefix) => {
+      mkdirSync(join(dir, `${prefix}${deadPid}-a`));
+    });
+
+    lzRemoveDeadRunDirs(dir, lzOssRunPrefix);
+
+    assert.deepEqual(readdirSync(dir), [`${lzOssPreparedPrefix}${deadPid}-a`]);
+  });
+});
 
 const required = ['--project', 'env-schema', '--source', 'D:/clone', '--out', 'D:/out', '--concurrency', '5'];
 
