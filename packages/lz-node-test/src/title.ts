@@ -163,21 +163,21 @@ function interpolate(text: string, items: readonly unknown[]): string {
       return match;
     }
 
-    const element = index ? attribute(items, path) : undefined;
-    const value = fromObject ? attribute(first, path, element) : element;
+    const own = fromObject ? attribute(first, path) : undefined;
+    const value = own === undefined && index ? attribute(items, path) : own;
 
     return typeof value === 'string' ? truncate(value) : render(value);
   });
 }
 
-function attribute(source: unknown, path: string, fallback?: unknown): unknown {
+function attribute(source: unknown, path: string): unknown {
   let value = source;
 
   for (const key of path.replace(/\[(\d+)\]/g, '.$1').split('.')) {
     value = Reflect.get(new Object(value), key);
 
     if (value === undefined) {
-      return fallback;
+      return undefined;
     }
   }
 
