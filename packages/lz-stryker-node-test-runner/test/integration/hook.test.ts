@@ -25,7 +25,7 @@ import reporter from '../../src/reporter.ts';
 
 // Loaded here, outside any test, the hook stays inactive (the runner did not start this process, or its own hook is
 // installed), and Stryker counts the hook's mutants as covered by every test, including those that run it in a child.
-const { activeResources, exit, later } = await import('../../src/hook.ts');
+const { activeResources, exit, later, now } = await import('../../src/hook.ts');
 
 shareCompileCache();
 
@@ -303,6 +303,21 @@ describe('hook', () => {
     later(callback, 250);
 
     assert.deepEqual([timers, unrefs], [[[callback, 250]], 1]);
+  });
+
+  it('keeps reading the clock when a test replaces process.hrtime, as fake timers do', () => {
+    const real = process.hrtime;
+    const before = Number(real.bigint()) / 1e6;
+    let read: number;
+
+    try {
+      process.hrtime = Object.assign((): [number, number] => [0, 5], { bigint: () => 5n });
+      read = now();
+    } finally {
+      process.hrtime = real;
+    }
+
+    assert.ok(read >= before, `${read} ms, before the ${before} ms read ahead of it`);
   });
 
   it("lists the process's active resources", () => {

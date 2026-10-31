@@ -31,6 +31,11 @@ export const later: HookDependencies['later'] = (callback, ms) => {
   setTimeout(callback, ms).unref();
 };
 
+// Found once, so that a test that fakes process.hrtime, as fake timers do, leaves the clock of every span alone.
+const hrtime = process.hrtime.bigint;
+
+export const now: HookDependencies['now'] = () => Number(hrtime()) / 1e6;
+
 install({
   env: process.env,
   mainFile: process.argv[1] ? resolve(process.argv[1]) : undefined,
@@ -66,7 +71,7 @@ install({
     return worker;
   },
   callSites: getCallSites,
-  now: () => Number(process.hrtime.bigint()) / 1e6,
+  now,
   signals:
     process.platform === 'win32'
       ? undefined
