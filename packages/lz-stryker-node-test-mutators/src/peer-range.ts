@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 
-import { isObject, isString, member } from './instrumenter.ts';
+import { isObject, isString, member } from './guards.ts';
 import { lzPackageName } from './operator.ts';
 
 const ownPackageJson = '@layzee/lz-stryker-node-test-mutators/package.json';

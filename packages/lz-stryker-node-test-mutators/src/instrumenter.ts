@@ -7,7 +7,8 @@ import { pathToFileURL } from 'node:url';
 
 import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
-import { lzPackageName, operatorBuilders, type BabelTypes } from './operator.ts';
+import { hasMember, isFunction, isNumber, isObject, isString, member } from './guards.ts';
+import { operatorBuilders, type BabelTypes } from './operator.ts';
 
 const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 const nothing = () => undefined;
@@ -148,43 +149,6 @@ function importFile(path: string): Promise<unknown> {
   return import(pathToFileURL(path).href);
 }
 
-/** Every function is assignable to it, and `Reflect.apply` and `Reflect.construct` call it. */
-type AnyFunction = (...args: never) => unknown;
-
-export function member<T>(value: unknown, key: string, check: (member: unknown) => member is T, source: string): T {
-  const found: unknown = isObject(value) ? Reflect.get(value, key) : undefined;
-
-  if (!check(found)) {
-    throw new Error(`${lzPackageName}: ${source} has no ${key} of the shape this module reads.`);
-  }
-
-  return found;
-}
-
-function hasMember<TKey extends string, T>(
-  value: unknown,
-  key: TKey,
-  check: (member: unknown) => member is T,
-): value is Record<TKey, T> {
-  return typeof value === 'object' && value !== null && check(Reflect.get(value, key));
-}
-
-function isFunction(value: unknown): value is AnyFunction {
-  return typeof value === 'function';
-}
-
-export function isObject(value: unknown): value is object {
-  return typeof value === 'object' && value !== null;
-}
-
-export function isString(value: unknown): value is string {
-  return typeof value === 'string';
-}
-
-function isNumber(value: unknown): value is number {
-  return typeof value === 'number';
-}
-
 function isMutatorList(value: unknown): value is ListedMutator[] {
   return Array.isArray(value) && value.every(isListedMutator);
 }
@@ -198,9 +162,7 @@ function isListedMutator(value: unknown): value is ListedMutator {
  * the consumer's @babel/core is a newer patch than the instrumenter's.
  */
 function isBabelTypes(value: unknown): value is BabelTypes {
-  return (
-    typeof value === 'object' && value !== null && operatorBuilders.every((key) => isFunction(Reflect.get(value, key)))
-  );
+  return isObject(value) && operatorBuilders.every((key) => isFunction(Reflect.get(value, key)));
 }
 
 function isMutantList(value: unknown): value is InstrumentedMutant[] {
