@@ -1,9 +1,7 @@
 // The memory watchdog: a worker thread that ends its process once the process holds more memory than its limit. It
 // guards mutant runs, and a dry run under lzStrykerNodeTest.maxMemoryMB, against Node.js's assertion diff, which grows with the
 // square of the lines it compares (nodejs/node#62792). node-assert-diff.test.ts fails once a Node.js release fixes it.
-import { writeFileSync } from 'node:fs';
-
-import type { ProcessRecord } from './record.ts';
+import { lzWriteRecord, type ProcessRecord } from './record.ts';
 
 export function workersAllowed(permission: { has(scope: string): boolean } | undefined): boolean {
   return permission?.has('worker') !== false;
@@ -20,7 +18,7 @@ export interface WatchdogData {
 export function checkMemory(
   { limitMB, recordPath }: WatchdogData,
   rssBytes: number,
-  write: (path: string, data: string) => void = writeFileSync,
+  write: (path: string, record: ProcessRecord) => void = lzWriteRecord,
   kill: (pid: number, signal: NodeJS.Signals) => void = process.kill,
 ): void {
   const rssMB = Math.round(rssBytes / 1048576);
@@ -29,7 +27,7 @@ export function checkMemory(
     const record = { tests: [], memoryLimitReached: { rssMB, limitMB } } satisfies ProcessRecord;
 
     try {
-      write(recordPath, JSON.stringify(record));
+      write(recordPath, record);
     } finally {
       kill(process.pid, 'SIGKILL');
     }

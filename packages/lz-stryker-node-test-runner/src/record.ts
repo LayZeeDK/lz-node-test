@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { renameSync, writeFileSync } from 'node:fs';
 
 import type { MutantCoverage, Position } from '@stryker-mutator/api/core';
 
@@ -128,6 +129,24 @@ export function memoryRecordName(pid: number, nonce: string): string {
 /** Where a record is written before it is renamed to `path`, so that a reader finds every record whole. */
 export function lzTempRecordPath(path: string): string {
   return `${path}.tmp`;
+}
+
+/** The file system calls `lzWriteRecord` makes. */
+export interface LzRecordFiles {
+  readonly write: (path: string, data: string) => void;
+  readonly rename: (from: string, to: string) => void;
+}
+
+const nodeFiles: LzRecordFiles = { write: writeFileSync, rename: renameSync };
+
+/**
+ * Writes `record` to `lzTempRecordPath(path)` and renames that over `path`, so that a reader finds the record whole, and
+ * a kill during the write leaves the one before.
+ */
+export function lzWriteRecord(path: string, record: ProcessRecord, files: LzRecordFiles = nodeFiles): void {
+  const temp = lzTempRecordPath(path);
+  files.write(temp, JSON.stringify(record));
+  files.rename(temp, path);
 }
 
 const recordNamePattern = /^\d+\.(?:\d+(?:\.[\da-f-]+)?|[\da-f-]+\.memory)\.json$/;

@@ -35,7 +35,6 @@ import {
   envNames,
   lzIsRecordName,
   lzParseRecord,
-  recordName,
   testId,
   within,
   type LzTimeWindow,
@@ -700,8 +699,6 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         ...groupOptions(process.platform),
       });
       const { exitCode, stderr } = await processEnd(child, process.platform);
-      // processEnd rejects for a process that failed to start, the only kind without a pid.
-      const mainRecord = child.pid === undefined ? undefined : recordName(child.pid, 0);
       let unreadable: string | undefined;
       const records = readdirSync(outDir)
         .filter(lzIsRecordName)
@@ -709,11 +706,9 @@ export class LzStrykerNodeTestRunner implements TestRunner {
           try {
             return [lzParseRecord(readFileSync(join(outDir, name), 'utf8'))];
           } catch (error) {
-            // A process that the tests started can still be writing its record when the grace period ends. The test
-            // file's own process writes its record before it exits, unless the memory watchdog ends it mid-write.
-            if (name === mainRecord) {
-              unreadable = error instanceof Error ? error.message : String(error);
-            }
+            // lzWriteRecord leaves a whole record or none, so this is a file that something else wrote at a record's
+            // name, or one that cannot be read.
+            unreadable = `${name}: ${error instanceof Error ? error.message : String(error)}`;
 
             return [];
           }

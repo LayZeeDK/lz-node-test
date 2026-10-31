@@ -1,11 +1,10 @@
-import { renameSync, writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { extname, resolve } from 'node:path';
 import { getCallSites } from 'node:util';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 
 import { install, writesAllowed, type HookDependencies } from './hook-core.ts';
-import { envNames, lzRecordNonce, lzTempRecordPath } from './record.ts';
+import { envNames, lzRecordNonce, lzWriteRecord } from './record.ts';
 import { workersAllowed } from './watchdog.ts';
 
 // The memory watchdog's thread runs this script, where Stryker sees no coverage, so it only starts watchdog.ts's watch,
@@ -48,10 +47,7 @@ install({
   onExit: (listener) => process.on('exit', listener),
   offExit: (listener) => process.off('exit', listener),
   onBeforeExit: (listener) => process.on('beforeExit', listener),
-  writeRecord: (path, record) => {
-    writeFileSync(lzTempRecordPath(path), JSON.stringify(record));
-    renameSync(lzTempRecordPath(path), path);
-  },
+  writeRecord: lzWriteRecord,
   every: (callback, ms) => {
     setInterval(callback, ms).unref();
   },

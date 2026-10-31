@@ -13,7 +13,7 @@ function check(rssBytes: number) {
   checkMemory(
     data,
     rssBytes,
-    (path, json) => writes.push([path, JSON.parse(json)]),
+    (path, record) => writes.push([path, record]),
     (pid, signal) => kills.push([pid, signal]),
   );
 

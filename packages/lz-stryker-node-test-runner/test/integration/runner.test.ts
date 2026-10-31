@@ -340,19 +340,22 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.equal(pipes(), pipesBefore);
   });
 
-  it('leaves out a record that a process the tests started has not finished writing', async (t) => {
+  it("reports a test file as an error when a file at another process's record name does not parse", async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import { writeFileSync } from 'node:fs';",
         "import { join } from 'node:path';",
-        "it('passes', () => { writeFileSync(join(process.env.LZ_STRYKER_NODE_TEST_OUT, 'half.json'), '{'); });",
+        'it(\'passes\', () => { writeFileSync(join(process.env.LZ_STRYKER_NODE_TEST_OUT, `${process.pid}.1.json`), "{"); });',
       ),
     });
     const runner = await initRunner(['a.test.mjs']);
 
-    const { tests } = complete(await settle(runner.dryRun(dryRun)));
+    const result = await settle(runner.dryRun(dryRun));
 
-    assert.deepEqual(summary(tests), [passed(`${join(dir, 'a.test.mjs')} > passes`)]);
+    assert.strictEqual(result.status, DryRunStatus.Error);
+    const prefix = `Unreadable test results for "${join(dir, 'a.test.mjs')}": `;
+    assert.ok(result.errorMessage.startsWith(prefix), result.errorMessage);
+    assert.match(result.errorMessage.slice(prefix.length), /^\d+\.1\.json: /);
   });
 
   lzTestFor<readonly [string, string]>([

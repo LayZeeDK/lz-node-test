@@ -9,6 +9,7 @@ import {
   lzParseRecord,
   lzRecordNonce,
   lzTempRecordPath,
+  lzWriteRecord,
   memoryRecordName,
   recordName,
   testId,
@@ -80,6 +81,27 @@ describe('lzIsRecordName', () => {
     '4321.0.js',
   ])('takes %s as no record', (name) => {
     assert.equal(lzIsRecordName(name), false);
+  });
+});
+
+describe('lzWriteRecord', () => {
+  it('writes the record to its temporary file and renames that over the record', () => {
+    const path = join('/out', recordName(4321, 0));
+    const calls: unknown[][] = [];
+
+    lzWriteRecord(
+      path,
+      { tests: [] },
+      {
+        write: (to, data) => calls.push(['write', to, data]),
+        rename: (from, to) => calls.push(['rename', from, to]),
+      },
+    );
+
+    assert.deepEqual(calls, [
+      ['write', lzTempRecordPath(path), '{"tests":[]}'],
+      ['rename', lzTempRecordPath(path), path],
+    ]);
   });
 });
 
