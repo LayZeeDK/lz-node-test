@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import type { LoadHookContext, ResolveHookContext } from 'node:module';
 import { join } from 'node:path';
+import { compileFunction } from 'node:vm';
 
 import { install, wrappedNodeTest, type HookDependencies, type ModuleHooks, type TestEvent } from '../src/hook-core.ts';
 import { envNames, lzParseRecord, lzRecordNonce, type ProcessRecord } from '../src/record.ts';
@@ -326,7 +327,7 @@ export async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
     }
 
     const commonjs: { exports: unknown } = { exports: undefined };
-    Reflect.apply(new Function('module', sourceFor(['node', 'require'])), undefined, [commonjs]);
+    Reflect.apply(compileFunction(sourceFor(['node', 'require']), ['module']), undefined, [commonjs]);
 
     return { module, commonjs: commonjs.exports };
   } finally {

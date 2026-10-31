@@ -177,6 +177,8 @@ export default [
       '@typescript-eslint/no-unnecessary-type-conversion': 'error',
       '@typescript-eslint/no-unnecessary-type-parameters': 'error',
       '@typescript-eslint/no-base-to-string': 'error',
+      'no-implied-eval': 'off',
+      '@typescript-eslint/no-implied-eval': 'error',
       // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature
       // refuses; this one allows it under that flag.
       'dot-notation': 'off',
