@@ -26,6 +26,11 @@ function isWaitedFor(path: NodePath): boolean {
 
 /** A `try` block, which its `catch` and `finally` wait for, or a `catch` clause, which a `finally` waits for. */
 function isWaitedForBlock(path: NodePath): boolean {
+  // The search reaches the Program, whose parentPath is null, when a parser option allows a return outside a function.
+  if (path.isProgram()) {
+    return false;
+  }
+
   const { parentPath } = path;
 
   // Stryker disable next-line ConditionalExpression: equivalent, as only a try statement has a block or a handler

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { parseSync, traverse, types } from '@babel/core';
+
 import { lzTestEach } from '@layzee/lz-node-test';
 import { returnAwait } from '../../src/return-await.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
@@ -53,5 +55,22 @@ describe('LzReturnAwait', () => {
     ['an await that is part of the returned value', guarded('return (await load()).value;')],
   ])('leaves %s alone', async (_title, source) => {
     assert.deepEqual(await mutantsOf(returnAwait, source), []);
+  });
+
+  it('leaves alone a return await at the top level of a script that allows a return outside a function', () => {
+    const file = parseSync('return await load();\n', {
+      babelrc: false,
+      configFile: false,
+      parserOpts: { allowReturnOutsideFunction: true },
+    });
+    assert.ok(file);
+    const mutants: unknown[] = [];
+    traverse(file, {
+      AwaitExpression(path) {
+        mutants.push(...returnAwait.mutate(path, types));
+      },
+    });
+
+    assert.deepEqual(mutants, []);
   });
 });
