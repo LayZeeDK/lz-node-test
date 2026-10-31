@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { assertMethod, importOf } from './bindings.ts';
+import { assertMethod, importOf, isTestContext, propertyName } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 const message = 'Stryker';
@@ -90,10 +90,8 @@ function isNodeTest(path: NodePath, callee: types.Node): boolean {
 
   return (
     callee.type === 'MemberExpression' &&
-    !callee.computed &&
-    callee.property.type === 'Identifier' &&
-    callee.property.name === 'test' &&
+    propertyName(callee) === 'test' &&
     callee.object.type === 'Identifier' &&
-    path.scope.getBinding(callee.object.name)?.kind === 'param'
+    isTestContext(path, callee.object)
   );
 }

@@ -6,6 +6,7 @@ export const nodeAssert: ReadonlySet<string> = new Set([
   'assert',
   'assert/strict',
 ]);
+const nodeProcess: ReadonlySet<string> = new Set(['node:process', 'process']);
 
 interface ImportOf {
   readonly source: string;
@@ -58,11 +59,16 @@ function isTestContextAssert(path: NodePath, callee: types.Node, root: types.Ide
     callee.object.type === 'MemberExpression' &&
     callee.object.object === root &&
     propertyName(callee.object) === 'assert' &&
-    path.scope.getBinding(root.name)?.kind === 'param'
+    isTestContext(path, root)
   );
 }
 
-function propertyName(member: types.Node): string | undefined {
+/** A parameter, which node:test passes the test context in. */
+export function isTestContext(path: NodePath, identifier: types.Identifier): boolean {
+  return path.scope.getBinding(identifier.name)?.kind === 'param';
+}
+
+export function propertyName(member: types.Node): string | undefined {
   return member.type === 'MemberExpression' && !member.computed && member.property.type === 'Identifier'
     ? member.property.name
     : undefined;
@@ -74,8 +80,6 @@ export function isNodeAssertCall(path: NodePath, call: types.CallExpression): bo
 
   return source !== undefined && nodeAssert.has(source);
 }
-
-const nodeProcess: ReadonlySet<string> = new Set(['node:process', 'process']);
 
 /** The global `process`, or the default or namespace import of `node:process`. */
 export function isProcess(path: NodePath, receiver: types.Node): boolean {

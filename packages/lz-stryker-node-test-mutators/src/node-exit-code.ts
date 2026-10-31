@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { isProcess } from './bindings.ts';
+import { isProcess, propertyName } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 /**
@@ -14,23 +14,18 @@ export const nodeExitCode: Operator = {
     const assignment = path.parent;
 
     if (
-      path.isNumericLiteral() &&
-      path.key === 'right' &&
-      assignment.type === 'AssignmentExpression' &&
-      assignment.operator === '=' &&
-      isExitCode(path, assignment.left)
+      !path.isNumericLiteral() ||
+      assignment.type !== 'AssignmentExpression' ||
+      assignment.operator !== '=' ||
+      !isExitCode(path, assignment.left)
     ) {
-      yield t.numericLiteral(path.node.value === 0 ? 1 : 0);
+      return;
     }
+
+    yield t.numericLiteral(path.node.value === 0 ? 1 : 0);
   },
 };
 
 function isExitCode(path: NodePath, target: types.Node): boolean {
-  return (
-    target.type === 'MemberExpression' &&
-    !target.computed &&
-    target.property.type === 'Identifier' &&
-    target.property.name === 'exitCode' &&
-    isProcess(path, target.object)
-  );
+  return target.type === 'MemberExpression' && propertyName(target) === 'exitCode' && isProcess(path, target.object);
 }
