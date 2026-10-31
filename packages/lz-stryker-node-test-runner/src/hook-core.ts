@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
+import { isNumber, isObject } from './guards.ts';
 import {
   afterHookId,
   envNames,
@@ -95,6 +96,29 @@ export interface HookDependencies {
   readonly global: { -readonly [TKey in keyof GlobalSlots]: GlobalSlots[TKey] };
   /** The clock of every `LzTimeWindow`. */
   readonly now: () => number;
+  /**
+   * The process's signals; undefined on Windows, where every kill is `TerminateProcess`, which runs no listener, and a
+   * SIGINT listener would keep Ctrl+C from ending the process.
+   */
+  readonly signals: LzProcessSignals | undefined;
+}
+
+export type LzEndingSignal = 'SIGTERM' | 'SIGINT' | 'SIGHUP';
+
+/** The signals that end a process that does not listen for them; `kill()` sends SIGTERM by default. */
+export const lzEndingSignals: readonly LzEndingSignal[] = ['SIGTERM', 'SIGINT', 'SIGHUP'];
+
+export interface LzProcessSignals {
+  readonly on: (signal: LzEndingSignal, listener: () => void) => void;
+  readonly off: (signal: LzEndingSignal, listener: () => void) => void;
+  readonly listenerCount: (signal: LzEndingSignal) => number;
+  /**
+   * The emitters through which signal-exit counts its listeners, whatever is in their place: version 4's on
+   * `globalThis[Symbol.for('signal-exit emitter')]`, version 3's on `process.__signal_exit_emitter__`.
+   */
+  readonly signalExitEmitters: () => readonly unknown[];
+  /** Sends the process `signal` again. */
+  readonly raise: (signal: LzEndingSignal) => void;
 }
 
 /**
@@ -265,7 +289,43 @@ export function install(deps: HookDependencies): boolean {
   });
   deps.onExit(write);
 
+  if (deps.signals && deps.canWriteRecords) {
+    writeOnEndingSignals(deps.signals, write);
+  }
+
   return true;
+}
+
+/** How many listeners signal-exit has for each signal, which leave how the process ends to any other listener. */
+function signalExitListeners(signals: LzProcessSignals): number {
+  return signals
+    .signalExitEmitters()
+    .reduce<number>(
+      (sum, emitter) => sum + (isObject(emitter) && isNumber(emitter['count']) ? emitter['count'] : 0),
+      0,
+    );
+}
+
+/**
+ * Writes the record when a signal would end the process, which runs no exit listener then. When no other listener
+ * decides how the process ends, the hook stops listening and raises the signal again, so the process ends by it as it
+ * would without the hook, as signal-exit does.
+ */
+function writeOnEndingSignals(signals: LzProcessSignals, write: () => void): void {
+  const listeners = lzEndingSignals.map((signal) => ({
+    signal,
+    listener: () => {
+      write();
+
+      if (signals.listenerCount(signal) - 1 > signalExitListeners(signals)) {
+        return;
+      }
+
+      listeners.forEach((entry) => signals.off(entry.signal, entry.listener));
+      signals.raise(signal);
+    },
+  }));
+  listeners.forEach(({ signal, listener }) => signals.on(signal, listener));
 }
 
 interface Ending {

@@ -61,4 +61,19 @@ install({
   },
   callSites: getCallSites,
   now: () => Number(process.hrtime.bigint()) / 1e6,
+  signals:
+    process.platform === 'win32'
+      ? undefined
+      : {
+          on: (signal, listener) => process.on(signal, listener),
+          off: (signal, listener) => process.off(signal, listener),
+          listenerCount: (signal) => process.listenerCount(signal),
+          signalExitEmitters: () => {
+            const version4: unknown = Reflect.get(globalThis, Symbol.for('signal-exit emitter'));
+            const version3: unknown = Reflect.get(process, '__signal_exit_emitter__');
+
+            return [version4, version3];
+          },
+          raise: (signal) => process.kill(process.pid, signal),
+        },
 });

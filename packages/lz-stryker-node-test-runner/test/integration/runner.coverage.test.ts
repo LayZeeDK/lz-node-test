@@ -251,6 +251,35 @@ describe('LzStrykerNodeTestRunner coverage', () => {
     });
   });
 
+  it(
+    'keeps the coverage of a child process that the test ends with child.kill() right after it covered a line',
+    // eslint-disable-next-line node-test/no-skip-test -- POSIX only, with the reason as its value
+    { skip: process.platform === 'win32' && 'Windows has no signals to catch: every kill is TerminateProcess' },
+    async (t) => {
+      const child = `${cover} cover('killed'); process.send('covered'); setInterval(() => {}, 1_000);`;
+      const dir = project(t, {
+        'a.test.mjs': fixture(
+          "import { spawn } from 'node:child_process';",
+          "import { once } from 'node:events';",
+          "it('kills', async () => {",
+          `  const child = spawn(process.execPath, ['-e', ${JSON.stringify(child)}], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });`,
+          "  await once(child, 'message');",
+          '  child.kill();',
+          "  await once(child, 'exit');",
+          '});',
+        ),
+      });
+      const runner = await initRunner(['a.test.mjs']);
+
+      const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+      assert.deepEqual(fixtureCoverage(mutantCoverage), {
+        static: {},
+        perTest: { [`${join(dir, 'a.test.mjs')} > kills`]: { killed: 1 } },
+      });
+    },
+  );
+
   it('runs the tests of a suite or test asking for concurrency one at a time, for coverage of their own', async (t) => {
     const interleaved = (name: string) =>
       `async () => { cover('${name} 1'); await new Promise((resolve) => setImmediate(resolve)); cover('${name} 2'); }`;

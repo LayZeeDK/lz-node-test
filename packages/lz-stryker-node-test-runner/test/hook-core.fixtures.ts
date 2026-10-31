@@ -3,7 +3,15 @@ import { randomUUID } from 'node:crypto';
 import type { LoadHookContext, ResolveHookContext } from 'node:module';
 import { join } from 'node:path';
 
-import { install, wrappedNodeTest, type HookDependencies, type ModuleHooks, type TestEvent } from '../src/hook-core.ts';
+import {
+  install,
+  lzEndingSignals,
+  wrappedNodeTest,
+  type HookDependencies,
+  type LzEndingSignal,
+  type ModuleHooks,
+  type TestEvent,
+} from '../src/hook-core.ts';
 import { envNames, lzParseRecord, type ProcessRecord } from '../src/record.ts';
 import type { NodeTestModule } from '../src/wrap.ts';
 
@@ -185,6 +193,15 @@ export interface Harness {
   readonly timers: readonly { readonly ms: number; readonly fire: () => void }[];
   /** Sets what `process.getActiveResourcesInfo()` lists from then on, as the tests open or close things; at first `PipeWrap`. */
   readonly listResources: (resources: readonly string[]) => void;
+  /** The signals the hook sent its own process. */
+  readonly raised: readonly LzEndingSignal[];
+  /** Sets what the hook finds as signal-exit's emitters; at first none. */
+  readonly useSignalExit: (emitters: readonly unknown[]) => void;
+  /** Adds a signal listener as the test file would, after the hook's. */
+  readonly listen: (signal: LzEndingSignal, listener: () => void) => void;
+  /** Runs the listeners of `signal` as Node.js does when the process gets it. */
+  readonly signal: (signal: LzEndingSignal) => void;
+  readonly listenerCounts: () => Record<string, number | undefined>;
 }
 
 export function harness(env: Record<string, string | undefined>, overrides: Partial<HookDependencies> = {}): Harness {
@@ -197,6 +214,9 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
   const exits: Harness['exits'][number][] = [];
   const timers: Harness['timers'][number][] = [];
   let resources: readonly string[] = ['PipeWrap'];
+  const signalListeners: { readonly signal: LzEndingSignal; readonly listener: () => void }[] = [];
+  let signalExitEmitters: readonly unknown[] = [];
+  const raised: LzEndingSignal[] = [];
   const deps: HookDependencies = {
     env,
     mainFile: testFile,
@@ -243,6 +263,20 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     },
     callSites: () => [],
     now: () => 0,
+    signals: {
+      on: (signal, listener) => {
+        signalListeners.push({ signal, listener });
+      },
+      off: (signal, listener) => {
+        const index = signalListeners.findIndex((entry) => entry.signal === signal && entry.listener === listener);
+        signalListeners.splice(index, 1);
+      },
+      listenerCount: (signal) => signalListeners.filter((entry) => entry.signal === signal).length,
+      signalExitEmitters: () => signalExitEmitters,
+      raise: (signal) => {
+        raised.push(signal);
+      },
+    },
     ...overrides,
   };
 
@@ -254,6 +288,18 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     hooks,
     exits,
     timers,
+    raised,
+    useSignalExit: (emitters) => {
+      signalExitEmitters = emitters;
+    },
+    listen: (signal, listener) => {
+      signalListeners.push({ signal, listener });
+    },
+    signal: (signal) => {
+      signalListeners.filter((entry) => entry.signal === signal).forEach((entry) => entry.listener());
+    },
+    listenerCounts: () =>
+      Object.fromEntries(lzEndingSignals.map((signal) => [signal, deps.signals?.listenerCount(signal)])),
     listResources: (now) => {
       resources = now;
     },

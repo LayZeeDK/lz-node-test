@@ -12,6 +12,7 @@ import { Worker } from 'node:worker_threads';
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
   installed,
+  lzEndingSignals,
   reporting,
   type GlobalSlots,
   type HookDependencies,
@@ -28,16 +29,18 @@ const { activeResources, exit, later } = await import('../../src/hook.ts');
 
 shareCompileCache();
 
+/** Loads the hook as in a process the runner started; it leaves no listener behind, and counts the signal listeners. */
 async function loadRunnerStartedHook(
   outDir: string,
   env: Record<string, string> = {},
-): Promise<Record<'exit' | 'beforeExit', ((code: number) => void)[]>> {
+): Promise<Record<'exit' | 'beforeExit', ((code: number) => void)[]> & { signals: Record<string, number> }> {
   const global: HookDependencies['global'] = globalThis;
   const previousMark = global[installed];
   const previousEnv = Object.values(envNames)
     .filter((key) => key !== envNames.current)
     .map((key): readonly [string, string | undefined] => [key, process.env[key]]);
   const listeners = { exit: process.listeners('exit'), beforeExit: process.listeners('beforeExit') };
+  const signalListeners = lzEndingSignals.map((signal) => ({ signal, before: process.listeners(signal) }));
 
   for (const [key] of previousEnv) {
     delete process.env[key];
@@ -68,6 +71,14 @@ async function loadRunnerStartedHook(
   return {
     exit: takeAddedListeners('exit', listeners.exit),
     beforeExit: takeAddedListeners('beforeExit', listeners.beforeExit),
+    signals: Object.fromEntries(
+      signalListeners.map(({ signal, before }) => {
+        const added = process.listeners(signal).filter((listener) => !before.includes(listener));
+        added.forEach((listener) => process.removeListener(signal, listener));
+
+        return [signal, added.length];
+      }),
+    ),
   };
 }
 
@@ -93,11 +104,16 @@ function tempDir(t: TestContext): string {
 }
 
 /** It keeps Stryker's active mutant, so a mutant in hook.ts reaches the process that loads it. */
-async function runWithHook(args: string[], env: Record<string, string>): Promise<{ code: number | null; pid: number }> {
+function hookedEnv(env: Record<string, string>): NodeJS.ProcessEnv {
   const dropped: string[] = ['NODE_OPTIONS', 'NODE_TEST_CONTEXT', ...Object.values(envNames)];
   const base = Object.fromEntries(Object.entries(process.env).filter(([key]) => !dropped.includes(key)));
+
+  return { ...base, ...env };
+}
+
+async function runWithHook(args: string[], env: Record<string, string>): Promise<{ code: number | null; pid: number }> {
   const child = spawn(process.execPath, ['--import', hookUrl, reporterArg, ...args], {
-    env: { ...base, ...env },
+    env: hookedEnv(env),
     stdio: 'ignore',
   });
 
@@ -174,6 +190,9 @@ describe('hook', () => {
 
     assert.deepEqual(hookEnv(), before);
     assert.deepEqual([added.exit.length, added.beforeExit.length], [1, 1]);
+    // Windows has no signals to catch: every kill there is TerminateProcess.
+    const signalListeners = process.platform === 'win32' ? 0 : 1;
+    assert.deepEqual(added.signals, { SIGTERM: signalListeners, SIGINT: signalListeners, SIGHUP: signalListeners });
 
     added.exit[0]?.(0);
 
@@ -672,6 +691,50 @@ describe('hook', () => {
     assert.equal(code, 0);
     assert.deepEqual(readRecords(outDir), {});
   });
+});
+
+describe('hook, in a process that a signal ends', () => {
+  const noSignals = process.platform === 'win32' && 'Windows has no signals to catch: every kill is TerminateProcess';
+
+  /** Starts a process the runner's test file started, running `script` once it says it is ready, and sends `signal`. */
+  async function signalled(t: TestContext, script: string, signal: NodeJS.Signals) {
+    const outDir = tempDir(t);
+    const child = spawn(process.execPath, ['--import', hookUrl, '-e', `${script} process.send('ready');`], {
+      env: hookedEnv({ [envNames.out]: outDir }),
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+    });
+    const exited = once(child, 'exit');
+    await once(child, 'message');
+    child.kill(signal);
+    await exited;
+
+    return { code: child.exitCode, signalCode: child.signalCode, records: Object.keys(readRecords(outDir)) };
+  }
+
+  lzTestFor<readonly [NodeJS.Signals]>([['SIGTERM'], ['SIGINT'], ['SIGHUP']])(
+    'writes the record of a process that %s ends, which ends by that signal as it would without the hook',
+    { skip: noSignals },
+    async ([signal], t) => {
+      const { code, signalCode, records } = await signalled(t, 'setInterval(() => {}, 1_000);', signal);
+
+      assert.deepEqual([code, signalCode], [null, signal]);
+      assert.equal(records.length, 1);
+    },
+  );
+
+  it(
+    'writes the record of a process with a SIGTERM listener of its own, which decides how the process ends',
+    // eslint-disable-next-line node-test/no-skip-test -- POSIX only, with the reason as its value
+    { skip: noSignals },
+    async (t) => {
+      const script = "process.on('SIGTERM', () => process.exit(7)); setInterval(() => {}, 1_000);";
+
+      const { code, signalCode, records } = await signalled(t, script, 'SIGTERM');
+
+      assert.deepEqual([code, signalCode], [7, null]);
+      assert.equal(records.length, 1);
+    },
+  );
 });
 
 describe('reporter', () => {
