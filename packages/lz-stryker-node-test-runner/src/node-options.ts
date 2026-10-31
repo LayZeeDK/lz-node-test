@@ -9,7 +9,7 @@ export function lzNodeOptionArgs(nodeOptions: string | undefined): string[] {
  * as `-`.
  */
 function optionRest(arg: string, name: string): string | undefined {
-  const option = arg.replaceAll('"', '').replace(/^[^=]*/, (optionName) => optionName.replaceAll('_', '-'));
+  const option = arg.replaceAll('"', '').replace(/[^=]*/, (optionName) => optionName.replaceAll('_', '-'));
 
   return option === name || option.startsWith(`${name}=`) ? option.slice(name.length) : undefined;
 }
@@ -19,6 +19,7 @@ function optionRest(arg: string, name: string): string | undefined {
  * runner's reporter is the only one; node refuses more reporters than destinations.
  */
 export function withoutReporters(args: readonly string[]): string[] {
+  // Stryker disable next-line StringLiteral: equivalent, as any default but a bare reporter option keeps the first argument
   const reporterOption = (arg = '') =>
     optionRest(arg, '--test-reporter') ?? optionRest(arg, '--test-reporter-destination');
 
