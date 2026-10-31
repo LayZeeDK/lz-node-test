@@ -1,7 +1,8 @@
 # @layzee/lz-stryker-node-test-mutators
 
 Extra [StrykerJS](https://stryker-mutator.io/) mutators for code that uses Node.js APIs and `node:assert`, plus a set
-for mutating test files. It is ESM only and needs Node.js 22.18 or later. It works with any Stryker test runner.
+for mutating test files. It is ESM only, needs Node.js 22.18 or later, and is tested on Node.js 22 and 24. It works
+with any Stryker test runner.
 
 ## Install
 
@@ -32,7 +33,8 @@ export default {
 ```
 
 Import it in the configuration file, not through `plugins`. Stryker only warns when a module in `plugins` fails to
-load, while a failed import stops the run.
+load, while a failed import stops the run. The configuration file must be an ES module, such as `stryker.config.mjs`,
+or `stryker.config.js` in a package with `"type": "module"`, as a JSON configuration cannot import a module.
 
 | Mutator             | What it changes                                                                                                                                                                                                                                                                                                                                           |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -42,6 +44,12 @@ load, while a failed import stops the run.
 | `LzAwaitStatement`  | Removes a statement that only awaits a call, such as `await flush();`. Stryker removes a call statement but not an awaited one, so a lint rule that adds `await` to a floating promise would hide the call from mutation testing. As Stryker does for a call statement, it leaves a statement with another mutant inside it, such as `await flush('x');`. |
 | `LzReturnAwait`     | Turns `return await x` into `return x` inside a `try` block, where the `catch` and `finally` then no longer wait for `x`, and inside a `catch` block that a `finally` block follows. A survivor is a rejection or a cleanup whose timing no test sees.                                                                                                    |
 | `LzNodeExitCode`    | Flips the number that `process.exitCode = N` sets, from the global `process` or `node:process`: 0 becomes 1 and any other number 0. A survivor is an exit status that no test checks.                                                                                                                                                                     |
+
+`LzNodeExitCode` suits code that a test runs in a child process and whose exit code the test reads, such as a CLI.
+Code that sets `process.exitCode` in the test's own process sets the exit code of the test run instead. With
+`@layzee/lz-stryker-node-test-runner`, the mutant that turns 0 into 1 then makes the test file exit with code 1 while
+no test fails, which Stryker reports as a `RuntimeError`, not as `Survived`. A mutant of an assignment that an
+uncaught exception follows is equivalent, as Node.js then exits with code 1 whatever `process.exitCode` holds.
 
 ## Mutate test files
 
@@ -70,4 +78,13 @@ The mutators' names work in Stryker's disable comments like Stryker's own mutato
 ```js
 // Stryker disable next-line LzNodeTimerDelay: the delay only spaces out retries
 setTimeout(retry, 100);
+```
+
+A disable comment for `LzAssertStatement` names `CallExpression` too. Stryker's `CallExpression` mutator removes a call
+statement that no other mutant shares, so with the `LzAssertStatement` mutant ignored, its removal of the statement
+comes back:
+
+```js
+// Stryker disable next-line LzAssertStatement,CallExpression: callers never pass an empty list
+assert.ok(items.length > 0);
 ```
