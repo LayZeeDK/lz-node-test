@@ -452,6 +452,8 @@ export class LzStrykerNodeTestRunner implements TestRunner {
    * the throwaway fixtures of the tests, and Node's default directory would grow with every run.
    */
   #cacheDir?: string;
+  /** Stryker's pool disposes a runner whose init has not settled yet, so dispose waits for it. */
+  #initialized?: Promise<void>;
   readonly #patterns: string[];
   readonly #nodeArgs: string[];
   readonly #dryRunConcurrency: number;
@@ -479,7 +481,13 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     return { reloadEnvironment: true };
   }
 
-  async init(): Promise<void> {
+  init(): Promise<void> {
+    this.#initialized = this.#init();
+
+    return this.#initialized;
+  }
+
+  async #init(): Promise<void> {
     const { node } = process.versions;
 
     if (!supportsNode(node)) {
@@ -515,6 +523,8 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   }
 
   async dispose(): Promise<void> {
+    await Promise.allSettled([this.#initialized]);
+
     if (this.#cacheDir !== undefined) {
       await removeDir(this.#cacheDir, this.#log);
     }

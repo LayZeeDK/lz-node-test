@@ -153,6 +153,25 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.deepEqual(ownCacheDirs(), before);
   });
 
+  it('removes its compile cache directory when Stryker disposes it before init settles', async (t) => {
+    project(t, { 'a.test.mjs': passing });
+    const before = ownCacheDirs();
+    t.after(() => {
+      process.env['NODE_COMPILE_CACHE'] = compileCache;
+    });
+    delete process.env['NODE_COMPILE_CACHE'];
+    const runner = new LzStrykerNodeTestRunner(
+      strykerOptions({ lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } }),
+      logger(),
+    );
+
+    const initialized = runner.init();
+    await runner.dispose();
+    await initialized;
+
+    assert.deepEqual(ownCacheDirs(), before);
+  });
+
   it('creates no compile cache directory when the environment names one', async (t) => {
     const dir = project(t, { 'a.test.mjs': writesOnLoad('cache-dir.txt', 'process.env.NODE_COMPILE_CACHE') });
     const before = ownCacheDirs();
