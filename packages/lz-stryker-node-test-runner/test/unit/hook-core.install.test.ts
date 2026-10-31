@@ -260,6 +260,23 @@ describe('install', () => {
     );
   });
 
+  it('neither listens for the end nor follows the coverage of a process that may not write its record', () => {
+    const persisting: string[] = [];
+    const { deps, calls } = harness(
+      { [envNames.out]: out, [envNames.dryRun]: 'true' },
+      {
+        mainFile: '/repo/child.mjs',
+        canWriteRecords: false,
+        every: () => persisting.push('every'),
+        onBeforeExit: () => persisting.push('onBeforeExit'),
+      },
+    );
+
+    install(deps);
+
+    assert.deepEqual([...calls, ...persisting], []);
+  });
+
   it('writes no record in a process that may not write one', () => {
     const { deps, records, exit } = installedHarness(fileEnv, { canWriteRecords: false });
     report(deps, 'passes', 'pass');

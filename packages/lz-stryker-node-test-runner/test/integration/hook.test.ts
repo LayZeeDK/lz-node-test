@@ -12,7 +12,6 @@ import { Worker } from 'node:worker_threads';
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
   installed,
-  lzEndingSignals,
   reporting,
   type GlobalSlots,
   type HookDependencies,
@@ -21,6 +20,7 @@ import {
 } from '../../src/hook-core.ts';
 import { fixture, grows, hookUrl, reporterArg, shareCompileCache } from '../runner.fixtures.ts';
 import { envNames, lzParseRecord, type ProcessRecord } from '../../src/record.ts';
+import { lzEndingSignals } from '../../src/record-writer.ts';
 import reporter from '../../src/reporter.ts';
 
 // Loaded here, outside any test, the hook stays inactive (the runner did not start this process, or its own hook is

@@ -2,9 +2,8 @@ import type { LoadHookSync, ResolveHookSync } from 'node:module';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { InstrumenterContext, MutantCoverage, Position } from '@stryker-mutator/api/core';
+import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
-import { isNumber, isObject } from './guards.ts';
 import {
   afterHookId,
   envNames,
@@ -16,6 +15,7 @@ import {
   type ProcessRecord,
   type RecordedTest,
 } from './record.ts';
+import { lzPersistRecord, type LzRecordDependencies } from './record-writer.ts';
 import type { WatchdogData } from './watchdog.ts';
 import { settling, wrapNodeTest, type Body, type NodeTestModule, type NodeTestTarget } from './wrap.ts';
 
@@ -55,7 +55,7 @@ export interface GlobalSlots {
 }
 
 /** What the hook takes from the process, and the global object whose slots it sets. */
-export interface HookDependencies {
+export interface HookDependencies extends LzRecordDependencies {
   readonly env: Record<string, string | undefined>;
   readonly mainFile: string | undefined;
   readonly pid: number;
@@ -63,15 +63,6 @@ export interface HookDependencies {
   readonly threadId: number;
   readonly nodeTest: () => NodeTestTarget;
   readonly registerHooks: (hooks: ModuleHooks) => unknown;
-  readonly onExit: (listener: () => void) => void;
-  readonly offExit: (listener: () => void) => void;
-  /** Registers a `beforeExit` listener, which a process that ends by itself calls and `process.exit()` skips. */
-  readonly onBeforeExit: (listener: () => void) => void;
-  readonly writeRecord: (path: string, record: ProcessRecord) => void;
-  /** Writes the record to `<path>.tmp` and renames that over `path`, so a reader finds either record whole. */
-  readonly replaceRecord: (path: string, record: ProcessRecord) => void;
-  /** Calls `callback` every `ms` without keeping the process alive. */
-  readonly every: (callback: () => void, ms: number) => void;
   /** Ends the process as `process.exit` does, with `process.exitCode` when no code is given. */
   readonly exit: (code?: number) => void;
   /** `process.getActiveResourcesInfo`. */
@@ -100,46 +91,6 @@ export interface HookDependencies {
   readonly global: { -readonly [TKey in keyof GlobalSlots]: GlobalSlots[TKey] };
   /** The clock of every `LzTimeWindow`. */
   readonly now: () => number;
-  /**
-   * The process's signals; undefined on Windows, where every kill is `TerminateProcess`, which runs no listener, and a
-   * SIGINT listener would keep Ctrl+C from ending the process.
-   */
-  readonly signals: LzProcessSignals | undefined;
-}
-
-/**
- * How often a process the tests started writes its record in the dry run. One write of a 500 KiB coverage map takes
- * about 10 ms, and counting its hits to see whether it changed about 2 ms.
- */
-const recordIntervalMs = 250;
-
-/** How many hits `coverage` counts; it only grows, as instrumented code adds mutants and counts up. */
-export function lzHits(coverage: MutantCoverage | undefined): number {
-  if (coverage === undefined) {
-    return 0;
-  }
-
-  return [coverage.static, ...Object.values(coverage.perTest)]
-    .flatMap((hits) => Object.values(hits))
-    .reduce((sum, count) => sum + count, 0);
-}
-
-export type LzEndingSignal = 'SIGTERM' | 'SIGINT' | 'SIGHUP';
-
-/** The signals that end a process that does not listen for them; `kill()` sends SIGTERM by default. */
-export const lzEndingSignals: readonly LzEndingSignal[] = ['SIGTERM', 'SIGINT', 'SIGHUP'];
-
-export interface LzProcessSignals {
-  readonly on: (signal: LzEndingSignal, listener: () => void) => void;
-  readonly off: (signal: LzEndingSignal, listener: () => void) => void;
-  readonly listenerCount: (signal: LzEndingSignal) => number;
-  /**
-   * The emitters through which signal-exit counts its listeners, whatever is in their place: version 4's on
-   * `globalThis[Symbol.for('signal-exit emitter')]`, version 3's on `process.__signal_exit_emitter__`.
-   */
-  readonly signalExitEmitters: () => readonly unknown[];
-  /** Sends the process `signal` again. */
-  readonly raise: (signal: LzEndingSignal) => void;
 }
 
 /**
@@ -222,7 +173,6 @@ export function install(deps: HookDependencies): boolean {
   const testFile = deps.env[envNames.file];
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
   let summarized = false;
-  let natural = false;
   let end: Ending | undefined;
 
   if (main) {
@@ -281,8 +231,11 @@ export function install(deps: HookDependencies): boolean {
     deps.registerHooks(redirectNodeTest(Object.keys(wrapped)));
   }
 
-  const recordPath = join(outDir, recordName(deps.pid, deps.threadId));
-  const record = (): ProcessRecord => {
+  if (!deps.canWriteRecords) {
+    return true;
+  }
+
+  const record = (natural: boolean): ProcessRecord => {
     const outcome = end?.outcome();
 
     return {
@@ -298,85 +251,9 @@ export function install(deps: HookDependencies): boolean {
       ...(main && { testSpans: Object.fromEntries(testSpans) }),
     };
   };
-  const write = () => {
-    if (deps.canWriteRecords) {
-      deps.writeRecord(recordPath, record());
-    }
-  };
-
-  // Node.js runs no exit listener that is added while the process exits, so the record goes behind the exit listeners
-  // of the tests here, where a process that ends by itself still runs code. process.exit() skips `beforeExit`.
-  deps.onBeforeExit(() => {
-    natural = true;
-    deps.offExit(write);
-    deps.onExit(write);
-  });
-  deps.onExit(write);
-
-  if (deps.signals && deps.canWriteRecords) {
-    writeOnEndingSignals(deps.signals, write);
-  }
-
-  // A process the tests started can end without its exit listeners, as `worker.terminate()` and every kill on Windows
-  // end it, so in the one run that reads coverage its record follows the coverage while it runs. The test file's own
-  // process does not need it: the runner reads its record only once it has exited.
-  if (dryRun && !main && deps.canWriteRecords) {
-    replaceOnNewHits(deps.every, ns, () => deps.replaceRecord(recordPath, record()));
-  }
+  lzPersistRecord(deps, join(outDir, recordName(deps.pid, deps.threadId)), record, { main, dryRun });
 
   return true;
-}
-
-/** Calls `replace` every `recordIntervalMs` once `ns` has counted more hits than at its last call. */
-function replaceOnNewHits(every: HookDependencies['every'], ns: InstrumenterContext, replace: () => void): void {
-  let replacedHits = 0;
-  every(() => {
-    const hits = lzHits(ns.mutantCoverage);
-
-    if (hits === replacedHits) {
-      return;
-    }
-
-    replacedHits = hits;
-
-    try {
-      replace();
-    } catch {
-      // The run that reads the record can be over, with its directory removed, while the process still runs.
-    }
-  }, recordIntervalMs);
-}
-
-/** How many listeners signal-exit has for each signal, which leave how the process ends to any other listener. */
-function signalExitListeners(signals: LzProcessSignals): number {
-  return signals
-    .signalExitEmitters()
-    .reduce<number>(
-      (sum, emitter) => sum + (isObject(emitter) && isNumber(emitter['count']) ? emitter['count'] : 0),
-      0,
-    );
-}
-
-/**
- * Writes the record when a signal would end the process, which runs no exit listener then. When no other listener
- * decides how the process ends, the hook stops listening and raises the signal again, so the process ends by it as it
- * would without the hook, as signal-exit does.
- */
-function writeOnEndingSignals(signals: LzProcessSignals, write: () => void): void {
-  const listeners = lzEndingSignals.map((signal) => ({
-    signal,
-    listener: () => {
-      write();
-
-      if (signals.listenerCount(signal) - 1 > signalExitListeners(signals)) {
-        return;
-      }
-
-      listeners.forEach((entry) => signals.off(entry.signal, entry.listener));
-      signals.raise(signal);
-    },
-  }));
-  listeners.forEach(({ signal, listener }) => signals.on(signal, listener));
 }
 
 interface Ending {
