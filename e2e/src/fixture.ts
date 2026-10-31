@@ -15,7 +15,8 @@ const pinnedNames: readonly string[] = [
   '@types/node',
 ];
 const strykerBin = join('node_modules', '@stryker-mutator', 'core', 'bin', 'stryker.js');
-const reportFile = join('reports', 'mutation', 'mutation.json');
+/** Where `lzStryker` has Stryker write its JSON report, relative to the run's folder. */
+export const lzReportFile = join('reports', 'mutation', 'mutation.json');
 export const lzStrykerTimeoutMs = 15 * 60_000;
 const dirPrefix = 'lz-node-test-e2e-';
 const runDirPattern = new RegExp(`^${dirPrefix}(\\d+)-`);
@@ -122,7 +123,7 @@ function reportOf(run: LzStrykerRun): LzReport {
 /** Runs `stryker run` in `dir`, whose `tmp` folder must exist: the run gets it as its temporary directory. */
 export async function lzStryker(dir: string, configFile: string, concurrency: number): Promise<LzStrykerRun> {
   const tmp = join(dir, 'tmp');
-  const report = join(dir, reportFile);
+  const report = join(dir, lzReportFile);
   const before = new Set(readdirSync(tmp));
 
   // A second run on the same install must not read the first one's report.

@@ -14,7 +14,7 @@ import { performance } from 'node:perf_hooks';
 import timers from 'node:timers/promises';
 
 import { lzExec } from '../exec.ts';
-import { lzInstall, lzPack, lzRemoveOnExit, lzStryker } from '../fixture.ts';
+import { lzInstall, lzPack, lzRemoveOnExit, lzReportFile, lzStryker } from '../fixture.ts';
 import { lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
 import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessRow } from './processes.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
@@ -22,7 +22,6 @@ import { lzCompare, lzScore } from './verdicts.ts';
 
 const sides: readonly LzSide[] = ['lz', 'command'];
 const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
-const reportFile = join('reports', 'mutation', 'mutation.json');
 /** How long processes that a run left get to end by themselves before they count as left behind. */
 const settleMs = 2_000;
 
@@ -97,7 +96,7 @@ async function runSide(side: LzSide) {
   writeFileSync(join(out, `${side}.log`), run.output);
 
   if (run.reported) {
-    copyFileSync(join(dir, reportFile), join(out, `${side}.mutation.json`));
+    copyFileSync(join(dir, lzReportFile), join(out, `${side}.mutation.json`));
   }
 
   const strykerTmp = join(dir, '.stryker-tmp');
