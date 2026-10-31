@@ -214,7 +214,7 @@ describe('lzFileError', () => {
       readonly string[],
     ]
   >([
-    ['trimmed stderr', 1, '  \nline 1\nline 2 \n', [], ['Stderr:', 'line 1', 'line 2']],
+    ['trimmed stderr', 1, '  \nline 1\nline 2 \n', [], ['Stderr, at most its last 8 KiB:', 'line 1', 'line 2']],
     ['no stderr', 3, ' \n', [], []],
     ['the missing exit code of a killed process', null, '', [], []],
     [
@@ -222,7 +222,7 @@ describe('lzFileError', () => {
       1,
       'out',
       [{ diagnostics: ['late 1'] }, {}, { diagnostics: ['late 2'] }],
-      ['Diagnostics:', 'late 1', 'late 2', 'Stderr:', 'out'],
+      ['Diagnostics:', 'late 1', 'late 2', 'Stderr, at most its last 8 KiB:', 'out'],
     ],
     [
       'what held it open, which hid an error raised after a test ended',

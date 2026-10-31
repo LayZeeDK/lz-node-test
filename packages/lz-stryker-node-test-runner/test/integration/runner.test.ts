@@ -275,7 +275,7 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.ok(!existsSync(left), `left behind: ${left}`);
   });
 
-  it('keeps multi-byte characters intact in stderr that spans several reads', async (t) => {
+  it('keeps the multi-byte characters of the last 8 KiB of stderr that spans several reads intact', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture("process.stderr.write('\\u20ac'.repeat(100_000));", 'process.exitCode = 5;'),
     });
@@ -286,7 +286,8 @@ describe('LzStrykerNodeTestRunner', () => {
       2_000,
     );
 
-    assert.equal(stderr, String.fromCodePoint(0x20ac).repeat(100_000));
+    // 8192 bytes of three-byte characters: 2730 whole ones after the cut one.
+    assert.equal(stderr, String.fromCodePoint(0x20ac).repeat(2730));
   });
 
   it('ends a run whose test file writes more to stdout than a pipe holds', async (t) => {

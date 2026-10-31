@@ -225,6 +225,19 @@ describe('processEnd', () => {
     assert.deepEqual(await settled(), { exitCode: 3, stderr: 'first second' });
   });
 
+  lzTestFor<readonly [string, readonly string[], string]>([
+    ['the last 8 KiB of stderr', ['dropped', 'x'.repeat(8191), 'y'], `${'x'.repeat(8191)}y`],
+    ['whole characters of the last 8 KiB of stderr', ['€'.repeat(3000)], '€'.repeat(2730)],
+  ])('keeps %s', async ([, writes, kept]) => {
+    const { child, settled } = ending();
+    writes.forEach((chunk) => child.stderr.write(chunk));
+    await settled();
+    child.emit('exit', 1);
+    child.emit('close', 1);
+
+    assert.deepEqual(await settled(), { exitCode: 1, stderr: kept });
+  });
+
   it('stops waiting out the grace period once stderr closes', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const { child, settled } = ending();

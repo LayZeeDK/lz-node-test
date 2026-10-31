@@ -18,6 +18,16 @@ const pollMs = 10;
  */
 const closeGraceMs = 1_500;
 
+/** How much of a test file's stderr the runner keeps, from its end. */
+export const lzStderrTailBytes = 8 * 1024;
+
+/** `tail` as text, without the bytes of a character whose start it cut off. */
+function wholeCharacters(tail: Buffer): string {
+  const start = tail.findIndex((byte) => (byte & 0xc0) !== 0x80);
+
+  return tail.subarray(start === -1 ? tail.length : start).toString('utf8');
+}
+
 type Kill = (pid: number, signal: NodeJS.Signals | 0) => void;
 
 /** Sends `signal` to the group, where 0 only asks whether it is there; false when no process of the group is left. */
@@ -74,10 +84,10 @@ function groupLasts(pid: number, kill: Kill): Promise<boolean> {
 }
 
 /**
- * Waits for a process to end and collects its stderr. Processes it started inherit stderr and can keep it open after
- * it exits; the records of those that end soon arrive by the time stderr closes, so this waits for that, but at most
- * `closeGraceMs` after the exit, and then lets go of stderr. Then it ends what is left of the process's group on
- * `platform`, and settles once that is done.
+ * Waits for a process to end and collects the last `lzStderrTailBytes` of its stderr. Processes it started inherit
+ * stderr and can keep it open after it exits; the records of those that end soon arrive by the time stderr closes, so
+ * this waits for that, but at most `closeGraceMs` after the exit, and then lets go of stderr. Then it ends what is left
+ * of the process's group on `platform`, and settles once that is done.
  */
 export function processEnd(
   child: EndingProcess,
@@ -85,7 +95,7 @@ export function processEnd(
   kill: Kill = process.kill,
 ): Promise<{ exitCode: number | null; stderr: string }> {
   return new Promise((done, fail) => {
-    let errors = '';
+    let errors = Buffer.alloc(0);
     let grace: NodeJS.Timeout | undefined;
     let ended = false;
     const end = (code: number | null) => {
@@ -96,10 +106,12 @@ export function processEnd(
       ended = true;
       // A process that failed to start has no pid, and no group to end.
       const grouped = child.pid === undefined ? Promise.resolve() : endGroup(child.pid, platform, kill);
-      grouped.then(() => done({ exitCode: code, stderr: errors }), fail);
+      grouped.then(() => done({ exitCode: code, stderr: wholeCharacters(errors) }), fail);
     };
-    child.stderr.setEncoding('utf8');
-    child.stderr.on('data', (chunk: string) => (errors += chunk));
+    child.stderr.on('data', (chunk: Buffer) => {
+      const all = Buffer.concat([errors, chunk]);
+      errors = all.subarray(Math.max(0, all.length - lzStderrTailBytes));
+    });
     child.on('error', fail);
     child.on('exit', (code) => {
       grace = setTimeout(() => {
@@ -118,8 +130,7 @@ interface EndingProcess {
   /** undefined for a process that failed to start, as on ChildProcess. */
   readonly pid?: number | undefined;
   readonly stderr: {
-    setEncoding(encoding: 'utf8'): unknown;
-    on(event: 'data', listener: (chunk: string) => void): unknown;
+    on(event: 'data', listener: (chunk: Buffer) => void): unknown;
     destroy(): unknown;
   };
   on(event: 'error', listener: (error: Error) => void): unknown;

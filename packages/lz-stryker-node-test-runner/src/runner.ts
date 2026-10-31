@@ -30,7 +30,7 @@ import {
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isNumber, isObject, isStrings, optional } from './guards.ts';
 import { memoryLimits, peakMemoryDir, removePeaksOnExit, type MemoryLimits } from './memory-limits.ts';
-import { groupOptions, processEnd } from './process-end.ts';
+import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
   envNames,
   lzIsRecordName,
@@ -226,7 +226,10 @@ function nodeCommand(args: readonly string[]): string {
   return ['node', ...args.map((arg) => `"${arg}"`)].join(' ');
 }
 
-/** Reports a test file that failed outside its tests as Stryker's tap runner does: command, diagnostics, stderr. */
+/**
+ * Reports a test file that failed outside its tests as Stryker's tap runner does: command, diagnostics, and the tail of
+ * stderr that `processEnd` keeps.
+ */
 export function lzFileError(testFile: string, { records, exitCode, stderr, args, nodeOptions }: LzFileRun): string {
   const diagnostics = records.flatMap((record) => record.diagnostics ?? []);
   const heldOpen = records.flatMap((record) => record.heldOpen ?? []);
@@ -242,7 +245,7 @@ export function lzFileError(testFile: string, { records, exitCode, stderr, args,
         ]
       : []),
     ...(diagnostics.length > 0 ? ['Diagnostics:', ...diagnostics] : []),
-    ...(output ? ['Stderr:', output] : []),
+    ...(output ? [`Stderr, at most its last ${lzStderrTailBytes / 1024} KiB:`, output] : []),
   ].join('\n');
 }
 
