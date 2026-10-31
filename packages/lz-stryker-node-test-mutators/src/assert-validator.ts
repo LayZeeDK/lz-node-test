@@ -5,7 +5,7 @@ import type { Operator } from './operator.ts';
 
 const message = 'Stryker';
 const testFunctions: ReadonlySet<string | undefined> = new Set(['it', 'test']);
-const testModifiers: ReadonlySet<string | undefined> = new Set(['only', 'skip', 'todo']);
+const uncountedOptions: readonly string[] = ['skip', 'todo'];
 const labelKeys: ReadonlySet<string | undefined> = new Set(['label', 'match']);
 const matcherTypes: ReadonlySet<string> = new Set([
   'RegExpLiteral',
@@ -58,8 +58,14 @@ function expectsMatchedFailure(path: NodePath, call: types.CallExpression): bool
   return (
     options?.type === 'ObjectExpression' &&
     isMatcher(propertyValue(options, 'expectFailure')) &&
+    !uncountedOptions.some((key) => isSet(propertyValue(options, key))) &&
     isNodeTest(path, call.callee)
   );
+}
+
+/** Whether a `skip` or `todo` option is set, so the test never runs or its failure fails nothing. */
+function isSet(value: types.Node | undefined): boolean {
+  return value !== undefined && !(value.type === 'BooleanLiteral' && !value.value);
 }
 
 /**
@@ -108,10 +114,11 @@ function keyOf(property: types.ObjectExpression['properties'][number]): string |
 
 /**
  * node:test's `it` or `test`, as an import or a member of the module's default or namespace import, or the test
- * context's `test`; called as it is or through `only`, `skip` or `todo`.
+ * context's `test`; called as it is or through `only`. A `skip` test never runs and a `todo` test's failure fails
+ * nothing, so a mutant there would survive whatever the matcher.
  */
 function isNodeTest(path: NodePath, callee: types.Node): boolean {
-  const test = callee.type === 'MemberExpression' && testModifiers.has(propertyName(callee)) ? callee.object : callee;
+  const test = callee.type === 'MemberExpression' && propertyName(callee) === 'only' ? callee.object : callee;
 
   if (test.type === 'Identifier') {
     const from = importOf(path, test.name);
