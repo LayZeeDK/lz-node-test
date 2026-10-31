@@ -119,6 +119,8 @@ describe('formatTitle', () => {
     ['$a$b', [{ a: 1, b: 2, a$b: 3 }], '3'],
     ['$结果', [{ 结果: 'ok' }], 'ok'],
     ['$missing-$a', [{ a: 'x' }], 'undefined-x'],
+    ['$missing.constructor', [{ a: 'x' }], 'undefined'],
+    ['$0', [{ 0: 'own' }], 'own'],
     ['$a %o', [{ a: '%o' }], "%o { a: '%o' }"],
     ['%o', [{ a: '$b', b: 'yay' }], "{ a: '$b', b: 'yay' }"],
     ['$0, $1, $k1, $k2', [{ k1: 'v1' }, { k2: 'v2' }], "{ k1: 'v1' }, { k2: 'v2' }, v1, undefined"],
