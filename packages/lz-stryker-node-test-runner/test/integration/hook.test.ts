@@ -730,6 +730,20 @@ describe('hook, in a process that a signal ends', () => {
     };
   }
 
+  it(
+    "adds no signal listener to the test file's own process, which a test there could count",
+    // eslint-disable-next-line node-test/no-skip-test -- POSIX only, with the reason as its value
+    { skip: noSignals },
+    async (t) => {
+      const { code } = await runTestFile(
+        t,
+        fixture("it('counts', () => { assert.equal(process.listenerCount('SIGTERM'), 0); });"),
+      );
+
+      assert.equal(code, 0);
+    },
+  );
+
   lzTestFor<readonly [NodeJS.Signals]>([['SIGTERM'], ['SIGINT'], ['SIGHUP']])(
     'writes the record of a process that %s ends, which ends by that signal as it would without the hook',
     { skip: noSignals },

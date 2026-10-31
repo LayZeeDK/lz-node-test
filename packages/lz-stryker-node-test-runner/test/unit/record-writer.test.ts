@@ -109,6 +109,12 @@ describe('lzPersistRecord, for a process that a signal ends', () => {
     assert.deepEqual(listenerCounts(), { SIGTERM: 1, SIGINT: 1, SIGHUP: 1 });
   });
 
+  it("listens for no signal in the test file's own process, which nothing signals while it runs", () => {
+    const { listenerCounts } = persisted({ main: true, dryRun: false });
+
+    assert.deepEqual(listenerCounts(), noListeners);
+  });
+
   it('writes the record at exit where the platform has no signal to catch', () => {
     const windows = persisted(undefined, { signals: undefined });
 

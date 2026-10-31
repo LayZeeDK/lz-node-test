@@ -60,8 +60,8 @@ export function lzHits(coverage: MutantCoverage | undefined): number {
 
 /**
  * Writes the record of the process at `path` however the process ends: on exit, behind the exit listeners of the tests
- * when it ends by itself, on a signal that would end it, and, for a process the tests started, in the dry run while it
- * runs. `record` is told whether the process ends by itself.
+ * when it ends by itself, and, for a process the tests started, on a signal that would end it and in the dry run while
+ * it runs. `record` is told whether the process ends by itself.
  */
 export function lzPersistRecord(
   deps: LzRecordDependencies,
@@ -83,7 +83,8 @@ export function lzPersistRecord(
   });
   deps.onExit(write);
 
-  if (deps.signals) {
+  // Nothing signals the test file's own process while it runs: the runner reads its record once it has exited.
+  if (deps.signals && !main) {
     writeOnEndingSignals(deps.signals, write);
   }
 
