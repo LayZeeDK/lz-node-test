@@ -20,10 +20,10 @@ import {
   writesAllowed,
   type HookDependencies,
   type ModuleHooks,
-  type NodeTestModule,
   type TestEvent,
 } from '../../src/hook-core.ts';
 import { envNames, lzParseRecord, testId, uniqueIds, type ProcessRecord, type RecordedTest } from '../../src/record.ts';
+import type { NodeTestModule } from '../../src/wrap.ts';
 import {
   bodyOf,
   callable,
