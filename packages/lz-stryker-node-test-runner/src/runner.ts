@@ -88,7 +88,10 @@ interface LzFileRun {
   readonly records: readonly ProcessRecord[];
   readonly exitCode: number | null;
   readonly stderr: string;
-  readonly nodeArgs: readonly string[];
+  /** node's arguments after the runner's reporter: lzStrykerNodeTest.nodeArgs and the test file. */
+  readonly fileArgs: readonly string[];
+  /** The consumer's NODE_OPTIONS that the test file ran with, as `lzConsumerNodeOptions` gives them. */
+  readonly nodeOptions: readonly string[];
   readonly unreadable?: string;
 }
 
@@ -230,15 +233,16 @@ function nodeCommand(args: readonly string[]): string {
  * Reports a test file that failed outside its tests as Stryker's tap runner does: command, diagnostics, and the tail of
  * stderr that `processEnd` keeps.
  */
-export function lzFileError(testFile: string, { records, exitCode, stderr, nodeArgs }: LzFileRun): string {
+export function lzFileError(testFile: string, { records, exitCode, stderr, fileArgs, nodeOptions }: LzFileRun): string {
   const diagnostics = records.flatMap((record) => record.diagnostics ?? []);
   const heldOpen = records.flatMap((record) => record.heldOpen ?? []);
   const output = stderr.trim();
+  const withNodeOptions = nodeOptions.length > 0 ? ` with NODE_OPTIONS set to \`${nodeOptions.join(' ')}\`` : '';
 
   return [
     `Error running file "${testFile}": node exited with code ${exitCode} outside any test.`,
-    `To reproduce it without the mutant, run \`${nodeCommand(['--test', ...nodeArgs, testFile])}\` in ` +
-      `${process.cwd()}, without the runner's reporter and hook.`,
+    `To reproduce it without the mutant, run \`${nodeCommand(['--test', ...fileArgs])}\` in ` +
+      `${process.cwd()}${withNodeOptions}, without the runner's reporter and hook.`,
     ...(heldOpen.length > 0
       ? [
           `It stayed alive after its tests, held open by ${heldOpen.join(', ')}, until the runner ended it; node:test ` +
@@ -449,6 +453,11 @@ export function lzTestRunnerConcurrency(
   return checkers ? Math.max(Math.ceil(total / 2), 1) + Math.max(Math.floor(total / 2), 1) : total;
 }
 
+/** The arguments of NODE_OPTIONS in `base` that a test file runs with, after the runner's hook. */
+export function lzConsumerNodeOptions(base: NodeJS.ProcessEnv): string[] {
+  return withoutReporters(lzNodeOptionArgs(base['NODE_OPTIONS']));
+}
+
 export function lzRunEnv(
   base: NodeJS.ProcessEnv,
   file: string,
@@ -471,10 +480,7 @@ export function lzRunEnv(
   const env: NodeJS.ProcessEnv & { NODE_OPTIONS: string } = {
     ...Object.fromEntries(Object.entries(base).filter(([key]) => !runState.has(key))),
     // The hook comes first, so a copy of this runner under test takes precedence over the runner running it.
-    NODE_OPTIONS: [
-      `--import ${JSON.stringify(hookUrl)}`,
-      ...withoutReporters(lzNodeOptionArgs(base['NODE_OPTIONS'])),
-    ].join(' '),
+    NODE_OPTIONS: [`--import ${JSON.stringify(hookUrl)}`, ...lzConsumerNodeOptions(base)].join(' '),
     [envNames.out]: outDir,
     [envNames.file]: file,
     [envNames.dryRun]: String(run.dryRun),
@@ -697,7 +703,8 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         memoryLimitMB,
         heldOpenMs: shortenedHeldOpen.get(this),
       });
-      const args = [`--test-reporter=${reporterUrl}`, ...this.#nodeArgs, file];
+      const fileArgs = [...this.#nodeArgs, file];
+      const args = [`--test-reporter=${reporterUrl}`, ...fileArgs];
 
       if (this.#log.isDebugEnabled()) {
         this.#log.debug(`Running: \`${nodeCommand(args)}\` in ${process.cwd()}`);
@@ -724,7 +731,14 @@ export class LzStrykerNodeTestRunner implements TestRunner {
           }
         });
 
-      return { records, exitCode, stderr, nodeArgs: this.#nodeArgs, ...(unreadable && { unreadable }) };
+      return {
+        records,
+        exitCode,
+        stderr,
+        fileArgs,
+        nodeOptions: lzConsumerNodeOptions(process.env),
+        ...(unreadable && { unreadable }),
+      };
     } finally {
       await removeDir(runDir, this.#log);
     }

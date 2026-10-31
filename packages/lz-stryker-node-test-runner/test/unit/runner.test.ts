@@ -243,12 +243,29 @@ describe('lzFileError', () => {
       })),
       exitCode,
       stderr,
-      nodeArgs: ['--no-deprecation'],
+      fileArgs: ['--no-deprecation', file],
+      nodeOptions: [],
     };
 
     assert.equal(
       lzFileError(file, run),
       [`Error running file "${file}": node exited with code ${exitCode} outside any test.`, command, ...end].join('\n'),
+    );
+  });
+
+  it("names the test file's NODE_OPTIONS without the runner's hook and reporters", () => {
+    const run = {
+      records: [],
+      exitCode: 1,
+      stderr: '',
+      fileArgs: ['--stack-size=900', file],
+      nodeOptions: ['--import tsx', '--max-old-space-size=100'],
+    };
+
+    assert.equal(
+      lzFileError(file, run).split('\n')[1],
+      `To reproduce it without the mutant, run \`node "--test" "--stack-size=900" "${file}"\` in ${process.cwd()} ` +
+        "with NODE_OPTIONS set to `--import tsx --max-old-space-size=100`, without the runner's reporter and hook.",
     );
   });
 });

@@ -23,7 +23,7 @@ import {
   summary,
 } from '../runner.fixtures.ts';
 import { isRunning } from '../../src/dirs.ts';
-import { lzFileError } from '../../src/runner.ts';
+import { lzConsumerNodeOptions, lzFileError } from '../../src/runner.ts';
 
 shareCompileCache();
 
@@ -154,7 +154,8 @@ describe('LzStrykerNodeTestRunner endings', () => {
         records: [],
         exitCode,
         stderr: '',
-        nodeArgs: [],
+        fileArgs: [a],
+        nodeOptions: lzConsumerNodeOptions(process.env),
       }),
     });
   });
@@ -168,13 +169,23 @@ describe('LzStrykerNodeTestRunner endings', () => {
         'process.exitCode = 3;',
       ),
     });
+    const nodeOptions = process.env['NODE_OPTIONS'];
+    t.after(() => {
+      if (nodeOptions === undefined) {
+        delete process.env['NODE_OPTIONS'];
+      } else {
+        process.env['NODE_OPTIONS'] = nodeOptions;
+      }
+    });
+    process.env['NODE_OPTIONS'] = '--max-old-space-size=4096 --test-reporter=spec';
     const runner = await initRunner(['*.test.mjs'], { nodeArgs: ['--no-deprecation'] });
     const b = join(dir, 'b.test.mjs');
     const errorMessage = lzFileError(b, {
       records: [],
       exitCode: 3,
       stderr: 'first\nsecond\n',
-      nodeArgs: ['--no-deprecation'],
+      fileArgs: ['--no-deprecation', b],
+      nodeOptions: ['--max-old-space-size=4096'],
     });
 
     assert.deepEqual(await settle(runner.dryRun(dryRun)), { status: DryRunStatus.Error, errorMessage });
