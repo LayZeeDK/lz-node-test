@@ -42,6 +42,7 @@ const corpus = [
     "assert.throws(() => parse(''), /empty/);",
   ].join('\n'),
   "import { it } from 'node:test';\nit('works', (t) => {\n  t.assert.deepEqual(run(), []);\n});",
+  "import { it } from 'node:test';\nit('rejects a bad id', { expectFailure: /bad id/ }, () => parse('x'));",
 ];
 
 function callees(code: string): Set<string> {

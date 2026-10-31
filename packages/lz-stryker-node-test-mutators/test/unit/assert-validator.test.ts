@@ -34,4 +34,49 @@ describe('LzAssertValidator', () => {
   ])('leaves %s alone', async (_title, source) => {
     assert.deepEqual(await mutantsOf(assertValidator, source), []);
   });
+
+  const nodeTest = "import { it } from 'node:test';\n";
+  const expecting = (matcher: string) =>
+    `${nodeTest}it('rejects a bad id', { expectFailure: ${matcher} }, () => parse('x'));`;
+
+  lzTestEach([
+    ['a regular expression', expecting('/bad id/')],
+    ['an error class', expecting('TypeError')],
+    ['an object', expecting("{ code: 'ERR_BAD_ID' }")],
+    ['a function', expecting("(error) => error.code === 'ERR_BAD_ID'")],
+    ['a variable', expecting('badId')],
+    ['the match of a label', expecting("{ label: 'bad ids fail', match: /bad id/ }")],
+    ['a match with no label', expecting('{ match: /bad id/ }')],
+  ])('replaces the test function of an expectFailure that matches through %s', async (_title, source) => {
+    assert.deepEqual(await mutantsOf(assertValidator, source), [throws]);
+  });
+
+  lzTestEach([
+    ['the default import', "import test from 'node:test';\ntest('fails', { expectFailure: /x/ }, f);"],
+    [
+      'a renamed import of test',
+      "import { test as check } from 'node:test';\ncheck('fails', { expectFailure: /x/ }, f);",
+    ],
+    [
+      "the test context's test",
+      "it('parent', async (t) => {\n  await t.test('fails', { expectFailure: /x/ }, f);\n});",
+    ],
+  ])('replaces the test function of an expectFailure test made through %s', async (_title, source) => {
+    assert.deepEqual(await mutantsOf(assertValidator, source), [throws]);
+  });
+
+  lzTestEach([
+    ['a label', expecting("'a known bug'")],
+    ['a template label', expecting('`bug ${id}`')],
+    ['true', expecting('true')],
+    ['a label with no match', expecting("{ label: 'a known bug' }")],
+    ["a match that is a string, which node:test reads as the assertion's message", expecting("{ match: 'bad id' }")],
+    ['no expectFailure', `${nodeTest}it('parses', { timeout: 10 }, () => parse('x'));`],
+    ['no options', `${nodeTest}it('parses', () => parse('x'));`],
+    ['options passed whole', `${nodeTest}it('fails', options, f);`],
+    ['an it of another library', "import { it } from 'vitest';\nit('fails', { expectFailure: /x/ }, f);"],
+    ['an it of its own', "function it(...args: unknown[]) {}\nit('fails', { expectFailure: /x/ }, f);"],
+  ])('leaves a test with %s alone', async (_title, source) => {
+    assert.deepEqual(await mutantsOf(assertValidator, source), []);
+  });
 });

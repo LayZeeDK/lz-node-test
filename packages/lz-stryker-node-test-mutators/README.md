@@ -57,10 +57,10 @@ export default {
 };
 ```
 
-| Mutator             | What it changes                                                                                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `LzAssertCall`      | Makes an assertion fail. A survivor is a check whose failure nothing sees. A check that never runs comes out as `NoCoverage`.              |
-| `LzAssertValidator` | Makes the code that `assert.throws` or `assert.rejects` checks throw an unrelated error. A survivor is a validator that accepts any error. |
+| Mutator             | What it changes                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LzAssertCall`      | Makes an assertion fail. A survivor is a check whose failure nothing sees. A check that never runs comes out as `NoCoverage`.                                                                                                                                                                                                                                       |
+| `LzAssertValidator` | Makes the code that `assert.throws` or `assert.rejects` checks throw an unrelated error, and so the test function of a node:test test whose `expectFailure` is a matcher, such as `{ expectFailure: /bad id/ }` or the `match` of `{ label, match }`. A string `expectFailure` is only a label and is left alone. A survivor is a validator that accepts any error. |
 
 ## Turn a mutator off
 
