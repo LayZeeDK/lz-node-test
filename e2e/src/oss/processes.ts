@@ -2,7 +2,10 @@ export interface LzProcessRow {
   readonly pid: number;
   readonly ppid: number;
   readonly workingSetBytes: number;
-  /** Windows FILETIME of the start, so a reused process id is told apart from the process it replaced. */
+  /**
+   * The start: a FILETIME on Windows, clock ticks since boot on Linux. It tells a reused process id apart from the
+   * process it replaced.
+   */
   readonly created: bigint;
   readonly name: string;
 }
@@ -18,6 +21,26 @@ export interface LzProcessPeaks {
  * each sample. Text after the last `--` is a sample the stop cut short, and is dropped.
  */
 export function lzParseSamples(text: string): LzProcessRow[][] {
+  return parseSamples(text, parseRow);
+}
+
+/**
+ * Reads the Linux sampler's output: the page size in bytes on the first line, then each sample as the
+ * `/proc/<pid>/stat` lines of every process and a `--` line. Text after the last `--` is dropped.
+ */
+export function lzParseProcSamples(text: string): LzProcessRow[][] {
+  const [first = '', ...rest] = text.split('\n');
+
+  if (!/^\d+$/.test(first)) {
+    throw new Error(`Not a page size: "${first}"`);
+  }
+
+  const pageSize = Number(first);
+
+  return parseSamples(rest.join('\n'), (line) => parseProcStat(line, pageSize));
+}
+
+function parseSamples(text: string, parse: (line: string) => LzProcessRow): LzProcessRow[][] {
   return text
     .split(/^--\r?$/m)
     .slice(0, -1)
@@ -25,8 +48,27 @@ export function lzParseSamples(text: string): LzProcessRow[][] {
       sample
         .split(/\r?\n/)
         .filter((line) => line !== '')
-        .map(parseRow),
+        .map(parse),
     );
+}
+
+/** See proc_pid_stat(5): the name sits in the last parentheses, and fields 4, 22 and 24 are ppid, starttime, rss. */
+function parseProcStat(line: string, pageSize: number): LzProcessRow {
+  const match = /^(\d+) \((.*)\) \S+ (\d+)(?: \S+){17} (\d+) \d+ (\d+)(?: \S+)*$/.exec(line);
+
+  if (match === null) {
+    throw new Error(`Not a /proc/<pid>/stat line: "${line}"`);
+  }
+
+  const [, pid = '', name = '', ppid = '', startTime = '', rssPages = ''] = match;
+
+  return {
+    pid: Number(pid),
+    ppid: Number(ppid),
+    workingSetBytes: Number(rssPages) * pageSize,
+    created: BigInt(startTime),
+    name,
+  };
 }
 
 function parseRow(line: string): LzProcessRow {

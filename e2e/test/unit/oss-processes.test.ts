@@ -5,6 +5,7 @@ import {
   lzDescendants,
   lzLeftovers,
   lzNewEntries,
+  lzParseProcSamples,
   lzParseSamples,
   lzPeaks,
   type LzProcessRow,
@@ -33,6 +34,37 @@ describe('lzParseSamples', () => {
 
   it('refuses a line that is no process', () => {
     assert.throws(() => lzParseSamples('WARNING: slow\n--\n'), { message: 'Not a process line: "WARNING: slow"' });
+  });
+});
+
+describe('lzParseProcSamples', () => {
+  const init =
+    '1 (node) S 0 1 1 34816 1 4194560 21542 0 0 0 51 12 0 0 20 0 11 0 2845 1093210112 12880 18446744073709551615 1 1 0 0 0 0 0 16781312 134235650 0 0 0 17 3 0 0 0 0 0 0 0 0 0 0 0 0 0';
+  const tool =
+    '4021 (my (tool) x) R 1 4021 1 34816 4021 4194304 310 0 0 0 1 0 0 0 20 0 1 0 90210 2347008 512 18446744073709551615 1 1 0 0 0 0 0 0 0 0 0 0 17 5 0 0 0 0 0 0 0 0 0 0 0 0 0';
+
+  it('reads the page size, then each sample of /proc/<pid>/stat lines up to its -- line', () => {
+    assert.deepEqual(lzParseProcSamples(`4096\n${init}\n${tool}\n--\n${init}\n--\n`), [
+      [
+        { pid: 1, ppid: 0, workingSetBytes: 12880 * 4096, created: 2845n, name: 'node' },
+        { pid: 4021, ppid: 1, workingSetBytes: 512 * 4096, created: 90210n, name: 'my (tool) x' },
+      ],
+      [{ pid: 1, ppid: 0, workingSetBytes: 12880 * 4096, created: 2845n, name: 'node' }],
+    ]);
+  });
+
+  it('drops a sample that the stop cut short', () => {
+    assert.equal(lzParseProcSamples(`4096\n${init}\n--\n${init}`).length, 1);
+  });
+
+  it('refuses text that does not start with the page size', () => {
+    assert.throws(() => lzParseProcSamples(`${init}\n--\n`), { message: `Not a page size: "${init}"` });
+  });
+
+  it('refuses a line that is no /proc/<pid>/stat line', () => {
+    assert.throws(() => lzParseProcSamples('4096\n1 (node) S 0\n--\n'), {
+      message: 'Not a /proc/<pid>/stat line: "1 (node) S 0"',
+    });
   });
 });
 

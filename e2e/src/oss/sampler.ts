@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 
 import { lzExec } from '../exec.ts';
-import { lzParseSamples, type LzProcessRow } from './processes.ts';
+import { lzParseProcSamples, lzParseSamples, type LzProcessRow } from './processes.ts';
 
 export interface LzSampler {
   readonly pid: number;
@@ -10,12 +10,40 @@ export interface LzSampler {
   stop(): Promise<LzProcessRow[][]>;
 }
 
-const sampleScript =
+interface LzProcessReader {
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly sample: string;
+  readonly loop: string;
+  readonly parse: typeof lzParseSamples;
+}
+
+const win32Sample =
   "Get-CimInstance -ClassName Win32_Process -Property ProcessId,ParentProcessId,WorkingSetSize,CreationDate,Name | ForEach-Object { '{0} {1} {2} {3} {4}' -f $_.ProcessId, $_.ParentProcessId, $_.WorkingSetSize, $(if ($_.CreationDate) { $_.CreationDate.ToFileTimeUtc() } else { 0 }), $_.Name }; '--'";
 
-/** Samples every process once a second, in one PowerShell process, until `stop`. */
+const windowsReader: LzProcessReader = {
+  command: 'pwsh',
+  args: ['-NoProfile', '-NonInteractive', '-Command'],
+  sample: win32Sample,
+  loop: `$ErrorActionPreference = 'Stop'; while ($true) { $start = Get-Date; ${win32Sample}; $wait = 1000 - ((Get-Date) - $start).TotalMilliseconds; if ($wait -gt 0) { Start-Sleep -Milliseconds $wait } }`,
+  parse: lzParseSamples,
+};
+
+// A process that ends between the glob and the read makes cat complain, so its stderr is dropped.
+const procSample = 'cat /proc/[0-9]*/stat 2>/dev/null; echo --';
+
+const linuxReader: LzProcessReader = {
+  command: 'sh',
+  args: ['-c'],
+  sample: `getconf PAGESIZE; ${procSample}`,
+  loop: `getconf PAGESIZE; while :; do ${procSample}; sleep 1; done`,
+  parse: lzParseProcSamples,
+};
+
+/** Samples every process once a second, in one shell process, until `stop`. */
 export function lzStartSampler(): LzSampler {
-  const child = spawn(pwsh(), [...pwshArgs, loopScript()], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  const { command, args, loop, parse } = reader();
+  const child = spawn(command, [...args, loop], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   const chunks: string[] = [];
   const errors: string[] = [];
   const closed = once(child, 'close');
@@ -37,15 +65,16 @@ export function lzStartSampler(): LzSampler {
         throw new Error(`The process sampler failed:\n${errors.join('')}`);
       }
 
-      return lzParseSamples(chunks.join(''));
+      return parse(chunks.join(''));
     },
   };
 }
 
 /** One sample of every process on the machine. */
 export async function lzSnapshot(): Promise<LzProcessRow[]> {
-  const { exitCode, stdout, stderr } = await lzExec(pwsh(), [...pwshArgs, sampleScript], { cwd: process.cwd() });
-  const [sample] = lzParseSamples(stdout);
+  const { command, args, sample: script, parse } = reader();
+  const { exitCode, stdout, stderr } = await lzExec(command, [...args, script], { cwd: process.cwd() });
+  const [sample] = parse(stdout);
 
   if (exitCode !== 0 || sample === undefined) {
     throw new Error(`The process snapshot failed with exit code ${exitCode}:\n${stderr}`);
@@ -54,17 +83,14 @@ export async function lzSnapshot(): Promise<LzProcessRow[]> {
   return sample;
 }
 
-const pwshArgs: readonly string[] = ['-NoProfile', '-NonInteractive', '-Command'];
-
-// ponytail: Windows only; a Linux run needs a `ps -eo pid=,ppid=,rss=,lstart=,comm=` reader in this file.
-function pwsh(): string {
-  if (process.platform !== 'win32') {
-    throw new Error(`The process sampler reads Win32_Process; ${process.platform} has no reader yet.`);
+function reader(): LzProcessReader {
+  if (process.platform === 'win32') {
+    return windowsReader;
   }
 
-  return 'pwsh';
-}
+  if (process.platform === 'linux') {
+    return linuxReader;
+  }
 
-function loopScript(): string {
-  return `$ErrorActionPreference = 'Stop'; while ($true) { $start = Get-Date; ${sampleScript}; $wait = 1000 - ((Get-Date) - $start).TotalMilliseconds; if ($wait -gt 0) { Start-Sleep -Milliseconds $wait } }`;
+  throw new Error(`The process sampler reads Win32_Process or /proc; ${process.platform} has neither.`);
 }
