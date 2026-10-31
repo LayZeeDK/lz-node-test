@@ -44,18 +44,40 @@ export interface Instrumenter {
 type Mode = 'add' | 'replace';
 
 /**
- * Puts `operators` into the mutator list of Stryker's instrumenter, and throws unless each makes a mutant of its
- * sample: a bundled instrumenter does not read the list and would drop the operators without a word.
+ * Puts `operators` into the mutator list of each copy of Stryker's instrumenter, and throws unless each makes a mutant
+ * of its sample: a bundled instrumenter does not read the list and would drop the operators without a word.
  */
 export async function install(
   mode: Mode,
   operators: readonly Operator[],
-  resolve: () => Promise<Instrumenter> = resolveFromCore,
+  resolve: () => Promise<readonly Instrumenter[]> = resolveEachCore,
   warn: (message: string) => void = console.warn,
 ): Promise<void> {
-  const instrumenter = await resolve();
+  const instrumenters = await resolve();
+
+  instrumenters.forEach(({ allMutators }) => checkNames(operators, allMutators));
+  instrumenters.forEach((instrumenter) => putInto(instrumenter, mode, operators));
+  await Promise.all(instrumenters.map((instrumenter) => selfCheck(instrumenter, operators)));
+  const range = corePeerRange();
+  const { major, minor, patch } = parseCaretFloor(range);
+
+  [...new Set(instrumenters.map(({ version }) => version))]
+    .filter((version) => !inPeerRange(version, range))
+    .forEach((version) =>
+      warn(
+        `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${major}.${minor}.${patch} or a later ` +
+          `${major}.x, not ${version}. Its install check passed, but it sees only this process, so mutants ` +
+          'of its mutators may be missing.',
+      ),
+    );
+}
+
+function resolveEachCore(): Promise<readonly Instrumenter[]> {
+  return Promise.all(corePackageJsons().map((corePackage) => resolveFromCore(corePackage)));
+}
+
+function putInto(instrumenter: Instrumenter, mode: Mode, operators: readonly Operator[]): void {
   const { allMutators } = instrumenter;
-  checkNames(operators, allMutators);
   const mutators = operators.map((operator) => toNodeMutator(operator, instrumenter.types));
 
   if (mode === 'replace') {
@@ -65,20 +87,6 @@ export async function install(
       ...allMutators,
       ...mutators.filter((mutator) => !allMutators.some(({ name }) => name === mutator.name)),
     ]);
-  }
-
-  await selfCheck(instrumenter, operators);
-
-  const range = corePeerRange();
-
-  if (!inPeerRange(instrumenter.version, range)) {
-    const { major, minor, patch } = parseCaretFloor(range);
-
-    warn(
-      `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${major}.${minor}.${patch} or a later ` +
-        `${major}.x, not ${instrumenter.version}. Its install check passed, but it sees only this process, so mutants ` +
-        'of its mutators may be missing.',
-    );
   }
 }
 
@@ -170,25 +178,26 @@ async function selfCheck(instrumenter: Instrumenter, operators: readonly Operato
 }
 
 /**
- * The package.json of the @stryker-mutator/core that runs this process, from the script that started it when that is
- * core's bin, as when Stryker runs from a global install; otherwise, as when a program uses Stryker's API, the core
- * that this module resolves, in the drive-letter case of that program's script.
+ * The package.json of each copy of @stryker-mutator/core that may run this process: from the script that started it
+ * when that is core's bin, as when Stryker runs from a global install; otherwise, as when a program uses Stryker's API,
+ * the core that this module resolves, in the drive-letter case of that program's script and in this module's own.
  */
-export function corePackageJson(
+export function corePackageJsons(
   argv: readonly string[] = process.argv,
   realpath: (path: string) => string = realpathSync,
   resolveHere: (specifier: string) => string = createRequire(import.meta.url).resolve,
-): string {
+): readonly [string, ...string[]] {
   const [, script] = argv;
   const real = realScript(script, realpath);
 
-  if (real === undefined) {
-    return resolveHere('@stryker-mutator/core/package.json');
+  if (real !== undefined && coreBinPattern.test(real)) {
+    return [join(real, '..', '..', 'package.json')];
   }
 
-  return coreBinPattern.test(real)
-    ? join(real, '..', '..', 'package.json')
-    : withDriveLetterOf(real, resolveHere('@stryker-mutator/core/package.json'));
+  const here = resolveHere('@stryker-mutator/core/package.json');
+  const scriptCase = real === undefined ? here : withDriveLetterOf(real, here);
+
+  return scriptCase === here ? [here] : [scriptCase, here];
 }
 
 function realScript(script: string | undefined, realpath: (path: string) => string): string | undefined {
@@ -206,9 +215,10 @@ function realScript(script: string | undefined, realpath: (path: string) => stri
 }
 
 /**
- * Stryker's modules load with the drive-letter case of the script that started the process, and this module with the
- * case of the working directory. ESM caches modules by URL, which keeps that case, so `d:` and `D:` would load two
- * instrumenters, and the self-check would pass on the one Stryker does not run.
+ * Stryker's modules load with the drive-letter case of the script that started the process when that script imports
+ * Stryker, and with the case of the working directory, as this module does, when a runner such as mocha loads the
+ * module that imports Stryker. ESM caches modules by URL, which keeps that case, so `d:` and `D:` load two
+ * instrumenters, and a self-check of one would pass while Stryker runs the other.
  */
 function withDriveLetterOf(script: string, path: string): string {
   const [drive] = /^[A-Za-z]:/.exec(script) ?? [];
@@ -221,7 +231,7 @@ function withDriveLetterOf(script: string, path: string): string {
  * modules have no importable types, and their members are checked before use.
  */
 export async function resolveFromCore(
-  corePackage: string = corePackageJson(),
+  corePackage: string = corePackageJsons()[0],
   load: (path: string) => Promise<unknown> = importFile,
 ): Promise<Instrumenter> {
   const fromCore = createRequire(corePackage);
