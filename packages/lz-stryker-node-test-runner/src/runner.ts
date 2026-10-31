@@ -184,7 +184,7 @@ function testsOverlapping(
 /** Whether `timeline`, the spans of every test sorted by start, leaves no part of `window` outside them. */
 function coversWholly(timeline: readonly LzTimeWindow[], window: LzTimeWindow): boolean {
   const coveredUntil = timeline.reduce(
-    (until, span) => (span.start <= until && until < span.end ? span.end : until),
+    (until, span) => (span.start <= until ? Math.max(until, span.end) : until),
     window.start,
   );
 
