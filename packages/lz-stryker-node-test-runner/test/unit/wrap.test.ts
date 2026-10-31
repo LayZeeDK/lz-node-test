@@ -5,17 +5,9 @@ import { setImmediate } from 'node:timers/promises';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { activeMutantEnv, envNames } from '../../src/record.ts';
-import {
-  bodyOf,
-  callable,
-  rawBodyOf,
-  runBodies,
-  testFile,
-  testContext,
-  wrapped,
-  type Subtests,
-} from '../hook-core.fixtures.ts';
+import { bodyOf, callable, rawBodyOf, testFile, testContext } from '../hook-core.fixtures.ts';
 import { callMember, member } from '../reflect.fixtures.ts';
+import { runBodies, wrapped, type Subtests } from '../wrap.fixtures.ts';
 
 interface SuiteCall {
   readonly self: unknown;
