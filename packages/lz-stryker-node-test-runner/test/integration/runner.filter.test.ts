@@ -203,6 +203,24 @@ describe('LzStrykerNodeTestRunner filter, bail and mutant activation', () => {
     assert.match(result.errorMessage, /Error: module-level mutant/);
   });
 
+  it("activates a mutant from the start in a file that the filter names whole, as Stryker's --testFiles names it for a static mutant", async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        `const greeting = process.env.${activeMutant} || globalThis.__stryker__.activeMutant ? 'mutated' : 'original';`,
+        "it('greets', () => { assert.equal(greeting, 'original'); });",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs'], undefined, { testFiles: ['a.test.mjs'] });
+    const a = join(dir, 'a.test.mjs');
+    // How Stryker 10.1 plans a static mutant when --testFiles is set: the test files as the filter, runtime activation.
+    const result = await settle(
+      runner.mutantRun(mutantRunOptions({ testFilter: [a], mutantActivation: 'runtime', reloadEnvironment: true })),
+    );
+
+    assert.strictEqual(result.status, MutantRunStatus.Killed);
+    assert.deepEqual(result.killedBy, [`${a} > greets`]);
+  });
+
   it('activates a mutant once the tests start when activation is runtime, also in processes they start', async (t) => {
     const child = `process.exitCode = process.env.${activeMutant} === 'fixture-mutant' ? 0 : 1;`;
     const dir = project(t, {

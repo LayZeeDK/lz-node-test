@@ -401,8 +401,10 @@ export function lzRunEnv({
   }
 
   // At runtime activation the hook activates the mutant once the tests start, so module-level code runs unmutated.
+  // Stryker names whole test files in the filter only for a mutant that runs every test, as a static mutant under
+  // --testFiles does, yet asks for runtime activation; such a mutant must be active from the start.
   if (run.activeMutant !== undefined) {
-    const runtime = run.mutantActivation === 'runtime';
+    const runtime = run.mutantActivation === 'runtime' && !run.testFilter?.includes(file);
     env[runtime ? envNames.activeMutant : INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE] = run.activeMutant;
   }
 
