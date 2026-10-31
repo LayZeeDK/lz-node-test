@@ -189,18 +189,18 @@ export interface LzRecordName {
   readonly nonce: string;
 }
 
-const threadRecordPattern = /^(\d+)\.(\d+)\.([\da-f-]+)\.json$/;
-const memoryRecordPattern = /^(\d+)\.([\da-f-]+)\.memory\.json$/;
+const threadRecordPattern = /^(?<pid>\d+)\.(?<thread>\d+)\.(?<nonce>[\da-f-]+)\.json$/;
+const memoryRecordPattern = /^(?<pid>\d+)\.(?<nonce>[\da-f-]+)\.memory\.json$/;
 
 /** The parts of a record's name, as `recordName` and `memoryRecordName` put them together; undefined for another name. */
 export function lzParseRecordName(name: string): LzRecordName | undefined {
-  const [, pid, threadId, nonce] = threadRecordPattern.exec(name) ?? [];
+  const { pid, thread, nonce } = threadRecordPattern.exec(name)?.groups ?? {};
 
   if (nonce !== undefined) {
-    return { pid: Number(pid), thread: Number(threadId), nonce };
+    return { pid: Number(pid), thread: Number(thread), nonce };
   }
 
-  const [, memoryPid, memoryNonce] = memoryRecordPattern.exec(name) ?? [];
+  const { pid: memoryPid, nonce: memoryNonce } = memoryRecordPattern.exec(name)?.groups ?? {};
 
   return memoryNonce === undefined ? undefined : { pid: Number(memoryPid), thread: 'memory', nonce: memoryNonce };
 }
