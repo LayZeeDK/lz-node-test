@@ -20,15 +20,11 @@ import {
   type TestResult,
 } from '@stryker-mutator/api/test-runner';
 
-import { LzStrykerNodeTestRunner, lzRunEnv, type LzStrykerNodeTestOptions } from '../src/runner.ts';
+import { LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../src/runner.ts';
 
 export const activeMutant = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
 export const hookUrl = pathToFileURL(join(import.meta.dirname, '..', 'src', 'hook.ts')).href;
 export const reporterArg = `--test-reporter=${pathToFileURL(join(import.meta.dirname, '..', 'src', 'reporter.ts')).href}`;
-
-export function runNodeOptions(): string {
-  return lzRunEnv(process.env, '', '', '', { dryRun: false, disableBail: false }, undefined).NODE_OPTIONS;
-}
 
 /**
  * A process id that no process has: above the largest that Linux (2^22) and macOS (99999) hand out, and one that

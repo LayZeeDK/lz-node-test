@@ -202,8 +202,8 @@ describe('lzToTestResults', () => {
 
 describe('lzFileError', () => {
   const command =
-    `To reproduce it, run \`node "--no-deprecation" "${file}"\` in ${process.cwd()} ` +
-    'with NODE_OPTIONS set to `--import "hook" --stack-size=900`.';
+    `To reproduce it without the mutant, run \`node "--test" "--no-deprecation" "${file}"\` in ${process.cwd()}, ` +
+    "without the runner's reporter and hook.";
 
   lzTestFor<
     readonly [
@@ -243,8 +243,7 @@ describe('lzFileError', () => {
       })),
       exitCode,
       stderr,
-      args: ['--no-deprecation', file],
-      nodeOptions: '--import "hook" --stack-size=900',
+      nodeArgs: ['--no-deprecation'],
     };
 
     assert.equal(

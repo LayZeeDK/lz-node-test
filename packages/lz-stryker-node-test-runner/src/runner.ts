@@ -87,8 +87,7 @@ interface LzFileRun {
   readonly records: readonly ProcessRecord[];
   readonly exitCode: number | null;
   readonly stderr: string;
-  readonly args: readonly string[];
-  readonly nodeOptions: string;
+  readonly nodeArgs: readonly string[];
   readonly unreadable?: string;
 }
 
@@ -230,14 +229,15 @@ function nodeCommand(args: readonly string[]): string {
  * Reports a test file that failed outside its tests as Stryker's tap runner does: command, diagnostics, and the tail of
  * stderr that `processEnd` keeps.
  */
-export function lzFileError(testFile: string, { records, exitCode, stderr, args, nodeOptions }: LzFileRun): string {
+export function lzFileError(testFile: string, { records, exitCode, stderr, nodeArgs }: LzFileRun): string {
   const diagnostics = records.flatMap((record) => record.diagnostics ?? []);
   const heldOpen = records.flatMap((record) => record.heldOpen ?? []);
   const output = stderr.trim();
 
   return [
     `Error running file "${testFile}": node exited with code ${exitCode} outside any test.`,
-    `To reproduce it, run \`${nodeCommand(args)}\` in ${process.cwd()} with NODE_OPTIONS set to \`${nodeOptions}\`.`,
+    `To reproduce it without the mutant, run \`${nodeCommand(['--test', ...nodeArgs, testFile])}\` in ` +
+      `${process.cwd()}, without the runner's reporter and hook.`,
     ...(heldOpen.length > 0
       ? [
           `It stayed alive after its tests, held open by ${heldOpen.join(', ')}, until the runner ended it; node:test ` +
@@ -715,7 +715,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
           }
         });
 
-      return { records, exitCode, stderr, args, nodeOptions: env.NODE_OPTIONS, ...(unreadable && { unreadable }) };
+      return { records, exitCode, stderr, nodeArgs: this.#nodeArgs, ...(unreadable && { unreadable }) };
     } finally {
       await removeDir(runDir, this.#log);
     }

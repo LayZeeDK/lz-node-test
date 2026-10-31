@@ -18,8 +18,6 @@ import {
   passed,
   passing,
   project,
-  reporterArg,
-  runNodeOptions,
   settle,
   shareCompileCache,
   summary,
@@ -156,8 +154,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
         records: [],
         exitCode,
         stderr: '',
-        args: [reporterArg, a],
-        nodeOptions: runNodeOptions(),
+        nodeArgs: [],
       }),
     });
   });
@@ -177,8 +174,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
       records: [],
       exitCode: 3,
       stderr: 'first\nsecond\n',
-      args: [reporterArg, '--no-deprecation', b],
-      nodeOptions: runNodeOptions(),
+      nodeArgs: ['--no-deprecation'],
     });
 
     assert.deepEqual(await settle(runner.dryRun(dryRun)), { status: DryRunStatus.Error, errorMessage });
