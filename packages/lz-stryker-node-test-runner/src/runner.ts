@@ -311,6 +311,10 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   return { results, coverages: records.map((record) => lzOverlapCoverage(record, main.testSpans)), failed };
 }
 
+function hasHits({ static: hits, perTest }: MutantCoverage): boolean {
+  return [hits, ...Object.values(perTest)].some((ofTest) => Object.keys(ofTest).length > 0);
+}
+
 function errorEnd(errorMessage: string): FileOutcome {
   return { end: { status: DryRunStatus.Error, errorMessage } };
 }
@@ -543,12 +547,27 @@ export class LzStrykerNodeTestRunner implements TestRunner {
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
-    return this.#run(files, run, this.#dryRunConcurrency, async (file) => {
+    const result = await this.#run(files, run, this.#dryRunConcurrency, async (file) => {
       const fileRun = await this.runFile(file, run, memoryLimitMB);
       this.#memoryLimits.record(file, fileRun.records);
 
       return fileRun;
     });
+
+    if (
+      result.status === DryRunStatus.Complete &&
+      result.mutantCoverage &&
+      !hasHits(result.mutantCoverage) &&
+      result.tests.some((test) => test.status !== TestStatus.Skipped)
+    ) {
+      this.#log.warn(
+        "The dry run's tests reached no mutated code, so Stryker will report every mutant as NoCoverage. Likely " +
+          'causes: the tests import built code, such as dist/, instead of the source files Stryker mutates, or the ' +
+          "code under test lies outside Stryker's sandbox.",
+      );
+    }
+
+    return result;
   }
 
   async mutantRun(options: MutantRunOptions): Promise<MutantRunResult> {

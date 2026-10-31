@@ -4,13 +4,15 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 
+import type { CoverageAnalysis, MutantCoverage } from '@stryker-mutator/api/core';
+import type { Logger } from '@stryker-mutator/api/logging';
 import { TestStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
-import { activeMutantEnv, envNames } from '../../src/record.ts';
+import { activeMutantEnv, envNames, type ProcessRecord, type RecordedTest } from '../../src/record.ts';
 import { callMember, construct, member } from '../reflect.fixtures.ts';
-import { activeMutant, hookUrl, logger, strykerOptions } from '../runner.fixtures.ts';
+import { activeMutant, dryRun, hookUrl, logger, strykerOptions } from '../runner.fixtures.ts';
 import {
   LzStrykerNodeTestRunner,
   lzFileError,
@@ -183,6 +185,59 @@ describe('LzStrykerNodeTestRunner options', () => {
     [{ maxMemoryMB: '512' }, 'maxMemoryMB'],
   ])('refuses %j, naming %s', (options, field) => {
     assert.throws(() => runner(options), { message: `not valid lzStrykerNodeTest options: ${field}` });
+  });
+});
+
+describe('LzStrykerNodeTestRunner dry run coverage', () => {
+  /** A runner whose test file reports `record` without running. */
+  class RecordingRunner extends LzStrykerNodeTestRunner {
+    readonly #record: ProcessRecord;
+
+    constructor(record: ProcessRecord, log: Logger) {
+      super(strykerOptions({ lzStrykerNodeTest: { maxMemoryMB: 512 } }), log);
+      this.#record = record;
+    }
+
+    override runFile() {
+      return Promise.resolve({ records: [this.#record], exitCode: 0, stderr: '', fileArgs: [], nodeOptions: [] });
+    }
+  }
+
+  const test = `${file} > passes`;
+  const dryRunWarnings = async (
+    coverageAnalysis: CoverageAnalysis,
+    mutantCoverage: MutantCoverage,
+    status: RecordedTest['status'] = 'passed',
+  ) => {
+    const warnings: string[] = [];
+    const record: ProcessRecord = { main: true, tests: [{ id: test, status, timeSpentMs: 1 }], mutantCoverage };
+
+    await new RecordingRunner(record, logger({ warnings })).dryRun({ ...dryRun, coverageAnalysis, testFiles: [file] });
+
+    return warnings;
+  };
+
+  lzTestFor<CoverageAnalysis>(['perTest', 'all'])(
+    'warns once, naming the likely causes, when the tests reach no instrumented code with coverage analysis %s',
+    async (coverageAnalysis) => {
+      const warnings = await dryRunWarnings(coverageAnalysis, { static: {}, perTest: { [test]: {} } });
+      const [warning = ''] = warnings;
+
+      assert.equal(warnings.length, 1);
+      assert.match(warning, /NoCoverage/);
+      assert.match(warning, /dist\//);
+      assert.match(warning, /sandbox/);
+    },
+  );
+
+  lzTestEach<[string, CoverageAnalysis, MutantCoverage, RecordedTest['status']]>([
+    ['a static hit', 'perTest', { static: { 1: 1 }, perTest: {} }, 'passed'],
+    ['a hit in a test', 'perTest', { static: {}, perTest: { [test]: { 1: 1 } } }, 'passed'],
+    ['a hit with coverage analysis all', 'all', { static: {}, perTest: { [test]: { 1: 1 } } }, 'passed'],
+    ['coverage analysis off', 'off', { static: {}, perTest: {} }, 'passed'],
+    ['only skipped tests', 'perTest', { static: {}, perTest: {} }, 'skipped'],
+  ])('does not warn about coverage with %s', async (_title, coverageAnalysis, mutantCoverage, status) => {
+    assert.deepEqual(await dryRunWarnings(coverageAnalysis, mutantCoverage, status), []);
   });
 });
 
