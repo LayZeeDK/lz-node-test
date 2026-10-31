@@ -27,7 +27,6 @@ export interface LzRecordDependencies {
   readonly offExit: (listener: () => void) => void;
   /** Registers a `beforeExit` listener, which a process that ends by itself calls and `process.exit()` skips. */
   readonly onBeforeExit: (listener: () => void) => void;
-  /** Writes the record as `lzWriteRecord` does. */
   readonly writeRecord: (path: string, record: ProcessRecord) => void;
   /** Calls `callback` every `ms` without keeping the process alive. */
   readonly every: (callback: () => void, ms: number) => void;
