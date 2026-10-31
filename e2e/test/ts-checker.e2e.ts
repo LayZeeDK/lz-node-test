@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 
-import { lzFixture, lzMutant, lzMutants } from '../src/fixture.ts';
+import { lzFixture, lzLeftover, lzMutant, lzMutants } from '../src/fixture.ts';
 
 const run = await (await lzFixture('ts-checker')).stryker();
 
@@ -33,5 +33,5 @@ it('ends a mutant whose test grows past maxMemoryMB as a timeout that names the 
 });
 
 it('leaves nothing in its temporary directory', () => {
-  assert.deepEqual(run.leftover, []);
+  assert.deepEqual(lzLeftover(run), []);
 });
