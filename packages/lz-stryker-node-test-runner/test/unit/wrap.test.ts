@@ -305,7 +305,7 @@ describe('wrapNodeTest', () => {
   });
 
   it('keeps a subtest that its parent does not await current until it ends, after its parent ends', async () => {
-    const { module, registrations, ns, env, seen, see } = wrapped();
+    const { module, registrations, ns, env, seen, see, testSpans } = wrapped();
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     let child: Promise<unknown> | undefined;
     module.it('parent', (t: Subtests) => {
@@ -328,6 +328,11 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(seen, [undefined, childId, childId]);
     assert.equal(ns.currentTestId, undefined);
     assert.ok(!(envNames.current in env));
+    // The clock ticks once per read, so a span moved while the child stayed current would shift the child's end.
+    assert.deepEqual(Object.fromEntries(testSpans), {
+      [`${testFile} > parent`]: [{ start: 1, end: 2 }],
+      [childId]: [{ start: 2, end: 3 }],
+    });
   });
 
   it('names the suites and tests a running test registers with the module after it, as node:test nests them', async () => {
