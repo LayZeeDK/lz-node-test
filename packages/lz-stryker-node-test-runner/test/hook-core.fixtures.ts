@@ -309,7 +309,7 @@ export async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
     const { source } = hooks.load(url, loadContext(conditions), passOn);
 
     if (typeof source !== 'string') {
-      throw new TypeError(`Loaded no source text: ${String(source)}`);
+      throw new TypeError(`Loaded no source text: ${typeof source}`);
     }
 
     return source;
