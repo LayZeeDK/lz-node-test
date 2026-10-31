@@ -55,10 +55,10 @@ describe('LzStrykerNodeTestRunner coverage', () => {
     );
     assert.ok(tests.every((test) => test.fileName === file && test.timeSpentMs >= 0));
     assert.equal(mutantCoverage?.static['f-static'], 1);
-    assert.equal(mutantCoverage?.perTest[`${file} > suite > passes`]?.['f-pass'], 1);
-    assert.equal(mutantCoverage?.perTest[`${file} > suite > fails`]?.['f-fail'], 1);
-    assert.equal(mutantCoverage?.perTest[`${file} > spawns`]?.['f-shared'], 2);
-    assert.equal(mutantCoverage?.perTest[`${file} > spawns`]?.['f-child'], 1);
+    assert.equal(mutantCoverage.perTest[`${file} > suite > passes`]?.['f-pass'], 1);
+    assert.equal(mutantCoverage.perTest[`${file} > suite > fails`]?.['f-fail'], 1);
+    assert.equal(mutantCoverage.perTest[`${file} > spawns`]?.['f-shared'], 2);
+    assert.equal(mutantCoverage.perTest[`${file} > spawns`]?.['f-child'], 1);
   });
 
   it('reports coverage as the coverage analysis asks: per test, all as static, or none', async (t) => {

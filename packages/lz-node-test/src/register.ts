@@ -45,11 +45,11 @@ const signatures =
 
 /**
  * Reads Vitest's call shapes: `(name, fn)`, `(name, fn, timeout)` and `(name, options, fn)`. Untyped callers can pass
- * other shapes, which throw.
+ * other shapes, which throw; the parameter types include the nulls and the misplaced options they can pass.
  */
 export function parseArguments<TCallback extends EachCallback>(
-  optionsOrFn: TCallback | LzTestTableOptions | undefined,
-  fnOrTimeout: TCallback | number | undefined,
+  optionsOrFn: TCallback | LzTestTableOptions | null | undefined,
+  fnOrTimeout: TCallback | LzTestTableOptions | number | null | undefined,
 ): { options: LzTestTableOptions; fn?: TCallback } {
   if (
     optionsOrFn === null ||

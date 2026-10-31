@@ -119,7 +119,7 @@ describe('install', () => {
     const { deps } = installedHarness({ [envNames.out]: out, [envNames.hitLimit]: '25' });
 
     assert.equal(deps.global.__stryker__?.hitLimit, 25);
-    assert.equal(deps.global.__stryker__?.hitCount, 0);
+    assert.equal(deps.global.__stryker__.hitCount, 0);
   });
 
   it("watches the process's memory when the memory limit is positive, with a record of its own in the out directory", () => {
@@ -719,7 +719,7 @@ describe('install', () => {
       assert.equal(callbackHook?.length, 2);
 
       finished?.();
-      callbackHook?.({}, (given: unknown) => passed.push(given));
+      callbackHook({}, (given: unknown) => passed.push(given));
 
       assert.equal(h.timers.length, 0);
 

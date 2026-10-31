@@ -29,12 +29,10 @@ describe('parseArguments', () => {
     { shape: 'two functions', args: [fn, fn] },
     { shape: 'null options', args: [null, fn] },
   ])('rejects $shape', ({ args: [optionsOrFn, fnOrTimeout] }) => {
-    // @ts-expect-error -- the shapes untyped callers can pass, which the types refuse
     assert.throws(() => parseArguments(optionsOrFn, fnOrTimeout), signatures);
   });
 
   it('accepts a null after a function', () => {
-    // @ts-expect-error -- null in place of a timeout, which untyped callers can pass
     assert.deepEqual(parseArguments(fn, null), { options: {}, fn });
   });
 });

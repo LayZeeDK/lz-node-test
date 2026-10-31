@@ -527,7 +527,7 @@ describe('hook', () => {
         { id: ids[3], startPosition: { line: 11, column: 9 } },
       ],
     );
-    assert.deepEqual(Object.keys(record?.mutantCoverage?.perTest ?? {}), ids);
+    assert.deepEqual(Object.keys(record.mutantCoverage?.perTest ?? {}), ids);
   });
 
   lzTestFor<readonly [string, string, Record<string, unknown>]>([

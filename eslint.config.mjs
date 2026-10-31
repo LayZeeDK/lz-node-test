@@ -185,6 +185,7 @@ export default [
       '@typescript-eslint/no-dynamic-delete': 'error',
       'require-await': 'off',
       '@typescript-eslint/require-await': 'error',
+      '@typescript-eslint/no-unnecessary-condition': 'error',
       'no-implied-eval': 'off',
       '@typescript-eslint/no-implied-eval': 'error',
       // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature
