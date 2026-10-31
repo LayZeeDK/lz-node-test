@@ -57,15 +57,16 @@ interface LzSideResult extends LzScore {
   readonly leftoverStrykerTmp: readonly string[];
 }
 
+/** Without a report on both sides there is nothing to compare, which an empty disagreement list would hide. */
+type LzComparison =
+  | { readonly compared: false }
+  | { readonly compared: true; readonly disagreements: readonly LzVerdict[]; readonly verdicts: readonly LzVerdict[] };
+
 /** The shape of result.json. */
 type LzOssResult = LzOssHeader &
   (
     | { readonly preparedIn: string }
-    | {
-        readonly sides: { readonly lz: LzSideResult; readonly command: LzSideResult };
-        readonly disagreements: readonly LzVerdict[];
-        readonly verdicts: readonly LzVerdict[];
-      }
+    | ({ readonly sides: { readonly lz: LzSideResult; readonly command: LzSideResult } } & LzComparison)
   );
 
 interface LzSideRun {
@@ -117,14 +118,8 @@ if (options.prepareOnly) {
 } else {
   const lz = await runSide('lz');
   const command = await runSide('command');
-  const verdicts = lz.run.reported && command.run.reported ? lzCompare(lz.run.report, command.run.report) : [];
 
-  writeResult({
-    ...header,
-    sides: { lz: lz.result, command: command.result },
-    disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command),
-    verdicts,
-  });
+  writeResult({ ...header, sides: { lz: lz.result, command: command.result }, ...comparison(lz.run, command.run) });
 }
 
 async function runSide(side: LzSide): Promise<LzSideRun> {
@@ -189,6 +184,16 @@ async function end(leftover: LzProcessRow): Promise<boolean> {
 
     throw error;
   }
+}
+
+function comparison(lz: LzStrykerRun, command: LzStrykerRun): LzComparison {
+  if (!lz.reported || !command.reported) {
+    return { compared: false };
+  }
+
+  const verdicts = lzCompare(lz.report, command.report);
+
+  return { compared: true, disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command), verdicts };
 }
 
 function configFile(side: LzSide): string {

@@ -48,6 +48,14 @@ describe('lzCompare', () => {
     ]);
   });
 
+  it('refuses a report with two mutants at one place, mutator and replacement', () => {
+    const lz = new Map([['index.js', [mutant(1, 'Killed'), mutant(1, 'Survived')]]]);
+
+    assert.throws(() => lzCompare(lz, new Map()), {
+      message: 'Two mutants share the key "index.js:1:3-1:9 StringLiteral x"; the comparison would drop one.',
+    });
+  });
+
   it('keeps apart two mutants that start at one place and end at two', () => {
     const lz = new Map([['index.js', [mutant(1, 'Killed', 'true', 20), mutant(1, 'Survived', 'true', 40)]]]);
     const command = new Map([['index.js', [mutant(1, 'Killed', 'true', 20), mutant(1, 'Killed', 'true', 40)]]]);

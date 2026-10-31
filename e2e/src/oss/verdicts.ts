@@ -39,12 +39,20 @@ export function lzCompare(lz: LzReport, command: LzReport): LzVerdict[] {
 }
 
 function statusesOf(report: LzReport): Map<string, LzMutantStatus> {
-  return new Map(
-    [...report].flatMap(([file, mutants]) =>
-      mutants.map(({ line, column, endLine, endColumn, mutator, replacement, status }): [string, LzMutantStatus] => [
-        `${file}:${line}:${column}-${endLine}:${endColumn} ${mutator} ${replacement.replaceAll(/\s+/g, ' ')}`,
-        status,
-      ]),
-    ),
+  const entries = [...report].flatMap(([file, mutants]) =>
+    mutants.map(({ line, column, endLine, endColumn, mutator, replacement, status }): [string, LzMutantStatus] => [
+      `${file}:${line}:${column}-${endLine}:${endColumn} ${mutator} ${replacement.replaceAll(/\s+/g, ' ')}`,
+      status,
+    ]),
   );
+  const statuses = new Map(entries);
+
+  if (statuses.size !== entries.length) {
+    const keys = entries.map(([key]) => key);
+    const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
+
+    throw new Error(`Two mutants share the key "${duplicate ?? ''}"; the comparison would drop one.`);
+  }
+
+  return statuses;
 }
