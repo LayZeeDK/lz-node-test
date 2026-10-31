@@ -46,7 +46,9 @@
       "type:lib"
     ],
     "targets": {
-      "mutate": {}
+      "mutate": {},
+      "mutate-src": {},
+      "mutate-test-code": {}
     }
   }
 }

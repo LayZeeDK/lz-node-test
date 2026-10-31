@@ -11,7 +11,15 @@
       "!{projectRoot}/tsconfig.spec.json"
     ],
     "sharedGlobals": [],
-    "nodeVersion": [{ "runtime": "node -v" }]
+    "nodeVersion": [{ "runtime": "node -v" }],
+    "mutation": [
+      "nodeVersion",
+      "{workspaceRoot}/stryker.base.mjs",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/packages/lz-stryker-node-test-runner/src/**/*",
+      "{workspaceRoot}/packages/lz-stryker-node-test-mutators/src/**/*",
+      { "externalDependencies": ["@stryker-mutator/core", "@stryker-mutator/typescript-checker", "typescript"] }
+    ]
   },
   "targetDefaults": {
     "test": {
@@ -22,29 +30,31 @@
       "cache": true,
       "inputs": ["default", "^production", "nodeVersion"]
     },
-    "mutate": {
+    "mutate-src": {
       "executor": "nx:run-commands",
       "cache": true,
       "parallelism": false,
       "dependsOn": ["build"],
-      "inputs": [
-        "default",
-        "^production",
-        "nodeVersion",
-        "{workspaceRoot}/stryker.base.mjs",
-        "{workspaceRoot}/tsconfig.base.json",
-        "{workspaceRoot}/packages/lz-stryker-node-test-runner/src/**/*",
-        "{workspaceRoot}/packages/lz-stryker-node-test-mutators/src/**/*",
-        { "externalDependencies": ["@stryker-mutator/core", "@stryker-mutator/typescript-checker", "typescript"] }
-      ],
+      "inputs": ["default", "^production", "mutation"],
       "options": {
         "cwd": "{workspaceRoot}",
-        "parallel": false,
-        "commands": [
-          "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.config.mjs",
-          "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.test-code.config.mjs"
-        ]
+        "command": "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.config.mjs"
       }
+    },
+    "mutate-test-code": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "parallelism": false,
+      "dependsOn": ["build"],
+      "inputs": ["default", "^production", "mutation"],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.test-code.config.mjs"
+      }
+    },
+    "mutate": {
+      "executor": "nx:noop",
+      "dependsOn": ["mutate-src", "mutate-test-code"]
     }
   },
   "plugins": [

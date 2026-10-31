@@ -40,6 +40,8 @@
     ],
     "targets": {
       "mutate": {},
+      "mutate-src": {},
+      "mutate-test-code": {},
       "test-integration": {
         "dependsOn": [
           "build"

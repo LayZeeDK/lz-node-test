@@ -1,5 +1,5 @@
 // Benchmarks the node:test runner on fixed synthetic fixtures, plus each Stryker suite that the Nx `mutate` target
-// runs, timed apart.
+// runs through the per-config targets it depends on, timed apart.
 //
 //   npm run bench
 //   npm run bench -- --runs 9 --mutate-runs 0
@@ -226,9 +226,15 @@ async function loadRunner(path: string, dir: string): Promise<BenchRunner> {
 
 function mutateSuites(): string[] {
   const nx: unknown = JSON.parse(readFileSync(join(workspaceRoot, 'nx.json'), 'utf8'));
-  const commands = field(field(field(field(nx, 'targetDefaults'), 'mutate'), 'options'), 'commands');
+  const targetDefaults = field(nx, 'targetDefaults');
+  const targets = field(field(targetDefaults, 'mutate'), 'dependsOn');
+  const commands: unknown[] = Array.isArray(targets)
+    ? targets.map((target: unknown) =>
+        typeof target === 'string' ? field(field(field(targetDefaults, target), 'options'), 'command') : undefined,
+      )
+    : [];
 
-  if (!Array.isArray(commands) || !commands.every((command) => typeof command === 'string')) {
+  if (commands.length === 0 || !commands.every((command) => typeof command === 'string')) {
     throw new Error('nx.json has no mutate target commands whose Stryker suites the bench could time');
   }
 
