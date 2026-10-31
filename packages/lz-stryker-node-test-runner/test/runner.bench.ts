@@ -102,7 +102,15 @@ function fixtureFile(index: number): string {
 }
 
 function scenarios(files: string[]): Scenario[] {
-  const testId = (file: number, test: number) => `${String(files[file])} > suite ${file} > test ${test}`;
+  const testId = (file: number, test: number) => {
+    const path = files[file];
+
+    if (path === undefined) {
+      throw new Error(`No fixture file ${file}.`);
+    }
+
+    return `${path} > suite ${file} > test ${test}`;
+  };
 
   return [
     {
@@ -257,8 +265,13 @@ async function main(): Promise<void> {
       files.push(file);
     }
 
-    runners.push(...(await Promise.all(runnerPaths.map((path) => loadRunner(path, dir)))));
-    const labels = runnerPaths.map((path) => (runnerPaths.length > 1 ? `[${path}] ` : ''));
+    const labeled = await Promise.all(
+      runnerPaths.map(async (path) => ({
+        runner: await loadRunner(path, dir),
+        label: runnerPaths.length > 1 ? `[${path}] ` : '',
+      })),
+    );
+    runners.push(...labeled.map(({ runner }) => runner));
     const samples = new Map<string, number[]>();
     const add = (label: string, ms: number) => samples.set(label, [...(samples.get(label) ?? []), ms]);
 
@@ -266,8 +279,8 @@ async function main(): Promise<void> {
     console.log(`fixtures: ${fileCount} files x ${testsPerFile} tests, ${spawningFiles} files spawn a child process`);
 
     for (const scenario of scenarios(files)) {
-      const sides = runners.map((runner, index): [string, () => Promise<void>] => [
-        `${String(labels[index])}${scenario.name}`,
+      const sides = labeled.map(({ runner, label }): [string, () => Promise<void>] => [
+        `${label}${scenario.name}`,
         async () => {
           assert.ok((await scenario.run(runner)) > 0);
         },

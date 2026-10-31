@@ -414,7 +414,9 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const named = (parent: string, name: string, test: boolean) => {
     registering();
     const id = idOf(parent, name);
-    const fullName = parent === testFile ? name : `${String(fullNames.get(parent))} > ${name}`;
+    // Only suites and tests have a full name, so a parent without one is the test file.
+    const parentName = fullNames.get(parent);
+    const fullName = parentName === undefined ? name : `${parentName} > ${name}`;
     fullNames.set(id, fullName);
     testsByFullName.set(fullName, test && !testsByFullName.has(fullName) ? id : undefined);
     declare(id);
