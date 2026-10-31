@@ -1,5 +1,6 @@
 import { resolveEachCore, type Instrumenter, type ListedMutator } from './instrumenter.ts';
-import { isOwn, lzPackageName, toNodeMutator, type Operator } from './operator.ts';
+import { isOwn, toNodeMutator, type Operator } from './operator.ts';
+import { lzPackageName } from './package-name.ts';
 import { lzWarnOutsidePeerRange } from './peer-range.ts';
 
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */

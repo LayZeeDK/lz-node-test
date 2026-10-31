@@ -1,9 +1,7 @@
 import { createRequire } from 'node:module';
 
 import { isObject, isString, member } from './guards.ts';
-import { lzPackageName } from './operator.ts';
-
-const ownPackageJson = '@layzee/lz-stryker-node-test-mutators/package.json';
+import { lzOwnPackageJson, lzPackageName } from './package-name.ts';
 
 export interface Version {
   readonly major: number;
@@ -28,10 +26,10 @@ export function lzWarnOutsidePeerRange(versions: readonly string[], warn: (messa
 }
 
 function corePeerRange(): string {
-  const packageJson: unknown = createRequire(import.meta.url)(ownPackageJson);
-  const peers = member(packageJson, 'peerDependencies', isObject, ownPackageJson);
+  const packageJson: unknown = createRequire(import.meta.url)(lzOwnPackageJson);
+  const peers = member(packageJson, 'peerDependencies', isObject, lzOwnPackageJson);
 
-  return member(peers, '@stryker-mutator/core', isString, ownPackageJson);
+  return member(peers, '@stryker-mutator/core', isString, lzOwnPackageJson);
 }
 
 /** The first release of a caret range such as `^10.1.1`, the form of this package's peer range. */

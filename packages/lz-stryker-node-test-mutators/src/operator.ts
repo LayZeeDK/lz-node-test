@@ -1,5 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
+import { lzPackageName } from './package-name.ts';
+
 /** The members of the Babel types that the operators may call; the install checks the instrumenter's for each. */
 export const operatorBuilders = Object.freeze([
   'arrowFunctionExpression',
@@ -45,7 +47,6 @@ export interface NodeMutatorLike {
   readonly filter?: ((mutantsInScope: readonly unknown[]) => boolean) | undefined;
 }
 
-export const lzPackageName = 'lz-stryker-node-test-mutators';
 export const own = Symbol.for(lzPackageName);
 
 interface OwnMutator extends NodeMutatorLike {

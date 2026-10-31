@@ -1,4 +1,4 @@
-import { lzPackageName } from './operator.ts';
+import { lzPackageName } from './package-name.ts';
 
 /** Every function is assignable to it, and `Reflect.apply` and `Reflect.construct` call it. */
 export type AnyFunction = (...args: never) => unknown;
