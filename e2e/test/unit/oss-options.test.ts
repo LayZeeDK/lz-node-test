@@ -71,7 +71,8 @@ describe('lzParseOptions', () => {
 
   it('refuses a project it has no settings for, and names those it has', () => {
     assert.throws(() => lzParseOptions(required.with(1, 'pino')), {
-      message: /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify, restartable\.$/,
+      message:
+        /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify, restartable, sonic-boom\.$/,
     });
   });
 
@@ -83,6 +84,17 @@ describe('lzParseOptions', () => {
       mutate: ['index.js', 'lib/server.js'],
       testFiles: ['test/*.test.js'],
       command: 'node --test',
+    });
+  });
+
+  it("mutates sonic-boom's index.js and runs its test files with their own 240 s test timeout", () => {
+    const { project } = lzParseOptions(required.with(1, 'sonic-boom'));
+
+    assert.deepEqual(project, {
+      name: 'sonic-boom',
+      mutate: ['index.js'],
+      testFiles: ['test/*.test.js'],
+      command: 'node --test --test-timeout=240000 "test/*.test.js"',
     });
   });
 

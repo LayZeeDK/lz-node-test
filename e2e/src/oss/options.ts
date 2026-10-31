@@ -64,6 +64,12 @@ const projects: readonly LzOssProject[] = [
     command: 'node --test "test/**/*.test.js" "test/**/*.test.mjs"',
   },
   { name: 'restartable', mutate: ['index.js', 'lib/server.js'], testFiles: ['test/*.test.js'], command: 'node --test' },
+  {
+    name: 'sonic-boom',
+    mutate: ['index.js'],
+    testFiles: ['test/*.test.js'],
+    command: 'node --test --test-timeout=240000 "test/*.test.js"',
+  },
 ];
 
 export const lzOssUsage =
