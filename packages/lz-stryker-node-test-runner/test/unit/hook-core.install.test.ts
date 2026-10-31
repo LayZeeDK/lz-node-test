@@ -281,7 +281,7 @@ describe('install', () => {
     assert.equal(new Set(paths).size, 2);
   });
 
-  it('neither listens for the end nor follows the coverage of a process that may not write its record', () => {
+  it('installs, but neither listens for the end nor follows the coverage of a process that may not write its record', () => {
     const persisting: string[] = [];
     const { deps, calls } = harness(
       { [envNames.out]: out, [envNames.dryRun]: 'true' },
@@ -293,8 +293,7 @@ describe('install', () => {
       },
     );
 
-    install(deps);
-
+    assert.equal(install(deps), true);
     assert.deepEqual([...calls, ...persisting], []);
   });
 
@@ -528,6 +527,8 @@ describe('install', () => {
         h.wrapped().it('inner', () => {});
       });
       enqueue(h.deps, 'fails', 'suite');
+      // node:test enqueues a suite's tests too, one level down.
+      send(h.deps, { type: 'test:enqueue', data: { name: 'inner', nesting: 1 } });
       afterHooks(h.fake)[0]?.();
       report(h.deps, 'fails', 'fail');
       send(h.deps, {
