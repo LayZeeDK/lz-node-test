@@ -24,14 +24,7 @@ import {
   type LzStrykerRun,
 } from '../fixture.ts';
 import { lzOssPreparedPrefix, lzOssRunPrefix, lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
-import {
-  lzDescendants,
-  lzLeftovers,
-  lzNewEntries,
-  lzPeaks,
-  type LzProcessPeaks,
-  type LzProcessRow,
-} from './processes.ts';
+import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessPeaks } from './processes.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
 import { lzCompare, lzScore, type LzScore, type LzVerdict } from './verdicts.ts';
 
@@ -156,21 +149,19 @@ async function runSide(side: LzSide): Promise<LzSideRun> {
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
   const started = performance.now();
-  const run = await settled('Stryker run', lzStryker(dir, configFile(side), options.concurrency, runTmp));
+  const run = await settled('Stryker run', () => lzStryker(dir, configFile(side), options.concurrency, runTmp));
   const wallMs = Math.round(performance.now() - started);
-  const stopped = await settled('Sampler', sampler.stop());
+  const stopped = await settled('Sampler', () => sampler.stop());
   const samples = stopped.ok ? stopped.value.map((sample) => lzDescendants(sample, process.pid, excluded)) : [];
 
   await timers.setTimeout(settleMs);
+  // One fresh snapshot just before the endings, so a pair that ended or whose id was reused meanwhile is skipped.
   // Ended once recorded, so that one side's leftovers cannot load the next side's run.
-  const found = await settled(
-    'Leftover snapshot',
-    lzSnapshot().then((now) => lzLeftovers(samples.flat(), now)),
-  );
+  const found = await settled('Leftover snapshot', async () => lzLeftovers(samples.flat(), await lzSnapshot()));
   const ended = await Promise.all(
     (found.ok ? found.value : []).map(async (leftover) => ({
       leftover,
-      ending: await settled(`Ending ${leftover.pid}`, end(leftover)),
+      ending: await settled(`Ending ${leftover.pid}`, () => end(leftover.pid)),
     })),
   );
   const strykerTmp = join(dir, '.stryker-tmp');
@@ -218,9 +209,9 @@ function strykerResult(run: LzStrykerRun): LzStrykerResult {
   };
 }
 
-async function settled<T>(step: string, promise: Promise<T>): Promise<LzSettled<T>> {
+async function settled<T>(step: string, run: () => T | Promise<T>): Promise<LzSettled<T>> {
   try {
-    return { ok: true, value: await promise };
+    return { ok: true, value: await run() };
   } catch (error) {
     return { ok: false, error: `${step}: ${messageOf(error)}` };
   }
@@ -230,14 +221,10 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** False when the process ended, or its id went to another process, before the driver could end it. */
-async function end(leftover: LzProcessRow): Promise<boolean> {
-  if (lzLeftovers([leftover], await lzSnapshot()).length === 0) {
-    return false;
-  }
-
+/** False when the process ended by itself before the driver could end it. */
+function end(pid: number): boolean {
   try {
-    process.kill(leftover.pid);
+    process.kill(pid);
 
     return true;
   } catch (error) {
