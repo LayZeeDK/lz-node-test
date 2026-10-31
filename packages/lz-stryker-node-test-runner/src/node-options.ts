@@ -5,10 +5,11 @@ export function lzNodeOptionArgs(nodeOptions: string | undefined): string[] {
 
 /**
  * What follows the option `name` in `arg`: `''` for the bare flag, `=` and its value for one with a value, or nothing
- * when `arg` is another option. An argument may be quoted, as in NODE_OPTIONS.
+ * when `arg` is another option. An argument may be quoted, as in NODE_OPTIONS, and node reads `_` in an option's name
+ * as `-`.
  */
 function optionRest(arg: string, name: string): string | undefined {
-  const option = arg.replaceAll('"', '');
+  const option = arg.replaceAll('"', '').replace(/^[^=]*/, (optionName) => optionName.replaceAll('_', '-'));
 
   return option === name || option.startsWith(`${name}=`) ? option.slice(name.length) : undefined;
 }

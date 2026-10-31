@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { describe } from 'node:test';
+import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { lzNodeOptionArgs, lzTestOnly } from '../../src/node-options.ts';
+import { lzConsumerNodeOptions, lzNodeOptionArgs, lzTestOnly } from '../../src/node-options.ts';
 
 describe('lzNodeOptionArgs', () => {
   lzTestEach([
@@ -13,6 +13,14 @@ describe('lzNodeOptionArgs', () => {
     ['an escaped quote inside quotes', '--title="a \\" b" --c', ['--title="a \\" b"', '--c']],
   ])('splits %s as node does', (_title, nodeOptions, args) => {
     assert.deepEqual(lzNodeOptionArgs(nodeOptions), args);
+  });
+});
+
+describe('lzConsumerNodeOptions', () => {
+  it('drops the node:test reporters spelled with underscores, which node reads as dashes', () => {
+    const nodeOptions = '--test_reporter=spec --test_reporter dot --test_reporter_destination=stdout --title=a_b';
+
+    assert.deepEqual(lzConsumerNodeOptions({ NODE_OPTIONS: nodeOptions }), ['--title=a_b']);
   });
 });
 
@@ -28,6 +36,8 @@ describe('lzTestOnly', () => {
     ['NODE_OPTIONS turns it on and the options off', ['--no-test-only'], '--test-only', false],
     ['NODE_OPTIONS turns it off and the options on', ['--test-only'], '--no-test-only', true],
     ['another option starts with it', ['--test-only-x'], undefined, false],
+    ['the options name it with an underscore', ['--test_only'], undefined, true],
+    ['NODE_OPTIONS turns it off with an underscore', [], '--test-only --no-test_only', false],
   ])('reads whether node runs with --test-only when %s', (_title, execArgv, nodeOptions, testOnly) => {
     assert.equal(lzTestOnly(execArgv, nodeOptions), testOnly);
   });
