@@ -116,7 +116,7 @@ jobs:
           'packages/lz-stryker-node-test-mutators/src/**', 'packages/lz-stryker-node-test-runner/src/**',
           format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
           '!**/out-tsc/**', matrix.mutated) }}-" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.INCREMENTAL_FILE }}
           key: ${{ steps.key.outputs.prefix }}${{ github.sha }}
@@ -128,7 +128,7 @@ jobs:
           ${{ github.event_name == 'push' && '--force' || '' }}
       # Also after a failure or a timeout: Stryker saves the results it has when it is interrupted.
       - if: always() && steps.key.outcome == 'success'
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.INCREMENTAL_FILE }}
           key: ${{ steps.key.outputs.prefix }}${{ github.sha }}
