@@ -207,7 +207,7 @@ describe('wrapNodeTest', () => {
 
   it('wraps the module, which is the test function, in a copy and leaves node:test unchanged', async () => {
     const { module, original, registrations, seen, see } = wrapped();
-    const unwrapped = { ...original };
+    const unwrapped = Object.entries(original);
     module('default export', see);
     module.only('default export only', see);
 
@@ -216,7 +216,7 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(seen, [`${testFile} > default export`, `${testFile} > default export only`]);
     assert.equal(module.test, module);
     assert.notEqual(module, original);
-    assert.deepEqual({ ...original }, unwrapped);
+    assert.deepEqual(Object.entries(original), unwrapped);
   });
 
   it('names the tests of only and todo suites and shorthands after their suites', async () => {
