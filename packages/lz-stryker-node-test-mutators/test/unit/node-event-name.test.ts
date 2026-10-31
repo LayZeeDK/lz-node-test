@@ -43,6 +43,8 @@ describe('LzNodeEventName', () => {
     ['emit', "child.emit('exit');"],
     ['off', "child.off('exit', f);"],
     ['a computed listener method', "child['on']('exit', f);"],
+    ['a listener method read from a variable', "child[on]('exit', f);"],
+    ['once of node:events read from a variable', "import events from 'node:events';\nevents[once](child, 'exit');"],
     ['a name after the listener', "child.on(f, 'exit');"],
     ['a template literal', 'child.on(`exit`, f);'],
     ['a function on of its own', "on('exit', f);"],

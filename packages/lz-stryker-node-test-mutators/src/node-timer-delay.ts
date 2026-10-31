@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { importOf } from './bindings.ts';
+import { importOf, propertyName } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 const timers: ReadonlySet<string | undefined> = new Set(['setTimeout', 'setInterval']);
@@ -48,16 +48,12 @@ function delayIndex(path: NodePath, callee: types.Node): number | undefined {
     return timers.has(from.imported) ? timersDelayIndex(from.source) : undefined;
   }
 
-  if (
-    callee.type !== 'MemberExpression' ||
-    callee.object.type !== 'Identifier' ||
-    callee.property.type !== 'Identifier'
-  ) {
+  if (callee.type !== 'MemberExpression' || callee.object.type !== 'Identifier') {
     return undefined;
   }
 
   const from = importOf(path, callee.object.name);
-  const method = callee.property.name;
+  const method = propertyName(callee);
 
   if (from === undefined) {
     return undefined;

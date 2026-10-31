@@ -61,6 +61,7 @@ describe('LzNodeTimerDelay', () => {
     ['the wait of the callback timers', "import { scheduler } from 'node:timers';\nscheduler.wait(5);"],
     ['AbortSignal.timeout', 'AbortSignal.timeout(5);'],
     ['a computed timer of node:timers', "import timers from 'node:timers';\ntimers['setTimeout'](f, 5);"],
+    ['a timer of node:timers read from a variable', "import timers from 'node:timers';\ntimers[setTimeout](f, 5);"],
     ['a timer constructed with new', 'new setTimeout(f, 5);'],
     // fastify/test/helper.js:9
     [

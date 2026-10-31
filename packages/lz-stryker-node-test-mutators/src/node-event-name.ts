@@ -1,9 +1,9 @@
 import type { NodePath, types } from '@babel/core';
 
-import { importOf, isProcess } from './bindings.ts';
+import { importOf, isProcess, propertyName } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
-const listenMethods: ReadonlySet<string> = new Set([
+const listenMethods: ReadonlySet<string | undefined> = new Set([
   'on',
   'once',
   'addListener',
@@ -60,10 +60,7 @@ function receiverOf(path: NodePath): types.Node | undefined {
   }
 
   const { callee } = call;
-  const listens =
-    callee.type === 'MemberExpression' &&
-    callee.property.type === 'Identifier' &&
-    listenMethods.has(callee.property.name);
+  const listens = callee.type === 'MemberExpression' && listenMethods.has(propertyName(callee));
 
   return listens && path.key === 0 ? callee.object : undefined;
 }
@@ -75,11 +72,7 @@ function isEventsFunction(path: NodePath, callee: types.Node): boolean {
     return from !== undefined && nodeEvents.has(from.source) && isOnceOrOn(from.imported);
   }
 
-  if (
-    callee.type !== 'MemberExpression' ||
-    callee.object.type !== 'Identifier' ||
-    callee.property.type !== 'Identifier'
-  ) {
+  if (callee.type !== 'MemberExpression' || callee.object.type !== 'Identifier') {
     return false;
   }
 
@@ -89,7 +82,7 @@ function isEventsFunction(path: NodePath, callee: types.Node): boolean {
     from !== undefined &&
     nodeEvents.has(from.source) &&
     (from.imported === undefined || from.imported === 'EventEmitter') &&
-    isOnceOrOn(callee.property.name)
+    isOnceOrOn(propertyName(callee))
   );
 }
 
