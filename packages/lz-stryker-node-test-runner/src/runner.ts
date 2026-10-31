@@ -455,7 +455,10 @@ export function lzRunEnv(
   tmpDir: string,
   run: LzRunOptions,
   cacheDir: string | undefined,
-  memoryLimitMB?: number,
+  {
+    memoryLimitMB,
+    heldOpenMs,
+  }: { readonly memoryLimitMB?: number | undefined; readonly heldOpenMs?: number | undefined } = {},
 ): NodeJS.ProcessEnv & { NODE_OPTIONS: string } {
   const runState = new Set([
     // Set when Stryker itself runs under `node --test`; node:test in the test file would then ignore `.only` and
@@ -499,6 +502,10 @@ export function lzRunEnv(
     env[envNames.memoryLimit] = String(memoryLimitMB);
   }
 
+  if (heldOpenMs !== undefined) {
+    env[envNames.heldOpen] = String(heldOpenMs);
+  }
+
   if (run.testFilter) {
     env[envNames.filter] = JSON.stringify(run.testFilter);
   }
@@ -509,6 +516,13 @@ export function lzRunEnv(
   }
 
   return env;
+}
+
+const shortenedHeldOpen = new WeakMap<LzStrykerNodeTestRunner, number>();
+
+/** Shortens the time a test file of `runner` may stay alive after its tests to `ms`, for the runner's own tests. */
+export function lzShortenHeldOpen(runner: LzStrykerNodeTestRunner, ms: number): void {
+  shortenedHeldOpen.set(runner, ms);
 }
 
 /** The Stryker options the runner reads, of all that Stryker passes it. */
@@ -532,10 +546,8 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   readonly #memoryLimits: MemoryLimits;
   readonly #allowEmpty: boolean;
   readonly #log: Logger;
-  readonly #heldOpenMs: number | undefined;
 
-  /** `heldOpenMs` shortens the time a test file may stay alive after its tests, for the runner's own tests. */
-  constructor(options: RunnerStrykerOptions, log: Logger, heldOpenMs?: number) {
+  constructor(options: RunnerStrykerOptions, log: Logger) {
     const lzStrykerNodeTest = parseOptions(options.lzStrykerNodeTest);
     const patterns = lzStrykerNodeTest.testFiles ?? defaults.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
@@ -549,7 +561,6 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, peakMemoryDir(process.ppid), log);
     this.#allowEmpty = options.allowEmpty;
     this.#log = log;
-    this.#heldOpenMs = heldOpenMs;
   }
 
   capabilities(): TestRunnerCapabilities {
@@ -682,12 +693,10 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     try {
       mkdirSync(outDir);
       mkdirSync(tmpDir);
-      const env = lzRunEnv(process.env, file, outDir, tmpDir, run, this.#cacheDir, memoryLimitMB);
-
-      if (this.#heldOpenMs !== undefined) {
-        env[envNames.heldOpen] = String(this.#heldOpenMs);
-      }
-
+      const env = lzRunEnv(process.env, file, outDir, tmpDir, run, this.#cacheDir, {
+        memoryLimitMB,
+        heldOpenMs: shortenedHeldOpen.get(this),
+      });
       const args = [`--test-reporter=${reporterUrl}`, ...this.#nodeArgs, file];
 
       if (this.#log.isDebugEnabled()) {

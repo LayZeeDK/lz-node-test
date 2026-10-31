@@ -20,7 +20,7 @@ import {
   type TestResult,
 } from '@stryker-mutator/api/test-runner';
 
-import { LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../src/runner.ts';
+import { lzShortenHeldOpen, LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../src/runner.ts';
 
 export const activeMutant = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
 export const hookUrl = pathToFileURL(join(import.meta.dirname, '..', 'src', 'hook.ts')).href;
@@ -138,7 +138,12 @@ export async function initRunner(
   const lzOptions = (testFiles ?? lzStrykerNodeTest) && {
     lzStrykerNodeTest: { ...lzStrykerNodeTest, ...(testFiles && { testFiles }) },
   };
-  const runner = new LzStrykerNodeTestRunner(strykerOptions({ ...options, ...lzOptions }), log, heldOpenMs);
+  const runner = new LzStrykerNodeTestRunner(strykerOptions({ ...options, ...lzOptions }), log);
+
+  if (heldOpenMs !== undefined) {
+    lzShortenHeldOpen(runner, heldOpenMs);
+  }
+
   await runner.init();
 
   return runner;

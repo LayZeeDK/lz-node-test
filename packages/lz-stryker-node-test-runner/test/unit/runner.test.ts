@@ -257,6 +257,10 @@ describe('LzStrykerNodeTestRunner options', () => {
   const runner = (lzStrykerNodeTest: unknown) =>
     new LzStrykerNodeTestRunner({ ...strykerOptions(), lzStrykerNodeTest }, logger());
 
+  it("takes Stryker's two constructor parameters only", () => {
+    assert.equal(LzStrykerNodeTestRunner.length, 2);
+  });
+
   lzTestEach([
     ['no options', undefined],
     ['empty options', {}],
@@ -548,7 +552,7 @@ describe('lzRunEnv', () => {
     assert.equal(lzRunEnv(inherited, file, out, tmp, run, undefined)['NODE_COMPILE_CACHE'], 'inherited');
   });
 
-  it('passes the run state and the memory limit on to the test file', () => {
+  it('passes the run state, the memory limit and a shortened held-open time on to the test file', () => {
     assert.deepEqual(
       lzRunEnv(
         {},
@@ -563,7 +567,7 @@ describe('lzRunEnv', () => {
           testFilter: [`${file} > test`],
         },
         undefined,
-        1500,
+        { memoryLimitMB: 1500, heldOpenMs: 200 },
       ),
       {
         NODE_OPTIONS: `--import ${JSON.stringify(hookUrl)}`,
@@ -576,6 +580,7 @@ describe('lzRunEnv', () => {
         [activeMutant]: '12',
         [envNames.hitLimit]: '40',
         [envNames.memoryLimit]: '1500',
+        [envNames.heldOpen]: '200',
         [envNames.filter]: JSON.stringify([`${file} > test`]),
       },
     );
