@@ -142,6 +142,7 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       // Augmenting node:test's types takes a namespace inside `declare module`.
       '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
+      '@nx/workspace-stryker-disable-comment': 'error',
     },
   },
   {
