@@ -89,8 +89,10 @@ export function lzPersistRecord(
   }
 
   atExit(() => {
+    const current = record(natural);
+
     try {
-      write();
+      deps.writeRecord(path, current);
     } catch {
       // A process the tests started exits as it would without the hook when its record cannot be written, as when the
       // run that reads it is over.

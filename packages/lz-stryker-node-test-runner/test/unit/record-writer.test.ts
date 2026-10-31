@@ -204,6 +204,16 @@ describe('lzPersistRecord, at exit', () => {
 
     assert.throws(exit, /EPERM/);
   });
+
+  it('lets the error through when the record of a process the tests started cannot be built', () => {
+    const { deps, exit } = fakeProcess({});
+    const unbuildable = (): ProcessRecord => {
+      throw new Error('no peak memory');
+    };
+    lzPersistRecord(deps, path, unbuildable, { main: false, dryRun: false });
+
+    assert.throws(exit, /no peak memory/);
+  });
 });
 
 describe('lzHits', () => {
