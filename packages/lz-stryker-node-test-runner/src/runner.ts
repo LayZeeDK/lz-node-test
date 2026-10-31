@@ -30,7 +30,7 @@ import {
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isNumber, isObject, isStrings, optional } from './guards.ts';
 import { memoryLimits, peakMemoryDir, removePeaksOnExit, type MemoryLimits } from './memory-limits.ts';
-import { lzNodeOptionArgs } from './node-options.ts';
+import { lzConsumerNodeOptions, withoutReporters } from './node-options.ts';
 import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
   envNames,
@@ -254,18 +254,6 @@ export function lzFileError(testFile: string, { records, exitCode, stderr, fileA
   ].join('\n');
 }
 
-/**
- * Leaves out node's options that add a node:test reporter or a reporter destination, with their values, so the
- * runner's reporter is the only one; node refuses more reporters than destinations. An argument may be quoted, as in
- * NODE_OPTIONS.
- */
-function withoutReporters(args: readonly string[]): string[] {
-  const reporterOption = (arg: string) => /^--test-reporter(?:-destination)?(=|$)/.exec(arg.replaceAll('"', ''));
-
-  // A reporter option without `=` takes the next argument as its value.
-  return args.filter((arg, index) => !reporterOption(arg) && reporterOption(String(args[index - 1]))?.[1] !== '');
-}
-
 function notOptions(field?: string): never {
   const message = 'not valid lzStrykerNodeTest options';
 
@@ -451,11 +439,6 @@ export function lzTestRunnerConcurrency(
   }
 
   return checkers ? Math.max(Math.ceil(total / 2), 1) + Math.max(Math.floor(total / 2), 1) : total;
-}
-
-/** The arguments of NODE_OPTIONS in `base` that a test file runs with, after the runner's hook. */
-export function lzConsumerNodeOptions(base: NodeJS.ProcessEnv): string[] {
-  return withoutReporters(lzNodeOptionArgs(base['NODE_OPTIONS']));
 }
 
 export function lzRunEnv(
