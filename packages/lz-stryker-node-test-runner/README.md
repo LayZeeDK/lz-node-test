@@ -125,6 +125,11 @@ Stryker's own timeout ends first is a `Timeout`.
 Stryker counts a `Timeout` as detected. So a mutant that only makes a process hold more memory than its limit counts
 as detected, though no test fails. To keep such mutants out of the detected ones, raise `maxMemoryMB`.
 
+A mutant that makes a module throw while a test file loads it, before any test runs, is a `RuntimeError`, as in
+Stryker's jest and mocha runners. Stryker leaves a `RuntimeError` out of the mutation score. Stryker's `command`
+runner and its tap runner count the same mutant as `Killed`, so on such code this runner's score can be lower than
+theirs while no test result differs.
+
 ## Close what your tests open
 
 A test file whose tests leave something open, such as a listening server, keeps its process alive after its tests
