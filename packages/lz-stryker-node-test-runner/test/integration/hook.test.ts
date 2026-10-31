@@ -25,7 +25,7 @@ import reporter from '../../src/reporter.ts';
 
 // Loaded here, outside any test, the hook stays inactive (the runner did not start this process, or its own hook is
 // installed), and Stryker counts the hook's mutants as covered by every test, including those that run it in a child.
-const { activeResources, exit, later, now } = await import('../../src/hook.ts');
+const { activeResources, exit, later, lzEvery, lzSignals, now } = await import('../../src/hook.ts');
 
 shareCompileCache();
 
@@ -321,6 +321,74 @@ describe('hook', () => {
     later(callback, 250);
 
     assert.deepEqual([timers, unrefs], [[[callback, 250]], 1]);
+  });
+
+  it('calls back every period without keeping the process alive', (t) => {
+    const timers: unknown[] = [];
+    let unrefs = 0;
+    t.mock.method(globalThis, 'setInterval', (callback: () => void, ms: number) => {
+      timers.push([callback, ms]);
+
+      return { unref: () => unrefs++ };
+    });
+    const callback = () => {};
+
+    lzEvery(callback, 250);
+
+    assert.deepEqual([timers, unrefs], [[[callback, 250]], 1]);
+  });
+
+  it('gives no signals on Windows, where every kill is TerminateProcess', () => {
+    assert.equal(lzSignals('win32'), undefined);
+  });
+
+  it("listens for, counts and stops listening for the process's signals on POSIX", (t) => {
+    const signals = lzSignals('linux');
+    assert.ok(signals);
+    const listener = () => {};
+    const before = process.listenerCount('SIGHUP');
+    t.after(() => {
+      process.off('SIGHUP', listener);
+    });
+
+    signals.on('SIGHUP', listener);
+    const added = [process.listeners('SIGHUP').includes(listener), signals.listenerCount('SIGHUP')];
+    signals.off('SIGHUP', listener);
+
+    assert.deepEqual([added, process.listeners('SIGHUP').includes(listener)], [[true, before + 1], false]);
+  });
+
+  it("finds the emitters of signal-exit's versions 4 and 3 on POSIX", (t) => {
+    const signals = lzSignals('linux');
+    assert.ok(signals);
+    const version4Key = Symbol.for('signal-exit emitter');
+    const version3Key = '__signal_exit_emitter__';
+    const previous = [Reflect.get(globalThis, version4Key), Reflect.get(process, version3Key)];
+    t.after(() => {
+      Reflect.set(globalThis, version4Key, previous[0]);
+      Reflect.set(process, version3Key, previous[1]);
+    });
+    const version4 = { count: 1 };
+    const version3 = { count: 2 };
+    Reflect.set(globalThis, version4Key, version4);
+    Reflect.set(process, version3Key, version3);
+
+    assert.deepEqual(signals.signalExitEmitters(), [version4, version3]);
+  });
+
+  it('sends the process a signal again on POSIX', (t) => {
+    const signals = lzSignals('linux');
+    assert.ok(signals);
+    const kills: unknown[] = [];
+    t.mock.method(process, 'kill', (pid: number, signal?: string | number) => {
+      kills.push([pid, signal]);
+
+      return true;
+    });
+
+    signals.raise('SIGTERM');
+
+    assert.deepEqual(kills, [[process.pid, 'SIGTERM']]);
   });
 
   it('keeps reading the clock when a test replaces process.hrtime, as fake timers do', () => {
