@@ -3,7 +3,7 @@ import { modified, type LzModified } from './modified.ts';
 import { register, type EachCallback, type Flags, type LzTableReturn, type Register } from './register.ts';
 
 /** The arguments of a `lzTestEach` callback for a readonly tuple row of up to 10 values, as in Vitest and Jest. */
-type ExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
+export type LzExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
   readonly 1: [T[0]];
   readonly 2: [T[0], T[1]];
   readonly 3: [T[0], T[1], T[2]];
@@ -42,7 +42,7 @@ export type LzTestEachFunctionReturn<T extends readonly any[]> = LzTableReturn<(
 
 export interface LzTestEachFunction {
   <T extends any[] | [any]>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T>;
-  <T extends ReadonlyArray<any>>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<ExtractEachCallbackArgs<T>>;
+  <T extends ReadonlyArray<any>>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<LzExtractEachCallbackArgs<T>>;
   <T>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T[]>;
   (...args: [TemplateStringsArray, ...any]): LzTestEachFunctionReturn<any[]>;
 }

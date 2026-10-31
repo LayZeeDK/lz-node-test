@@ -72,16 +72,17 @@ only when its body fails.
 
 The package exports a type for each value its functions take or return:
 
-| Type                          | Describes                                                              |
-| ----------------------------- | ---------------------------------------------------------------------- |
-| `LzName`                      | a test's name: a string, or a function, which names it by its own name |
-| `LzEachOptions`               | the options, with `fails`                                              |
-| `LzTestEachFunction`          | `lzTestEach`, without its modifiers                                    |
-| `LzTestEachFunctionReturn<T>` | what `lzTestEach(cases)` returns, for `fn`'s arguments `T`             |
-| `LzTestForFunction`           | `lzTestFor`, without its modifiers                                     |
-| `LzTestForFunctionReturn<T>`  | what `lzTestFor(cases)` returns, for the case type `T`                 |
-| `LzTableReturn<TCallback>`    | the function both tables return, for its callback type `TCallback`     |
-| `LzModified<TFunction>`       | the table function `TFunction` with its modifiers, as both values are  |
+| Type                           | Describes                                                              |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `LzName`                       | a test's name: a string, or a function, which names it by its own name |
+| `LzEachOptions`                | the options, with `fails`                                              |
+| `LzTestEachFunction`           | `lzTestEach`, without its modifiers                                    |
+| `LzTestEachFunctionReturn<T>`  | what `lzTestEach(cases)` returns, for `fn`'s arguments `T`             |
+| `LzTestForFunction`            | `lzTestFor`, without its modifiers                                     |
+| `LzTestForFunctionReturn<T>`   | what `lzTestFor(cases)` returns, for the case type `T`                 |
+| `LzTableReturn<TCallback>`     | the function both tables return, for its callback type `TCallback`     |
+| `LzModified<TFunction>`        | the table function `TFunction` with its modifiers, as both values are  |
+| `LzExtractEachCallbackArgs<T>` | `fn`'s arguments for a tuple row `T` of up to 10 values, as in Vitest  |
 
 ### Modifiers
 
