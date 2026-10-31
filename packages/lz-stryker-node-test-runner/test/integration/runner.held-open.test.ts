@@ -46,6 +46,25 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
     assert.deepEqual(result.killedBy, [`${join(dir, 'a.test.mjs')} > fails`]);
   });
 
+  it('reports a mutant killed at once when a failed test leaves a server listening and node:test filters out a top-level test', async (t) => {
+    heldOpenFor(t, 5000);
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        server,
+        `it('fails', async () => { ${listen} assert.fail('expected failure'); });`,
+        "it('filtered out', () => {});",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs'], { nodeArgs: ['--test-name-pattern=fails'] });
+    const started = Date.now();
+
+    const result = await settle(runner.mutantRun(mutantRunOptions()));
+
+    assert.equal(result.status, MutantRunStatus.Killed);
+    assert.deepEqual(result.killedBy, [`${join(dir, 'a.test.mjs')} > fails`]);
+    assert.ok(Date.now() - started < 5000, 'it waited for the held-open time');
+  });
+
   it('ends the dry run of a test file whose passing test leaves a server listening as an error that says what to do', async (t) => {
     heldOpenFor(t, 200);
     const dir = project(t, { 'a.test.mjs': fixture(server, `it('passes', async () => { ${listen} });`) });

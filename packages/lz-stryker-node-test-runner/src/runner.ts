@@ -354,8 +354,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
 
   // The hook ended a file that something its tests opened kept alive, which `node --test` would wait for forever: in
   // the dry run an error to fix, and in a mutant run a timeout, which Stryker's own timer reports first unless the
-  // file's tests take most of its budget. Top-level tests that node:test filters out never get reported, so such a
-  // file can also be unfinished.
+  // file's tests take most of its budget.
   if (!failed && main.heldOpen) {
     const heldBy = main.heldOpen.join(', ');
     const errorMessage =

@@ -29,8 +29,8 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
   const seen: (string | undefined)[] = [];
   const positions = new Map<string, Position>();
   const sites: CallSite[] = [];
-  /** Each call of `registering`: whether top-level, and how many registrations node:test had then. */
-  const registering: [boolean, number][] = [];
+  /** Each call of `registering`: how many registrations node:test had then. */
+  const registering: number[] = [];
   const rootAfters: unknown[] = [];
   const testSpans = new Map<string, readonly LzTimeWindow[]>();
   let time = 0;
@@ -45,8 +45,8 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
     positions,
     callSites: () => sites,
     nodeTest: fake.module,
-    registering: (topLevel) => {
-      registering.push([topLevel, fake.registrations.length]);
+    registering: () => {
+      registering.push(fake.registrations.length);
     },
     rootAfter: (hook) => {
       rootAfters.push(hook);

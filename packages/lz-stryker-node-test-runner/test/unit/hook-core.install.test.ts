@@ -62,6 +62,11 @@ function send(deps: HookDependencies, ...events: readonly TestEvent[]): void {
   }
 }
 
+/** node:test enqueues a top-level suite or test as it registers it, unless one of its filters leaves it out. */
+function enqueue(deps: HookDependencies, ...names: readonly string[]): void {
+  send(deps, ...names.map((name) => ({ type: 'test:enqueue', data: { name, nesting: 0 } })));
+}
+
 function report(deps: HookDependencies, name: string, outcome: 'pass' | 'fail'): void {
   const error = { message: `${name} failed` };
 
@@ -476,6 +481,7 @@ describe('install', () => {
       h.wrapped().describe('suite', () => {
         h.wrapped().it('inner', () => {});
       });
+      enqueue(h.deps, 'fails', 'suite');
       afterHooks(h.fake)[0]?.();
       report(h.deps, 'fails', 'fail');
       send(h.deps, {
@@ -499,6 +505,17 @@ describe('install', () => {
         type: 'test:pass',
         data: { name: 'suite', nesting: 0, details: { type: 'suite', duration_ms: 1 } },
       });
+
+      assert.deepEqual(h.exits, [1]);
+    });
+
+    it('ends a failed file at once when node:test filters out a top-level test, as it reports no `test:enqueue` for it', () => {
+      const h = installedHarness(fileEnv);
+      h.wrapped().it('fails', () => {});
+      h.wrapped().it('filtered out', () => {});
+      afterHooks(h.fake)[0]?.();
+      enqueue(h.deps, 'fails');
+      report(h.deps, 'fails', 'fail');
 
       assert.deepEqual(h.exits, [1]);
     });
@@ -539,6 +556,7 @@ describe('install', () => {
       async ([, reported, marks]) => {
         const h = installedHarness(fileEnv);
         h.wrapped().it('passes', () => {});
+        enqueue(h.deps, 'passes');
         await bodyOf(h.fake.registrations, 'passes')(testContext());
 
         if (reported) {

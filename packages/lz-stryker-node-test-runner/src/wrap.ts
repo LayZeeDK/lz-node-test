@@ -121,8 +121,8 @@ interface WrapOptions {
   readonly positions: Map<string, Position>;
   readonly callSites: () => readonly CallSite[];
   readonly nodeTest: NodeTestTarget;
-  /** Called before each suite, test or hook goes to node:test, `topLevel` for a suite or test outside any other. */
-  readonly registering: (topLevel: boolean) => void;
+  /** Called before each suite, test or hook goes to node:test. */
+  readonly registering: () => void;
   /** Wraps a function registered as an `after` hook outside any suite, a root `after` hook of the test file. */
   readonly rootAfter: (hook: Body) => Body;
   /** The spans during which each test is current, by id, as `ProcessRecord.testSpans` describes them. */
@@ -236,7 +236,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         return undefined;
       }
 
-      registering(false);
+      registering();
 
       return Reflect.apply(register, this, [prepare(hook, suite), ...rest]);
     };
@@ -295,7 +295,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     }
   };
   const named = (parent: string, name: string, test: boolean) => {
-    registering(parent === testFile);
+    registering();
     const id = idOf(parent, name);
     const fullName = parent === testFile ? name : `${fullNames.get(parent)} > ${name}`;
     fullNames.set(id, fullName);
@@ -428,7 +428,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   // The bodies of skipped suites and tests never run, so `skip` only notes where they are declared.
   const declareSkipped = (register: Body): Registrar =>
     function (this: unknown, ...args: unknown[]): unknown {
-      registering(parentId() === testFile);
+      registering();
       declare(idOf(parentId(), parse(args).name));
 
       return Reflect.apply(register, this, args);

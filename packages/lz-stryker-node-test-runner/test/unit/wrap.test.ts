@@ -383,7 +383,7 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(seen, [`${testFile} > parent`, `${testFile} > parent > wanted`]);
   });
 
-  it('tells before each suite, test and hook goes to node:test, and whether it is a top-level suite or test', async () => {
+  it('tells before each suite, test and hook goes to node:test', async () => {
     const { module, registrations, registering } = wrapped({ filter: [`${testFile} > runs`] });
     module.after(() => {});
     module.describe('suite', () => {
@@ -399,17 +399,7 @@ describe('wrapNodeTest', () => {
     await bodyOf(registrations, 'runs')(testContext(registrations));
 
     // The hook, the suite, its two tests, the skipped test, `runs`, the filtered test, and the two that `runs` registers.
-    assert.deepEqual(registering, [
-      [false, 0],
-      [true, 1],
-      [false, 2],
-      [false, 3],
-      [true, 4],
-      [true, 5],
-      [true, 6],
-      [false, 7],
-      [false, 8],
-    ]);
+    assert.deepEqual(registering, [0, 1, 2, 3, 4, 5, 6, 7, 8]);
   });
 
   it('hands each root `after` hook with a function, and none other, to rootAfter, and registers what it returns', () => {

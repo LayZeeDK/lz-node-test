@@ -381,10 +381,10 @@ function writeOnEndingSignals(signals: LzProcessSignals, write: () => void): voi
 
 interface Ending {
   /**
-   * The test file registers a suite, test or hook through node:test, `topLevel` when it is a suite or test outside any
-   * other. The first registration also registers a root `after` hook of the ending's own, ahead of the file's.
+   * The test file registers a suite, test or hook through node:test. The first registration also registers a root
+   * `after` hook of the ending's own, ahead of the file's.
    */
-  readonly registering: (topLevel: boolean) => void;
+  readonly registering: () => void;
   /** Makes the ending wait for a root `after` hook of the test file to settle. */
   readonly track: (hook: Body) => Body;
   /** node:test has reported another event. */
@@ -397,8 +397,9 @@ interface Ending {
  * Ends a test file's process that outlives its tests, as a server left listening makes it. Once node:test has
  * finished every top-level suite and test and the file's root `after` hooks have settled, or one of them threw or timed
  * out, which stops the rest, a file with a failed test ends with exit code 1 once node:test has reported each top-level
- * suite and test, as nothing later changes its outcome. A top-level test that node:test filters out is never reported,
- * so such a file waits like any other: one still alive `graceMs` later ends with node:test's exit code.
+ * suite and test it enqueued, as nothing later changes its outcome. node:test enqueues each one as it is registered,
+ * before reporting it, and never enqueues nor reports one its filters leave out. A file still alive `graceMs` later
+ * ends with node:test's exit code.
  *
  * node:test runs root `after` hooks in the order they were added, once every top-level suite and test has finished.
  * The ending adds its own at the file's first registration, not earlier: node:test sets itself up on its first use, and
@@ -410,7 +411,7 @@ export function ending(
   rootAfter: (hook: () => void) => void,
   graceMs: number,
 ): Ending {
-  let declared = 0;
+  let enqueuedTopLevel = 0;
   let reportedTopLevel = 0;
   let hooked = false;
   let finished = false;
@@ -434,8 +435,8 @@ export function ending(
     return resources;
   };
   // node:test reports a test a little after it ends, so a failure can arrive after the hooks have settled. It reports a
-  // suite after everything inside it, so once each top-level one is reported, everything is.
-  const allReported = () => reportedTopLevel >= declared;
+  // suite after everything inside it, so once each enqueued top-level one is reported, everything is.
+  const allReported = () => reportedTopLevel >= enqueuedTopLevel;
   const end = (code: number | undefined, heldOpen?: readonly string[]) => {
     ended = { complete: allReported(), ...(heldOpen && { heldOpen }) };
     deps.exit(code);
@@ -463,17 +464,13 @@ export function ending(
   };
 
   return {
-    registering: (topLevel) => {
+    registering: () => {
       if (!hooked) {
         hooked = true;
         rootAfter(() => {
           finished = true;
           armOnceSettled();
         });
-      }
-
-      if (topLevel) {
-        declared++;
       }
     },
     track: (hook) => {
@@ -482,6 +479,10 @@ export function ending(
       return settling(hook, () => settle);
     },
     reported: ({ type, data }) => {
+      if (type === 'test:enqueue' && data.nesting === 0) {
+        enqueuedTopLevel++;
+      }
+
       if (isResult(type) && data.nesting === 0 && !fileLevel(data.details)) {
         reportedTopLevel++;
       }
