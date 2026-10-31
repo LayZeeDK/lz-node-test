@@ -254,7 +254,8 @@ describe('LzStrykerNodeTestRunner coverage', () => {
 
   /**
    * Waits, at most 2 s, for the record of a process the test started, which the process writes while it runs in the
-   * dry run. The name after `prefix` is the process's nonce.
+   * dry run. `prefix` is a record name up to the process's nonce: a copy of the format `recordName` writes, as the test
+   * file runs in a process of its own, which does not load the runner's source.
    */
   const recorded = [
     "import { readdirSync } from 'node:fs';",

@@ -7,7 +7,9 @@ import { lzTestFor } from '@layzee/lz-node-test';
 import {
   lzIsRecordName,
   lzParseRecord,
+  lzParseRecordName,
   lzRecordNonce,
+  type LzRecordName,
   lzTempRecordPath,
   lzWriteRecord,
   memoryRecordName,
@@ -81,6 +83,19 @@ describe('lzIsRecordName', () => {
     '4321.0.js',
   ])('takes %s as no record', (name) => {
     assert.equal(lzIsRecordName(name), false);
+  });
+});
+
+describe('lzParseRecordName', () => {
+  const nonce = lzRecordNonce();
+
+  lzTestFor<readonly [string, LzRecordName | undefined]>([
+    [recordName(4321, 0), { pid: 4321, thread: 0, nonce: undefined }],
+    [recordName(4321, 3, nonce), { pid: 4321, thread: 3, nonce }],
+    [memoryRecordName(4321, nonce), { pid: 4321, thread: 'memory', nonce }],
+    [lzTempRecordPath(recordName(4321, 3, nonce)), undefined],
+  ])('reads %s as %j', ([name, parsed]) => {
+    assert.deepEqual(lzParseRecordName(name), parsed);
   });
 });
 

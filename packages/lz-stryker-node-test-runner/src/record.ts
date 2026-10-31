@@ -184,11 +184,33 @@ export function lzWriteRecord(path: string, record: ProcessRecord, files: LzReco
   }
 }
 
-const recordNamePattern = /^\d+\.(?:\d+(?:\.[\da-f-]+)?|[\da-f-]+\.memory)\.json$/;
+/** What the name of a record says about the process or thread that wrote it. */
+export interface LzRecordName {
+  readonly pid: number;
+  /** The id of the thread that wrote the record, or `memory` for the record the memory watchdog writes. */
+  readonly thread: number | 'memory';
+  readonly nonce: string | undefined;
+}
+
+const threadRecordPattern = /^(\d+)\.(\d+)(?:\.([\da-f-]+))?\.json$/;
+const memoryRecordPattern = /^(\d+)\.([\da-f-]+)\.memory\.json$/;
+
+/** The parts of a record's name, as `recordName` and `memoryRecordName` put them together; undefined for another name. */
+export function lzParseRecordName(name: string): LzRecordName | undefined {
+  const [, pid, threadId, nonce] = threadRecordPattern.exec(name) ?? [];
+
+  if (pid !== undefined) {
+    return { pid: Number(pid), thread: Number(threadId), nonce };
+  }
+
+  const [, memoryPid, memoryNonce] = memoryRecordPattern.exec(name) ?? [];
+
+  return memoryPid === undefined ? undefined : { pid: Number(memoryPid), thread: 'memory', nonce: memoryNonce };
+}
 
 /** Whether `name` is the name of a record, which a record's temporary file is not. */
 export function lzIsRecordName(name: string): boolean {
-  return recordNamePattern.test(name);
+  return lzParseRecordName(name) !== undefined;
 }
 
 function notARecord(field?: string): never {

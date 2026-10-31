@@ -19,7 +19,7 @@ import {
   watchdog,
 } from '../../src/hook-core.ts';
 import { fixture, grows, hookUrl, reporterArg, shareCompileCache } from '../runner.fixtures.ts';
-import { envNames, lzParseRecord, type ProcessRecord } from '../../src/record.ts';
+import { envNames, lzParseRecord, lzParseRecordName, type LzRecordName, type ProcessRecord } from '../../src/record.ts';
 import { lzEndingSignals } from '../../src/record-writer.ts';
 import reporter from '../../src/reporter.ts';
 
@@ -132,21 +132,17 @@ function readRecords(outDir: string): Record<string, ProcessRecord> {
   );
 }
 
-/** The record of a process that is not the test file's own, whose name carries the process's nonce between the two. */
-function recordNamed(
+/** The record that the process `pid` wrote from `thread`, by its name. */
+function recordOf(
   records: Record<string, ProcessRecord>,
-  prefix: string,
-  suffix: string,
+  pid: number,
+  thread: LzRecordName['thread'],
 ): ProcessRecord | undefined {
-  return Object.entries(records).find(([name]) => name.startsWith(prefix) && name.endsWith(suffix))?.[1];
-}
+  return Object.entries(records).find(([name]) => {
+    const parsed = lzParseRecordName(name);
 
-function memoryRecord(records: Record<string, ProcessRecord>, pid: number): ProcessRecord | undefined {
-  return recordNamed(records, `${pid}.`, '.memory.json');
-}
-
-function childRecord(records: Record<string, ProcessRecord>, pid: number): ProcessRecord | undefined {
-  return recordNamed(records, `${pid}.0.`, '.json');
+    return parsed?.pid === pid && parsed.thread === thread;
+  })?.[1];
 }
 
 /** The record without its lifetime, once that runs from when the hook ran up to now on the clock this process reads. */
@@ -186,7 +182,7 @@ async function runTestFile(
   });
   const records = readRecords(outDir);
 
-  return { code, pid, testFile, records, record: records[`${pid}.0.json`] };
+  return { code, pid, testFile, records, record: recordOf(records, pid, 0) };
 }
 
 describe('hook', () => {
@@ -214,7 +210,7 @@ describe('hook', () => {
     added.exit[0]?.(0);
 
     const records = readRecords(outDir);
-    const record = childRecord(records, process.pid);
+    const record = recordOf(records, process.pid, 0);
     assert.deepEqual(Object.values(records), [record]);
     assert.deepEqual(record?.tests, []);
   });
@@ -258,7 +254,7 @@ describe('hook', () => {
 
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);
     added.exit[0]?.(0);
-    const peakMB = childRecord(readRecords(outDir), process.pid)?.peakMemoryMB;
+    const peakMB = recordOf(readRecords(outDir), process.pid, 0)?.peakMemoryMB;
     assert.ok(peakMB, 'The record has no peak memory.');
 
     assert.ok(Number.isInteger(peakMB), String(peakMB));
@@ -283,14 +279,14 @@ describe('hook', () => {
     );
 
     assert.equal(code, 0);
-    const workers = Object.keys(records).filter((name) => name !== `${pid}.0.json`);
+    const workers = Object.entries(records).filter(([, other]) => other !== record);
     assert.equal(record?.main, true);
     assert.deepEqual(
-      workers.map((name) => [
-        /^\d+\.[1-9]\d*\.[\da-f-]+\.json$/.test(name),
-        records[name]?.main,
-        records[name]?.hitCount,
-      ]),
+      workers.map(([name, worker]) => {
+        const parsed = lzParseRecordName(name);
+
+        return [parsed?.pid === pid && parsed.thread !== 0 && parsed.nonce !== undefined, worker.main, worker.hitCount];
+      }),
       [[true, undefined, 999]],
     );
   });
@@ -588,7 +584,7 @@ describe('hook', () => {
       [envNames.file]: join(outDir, 'some.test.mjs'),
     });
     const records = readRecords(outDir);
-    const record = childRecord(records, pid);
+    const record = recordOf(records, pid, 0);
 
     assert.equal(code, 0);
     assert.deepEqual(Object.values(records), [record]);
@@ -612,7 +608,7 @@ describe('hook', () => {
 
       assert.notEqual(code, 0);
       const records = readRecords(outDir);
-      const record = memoryRecord(records, pid);
+      const record = recordOf(records, pid, 'memory');
       assert.deepEqual(Object.values(records), [record]);
       assert.ok(record);
       const { tests, memoryLimitReached } = record;
@@ -631,7 +627,7 @@ describe('hook', () => {
       [envNames.dryRun]: 'true',
     });
 
-    const peakMB = childRecord(readRecords(outDir), pid)?.peakMemoryMB;
+    const peakMB = recordOf(readRecords(outDir), pid, 0)?.peakMemoryMB;
     assert.ok(peakMB, 'The record has no peak memory.');
 
     assert.ok(Number.isInteger(peakMB), String(peakMB));
@@ -704,7 +700,7 @@ describe('hook', () => {
     });
 
     assert.notEqual(code, 0);
-    assert.equal(memoryRecord(readRecords(outDir), pid)?.memoryLimitReached?.limitMB, 200);
+    assert.equal(recordOf(readRecords(outDir), pid, 'memory')?.memoryLimitReached?.limitMB, 200);
   });
 
   it('runs a process under the permission model without workers with a memory limit as it would without one', async (t) => {
@@ -715,7 +711,7 @@ describe('hook', () => {
     const records = readRecords(outDir);
 
     assert.equal(code, 0);
-    const record = childRecord(records, pid);
+    const record = recordOf(records, pid, 0);
     assert.deepEqual(Object.values(records), [record]);
     assert.deepEqual(untimed(record), { tests: [] });
   });
