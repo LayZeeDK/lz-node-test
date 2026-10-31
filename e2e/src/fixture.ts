@@ -119,9 +119,13 @@ function reportOf(run: LzStrykerRun): LzReport {
   return run.report;
 }
 
-/** Runs `stryker run` in `dir`, whose `tmp` folder must exist: the run gets it as its temporary directory. */
-export async function lzStryker(dir: string, configFile: string, concurrency: number): Promise<LzStrykerRun> {
-  const tmp = join(dir, 'tmp');
+/** Runs `stryker run` in `dir` with `tmp`, which must exist, as its temporary directory. */
+export async function lzStryker(
+  dir: string,
+  configFile: string,
+  concurrency: number,
+  tmp = join(dir, 'tmp'),
+): Promise<LzStrykerRun> {
   const report = join(dir, lzReportFile);
   const before = new Set(readdirSync(tmp));
 

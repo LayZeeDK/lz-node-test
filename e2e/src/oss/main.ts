@@ -102,17 +102,25 @@ const out = resolve(options.out);
 
 mkdirSync(out, { recursive: true });
 lzRemoveDeadRunDirs(tmpdir(), dirPrefix);
-const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${process.pid}-`)));
+const root = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${process.pid}-`)));
+// Beside the copy, not in it, so that no folder of the project can collide with them.
+const dir = join(root, 'project');
+const runTmp = join(root, 'tmp');
 
 if (!options.prepareOnly) {
-  lzRemoveOnExit(dir);
+  lzRemoveOnExit(root);
 }
 
 const copied = new Set(['.git', 'node_modules']);
 
-cpSync(options.source, dir, { recursive: true, filter: (path) => !copied.has(relative(options.source, path)) });
-mkdirSync(join(dir, 'tmp'));
-const tarballs = options.tarballs === undefined ? await lzPack(join(dir, 'tarballs')) : given(options.tarballs);
+// Verbatim, as a relative link rewritten to an absolute one would let a write in the copy reach the source.
+cpSync(options.source, dir, {
+  recursive: true,
+  verbatimSymlinks: true,
+  filter: (path) => !copied.has(relative(options.source, path)),
+});
+mkdirSync(runTmp);
+const tarballs = options.tarballs === undefined ? await lzPack(join(root, 'tarballs')) : given(options.tarballs);
 
 await lzInstall(dir, tarballs);
 sides.forEach((side) => {
@@ -133,7 +141,7 @@ const header: LzOssHeader = {
 
 if (options.prepareOnly) {
   writeResult({ ...header, preparedIn: dir });
-  process.stdout.write(`Prepared ${dir}; it stays for manual runs.\n`);
+  process.stdout.write(`Prepared ${dir}, with ${runTmp} for TMP; both stay for manual runs.\n`);
 } else {
   const lz = await runSide('lz');
   const command = await runSide('command');
@@ -147,7 +155,7 @@ async function runSide(side: LzSide): Promise<LzSideRun> {
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
   const started = performance.now();
-  const run = await settled('Stryker run', lzStryker(dir, configFile(side), options.concurrency));
+  const run = await settled('Stryker run', lzStryker(dir, configFile(side), options.concurrency, runTmp));
   const wallMs = Math.round(performance.now() - started);
   const stopped = await settled('Sampler', sampler.stop());
   const samples = stopped.ok ? stopped.value.map((sample) => lzDescendants(sample, process.pid, excluded)) : [];
