@@ -21,3 +21,7 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
+
+## Proving tests
+
+- Prove that a test catches a change with `npx nx run <project>:mutate-src --mutate <file>:<lines>`, not by reverting code or writing a control test by hand
