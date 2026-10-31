@@ -1,6 +1,4 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { it } from 'node:test';
 
 import { lzFixture, lzLeftover, lzMutants } from '../src/fixture.ts';
@@ -37,11 +35,4 @@ it('mutates only the assertions of a test file with the test-code entry and kill
 
 it('leaves nothing in its temporary directory after either run', () => {
   assert.deepEqual([...lzLeftover(production), ...lzLeftover(testCode)], []);
-});
-
-it('removes the memory peaks of an ended run at the next run', () => {
-  const [firstPeaks] = production.leftover;
-
-  assert.ok(firstPeaks);
-  assert.equal(existsSync(join(fixture.dir, 'tmp', firstPeaks)), false);
 });

@@ -32,7 +32,6 @@ export type LzStrykerRun =
   | (LzStrykerOutcome & { readonly reported: false });
 
 export interface LzFixture {
-  readonly dir: string;
   stryker(configFile?: string): Promise<LzStrykerRun>;
 }
 
@@ -60,7 +59,7 @@ export async function lzFixture(name: string): Promise<LzFixture> {
     ...pinned(),
   ]);
 
-  return { dir, stryker: (configFile = 'stryker.config.mjs') => stryker(dir, configFile, concurrency) };
+  return { stryker: (configFile = 'stryker.config.mjs') => stryker(dir, configFile, concurrency) };
 }
 
 /** Required, so that no run falls back to Stryker's default of all cores but one on a machine that other work shares. */
