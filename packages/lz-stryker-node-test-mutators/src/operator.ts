@@ -31,12 +31,18 @@ export interface Operator {
   /** A TypeScript module in which the operator makes a mutant; the install's self-check instruments it. */
   readonly sample: string;
   mutate(path: NodePath, t: BabelTypes): Iterable<types.Node>;
+  /**
+   * Stryker's mutator filter: once the instrumenter leaves a node this operator mutated, it passes every mutant made in
+   * that node, and `false` drops this operator's mutants of the node.
+   */
+  readonly filter?: (mutantsInScope: readonly unknown[]) => boolean;
 }
 
 /** The shape of Stryker's `NodeMutator`, which the instrumenter's exports keep out of reach. */
 export interface NodeMutatorLike {
   readonly name: string;
   mutate(path: NodePath, context: { readonly isExpressionContext: boolean }): Iterable<types.Node>;
+  readonly filter?: ((mutantsInScope: readonly unknown[]) => boolean) | undefined;
 }
 
 export const own = Symbol.for('lz-stryker-node-test-mutators');
@@ -50,6 +56,7 @@ export function toNodeMutator(operator: Operator, t: BabelTypes): OwnMutator {
   return {
     name: operator.name,
     [own]: true,
+    filter: operator.filter,
     *mutate(path, { isExpressionContext }) {
       if (!isExpressionContext) {
         yield* operator.mutate(path, t);

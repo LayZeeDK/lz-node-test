@@ -32,6 +32,8 @@ describe('LzAwaitStatement', () => {
   lzTestEach([
     ['an awaited call', 'await flush(1);', [], ['LzAwaitStatement']],
     ['a call that is not awaited', 'flush(1);', ['CallExpression'], ['CallExpression']],
+    ['an awaited call whose argument Stryker mutates', "await flush('x');", [], []],
+    ['a call whose argument Stryker mutates', "flush('x');", [], []],
   ])("gives %s exactly the removals next to Stryker's mutators", async (_title, source, alone, together) => {
     assert.deepEqual(await removalsNextToBuiltIns(awaitStatement, source), [alone, together]);
   });
