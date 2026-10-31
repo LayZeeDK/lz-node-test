@@ -11,14 +11,13 @@ import {
   memoryRecordName,
   recordName,
   uniqueIds,
-  type LzTimeWindow,
   type ProcessRecord,
   type RecordedTest,
 } from './record.ts';
 import { lzTestOnly } from './node-options.ts';
 import { lzPersistRecord, type LzRecordDependencies } from './record-writer.ts';
 import type { WatchdogData } from './watchdog.ts';
-import { settling, wrapNodeTest, type Body, type NodeTestModule, type NodeTestTarget } from './wrap.ts';
+import { lzCurrentTests, settling, wrapNodeTest, type Body, type NodeTestModule, type NodeTestTarget } from './wrap.ts';
 
 export interface TestEvent {
   readonly type: string;
@@ -175,7 +174,7 @@ export function install(deps: HookDependencies): boolean {
   const testFile = deps.env[envNames.file];
   Reflect.deleteProperty(deps.env, envNames.file);
   const tests: RecordedTest[] = [];
-  const testSpans = new Map<string, readonly LzTimeWindow[]>();
+  const currentTests = lzCurrentTests({ ns, env: deps.env, now: deps.now });
   const diagnostics: string[] = [];
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
   let summarized = false;
@@ -231,8 +230,7 @@ export function install(deps: HookDependencies): boolean {
       nodeTest,
       registering: ends.registering,
       rootAfter: ends.track,
-      testSpans,
-      now: deps.now,
+      currentTests,
     });
     deps.global[wrappedNodeTest] = wrapped;
     deps.registerHooks(redirectNodeTest(Object.keys(wrapped)));
@@ -245,12 +243,6 @@ export function install(deps: HookDependencies): boolean {
   const record = (natural: boolean): ProcessRecord => {
     const outcome = end?.outcome();
     const written = deps.now();
-    const current = ns.currentTestId;
-    const spans = current === undefined ? [] : (testSpans.get(current) ?? []);
-    const open = spans.at(-1);
-    // The span of the test that runs as the record is written ends then.
-    const closed =
-      current !== undefined && open ? { [current]: [...spans.slice(0, -1), { start: open.start, end: written }] } : {};
 
     return {
       ...(main && { main }),
@@ -262,7 +254,7 @@ export function install(deps: HookDependencies): boolean {
       ...(main && !summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
       lifetime: { start: started, end: written },
-      ...(main && { testSpans: { ...Object.fromEntries(testSpans), ...closed } }),
+      ...(main && { testSpans: currentTests.spansAt(written) }),
     };
   };
   lzPersistRecord(deps, join(outDir, recordName(deps.pid, deps.threadId, deps.nonce)), record, { main, dryRun });

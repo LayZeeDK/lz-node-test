@@ -182,9 +182,7 @@ interface WrapOptions {
   readonly registering: () => void;
   /** Wraps a function registered as an `after` hook outside any suite, a root `after` hook of the test file. */
   readonly rootAfter: (hook: Body) => Body;
-  /** The spans during which each test is current, by id, as `ProcessRecord.testSpans` describes them. */
-  readonly testSpans: Map<string, readonly LzTimeWindow[]>;
-  readonly now: () => number;
+  readonly currentTests: LzCurrentTests;
 }
 
 /** `hook` calling `first` with its context before it runs. */
@@ -232,22 +230,34 @@ function lzOnlyRules(testOnly: boolean) {
   };
 }
 
+export type LzCurrentTests = ReturnType<typeof lzCurrentTests>;
+
 /**
  * Tracks which test is current, in the instrumenter's context and the environment, and the spans during which each
- * test is current. `makeCurrent` returns the function that ends it.
+ * test is current. `makeCurrent` returns the function that ends it. `spansAt` gives the spans by id, as
+ * `ProcessRecord.testSpans` describes them, with the open span ending at `time`.
  */
-function lzCurrentTests({ ns, env, testSpans, now }: Pick<WrapOptions, 'ns' | 'env' | 'testSpans' | 'now'>) {
+export function lzCurrentTests({
+  ns,
+  env,
+  now,
+}: {
+  readonly ns: InstrumenterContext;
+  readonly env: Record<string, string | undefined>;
+  readonly now: () => number;
+}) {
+  const testSpans = new Map<string, readonly LzTimeWindow[]>();
   // The last is current, also when a subtest that its parent does not await outlives the parent's body.
   const active = new Set<string>();
   /** The test whose span is open, and the test of the span opened last. */
   let spanning: string | undefined;
   let latest: string | undefined;
-  const closeSpan = (id: string, time: number) => {
-    const spans = testSpans.get(id) ?? [];
-    const open = spans.at(-1);
+  const closeSpan = (spans: Map<string, readonly LzTimeWindow[]>, id: string, time: number) => {
+    const own = spans.get(id) ?? [];
+    const open = own.at(-1);
 
     if (open) {
-      testSpans.set(id, [...spans.slice(0, -1), { start: open.start, end: time }]);
+      spans.set(id, [...own.slice(0, -1), { start: open.start, end: time }]);
     }
   };
   const moveSpan = (id: string | undefined) => {
@@ -258,7 +268,7 @@ function lzCurrentTests({ ns, env, testSpans, now }: Pick<WrapOptions, 'ns' | 'e
     const time = now();
 
     if (spanning !== undefined) {
-      closeSpan(spanning, time);
+      closeSpan(testSpans, spanning, time);
     }
 
     if (id !== undefined && id !== latest) {
@@ -291,7 +301,17 @@ function lzCurrentTests({ ns, env, testSpans, now }: Pick<WrapOptions, 'ns' | 'e
     };
   };
 
-  return { makeCurrent, isActive: (id: string) => active.has(id) };
+  const spansAt = (time: number): Readonly<Record<string, readonly LzTimeWindow[]>> => {
+    const spans = new Map(testSpans);
+
+    if (spanning !== undefined) {
+      closeSpan(spans, spanning, time);
+    }
+
+    return Object.fromEntries(spans);
+  };
+
+  return { makeCurrent, isActive: (id: string) => active.has(id), spansAt };
 }
 
 /**
@@ -314,6 +334,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     nodeTest,
     registering,
     rootAfter,
+    currentTests,
   } = options;
   const idOf = uniqueIds();
   /**
@@ -324,7 +345,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const parentId = () => running.getStore() ?? testFile;
   const bailed = () => bail && tests.some((test) => test.status === 'failed');
   const { only, withoutOnly, turnOffRunOnly, ignoringRunOnly } = lzOnlyRules(testOnly);
-  const { makeCurrent, isActive } = lzCurrentTests(options);
+  const { makeCurrent, isActive } = currentTests;
   /**
    * Whether the filter selects the test, or a subtest of it, which the test must run to register. Stryker names a
    * whole test file in the filter when --testFiles limits the run.

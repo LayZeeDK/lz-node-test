@@ -374,7 +374,7 @@ describe('wrapNodeTest', () => {
     assert.equal(ns.currentTestId, undefined);
     assert.ok(!(envNames.current in env));
     // The clock ticks once per read, so a span moved while the child stayed current would shift the child's end.
-    assert.deepEqual(Object.fromEntries(testSpans), {
+    assert.deepEqual(testSpans(), {
       [`${testFile} > parent`]: [{ start: 1, end: 2 }],
       [childId]: [{ start: 2, end: 3 }],
     });
@@ -690,7 +690,7 @@ describe('wrapNodeTest', () => {
 
     await runBodies(registrations, ['first', 'second']);
 
-    assert.deepEqual(Object.fromEntries(testSpans), {
+    assert.deepEqual(testSpans(), {
       [`${testFile} > first`]: [{ start: 1, end: 4 }],
       [`${testFile} > second`]: [{ start: 5, end: 6 }],
     });
@@ -705,7 +705,7 @@ describe('wrapNodeTest', () => {
 
     await bodyOf(registrations, 'parent')(testContext(registrations));
 
-    assert.deepEqual(Object.fromEntries(testSpans), {
+    assert.deepEqual(testSpans(), {
       [`${testFile} > parent`]: [
         { start: 1, end: 2 },
         { start: 3, end: 4 },

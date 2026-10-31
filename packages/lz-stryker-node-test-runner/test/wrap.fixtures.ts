@@ -1,7 +1,7 @@
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
-import type { LzTimeWindow, RecordedTest } from '../src/record.ts';
-import { wrapNodeTest, type CallSite } from '../src/wrap.ts';
+import type { RecordedTest } from '../src/record.ts';
+import { lzCurrentTests, wrapNodeTest, type CallSite } from '../src/wrap.ts';
 import { bodyOf, fakeNodeTest, testContext, testFile, type Fn, type Registration } from './hook-core.fixtures.ts';
 
 export async function runBodies(registrations: Registration[], names: string[]): Promise<void> {
@@ -33,8 +33,8 @@ export function wrapped({ filter, bail = false, testOnly = true, activeMutant, e
   /** Each call of `registering`: how many registrations node:test had then. */
   const registering: number[] = [];
   const rootAfters: unknown[] = [];
-  const testSpans = new Map<string, readonly LzTimeWindow[]>();
   let time = 0;
+  const currentTests = lzCurrentTests({ ns, env, now: () => ++time });
   const module = wrapNodeTest({
     ns,
     testFile: testFile,
@@ -55,8 +55,7 @@ export function wrapped({ filter, bail = false, testOnly = true, activeMutant, e
 
       return hook;
     },
-    testSpans,
-    now: () => ++time,
+    currentTests,
   });
 
   const see = () => seen.push(ns.currentTestId);
@@ -74,6 +73,7 @@ export function wrapped({ filter, bail = false, testOnly = true, activeMutant, e
     see,
     registering,
     rootAfters,
-    testSpans,
+    /** The spans so far, with an open span ending now. */
+    testSpans: () => currentTests.spansAt(time),
   };
 }
