@@ -2,6 +2,7 @@ import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import nx from '@nx/eslint-plugin';
 import n from 'eslint-plugin-n';
 import nodeTest from 'eslint-node-test';
+import tseslint from 'typescript-eslint';
 
 // Relative to the config ESLint loads: the root one or a package's, which spreads this one.
 // The workspace's ESLint rules keep their tests beside them, outside src/ and test/.
@@ -12,6 +13,10 @@ const test = ['**/test/**/*.ts', ...toolTest];
 const synthetic = ['**/test/synthetic/**'];
 // Consumer projects the e2e suite installs; they break workspace rules on purpose.
 const e2eFixtures = ['**/e2e/fixtures/**'];
+
+// The rules of typescript-eslint's strict-type-checked preset, spread into the src and test block; the nx configs
+// already set up its parser and plugin.
+const strictTypeChecked = Object.assign({}, ...tseslint.configs.strictTypeChecked.map(({ rules }) => rules ?? {}));
 
 const declared = ':matches(TSInterfaceDeclaration, TSTypeAliasDeclaration)';
 // Every block that sets no-restricted-syntax spreads these: a later block replaces the rule's options.
@@ -110,84 +115,17 @@ export default [
       'n/prefer-promises/dns': 'error',
       'n/no-path-concat': 'error',
       'preserve-caught-error': 'error',
-      '@typescript-eslint/no-require-imports': 'error',
+      ...strictTypeChecked,
       '@typescript-eslint/no-floating-promises': [
         'error',
         // Never add 'test': it also silences an un-awaited t.test() subtest.
         { allowForKnownSafeCalls: [{ from: 'package', package: 'node:test', name: ['it', 'describe', 'suite'] }] },
       ],
-      '@typescript-eslint/no-misused-promises': 'error',
-      '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/return-await': ['error', 'in-try-catch'],
-      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'error',
-      '@typescript-eslint/no-unsafe-member-access': 'error',
-      '@typescript-eslint/no-unsafe-call': 'error',
-      '@typescript-eslint/no-unsafe-return': 'error',
-      '@typescript-eslint/no-unsafe-argument': 'error',
-      // The strict-type-checked options: no type converts itself silently in a template literal.
-      '@typescript-eslint/restrict-template-expressions': [
-        'error',
-        {
-          allowAny: false,
-          allowBoolean: false,
-          allowNever: false,
-          allowNullish: false,
-          allowNumber: false,
-          allowRegExp: false,
-        },
-      ],
-      '@typescript-eslint/no-confusing-void-expression': 'error',
-      '@typescript-eslint/ban-ts-comment': ['error', { minimumDescriptionLength: 10 }],
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-array-delete': 'error',
-      '@typescript-eslint/no-deprecated': 'error',
-      '@typescript-eslint/no-duplicate-type-constituents': 'error',
-      '@typescript-eslint/no-for-in-array': 'error',
-      '@typescript-eslint/no-generated-empty-object-type': 'error',
-      '@typescript-eslint/no-mixed-enums': 'error',
-      '@typescript-eslint/no-non-null-asserted-nullish-coalescing': 'error',
-      '@typescript-eslint/no-redundant-type-constituents': 'error',
-      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
-      '@typescript-eslint/no-unnecessary-template-expression': 'error',
-      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
-      '@typescript-eslint/no-unsafe-enum-assignment': 'error',
-      '@typescript-eslint/no-unsafe-enum-comparison': 'error',
-      '@typescript-eslint/no-unsafe-unary-minus': 'error',
-      'no-useless-constructor': 'off',
-      '@typescript-eslint/no-useless-constructor': 'error',
-      '@typescript-eslint/no-useless-default-assignment': 'error',
-      '@typescript-eslint/prefer-literal-enum-member': 'error',
-      '@typescript-eslint/prefer-reduce-type-parameter': 'error',
-      '@typescript-eslint/prefer-return-this-type': 'error',
-      '@typescript-eslint/related-getter-setter-pairs': 'error',
-      '@typescript-eslint/restrict-plus-operands': [
-        'error',
-        {
-          allowAny: false,
-          allowBoolean: false,
-          allowNullish: false,
-          allowNumberAndString: false,
-          allowRegExp: false,
-        },
-      ],
-      '@typescript-eslint/unified-signatures': 'error',
-      '@typescript-eslint/no-unnecessary-type-conversion': 'error',
-      '@typescript-eslint/no-unnecessary-type-parameters': 'error',
-      '@typescript-eslint/no-base-to-string': 'error',
-      '@typescript-eslint/no-extraneous-class': 'error',
-      '@typescript-eslint/no-misused-spread': 'error',
-      '@typescript-eslint/no-meaningless-void-operator': 'error',
-      '@typescript-eslint/no-invalid-void-type': 'error',
-      '@typescript-eslint/unbound-method': 'error',
-      '@typescript-eslint/no-dynamic-delete': 'error',
-      'require-await': 'off',
-      '@typescript-eslint/require-await': 'error',
-      '@typescript-eslint/no-unnecessary-condition': 'error',
-      'no-implied-eval': 'off',
-      '@typescript-eslint/no-implied-eval': 'error',
+      // src passes on a caught value, typed unknown, that may be no Error; tests reject with such values to cover it.
+      '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],
+      '@typescript-eslint/only-throw-error': ['error', { allowThrowingUnknown: true }],
       // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature
       // refuses; this one allows it under that flag.
       'dot-notation': 'off',
@@ -203,8 +141,6 @@ export default [
     rules: {
       'n/no-process-exit': 'error',
       'n/no-extraneous-import': 'error',
-      '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],
-      '@typescript-eslint/only-throw-error': ['error', { allowThrowingUnknown: true }],
       'no-restricted-syntax': [
         'error',
         {
@@ -258,9 +194,6 @@ export default [
       // The tests' empty functions are no-op test doubles.
       '@typescript-eslint/no-empty-function': 'off',
       '@nx/workspace-no-assertion-in-iteration': 'error',
-      // A test rejects with a value typed unknown that is no Error, to cover src that takes any rejection.
-      '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],
-      '@typescript-eslint/only-throw-error': 'error',
       'no-restricted-syntax': [
         'error',
         {
