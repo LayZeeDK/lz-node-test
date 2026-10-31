@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto';
 import type { LoadHookContext, ResolveHookContext } from 'node:module';
 import { join } from 'node:path';
 
-import { wrappedNodeTest, type ModuleHooks, type TestEvent } from '../src/hook-core.ts';
+import { install, wrappedNodeTest, type HookDependencies, type ModuleHooks, type TestEvent } from '../src/hook-core.ts';
+import { envNames, lzParseRecord, type ProcessRecord } from '../src/record.ts';
 import type { NodeTestModule } from '../src/wrap.ts';
 
 export type Fn = (this: unknown, ...args: unknown[]) => unknown;
@@ -165,6 +166,133 @@ export function resolveContext(conditions: string[]): ResolveHookContext {
 
 export function loadContext(conditions: string[]): LoadHookContext {
   return { conditions, format: undefined, importAttributes: {} };
+}
+
+export interface Harness {
+  readonly deps: HookDependencies;
+  readonly fake: ReturnType<typeof fakeNodeTest>;
+  readonly records: readonly { readonly path: string; readonly record: ProcessRecord }[];
+  readonly calls: readonly string[];
+  readonly hooks: readonly ModuleHooks[];
+  readonly wrapped: () => NodeTestModule;
+  /** Adds an exit listener as the test file would, after the hook's. */
+  readonly onExit: (listener: () => void) => void;
+  /** Runs the listeners as Node.js does: `beforeExit` on a natural end, then the exit listeners there are then. */
+  readonly exit: (options?: { readonly natural: boolean }) => void;
+  /** The codes the hook ended the process with, `undefined` for node:test's own. */
+  readonly exits: readonly (number | undefined)[];
+  /** The timers the hook set, by delay, which a test fires by calling them. */
+  readonly timers: readonly { readonly ms: number; readonly fire: () => void }[];
+  /** Sets what `process.getActiveResourcesInfo()` lists from then on, as the tests open or close things; at first `PipeWrap`. */
+  readonly listResources: (resources: readonly string[]) => void;
+}
+
+export function harness(env: Record<string, string | undefined>, overrides: Partial<HookDependencies> = {}): Harness {
+  const fake = fakeNodeTest();
+  const records: Harness['records'][number][] = [];
+  const calls: string[] = [];
+  const hooks: ModuleHooks[] = [];
+  const listeners: (() => void)[] = [];
+  const beforeExitListeners: (() => void)[] = [];
+  const exits: Harness['exits'][number][] = [];
+  const timers: Harness['timers'][number][] = [];
+  let resources: readonly string[] = ['PipeWrap'];
+  const deps: HookDependencies = {
+    env,
+    mainFile: testFile,
+    pid: 4321,
+    threadId: 0,
+    global: { globalThis: undefined },
+    nodeTest: () => {
+      calls.push('nodeTest');
+
+      return fake.module;
+    },
+    registerHooks: (registered) => {
+      calls.push(deps.global[wrappedNodeTest] ? 'registerHooks' : 'registerHooks before publishing');
+      hooks.push(registered);
+    },
+    onExit: (listener) => {
+      calls.push('onExit');
+      listeners.push(listener);
+    },
+    offExit: (listener) => {
+      calls.push('offExit');
+      listeners.splice(listeners.lastIndexOf(listener), 1);
+    },
+    onBeforeExit: (listener) => {
+      beforeExitListeners.push(listener);
+    },
+    writeRecord: (path, record) => {
+      records.push({ path, record: lzParseRecord(JSON.stringify(record)) });
+    },
+    exit: (code) => {
+      exits.push(code);
+    },
+    activeResources: () => resources,
+    later: (fire, ms) => {
+      timers.push({ ms, fire });
+    },
+    canWriteRecords: true,
+    peakMemoryMB: () => 123,
+    canWatchMemory: true,
+    watchMemory: (options) => {
+      calls.push(`watchMemory ${JSON.stringify(options)}`);
+
+      return 'the watchdog';
+    },
+    callSites: () => [],
+    now: () => 0,
+    ...overrides,
+  };
+
+  return {
+    deps,
+    fake,
+    records,
+    calls,
+    hooks,
+    exits,
+    timers,
+    listResources: (now) => {
+      resources = now;
+    },
+    wrapped: () => {
+      const wrapped = deps.global[wrappedNodeTest];
+      assert.ok(wrapped, 'the hook published no wrapped node:test');
+
+      return wrapped;
+    },
+    onExit: (listener) => {
+      listeners.push(listener);
+    },
+    exit: ({ natural } = { natural: true }) => {
+      for (const listener of natural ? [...beforeExitListeners] : []) {
+        listener();
+      }
+
+      for (const listener of [...listeners]) {
+        listener();
+      }
+    },
+  };
+}
+
+/** The harness's clock stays at 0. */
+export const lifetime = { start: 0, end: 0 };
+export const spans = (...ran: string[]) => Object.fromEntries(ran.map((name) => [`${testFile} > ${name}`, [lifetime]]));
+
+/** The environment of the process that runs the test file. */
+export const fileEnv = { [envNames.out]: out, [envNames.file]: testFile };
+
+export function installedHarness(
+  env: Record<string, string | undefined>,
+  overrides: Partial<HookDependencies> = {},
+): Harness {
+  const h = harness(env, overrides);
+  install(h.deps);
+
+  return h;
 }
 
 /** Imports and requires node:test through `hooks`, with `wrapped`, which may be any fake, as the wrapped module. */
