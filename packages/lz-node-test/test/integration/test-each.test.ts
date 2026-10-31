@@ -47,11 +47,7 @@ describe('lzTestEach', () => {
           throw new Error('two');
         }
       });
-      lzTestEach([1, 2])('async %s', async (n) => {
-        if (n === 2) {
-          throw new Error('rejects');
-        }
-      });
+      lzTestEach([1, 2])('async %s', (n) => (n === 2 ? Promise.reject(new Error('rejects')) : Promise.resolve()));
     }, [
       { name: 'case 1', outcome: 'pass' },
       { name: 'case 2', outcome: 'fail', error: 'two' },

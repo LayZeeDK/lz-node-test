@@ -14,9 +14,7 @@ describe('the modifiers of lzTestEach and lzTestFor', () => {
           throw new Error('one');
         }
       });
-      lzTestFor.fails([1])('fails async %s', async () => {
-        throw new Error('rejects');
-      });
+      lzTestFor.fails([1])('fails async %s', () => Promise.reject(new Error('rejects')));
       lzTestEach.todo.fails([1])('todo fails %s', () => {});
       lzTestEach.fails.todo([1])('fails todo %s', () => {});
     }, [

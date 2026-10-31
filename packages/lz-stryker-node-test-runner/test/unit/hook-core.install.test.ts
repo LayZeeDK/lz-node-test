@@ -691,7 +691,12 @@ describe('install', () => {
       const [finished, failing] = afterHooks(h.fake);
 
       finished?.();
-      await assert.rejects(async () => failing?.(), { message: 'after failed' });
+      // The executor turns a hook that throws into a rejection too.
+      const settled = new Promise((resolve) => {
+        resolve(failing?.());
+      });
+
+      await assert.rejects(settled, { message: 'after failed' });
 
       assert.equal(h.timers.length, 1);
     });

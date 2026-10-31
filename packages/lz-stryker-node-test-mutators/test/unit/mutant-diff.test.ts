@@ -42,17 +42,17 @@ describe('corpusDiff', () => {
       allMutators: [{ name: 'StringLiteral', *mutate() {} }],
       setMutators() {},
       types,
-      async instrument(files, mutators: readonly NodeMutatorLike[] = []) {
+      instrument(files, mutators: readonly NodeMutatorLike[] = []) {
         instrumented.push([[...files], mutators.map(({ name }) => name)]);
 
-        return mutators.map(({ name }) => mutant(name, 0, 0));
+        return Promise.resolve(mutators.map(({ name }) => mutant(name, 0, 0)));
       },
     };
     const own: Operator = { name: 'Own', sample: '', *mutate() {} };
     const text = await corpusDiff(
       names,
       (name) => (name.includes('owned') ? [own] : []),
-      async () => instrumenter,
+      () => Promise.resolve(instrumenter),
       (name) => {
         read.push(name);
 
@@ -88,8 +88,8 @@ describe('corpusDiff', () => {
       allMutators: [],
       setMutators() {},
       types,
-      async instrument(_files, mutators = []) {
-        return [mutators.length > 0 ? mutant('Own', 0, 0) : mutant('CallExpression', 0, 0)];
+      instrument(_files, mutators = []) {
+        return Promise.resolve([mutators.length > 0 ? mutant('Own', 0, 0) : mutant('CallExpression', 0, 0)]);
       },
     };
 
@@ -97,7 +97,7 @@ describe('corpusDiff', () => {
       await corpusDiff(
         ['a.ts'],
         () => [{ name: 'Own', sample: '', *mutate() {} }],
-        async () => instrumenter,
+        () => Promise.resolve(instrumenter),
         () => '',
       ),
       '### a.ts\n\n1 mutants without the operators, 1 with them.\n\n    + 1:1 Own ;\n    - 1:1 CallExpression ;\n',

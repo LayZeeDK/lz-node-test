@@ -183,6 +183,8 @@ export default [
       '@typescript-eslint/no-invalid-void-type': 'error',
       '@typescript-eslint/unbound-method': 'error',
       '@typescript-eslint/no-dynamic-delete': 'error',
+      'require-await': 'off',
+      '@typescript-eslint/require-await': 'error',
       'no-implied-eval': 'off',
       '@typescript-eslint/no-implied-eval': 'error',
       // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { globSync, mkdirSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { glob } from 'node:fs/promises';
 import { availableParallelism, tmpdir } from 'node:os';
 import { extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -579,8 +580,13 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       );
     }
 
-    // globSync returns a file once per spelling, relative for a relative pattern and absolute for an absolute one.
-    const files = globSync(this.#patterns, { exclude: (name) => name === 'node_modules' }).map((file) => resolve(file));
+    // glob gives a file once per spelling, relative for a relative pattern and absolute for an absolute one.
+    const files: string[] = [];
+
+    for await (const file of glob(this.#patterns, { exclude: (name) => name === 'node_modules' })) {
+      files.push(resolve(file));
+    }
+
     this.#testFiles = [...new Set(files)].sort();
 
     if (this.#testFiles.length === 0) {

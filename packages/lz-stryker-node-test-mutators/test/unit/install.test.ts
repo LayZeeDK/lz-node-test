@@ -45,21 +45,23 @@ function setup({
       allMutators.splice(0, allMutators.length, ...mutators);
     },
     types,
-    async instrument(files) {
+    instrument(files) {
       instrumented.push([...files]);
 
-      return allMutators
-        .filter((mutator) => isOwn(mutator) && !silent.includes(mutator.name))
-        .map(
-          (mutator): InstrumentedMutant => ({ mutatorName: mutator.name, replacement: '', location: sampleLocation }),
-        );
+      return Promise.resolve(
+        allMutators
+          .filter((mutator) => isOwn(mutator) && !silent.includes(mutator.name))
+          .map(
+            (mutator): InstrumentedMutant => ({ mutatorName: mutator.name, replacement: '', location: sampleLocation }),
+          ),
+      );
     },
   };
   const run = (mode: 'add' | 'replace', operators: Operator[]) =>
     install(
       mode,
       operators,
-      async () => [instrumenter],
+      () => Promise.resolve([instrumenter]),
       (message) => warnings.push(message),
     );
   const names = () => allMutators.map(({ name }) => name);
@@ -88,7 +90,7 @@ describe('install', () => {
     const second = setup({ silent: ['Alpha'], dir: '/stryker/copy' });
 
     await assert.rejects(
-      install('add', [operator('Alpha')], async () => [first.instrumenter, second.instrumenter]),
+      install('add', [operator('Alpha')], () => Promise.resolve([first.instrumenter, second.instrumenter])),
       { message: /^lz-stryker-node-test-mutators: the instrumenter in \/stryker\/copy made no mutants of Alpha / },
     );
     assert.deepEqual(
@@ -460,10 +462,10 @@ describe('resolveFromCore', () => {
       writeFileSync(join(root, file), content);
     });
     const loaded: string[] = [];
-    const load = async (path: string): Promise<unknown> => {
+    const load = (path: string): Promise<unknown> => {
       loaded.push(path);
 
-      return { allMutators: [], transformBabel() {}, Instrumenter() {}, types };
+      return Promise.resolve({ allMutators: [], transformBabel() {}, Instrumenter() {}, types });
     };
 
     await resolveFromCore(join(root, 'package.json'), load);
@@ -480,8 +482,8 @@ describe('resolveFromCore', () => {
 
   const resolvingTo = (result: unknown) =>
     class {
-      async instrument() {
-        return result;
+      instrument() {
+        return Promise.resolve(result);
       }
     };
   const located = (mutant: object) => ({

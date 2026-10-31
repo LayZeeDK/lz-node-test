@@ -46,9 +46,11 @@ describe('wrapNodeTest', () => {
     module.describe('s', () => {
       module.it('works', see);
       module.it.skip('works', see);
-      module.test('works', async (t: Subtests) => {
+      module.test('works', (t: Subtests) => {
         t.test('child', see);
         t.test('child', see);
+
+        return Promise.resolve();
       });
     });
     module.describe('s', () => {
@@ -536,9 +538,7 @@ describe('wrapNodeTest', () => {
     module.it('fails', () => {
       throw failure;
     });
-    module.it('rejects with 0', async () => {
-      throw notAnError;
-    });
+    module.it('rejects with 0', () => Promise.reject(notAnError));
 
     await assert.rejects(bodyOf(registrations, 'fails')(testContext()), (error) => error === failure);
     await assert.rejects(bodyOf(registrations, 'rejects with 0')(testContext()), (error) => error === notAnError);
@@ -649,7 +649,7 @@ describe('wrapNodeTest', () => {
 
     it('leaves the test once when it calls `done` and then throws, so its parent stays current', async () => {
       const { module, registrations, seen, see } = wrapped();
-      module.it('parent', async (t: Subtests) => {
+      module.it('parent', (t: Subtests) => {
         t.test('child', (_t: unknown, done: unknown) => {
           callable(done)();
           throw notAnError;
@@ -659,6 +659,8 @@ describe('wrapNodeTest', () => {
           (error) => error === notAnError,
         );
         see();
+
+        return Promise.resolve();
       });
 
       await bodyOf(registrations, 'parent')(testContext(registrations));
