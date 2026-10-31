@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { describe, it } from 'node:test';
+
+import { endGroup, groupOptions } from '../../src/process-end.ts';
+
+describe('endGroup', () => {
+  it(
+    'stops waiting once a group that SIGTERM ends is gone, well before the time it gives the group',
+    // eslint-disable-next-line node-test/no-skip-test -- POSIX only, with the reason as its value
+    { skip: process.platform === 'win32' && 'Windows has no signals to catch: every kill is TerminateProcess' },
+    async (t) => {
+      const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1_000);'], {
+        ...groupOptions(process.platform),
+        stdio: 'ignore',
+      });
+      t.after(() => {
+        child.kill('SIGKILL');
+      });
+      await once(child, 'spawn');
+      const { pid } = child;
+      assert.ok(pid, 'The child process started without a pid.');
+      const exited = once(child, 'exit');
+
+      const started = performance.now();
+      await endGroup(pid, process.platform, process.kill);
+      const waitedMs = performance.now() - started;
+      await exited;
+
+      assert.equal(child.signalCode, 'SIGTERM');
+      assert.ok(waitedMs < 150, `${waitedMs} ms`);
+    },
+  );
+});

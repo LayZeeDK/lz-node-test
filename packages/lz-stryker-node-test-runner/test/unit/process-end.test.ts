@@ -23,10 +23,13 @@ const groupEnded = [
   [-123, 'SIGKILL'],
 ];
 
+/** The signals sent, without the signal 0 that only asks whether the group is still there. */
+const sent = (calls: readonly unknown[][]) => calls.filter(([, signal]) => signal !== 0);
+
 describe('endGroup', () => {
   const gone = Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
 
-  function setup(platform: NodeJS.Platform, error?: unknown, failing: NodeJS.Signals = 'SIGTERM') {
+  function setup(platform: NodeJS.Platform, error?: unknown, failing: NodeJS.Signals | 0 = 'SIGTERM') {
     const calls: unknown[][] = [];
     const end = () =>
       endGroup(123, platform, (pid, signal) => {
@@ -40,19 +43,35 @@ describe('endGroup', () => {
     return { calls, end };
   }
 
-  it("asks a POSIX test file's process group to end, then kills it 200 ms later", async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
+  it("asks a POSIX test file's process group to end, then kills it 200 ms later while it lasts", async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
     const { calls, end } = setup('linux');
 
     const ended = end();
     t.mock.timers.tick(199);
 
-    assert.deepEqual(calls, [[-123, 'SIGTERM']]);
+    assert.deepEqual(sent(calls), [[-123, 'SIGTERM']]);
 
     t.mock.timers.tick(1);
     await ended;
 
-    assert.deepEqual(calls, groupEnded);
+    assert.deepEqual(sent(calls), groupEnded);
+  });
+
+  it('stops waiting, and kills nothing, once the group is gone after it was asked to end', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+    const { calls, end } = setup('linux', gone, 0);
+    let ended = false;
+    void end().then(() => (ended = true));
+
+    t.mock.timers.tick(10);
+    await timers.setImmediate();
+
+    assert.equal(ended, true);
+    assert.deepEqual(calls, [
+      [-123, 'SIGTERM'],
+      [-123, 0],
+    ]);
   });
 
   it('leaves Windows, where the processes end with the test file, alone', async () => {
@@ -73,25 +92,26 @@ describe('endGroup', () => {
     assert.deepEqual(calls, [[-123, 'SIGTERM']]);
   });
 
-  it('takes a group that ended while it waited as ended', async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
+  it('takes a group that ended between the last ask and the kill as ended', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
     const { calls, end } = setup('linux', gone, 'SIGKILL');
     const ended = end();
     t.mock.timers.tick(200);
 
     await ended;
 
-    assert.deepEqual(calls, groupEnded);
+    assert.deepEqual(sent(calls), groupEnded);
   });
 
-  lzTestFor<readonly [string, NodeJS.Signals, unknown]>([
+  lzTestFor<readonly [string, NodeJS.Signals | 0, unknown]>([
     ['an Error with another code', 'SIGTERM', Object.assign(new Error('kill EPERM'), { code: 'EPERM' })],
     ['an Error without a code', 'SIGTERM', new Error('kill failed')],
     ['an object with the code ESRCH that is no Error', 'SIGTERM', { code: 'ESRCH' }],
     ['a string', 'SIGTERM', 'ESRCH'],
+    ['an Error with another code', 0, Object.assign(new Error('kill EPERM'), { code: 'EPERM' })],
     ['an Error with another code', 'SIGKILL', Object.assign(new Error('kill EPERM'), { code: 'EPERM' })],
   ])('rejects with %s that sending %s throws', async ([, failing, thrown], t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
     const ended = setup('linux', thrown, failing).end();
     t.mock.timers.tick(200);
 
@@ -100,16 +120,12 @@ describe('endGroup', () => {
 });
 
 describe('processEnd', () => {
-  function ending(
-    graceMs: number,
-    platform: NodeJS.Platform = 'win32',
-    options: { pid?: number | undefined; killError?: Error } = {},
-  ) {
+  function ending(platform: NodeJS.Platform = 'win32', options: { pid?: number | undefined; killError?: Error } = {}) {
     const { killError } = options;
     const pid = 'pid' in options ? options.pid : 123;
     const child = Object.assign(new EventEmitter(), { pid, stderr: new PassThrough() });
     const kills: unknown[][] = [];
-    const end = processEnd(child, graceMs, platform, (target, signal) => {
+    const end = processEnd(child, platform, (target, signal) => {
       kills.push([target, signal]);
 
       if (killError) {
@@ -131,8 +147,8 @@ describe('processEnd', () => {
   }
 
   it("ends what is left of a POSIX process's group once the process ends and stderr closes, before it ends", async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
-    const closes = ending(1_000, 'linux');
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+    const closes = ending('linux');
     closes.child.emit('exit', 0);
     await closes.settled();
 
@@ -145,24 +161,24 @@ describe('processEnd', () => {
     t.mock.timers.tick(200);
 
     assert.deepEqual(await closes.settled(), { exitCode: 0, stderr: '' });
-    assert.deepEqual(closes.kills, groupEnded);
+    assert.deepEqual(sent(closes.kills), groupEnded);
   });
 
   it("ends what is left of a POSIX process's group once the process ends and stderr stays open", async (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout'] });
-    const staysOpen = ending(1_000, 'linux');
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+    const staysOpen = ending('linux');
     staysOpen.child.emit('exit', 0);
-    t.mock.timers.tick(1_000);
+    t.mock.timers.tick(1_500);
     // Node.js closes the process once the grace period lets go of stderr.
     staysOpen.child.emit('close', 0);
     t.mock.timers.tick(200);
     await staysOpen.settled();
 
-    assert.deepEqual(staysOpen.kills, groupEnded);
+    assert.deepEqual(sent(staysOpen.kills), groupEnded);
   });
 
   it('ends no group of a process that failed to start, which has no pid', async () => {
-    const { child, settled, kills } = ending(1_000, 'linux', { pid: undefined });
+    const { child, settled, kills } = ending('linux', { pid: undefined });
     const failure = new Error('spawn EAGAIN');
     child.emit('error', failure);
     child.emit('close', -2);
@@ -173,7 +189,7 @@ describe('processEnd', () => {
 
   it("fails with the error that ending the process's group throws", async () => {
     const denied = Object.assign(new Error('kill EPERM'), { code: 'EPERM' });
-    const { child, settled } = ending(1_000, 'linux', { killError: denied });
+    const { child, settled } = ending('linux', { killError: denied });
     child.emit('exit', 0);
     child.emit('close', 0);
 
@@ -181,9 +197,9 @@ describe('processEnd', () => {
   });
 
   it('ends when the process closes its stdio, with its exit code and stderr, without waiting', async (t) => {
-    // eslint-disable-next-line node-test/require-mock-timers-advance -- time stands still, so the 1_000 ms grace never ends the wait
+    // eslint-disable-next-line node-test/require-mock-timers-advance -- time stands still, so the 1_500 ms grace never ends the wait
     t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { child, settled } = ending(1_000);
+    const { child, settled } = ending();
     child.stderr.write('first ');
     child.stderr.write('second');
     await settled();
@@ -195,22 +211,22 @@ describe('processEnd', () => {
 
   it('stops waiting out the grace period once stderr closes', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { child, settled } = ending(1_000);
+    const { child, settled } = ending();
     child.emit('exit', 0);
     child.emit('close', 0);
     await settled();
-    t.mock.timers.tick(1_000);
+    t.mock.timers.tick(1_500);
 
     assert.equal(child.stderr.destroyed, false);
   });
 
-  it('ends `graceMs` after the process exits when stderr stays open, and lets go of stderr', async (t) => {
+  it('ends 1.5 s after the process exits when stderr stays open, and lets go of stderr', async (t) => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
-    const { child, settled } = ending(1_000);
+    const { child, settled } = ending();
     child.stderr.write('before exit');
     await settled();
     child.emit('exit', 1);
-    t.mock.timers.tick(999);
+    t.mock.timers.tick(1_499);
 
     assert.equal(await settled(), 'pending');
 
@@ -221,7 +237,7 @@ describe('processEnd', () => {
   });
 
   it('fails when the process cannot start', async () => {
-    const { child, settled } = ending(1_000);
+    const { child, settled } = ending();
     const failure = new Error('spawn ENOENT');
     child.emit('error', failure);
 

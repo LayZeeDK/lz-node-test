@@ -62,7 +62,7 @@ All options sit under `lzStrykerNodeTest`.
   - Lost: what such a process covered in its last 250 ms, what a process that SIGKILL ends covered since its last
     write, and what a process whose event loop is busy when it is ended covered since its last write.
   - When a test file's process exits, the runner ends the processes its tests left running: on Linux and macOS with
-    SIGTERM and, 200 ms later, SIGKILL; on Windows at once.
+    SIGTERM and, when any is still running 200 ms later, SIGKILL; on Windows at once.
 - **Coverage analysis.** The runner supports Stryker's `coverageAnalysis` values `off`, `all` and `perTest`. With
   `perTest`, a mutant runs only the tests that reach it. A child process or worker thread that ends before the test
   that started it counts toward that test alone. One that keeps running after its test, such as a worker that the

@@ -6,14 +6,22 @@ export function groupOptions(platform: NodeJS.Platform): { detached: boolean; wi
   return { detached: platform !== 'win32', windowsHide: true };
 }
 
+/** How long the processes of a test file's group get after SIGTERM before SIGKILL, at most. */
 const termGraceMs = 200;
 
-/** Sends `signal` to the group; false when no process of the group is left. */
-function signalGroup(
-  pid: number,
-  signal: NodeJS.Signals,
-  kill: (pid: number, signal: NodeJS.Signals) => void,
-): boolean {
+/** How often the wait after SIGTERM asks whether the group is gone. */
+const pollMs = 10;
+
+/**
+ * How long a test file's process may hold stderr open after it exits, for the records of the processes it started
+ * that end soon.
+ */
+const closeGraceMs = 1_500;
+
+type Kill = (pid: number, signal: NodeJS.Signals | 0) => void;
+
+/** Sends `signal` to the group, where 0 only asks whether it is there; false when no process of the group is left. */
+function signalGroup(pid: number, signal: NodeJS.Signals | 0, kill: Kill): boolean {
   try {
     kill(-pid, signal);
 
@@ -28,33 +36,53 @@ function signalGroup(
 }
 
 /**
- * Sends the group SIGTERM and, `termGraceMs` later, SIGKILL, so a process that listens for SIGTERM gets to run its
- * listener. A process that detached itself has a group of its own and stays.
+ * Sends the group SIGTERM and, when any of it is left `termGraceMs` later, SIGKILL, so a process that listens for
+ * SIGTERM gets to run its listener. A process that detached itself has a group of its own and stays.
  */
-export async function endGroup(
-  pid: number,
-  platform: NodeJS.Platform,
-  kill: (pid: number, signal: NodeJS.Signals) => void,
-): Promise<void> {
+export async function endGroup(pid: number, platform: NodeJS.Platform, kill: Kill): Promise<void> {
   if (!groupOptions(platform).detached || !signalGroup(pid, 'SIGTERM', kill)) {
     return;
   }
 
-  await new Promise((resolve) => setTimeout(resolve, termGraceMs));
-  signalGroup(pid, 'SIGKILL', kill);
+  if (await groupLasts(pid, kill)) {
+    signalGroup(pid, 'SIGKILL', kill);
+  }
+}
+
+/** Whether the group is still there `termGraceMs` from now; it asks every `pollMs` and stops once the group is gone. */
+function groupLasts(pid: number, kill: Kill): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    let waited = 0;
+    const poll = setInterval(() => {
+      waited += pollMs;
+
+      try {
+        const lasts = signalGroup(pid, 0, kill);
+
+        if (lasts && waited < termGraceMs) {
+          return;
+        }
+
+        clearInterval(poll);
+        resolve(lasts);
+      } catch (error) {
+        clearInterval(poll);
+        reject(error);
+      }
+    }, pollMs);
+  });
 }
 
 /**
  * Waits for a process to end and collects its stderr. Processes it started inherit stderr and can keep it open after
  * it exits; the records of those that end soon arrive by the time stderr closes, so this waits for that, but at most
- * `graceMs` after the exit, and then lets go of stderr. Then it ends what is left of the process's group on `platform`,
- * and settles once that is done.
+ * `closeGraceMs` after the exit, and then lets go of stderr. Then it ends what is left of the process's group on
+ * `platform`, and settles once that is done.
  */
 export function processEnd(
   child: EndingProcess,
-  graceMs: number,
   platform: NodeJS.Platform,
-  kill: (pid: number, signal: NodeJS.Signals) => void = process.kill,
+  kill: Kill = process.kill,
 ): Promise<{ exitCode: number | null; stderr: string }> {
   return new Promise((done, fail) => {
     let errors = '';
@@ -77,7 +105,7 @@ export function processEnd(
       grace = setTimeout(() => {
         child.stderr.destroy();
         end(code);
-      }, graceMs);
+      }, closeGraceMs);
     });
     child.on('close', (code) => {
       clearTimeout(grace);

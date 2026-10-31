@@ -97,7 +97,6 @@ interface LzFileRun {
 const ext = extname(import.meta.filename);
 const hookUrl = pathToFileURL(resolve(import.meta.dirname, `hook${ext}`)).href;
 const reporterUrl = pathToFileURL(resolve(import.meta.dirname, `reporter${ext}`)).href;
-const closeGraceMs = 1_500;
 
 removePeaksOnExit();
 
@@ -700,7 +699,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         stdio: ['ignore', 'ignore', 'pipe'],
         ...groupOptions(process.platform),
       });
-      const { exitCode, stderr } = await processEnd(child, closeGraceMs, process.platform);
+      const { exitCode, stderr } = await processEnd(child, process.platform);
       // processEnd rejects for a process that failed to start, the only kind without a pid.
       const mainRecord = child.pid === undefined ? undefined : recordName(child.pid, 0);
       let unreadable: string | undefined;
