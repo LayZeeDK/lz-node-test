@@ -52,7 +52,7 @@ export function lzSignals(platform: NodeJS.Platform): HookDependencies['signals'
 }
 
 // Found once, so that a test that fakes process.hrtime, as fake timers do, leaves the clock of every span alone.
-const hrtime = process.hrtime.bigint;
+const hrtime = process.hrtime.bigint.bind(process.hrtime);
 
 export const now: HookDependencies['now'] = () => Number(hrtime()) / 1e6;
 

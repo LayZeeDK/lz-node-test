@@ -24,7 +24,7 @@ describe('endGroup', () => {
       const exited = once(child, 'exit');
 
       const started = performance.now();
-      await endGroup(pid, process.platform, process.kill);
+      await endGroup(pid, process.platform, process.kill.bind(process));
       const waitedMs = performance.now() - started;
       await exited;
 

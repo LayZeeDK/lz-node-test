@@ -93,7 +93,7 @@ function string(value: unknown): string {
   }
 
   if (typeof value === 'object' && value !== null) {
-    const { toString }: { toString?: unknown } = value;
+    const toString: unknown = Reflect.get(value, 'toString');
 
     return typeof toString === 'function' && toString !== Object.prototype.toString
       ? String(toString.call(value))

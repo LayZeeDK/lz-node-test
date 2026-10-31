@@ -19,7 +19,7 @@ export function checkMemory(
   { limitMB, recordPath }: WatchdogData,
   rssBytes: number,
   write: (path: string, record: ProcessRecord) => void = lzWriteRecord,
-  kill: (pid: number, signal: NodeJS.Signals) => void = process.kill,
+  kill: (pid: number, signal: NodeJS.Signals) => void = process.kill.bind(process),
 ): void {
   const rssMB = Math.round(rssBytes / 1048576);
 
@@ -34,7 +34,7 @@ export function checkMemory(
   }
 }
 
-export function watch(data: WatchdogData, rss: () => number = process.memoryUsage.rss): void {
+export function watch(data: WatchdogData, rss: () => number = process.memoryUsage.rss.bind(process.memoryUsage)): void {
   setInterval(() => {
     checkMemory(data, rss());
   }, 50);
