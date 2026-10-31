@@ -33,51 +33,43 @@ export interface MemoryLimits {
  */
 export function memoryLimits(maxMemoryMB: number | undefined, dir: string, log: Logger): MemoryLimits {
   if (maxMemoryMB === undefined) {
-    return new DryRunPeaks(dir, log);
+    return dryRunPeaks(dir, log);
   }
 
   return { startDryRun: () => maxMemoryMB, record: () => undefined, forMutantRun: () => maxMemoryMB };
 }
 
-class DryRunPeaks implements MemoryLimits {
-  readonly #dir: string;
-  readonly #log: Logger;
-  readonly #unmeasured = new Set<string>();
+function dryRunPeaks(dir: string, log: Logger): MemoryLimits {
+  const unmeasured = new Set<string>();
+  const path = (file: string) => join(dir, createHash('sha256').update(file).digest('hex'));
 
-  constructor(dir: string, log: Logger) {
-    this.#dir = dir;
-    this.#log = log;
-  }
+  return {
+    startDryRun(): undefined {
+      ownDir(dir);
+    },
 
-  startDryRun(): undefined {
-    ownDir(this.#dir);
-  }
+    record(file, records) {
+      const peakMB = Math.max(0, ...records.map((record) => record.peakMemoryMB ?? 0));
+      writeFileSync(path(file), String(peakMB));
+    },
 
-  record(file: string, records: readonly ProcessRecord[]): void {
-    const peakMB = Math.max(0, ...records.map((record) => record.peakMemoryMB ?? 0));
-    writeFileSync(this.#path(file), String(peakMB));
-  }
+    /** A file without a dry-run peak, as when Stryker's --testFiles names fewer files, gets the floor with a warning. */
+    forMutantRun(file) {
+      const peakMB = storedPeak(path(file));
+      const limitMB = Math.round((peakMB ?? 0) * 1.5 + 1024);
 
-  /** A file without a dry-run peak, as when Stryker's --testFiles names fewer files, gets the floor with a warning. */
-  forMutantRun(file: string): number {
-    const peakMB = storedPeak(this.#path(file));
-    const limitMB = Math.round((peakMB ?? 0) * 1.5 + 1024);
+      if (peakMB === undefined && !unmeasured.has(file)) {
+        unmeasured.add(file);
+        log.warn(
+          `The dry run left no readable memory peak for "${file}", ` +
+            `so each process of its mutant runs may hold ${limitMB} MB. ` +
+            'Set lzStrykerNodeTest.maxMemoryMB to choose the limit.',
+        );
+      }
 
-    if (peakMB === undefined && !this.#unmeasured.has(file)) {
-      this.#unmeasured.add(file);
-      this.#log.warn(
-        `The dry run left no readable memory peak for "${file}", ` +
-          `so each process of its mutant runs may hold ${limitMB} MB. ` +
-          'Set lzStrykerNodeTest.maxMemoryMB to choose the limit.',
-      );
-    }
-
-    return limitMB;
-  }
-
-  #path(file: string): string {
-    return join(this.#dir, createHash('sha256').update(file).digest('hex'));
-  }
+      return limitMB;
+    },
+  };
 }
 
 function storedPeak(path: string): number | undefined {
