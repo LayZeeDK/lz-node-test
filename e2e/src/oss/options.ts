@@ -70,6 +70,21 @@ const projects: readonly LzOssProject[] = [
     testFiles: ['test/*.test.js'],
     command: 'node --test --test-timeout=240000 "test/*.test.js"',
   },
+  {
+    name: 'pino-pretty',
+    mutate: ['index.js', 'lib/**/*.js', '!lib/**/*.test.js'],
+    testFiles: [
+      'lib/**/*.test.js',
+      'test/basic.test.js',
+      'test/boolean-options.test.js',
+      'test/cli.test.js',
+      'test/crlf.test.js',
+      'test/error-objects.test.js',
+    ],
+    command:
+      'node --test "lib/**/*.test.js" "test/basic.test.js" "test/boolean-options.test.js" "test/cli.test.js" ' +
+      '"test/crlf.test.js" "test/error-objects.test.js"',
+  },
 ];
 
 export const lzOssUsage =

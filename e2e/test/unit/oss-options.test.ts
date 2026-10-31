@@ -72,7 +72,27 @@ describe('lzParseOptions', () => {
   it('refuses a project it has no settings for, and names those it has', () => {
     assert.throws(() => lzParseOptions(required.with(1, 'pino')), {
       message:
-        /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify, restartable, sonic-boom\.$/,
+        /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify, restartable, sonic-boom, pino-pretty\.$/,
+    });
+  });
+
+  it("mutates pino-pretty's index.js and lib sources, and runs its test files but cli-rc, which fails on Windows", () => {
+    const { project } = lzParseOptions(required.with(1, 'pino-pretty'));
+
+    assert.deepEqual(project, {
+      name: 'pino-pretty',
+      mutate: ['index.js', 'lib/**/*.js', '!lib/**/*.test.js'],
+      testFiles: [
+        'lib/**/*.test.js',
+        'test/basic.test.js',
+        'test/boolean-options.test.js',
+        'test/cli.test.js',
+        'test/crlf.test.js',
+        'test/error-objects.test.js',
+      ],
+      command:
+        'node --test "lib/**/*.test.js" "test/basic.test.js" "test/boolean-options.test.js" "test/cli.test.js" ' +
+        '"test/crlf.test.js" "test/error-objects.test.js"',
     });
   });
 
