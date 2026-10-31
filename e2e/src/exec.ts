@@ -21,22 +21,16 @@ export async function lzExec(
   args: readonly string[],
   { cwd, env = process.env, timeoutMs = 0 }: LzExecOptions,
 ): Promise<LzExecResult> {
-  const child = spawn(file, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
-  let timedOut = false;
-  const timer =
-    timeoutMs > 0
-      ? setTimeout(() => {
-          timedOut = true;
-          child.kill();
-        }, timeoutMs)
-      : undefined;
+  const child = spawn(file, args, {
+    cwd,
+    env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: timeoutMs,
+    windowsHide: true,
+  });
+  const closed: Promise<unknown[]> = once(child, 'close');
+  const [stdout, stderr, [code]] = await Promise.all([text(child.stdout), text(child.stderr), closed]);
 
-  try {
-    const closed: Promise<unknown[]> = once(child, 'close');
-    const [stdout, stderr, [code]] = await Promise.all([text(child.stdout), text(child.stderr), closed]);
-
-    return { exitCode: typeof code === 'number' ? code : 1, stdout, stderr, timedOut };
-  } finally {
-    clearTimeout(timer);
-  }
+  // Only the timeout kills the child, so `killed` means it timed out.
+  return { exitCode: typeof code === 'number' ? code : 1, stdout, stderr, timedOut: child.killed };
 }
