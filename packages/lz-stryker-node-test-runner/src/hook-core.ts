@@ -359,7 +359,7 @@ export function ending(
     track: (hook) => {
       pending++;
 
-      return settling(hook, () => settle);
+      return settling(hook, () => ({ kind: 'settle', settle }));
     },
     reported: ({ type, data }) => {
       if (type === 'test:enqueue' && data.nesting === 0) {

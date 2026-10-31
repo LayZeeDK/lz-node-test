@@ -70,29 +70,39 @@ function isLzTestContext(context: unknown): context is LzTestContext {
 }
 
 /**
- * Runs `fn`, a test body or hook, as node:test would, in its callback or promise style, through `run`, and calls what
- * `begin` returns when it settles: with whether it failed. A `begin` that returns nothing leaves the call as it is, and
- * one that returns `skip` leaves it out, calling back at once. A promise-style `fn` that throws synchronously rejects;
- * a callback-style one throws.
+ * What `settling` does with a call once `begin` has seen its context: run it as it is, skip it, or run it and call
+ * `settle` when it settles, with whether it failed.
+ */
+export type LzBegun =
+  | { readonly kind: 'as is' }
+  | { readonly kind: 'skip' }
+  | { readonly kind: 'settle'; readonly settle: (failed: boolean) => void };
+
+/**
+ * Runs `fn`, a test body or hook, as node:test would, in its callback or promise style, through `run`, as `begin`
+ * says; a skipped callback-style `fn` calls back at once. A promise-style `fn` whose settling `begin` follows rejects
+ * when it throws synchronously; a callback-style one throws.
  */
 export function settling(
   fn: Body,
-  begin: (context: unknown) => ((failed: boolean) => void) | 'skip' | undefined,
+  begin: (context: unknown) => LzBegun,
   run: (call: () => unknown) => unknown = (call) => call(),
 ): Body {
   const call = (self: unknown, args: unknown[]): unknown => run(() => Reflect.apply(fn, self, args));
   const callingBack: HookFn = function (this: unknown, context, done) {
-    const settle = begin(context);
+    const begun = begin(context);
 
-    if (settle === 'skip') {
+    if (begun.kind === 'skip') {
       done();
 
       return undefined;
     }
 
-    if (settle === undefined) {
+    if (begun.kind === 'as is') {
       return call(this, [context, done]);
     }
+
+    const { settle } = begun;
 
     try {
       return call(this, [
@@ -122,17 +132,17 @@ export function settling(
     return value;
   };
   const promising = function (this: unknown, ...args: unknown[]) {
-    const settle = begin(args[0]);
+    const begun = begin(args[0]);
 
-    if (settle === 'skip') {
+    if (begun.kind === 'skip') {
       return undefined;
     }
 
-    if (settle === undefined) {
+    if (begun.kind === 'as is') {
       return call(this, args);
     }
 
-    return callPromising(this, args, settle);
+    return callPromising(this, args, begun.settle);
   };
 
   // node:test passes a `done` callback only to a function whose length is exactly 2.
@@ -288,15 +298,14 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       return hook;
     }
 
-    /** Makes the test current and returns what ends that, or nothing when the hook runs as it is. */
-    const attribute = (context: unknown) => {
+    const attribute = (context: unknown): LzBegun => {
       const id = find(context);
 
       if (id === undefined || active.has(id)) {
-        return undefined;
+        return { kind: 'as is' };
       }
 
-      return makeCurrent(id);
+      return { kind: 'settle', settle: makeCurrent(id) };
     };
 
     return settling(hook, attribute);
@@ -414,7 +423,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
         return leave;
       };
-      const begin = (context: unknown) => {
+      const begin = (context: unknown): LzBegun => {
         if (!isLzTestContext(context)) {
           throw new TypeError(`node:test ran "${id}" without a test context`);
         }
@@ -422,10 +431,10 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         if (bailed()) {
           context.skip();
 
-          return 'skip';
+          return { kind: 'skip' };
         }
 
-        return enter(context);
+        return { kind: 'settle', settle: enter(context) };
       };
       const wrap = (body: Body) => settling(body, begin, (call) => running.run(id, call));
 
