@@ -1,12 +1,11 @@
 import type { NodePath, types } from '@babel/core';
 
-export const nodeAssert: ReadonlySet<string> = new Set([
-  'node:assert',
-  'node:assert/strict',
-  'assert',
-  'assert/strict',
-]);
-const nodeProcess: ReadonlySet<string> = new Set(['node:process', 'process']);
+export const nodeAssert = lzBuiltin('assert', 'assert/strict');
+const nodeProcess = lzBuiltin('process');
+
+export function lzBuiltin(...names: readonly string[]): ReadonlySet<string> {
+  return new Set(names.flatMap((name) => [name, `node:${name}`]));
+}
 
 interface ImportOf {
   readonly source: string;

@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { importOf, isProcess, propertyName } from './bindings.ts';
+import { importOf, isProcess, lzBuiltin, propertyName } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 const listenMethods: ReadonlySet<string | undefined> = new Set([
@@ -10,7 +10,7 @@ const listenMethods: ReadonlySet<string | undefined> = new Set([
   'prependListener',
   'prependOnceListener',
 ]);
-const nodeEvents: ReadonlySet<string> = new Set(['node:events', 'events']);
+const nodeEvents = lzBuiltin('events');
 const processSwaps: ReadonlyMap<string, readonly string[]> = new Map([
   ['exit', ['beforeExit']],
   ['beforeExit', ['exit']],

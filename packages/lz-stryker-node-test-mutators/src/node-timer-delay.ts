@@ -1,11 +1,11 @@
 import type { NodePath, types } from '@babel/core';
 
-import { importOf, propertyName } from './bindings.ts';
+import { importOf, lzBuiltin, propertyName } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 const timers: ReadonlySet<string | undefined> = new Set(['setTimeout', 'setInterval']);
-const nodeTimers: ReadonlySet<string> = new Set(['node:timers', 'timers']);
-const nodeTimersPromises: ReadonlySet<string> = new Set(['node:timers/promises', 'timers/promises']);
+const nodeTimers = lzBuiltin('timers');
+const nodeTimersPromises = lzBuiltin('timers/promises');
 
 /**
  * Moves a timer's delay by 1 ms each way. Node.js runs a delay below 1 after 1 ms, so the moves that leave a delay of
