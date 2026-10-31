@@ -676,10 +676,16 @@ describe('install', () => {
       assert.deepEqual([h.timers.length, h.exits], [1, [1]]);
     });
 
-    lzTestFor<readonly [string, () => unknown]>([
+    lzTestFor<readonly [string, (context?: unknown, done?: unknown) => unknown]>([
       [
         'throws',
         (): unknown => {
+          throw new Error('after failed');
+        },
+      ],
+      [
+        'takes `done` and throws',
+        (_context: unknown, _done: unknown): unknown => {
           throw new Error('after failed');
         },
       ],

@@ -542,11 +542,14 @@ describe('wrapNodeTest', () => {
     await assert.rejects(bodyOf(registrations, 'rejects with 0')(testContext()), (error) => error === notAnError);
   });
 
-  it('fails a test body that node:test runs without a test context', () => {
+  lzTestEach([
+    ['without a test context', {}],
+    ['with a context that lacks a function the wrapper calls', { ...testContext(), skip: undefined }],
+  ])('fails a test body that node:test runs %s', (_title, context) => {
     const { module, registrations } = wrapped();
     module.it('runs', () => {});
 
-    assert.throws(() => rawBodyOf(registrations, 'runs')({}), {
+    assert.throws(() => rawBodyOf(registrations, 'runs')(context), {
       name: 'TypeError',
       message: `node:test ran "${testFile} > runs" without a test context`,
     });

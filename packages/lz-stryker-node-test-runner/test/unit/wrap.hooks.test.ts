@@ -203,5 +203,17 @@ describe('wrapNodeTest', () => {
       assert.equal(hooks.length, 5);
       assert.deepEqual(calls, expected);
     });
+
+    it("adds no t.runOnly to a hook's context that has none, as a suite's has none, without --test-only", async () => {
+      const { module, registrations } = wrapped({ testOnly: false });
+      module.before(() => {});
+      const [before] = hooksOf(registrations, 'before');
+      assert.ok(before);
+      const context = testContext();
+
+      await before(context);
+
+      assert.equal('runOnly' in context, false);
+    });
   });
 });
