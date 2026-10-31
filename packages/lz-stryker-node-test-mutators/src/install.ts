@@ -199,7 +199,7 @@ export async function resolveFromCore(
   const dir = dirname(packageJson);
   const mutateFile = join(dir, 'dist', 'src', 'mutators', 'mutate.js');
   const transformerFile = join(dir, 'dist', 'src', 'transformers', 'babel-transformer.js');
-  const indexFile = join(dir, 'dist', 'src', 'index.js');
+  const indexFile = fromCore.resolve('@stryker-mutator/instrumenter');
   const babelFile = createRequire(packageJson).resolve('@babel/core');
   const [mutate, transformer, index, babel] = await Promise.all(
     [mutateFile, transformerFile, indexFile, babelFile].map(load),

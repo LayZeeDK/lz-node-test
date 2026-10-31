@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
@@ -387,6 +388,37 @@ describe('resolveFromCore', () => {
     instrumenter.setMutators([own]);
 
     assert.deepEqual(listed, [own]);
+  });
+
+  it('constructs the Instrumenter from the entry that core resolves for the package', async (t) => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'lz-mutators-entry-')));
+
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const packageFiles: Readonly<Record<string, string>> = {
+      'node_modules/@stryker-mutator/instrumenter/package.json': JSON.stringify({
+        name: '@stryker-mutator/instrumenter',
+        version: '10.1.1',
+        exports: { '.': './dist/bundle.js', './package.json': './package.json' },
+      }),
+      'node_modules/@stryker-mutator/instrumenter/dist/bundle.js': '',
+      'node_modules/@babel/core/package.json': JSON.stringify({ name: '@babel/core', main: 'index.js' }),
+      'node_modules/@babel/core/index.js': '',
+    };
+
+    Object.entries(packageFiles).forEach(([file, content]) => {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), content);
+    });
+    const loaded: string[] = [];
+    const load = async (path: string): Promise<unknown> => {
+      loaded.push(path);
+
+      return { allMutators: [], transformBabel() {}, Instrumenter: class {}, types };
+    };
+
+    await resolveFromCore(join(root, 'package.json'), load);
+
+    assert.ok(loaded.includes(join(root, 'node_modules', '@stryker-mutator', 'instrumenter', 'dist', 'bundle.js')));
   });
 
   const resolvingTo = (result: unknown) =>
