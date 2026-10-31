@@ -222,8 +222,12 @@ async function settled<T>(step: string, promise: Promise<T>): Promise<LzSettled<
   try {
     return { ok: true, value: await promise };
   } catch (error) {
-    return { ok: false, error: `${step}: ${error instanceof Error ? error.message : String(error)}` };
+    return { ok: false, error: `${step}: ${messageOf(error)}` };
   }
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** False when the process ended, or its id went to another process, before the driver could end it. */
@@ -255,7 +259,7 @@ function comparison(lz: LzStrykerRun | null, command: LzStrykerRun | null): LzCo
 
     return { compared: true, disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command), verdicts };
   } catch (error) {
-    return { compared: false, reason: error instanceof Error ? error.message : String(error) };
+    return { compared: false, reason: messageOf(error) };
   }
 }
 
