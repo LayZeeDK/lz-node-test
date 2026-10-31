@@ -66,7 +66,7 @@ describe('LzAssertCall', () => {
       .findLast((line) => !line.startsWith('}'))
       ?.trim();
 
-    assert.deepEqual(await mutantsOf(assertCall, source), [`{ ${statement} ${throwStatement} }`]);
+    assert.deepEqual(await mutantsOf(assertCall, source), [`{ ${String(statement)} ${throwStatement} }`]);
   });
 
   lzTestEach([

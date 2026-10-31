@@ -374,7 +374,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const named = (parent: string, name: string, test: boolean) => {
     registering();
     const id = idOf(parent, name);
-    const fullName = parent === testFile ? name : `${fullNames.get(parent)} > ${name}`;
+    const fullName = parent === testFile ? name : `${String(fullNames.get(parent))} > ${name}`;
     fullNames.set(id, fullName);
     testsByFullName.set(fullName, test && !testsByFullName.has(fullName) ? id : undefined);
     declare(id);

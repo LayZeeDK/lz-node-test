@@ -240,7 +240,7 @@ export function lzFileError(testFile: string, { records, exitCode, stderr, fileA
   const withNodeOptions = nodeOptions.length > 0 ? ` with NODE_OPTIONS set to \`${nodeOptions.join(' ')}\`` : '';
 
   return [
-    `Error running file "${testFile}": node exited with code ${exitCode} outside any test.`,
+    `Error running file "${testFile}": node exited with code ${String(exitCode)} outside any test.`,
     `To reproduce it without the mutant, run \`${nodeCommand(['--test', ...fileArgs])}\` in ` +
       `${process.cwd()}${withNodeOptions}, without the runner's reporter and hook.`,
     ...(heldOpen.length > 0
@@ -250,7 +250,7 @@ export function lzFileError(testFile: string, { records, exitCode, stderr, fileA
         ]
       : []),
     ...(diagnostics.length > 0 ? ['Diagnostics:', ...diagnostics] : []),
-    ...(output ? [`Stderr, at most its last ${lzStderrTailBytes / 1024} KiB:`, output] : []),
+    ...(output ? [`Stderr, at most its last ${String(lzStderrTailBytes / 1024)} KiB:`, output] : []),
   ].join('\n');
 }
 
@@ -335,11 +335,11 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   if (memoryLimitReached) {
     const { rssMB, limitMB } = memoryLimitReached;
     const errorMessage =
-      `A process of "${file}" held ${rssMB} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB (${limitMB} MB), so ` +
+      `A process of "${file}" held ${String(rssMB)} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB (${String(limitMB)} MB), so ` +
       "its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's limit from " +
       'the dry run.';
 
-    return dryRunErrorElseTimeout(run, errorMessage, `Memory limit reached (${rssMB}/${limitMB} MB)`);
+    return dryRunErrorElseTimeout(run, errorMessage, `Memory limit reached (${String(rssMB)}/${String(limitMB)} MB)`);
   }
 
   if (unreadable !== undefined) {

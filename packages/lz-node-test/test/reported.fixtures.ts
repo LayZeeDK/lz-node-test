@@ -71,7 +71,7 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
         `import { lzTestEach } from ${JSON.stringify(testEach)};`,
         `import { lzTestFor } from ${JSON.stringify(testFor)};`,
         String(report),
-        `(${cases})();`,
+        `(${String(cases)})();`,
       ].join('\n'),
     );
     delete process.env['NODE_TEST_CONTEXT'];

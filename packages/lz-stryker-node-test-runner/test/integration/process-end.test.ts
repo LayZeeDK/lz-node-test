@@ -31,7 +31,7 @@ describe('endGroup', () => {
       // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.equal(child.signalCode, 'SIGTERM');
       // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
-      assert.ok(waitedMs < termGraceMs, `${waitedMs} ms`);
+      assert.ok(waitedMs < termGraceMs, `${String(waitedMs)} ms`);
     },
   );
 });

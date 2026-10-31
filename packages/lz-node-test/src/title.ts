@@ -59,13 +59,17 @@ function format(placeholder: string, value: unknown): string {
       return string(value);
     }
     case '%d': {
-      return typeof value === 'bigint' ? `${value}n` : typeof value === 'symbol' ? 'NaN' : String(Number(value));
+      return typeof value === 'bigint'
+        ? `${String(value)}n`
+        : typeof value === 'symbol'
+          ? 'NaN'
+          : String(Number(value));
     }
     case '%i': {
-      return typeof value === 'bigint' ? `${value}n` : String(Number.parseInt(String(value)));
+      return typeof value === 'bigint' ? `${String(value)}n` : String(Number.parseInt(String(value)));
     }
     case '%f': {
-      return `${negative(value) ? '-' : ''}${Number.parseFloat(String(value))}`;
+      return `${negative(value) ? '-' : ''}${String(Number.parseFloat(String(value)))}`;
     }
     case '%j': {
       return json(value);
@@ -81,7 +85,7 @@ function format(placeholder: string, value: unknown): string {
 
 function string(value: unknown): string {
   if (typeof value === 'bigint') {
-    return `${value}n`;
+    return `${String(value)}n`;
   }
 
   if (Object.is(value, -0)) {
@@ -125,7 +129,7 @@ function render(value: unknown): string {
   const text = inspect(value, { breakLength: Infinity, compact: true });
   const cut = truncate(text);
 
-  return typeof value === 'string' && cut !== text ? `${cut}${text.at(-1)}` : cut;
+  return typeof value === 'string' && cut !== text ? `${cut}${text.slice(-1)}` : cut;
 }
 
 /** Cuts `text` short past the limit, before a character that the cut would split in two, as Vitest does. */

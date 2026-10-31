@@ -180,7 +180,7 @@ describe('lzNodeRecordFiles', () => {
     lzNodeRecordFiles.pause(50);
 
     const waited = performance.now() - started;
-    assert.ok(waited >= 50, `${waited} ms`);
+    assert.ok(waited >= 50, `${String(waited)} ms`);
   });
 });
 

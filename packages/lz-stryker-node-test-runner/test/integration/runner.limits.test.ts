@@ -26,7 +26,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
   const loop = (hits: number) =>
     [
       'const ns = globalThis.__stryker__;',
-      `for (let i = 0; i < ${hits}; i++) {`,
+      `for (let i = 0; i < ${String(hits)}; i++) {`,
       "  if (ns.hitCount !== undefined && ++ns.hitCount > ns.hitLimit) throw new Error('Hit limit reached');",
       '}',
     ].join(' ');
@@ -171,7 +171,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
     assert.ok(rssMB > 10, result.errorMessage);
     assert.equal(
       result.errorMessage,
-      `A process of "${join(dir, 'a.test.mjs')}" held ${rssMB} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB ` +
+      `A process of "${join(dir, 'a.test.mjs')}" held ${String(rssMB)} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB ` +
         "(10 MB), so its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's " +
         'limit from the dry run.',
     );

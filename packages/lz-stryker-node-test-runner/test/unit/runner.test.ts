@@ -250,7 +250,11 @@ describe('lzFileError', () => {
 
     assert.equal(
       lzFileError(file, run),
-      [`Error running file "${file}": node exited with code ${exitCode} outside any test.`, command, ...end].join('\n'),
+      [
+        `Error running file "${file}": node exited with code ${String(exitCode)} outside any test.`,
+        command,
+        ...end,
+      ].join('\n'),
     );
   });
 

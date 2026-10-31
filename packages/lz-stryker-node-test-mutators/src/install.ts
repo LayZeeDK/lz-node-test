@@ -65,8 +65,8 @@ export async function install(
     .filter((version) => !inPeerRange(version, range))
     .forEach((version) =>
       warn(
-        `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${major}.${minor}.${patch} or a later ` +
-          `${major}.x, not ${version}. Its install check passed, but it sees only this process, so mutants ` +
+        `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${String(major)}.${String(minor)}.${String(patch)} or a later ` +
+          `${String(major)}.x, not ${version}. Its install check passed, but it sees only this process, so mutants ` +
           'of its mutators may be missing.',
       ),
     );

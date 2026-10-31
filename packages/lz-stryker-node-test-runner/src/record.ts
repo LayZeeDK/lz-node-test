@@ -23,7 +23,7 @@ export function uniqueIds(): (parent: string, name: string) => string {
     let id = base;
 
     for (let count = 2; used.has(id); count++) {
-      id = `${base} (${count})`;
+      id = `${base} (${String(count)})`;
     }
 
     used.add(id);
@@ -116,12 +116,12 @@ export function lzRecordNonce(): string {
 }
 
 export function recordName(pid: number, threadId: number, nonce: string): string {
-  return `${pid}.${threadId}.${nonce}.json`;
+  return `${String(pid)}.${String(threadId)}.${nonce}.json`;
 }
 
 /** The record the memory watchdog writes when it ends its process. */
 export function memoryRecordName(pid: number, nonce: string): string {
-  return `${pid}.${nonce}.memory.json`;
+  return `${String(pid)}.${nonce}.memory.json`;
 }
 
 /** Where a record is written before it is renamed to `path`, so that a reader finds every record whole. */
@@ -287,7 +287,7 @@ export function lzParseRecord(json: string): ProcessRecord {
   }
 
   return {
-    tests: tests.map((test, index) => parseTest(test, `tests[${index}]`)),
+    tests: tests.map((test, index) => parseTest(test, `tests[${String(index)}]`)),
     ...optional('main', main, isTrue, notARecord),
     ...optional('hitCount', hitCount, isNumber, notARecord),
     ...optional('mutantCoverage', mutantCoverage, isCoverage, notARecord),

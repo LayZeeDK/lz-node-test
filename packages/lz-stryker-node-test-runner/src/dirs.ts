@@ -41,7 +41,7 @@ export async function removeDir(
     ),
     timers.setTimeout(
       waitMs,
-      `Stopped waiting for ${dir} to be removed after ${waitMs} ms; a later runner removes what is left.`,
+      `Stopped waiting for ${dir} to be removed after ${String(waitMs)} ms; a later runner removes what is left.`,
       { ref: false },
     ),
   ]);
@@ -80,7 +80,7 @@ const lzDirPattern = new RegExp(`^${lzDirBase}(?:${Object.values(lzDirKinds).joi
 
 /** The start of the name of a directory that the runners of process `pid` make, which `removeLeftDirs` recognizes. */
 export function lzDirPrefix(kind: keyof typeof lzDirKinds, pid: number): string {
-  return `${lzDirBase}${lzDirKinds[kind]}${pid}-`;
+  return `${lzDirBase}${lzDirKinds[kind]}${String(pid)}-`;
 }
 
 /**
