@@ -9,8 +9,7 @@ import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
 import { isOwn, operatorBuilders, toNodeMutator, type BabelTypes, type Operator } from './operator.ts';
 
-/** The first release of the peer range, which takes the later releases of the same major too. */
-const testedFloor = { major: 10, minor: 1, patch: 1 };
+const ownPackageJson = '@layzee/lz-stryker-node-test-mutators/package.json';
 const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
 const namePattern = /^[A-Za-z]+$/;
@@ -70,30 +69,62 @@ export async function install(
 
   await selfCheck(instrumenter, operators);
 
-  if (!isTested(instrumenter.version)) {
-    const { major, minor, patch } = testedFloor;
+  const range = corePeerRange();
+
+  if (!inPeerRange(instrumenter.version, range)) {
+    const { major, minor, patch } = parseCaretFloor(range);
 
     warn(
-      `lz-stryker-node-test-mutators is tested with @stryker-mutator/instrumenter ${major}.${minor}.${patch} or a later ` +
+      `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${major}.${minor}.${patch} or a later ` +
         `${major}.x, not ${instrumenter.version}. Its install check passed, but it sees only this process, so mutants ` +
         'of its mutators may be missing.',
     );
   }
 }
 
-/** Whether the peer range takes `version`; as with npm's caret ranges, it takes no prerelease. */
-function isTested(version: string): boolean {
-  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+export interface Version {
+  readonly major: number;
+  readonly minor: number;
+  readonly patch: number;
+}
 
-  if (match === null) {
+function corePeerRange(): string {
+  const packageJson: unknown = createRequire(import.meta.url)(ownPackageJson);
+  const peers = member(packageJson, 'peerDependencies', isObject, ownPackageJson);
+
+  return member(peers, '@stryker-mutator/core', isString, ownPackageJson);
+}
+
+/** The first release of a caret range such as `^10.1.1`, the form of this package's peer range. */
+export function parseCaretFloor(range: string): Version {
+  const floor = range.startsWith('^') ? parseVersion(range.slice(1)) : undefined;
+
+  if (floor === undefined) {
+    throw new Error(`lz-stryker-node-test-mutators: ${range} is no caret range of a release.`);
+  }
+
+  return floor;
+}
+
+/** A release only: a prerelease or build suffix gives `undefined`. */
+function parseVersion(text: string): Version | undefined {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(text);
+
+  return match === null ? undefined : { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
+}
+
+/** Whether the caret `range` takes `version`; as with npm's caret ranges, it takes no prerelease. */
+export function inPeerRange(version: string, range: string): boolean {
+  const floor = parseCaretFloor(range);
+  const parsed = parseVersion(version);
+
+  if (parsed === undefined) {
     return false;
   }
 
-  const minor = Number(match[2]);
-
   return (
-    Number(match[1]) === testedFloor.major &&
-    (minor > testedFloor.minor || (minor === testedFloor.minor && Number(match[3]) >= testedFloor.patch))
+    parsed.major === floor.major &&
+    (parsed.minor > floor.minor || (parsed.minor === floor.minor && parsed.patch >= floor.patch))
   );
 }
 
@@ -268,6 +299,10 @@ function hasMember<TKey extends string, T>(
 
 function isFunction(value: unknown): value is AnyFunction {
   return typeof value === 'function';
+}
+
+function isObject(value: unknown): value is object {
+  return typeof value === 'object' && value !== null;
 }
 
 function isString(value: unknown): value is string {

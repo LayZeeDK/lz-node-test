@@ -10,7 +10,9 @@ import { types } from '@babel/core';
 import { lzTestEach } from '@layzee/lz-node-test';
 import {
   corePackageJson,
+  inPeerRange,
   install,
+  parseCaretFloor,
   resolveFromCore,
   type Instrumenter,
   type ListedMutator,
@@ -157,33 +159,51 @@ describe('install', () => {
   });
 
   lzTestEach(['11.0.0', '110.1.1'])(
-    'warns that mutants may be missing with the instrumenter version %s, outside the tested range',
+    'warns that mutants may be missing with the instrumenter version %s, outside the peer range',
     async (version) => {
       const { run, warnings } = setup({ version });
 
       await run('add', [operator('Alpha')]);
 
       assert.deepEqual(warnings, [
-        `lz-stryker-node-test-mutators is tested with @stryker-mutator/instrumenter 10.1.1 or a later 10.x, not ${version}. ` +
+        `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter 10.1.1 or a later 10.x, not ${version}. ` +
           'Its install check passed, but it sees only this process, so mutants of its mutators may be missing.',
       ]);
     },
   );
 });
 
+describe('inPeerRange', () => {
+  lzTestEach([
+    ['10.1.5', '^10.2.0', false],
+    ['10.2.0', '^10.2.0', true],
+    ['10.1.9', '^10.1.10', false],
+    ['10.0.0', '^10.0.0', true],
+    ['9.9.9', '^10.0.0', false],
+  ])('takes %s in %s: %s', (version, range, expected) => {
+    assert.equal(inPeerRange(version, range), expected);
+  });
+
+  lzTestEach(['~10.1.1', '^10.1', '^10.1.1-beta.0'])(
+    'refuses the range %s, which is no caret range of a release',
+    (range) => {
+      assert.throws(() => inPeerRange('10.1.1', range), {
+        message: `lz-stryker-node-test-mutators: ${range} is no caret range of a release.`,
+      });
+    },
+  );
+});
+
 describe('the Stryker versions of the peer range', () => {
-  const { major, minor, patch } = corePeerFloor();
+  const { major, minor, patch } = parseCaretFloor(pkg.peerDependencies['@stryker-mutator/core']);
   const floor = `${major}.${minor}.${patch}`;
 
-  function corePeerFloor() {
-    const range = pkg.peerDependencies['@stryker-mutator/core'];
-    const match = /^\^(\d+)\.(\d+)\.(\d+)$/.exec(range);
-
-    if (match === null) {
-      throw new Error(`The peer range of @stryker-mutator/core is no caret range: ${range}`);
+  function belowFloor(): string {
+    if (patch > 0) {
+      return `${major}.${minor}.${patch - 1}`;
     }
 
-    return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
+    return minor > 0 ? `${major}.${minor - 1}.999` : `${major - 1}.999.999`;
   }
 
   async function warningsFor(version: string): Promise<readonly string[]> {
@@ -202,7 +222,7 @@ describe('the Stryker versions of the peer range', () => {
   );
 
   lzTestEach([
-    `${major}.${minor}.${patch - 1}`,
+    belowFloor(),
     `${major + 1}.0.0`,
     `${major - 1}.${minor}.${patch}`,
     `1${floor}`,
