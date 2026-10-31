@@ -34,10 +34,14 @@ export default {
 Keep `'@stryker-mutator/*'` in `plugins`, so that Stryker still loads its own plugins, such as the TypeScript checker.
 
 By default, the runner runs the test files that Nx's convention names: every `.spec` or `.test` file that ends in
-`.js`, `.jsx`, `.ts` or `.tsx`, such as `app.spec.ts` or `app.test.js`, outside `node_modules`. Set `testFiles` for
-other names, such as `.test.mjs` files. Node.js strips the types of `.ts` test files itself, so no build step is
-needed. Add `@stryker-mutator/typescript-checker` and `checkers: ['typescript']` to report mutants that do not
-compile as compile errors instead of running them.
+`.js`, `.jsx`, `.ts` or `.tsx`, such as `app.spec.ts` or `app.test.js`, outside `node_modules`. The default also
+matches files named only `spec` or `test`, such as `test.js` or a Karma `src/test.ts`, and built test files, such as
+`dist/app.spec.js`. Set `testFiles` when such files sit in the working directory, or the runner runs them as test
+files. Set it as well for other names, such as `.test.mjs` files.
+
+Node.js strips the types of `.ts` test files itself, so no build step is needed, but it cannot run `.tsx` or `.jsx`
+files: add a loader for them to `nodeArgs`. Add `@stryker-mutator/typescript-checker` and `checkers: ['typescript']`
+to report mutants that do not compile as compile errors instead of running them.
 
 ## Options
 
