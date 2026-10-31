@@ -351,22 +351,23 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   lzTestFor([{}, { lzStrykerNodeTest: {} }])(
-    'runs the TypeScript test files outside node_modules by default, with the options %j',
+    "runs the .spec and .test files that Nx's convention names, outside node_modules, by default, with the options %j",
     async (options, t) => {
       const dir = project(t, {
         'a.test.ts': passing,
-        [join('sub', 'b.test.ts')]: passing,
+        [join('sub', 'b.spec.js')]: passing,
         [join('node_modules', 'pkg', 'c.test.ts')]: failing,
         'd.test.mjs': failing,
+        'e.ts': failing,
       });
       const runner = await initRunner(undefined, options.lzStrykerNodeTest);
       t.after(() => runner.dispose());
 
-      const { tests } = complete(await settle(runner.dryRun(dryRun)));
+      const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
 
       assert.deepEqual(summary(tests), [
         passed(`${join(dir, 'a.test.ts')} > passes`),
-        passed(`${join(dir, 'sub', 'b.test.ts')} > passes`),
+        passed(`${join(dir, 'sub', 'b.spec.js')} > passes`),
       ]);
     },
   );

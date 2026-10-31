@@ -62,10 +62,10 @@ describe('plugin declaration', () => {
   });
 
   lzTestEach([
-    [{}, { lzStrykerNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [] } }],
+    [{}, { lzStrykerNodeTest: { testFiles: ['**/?(*.)+(spec|test).[jt]s?(x)'], nodeArgs: [] } }],
     [
       { lzStrykerNodeTest: { maxMemoryMB: 1500 } },
-      { lzStrykerNodeTest: { testFiles: ['**/*.test.ts'], nodeArgs: [], maxMemoryMB: 1500 } },
+      { lzStrykerNodeTest: { testFiles: ['**/?(*.)+(spec|test).[jt]s?(x)'], nodeArgs: [], maxMemoryMB: 1500 } },
     ],
     [
       { lzStrykerNodeTest: { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'] } },

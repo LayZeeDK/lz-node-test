@@ -33,7 +33,9 @@ export default {
 
 Keep `'@stryker-mutator/*'` in `plugins`, so that Stryker still loads its own plugins, such as the TypeScript checker.
 
-To test TypeScript, point `testFiles` at the `.ts` test files. Node.js strips the types itself, so no build step is
+By default, the runner runs the test files that Nx's convention names: every `.spec` or `.test` file that ends in
+`.js`, `.jsx`, `.ts` or `.tsx`, such as `app.spec.ts` or `app.test.js`, outside `node_modules`. Set `testFiles` for
+other names, such as `.test.mjs` files. Node.js strips the types of `.ts` test files itself, so no build step is
 needed. Add `@stryker-mutator/typescript-checker` and `checkers: ['typescript']` to report mutants that do not
 compile as compile errors instead of running them.
 
@@ -41,11 +43,11 @@ compile as compile errors instead of running them.
 
 All options sit under `lzStrykerNodeTest`.
 
-| Option        | Type       | Default            | Description                                                                                                                                                                                                                          |
-| ------------- | ---------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `testFiles`   | `string[]` | `['**/*.test.ts']` | Glob patterns for the test files, relative to the working directory. `node_modules` is never searched.                                                                                                                               |
-| `nodeArgs`    | `string[]` | `[]`               | Arguments for `node` ahead of the test file, such as `--enable-source-maps` or `--test-only`. Options that add a `node:test` reporter or its destination are left out, because the runner uses its own reporter.                     |
-| `maxMemoryMB` | `number`   | from the dry run   | The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. The default is the most memory that a process of the test file held in the dry run, times 1.5, plus 1024. |
+| Option        | Type       | Default                               | Description                                                                                                                                                                                                                          |
+| ------------- | ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `testFiles`   | `string[]` | `['**/?(*.)+(spec\|test).[jt]s?(x)']` | Glob patterns for the test files, relative to the working directory. `node_modules` is never searched. The default is Nx's test-file convention.                                                                                     |
+| `nodeArgs`    | `string[]` | `[]`                                  | Arguments for `node` ahead of the test file, such as `--enable-source-maps` or `--test-only`. Options that add a `node:test` reporter or its destination are left out, because the runner uses its own reporter.                     |
+| `maxMemoryMB` | `number`   | from the dry run                      | The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. The default is the most memory that a process of the test file held in the dry run, times 1.5, plus 1024. |
 
 ## What the runner does
 
