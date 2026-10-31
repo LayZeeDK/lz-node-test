@@ -91,8 +91,12 @@ async function reported(cases: () => void, only = false): Promise<Reported[]> {
     };
     // The stream's iterator yields `any`; its named events carry typed data.
     const stream = run({ files: [file], only });
-    stream.on('test:pass', (data) => record('pass', data));
-    stream.on('test:fail', (data) => record('fail', data));
+    stream.on('test:pass', (data) => {
+      record('pass', data);
+    });
+    stream.on('test:fail', (data) => {
+      record('fail', data);
+    });
     await stream.toArray();
 
     return tests;

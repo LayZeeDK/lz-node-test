@@ -11,7 +11,9 @@ import { peakMemoryDir } from '../../src/memory-limits.ts';
 
 function tempDirWith(t: TestContext, prefix: string, names: readonly string[] = []) {
   const dir = mkdtempSync(join(tmpdir(), prefix));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   for (const name of names) {
     mkdirSync(join(dir, name));
@@ -167,12 +169,13 @@ describe('ownDir', () => {
     const asked: string[] = [];
 
     assert.throws(
-      () =>
+      () => {
         ownDir(dir, (path) => {
           asked.push(path);
 
           return false;
-        }),
+        });
+      },
       { message: `"${dir}" belongs to another user; remove it, or run Stryker as that user.` },
     );
     assert.deepEqual(asked, [dir]);

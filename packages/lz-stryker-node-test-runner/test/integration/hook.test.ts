@@ -98,7 +98,9 @@ function takeAddedListeners(
 
 function tempDir(t: TestContext): string {
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'hook-test-')));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   return dir;
 }

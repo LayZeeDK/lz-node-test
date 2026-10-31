@@ -192,7 +192,9 @@ describe('LzStrykerNodeTestRunner', () => {
     project(t, { 'a.test.mjs': passing });
     const left = join(tmpdir(), `lz-stryker-node-test-${String(noProcess)}-left`);
     mkdirSync(join(left, 'out'), { recursive: true });
-    t.after(() => rmSync(left, { recursive: true, force: true }));
+    t.after(() => {
+      rmSync(left, { recursive: true, force: true });
+    });
 
     await initRunner(['a.test.mjs']);
 
@@ -271,7 +273,9 @@ describe('LzStrykerNodeTestRunner', () => {
     await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
 
     const left = readFileSync(join(dir, 'left.txt'), 'utf8');
-    t.after(() => rmSync(left, { recursive: true, force: true }));
+    t.after(() => {
+      rmSync(left, { recursive: true, force: true });
+    });
     assert.ok(!existsSync(left), `left behind: ${left}`);
   });
 

@@ -55,13 +55,19 @@ describe('the options of lzTestEach and lzTestFor', () => {
   });
 
   it('throws before registering a test for options after a function, two functions, or null options', () => {
-    // @ts-expect-error -- options after the function, which the types refuse and the check must catch
-    assert.throws(() => lzTestEach([1])('x', () => {}, {}), signatures);
+    assert.throws(() => {
+      // @ts-expect-error -- options after the function, which the types refuse and the check must catch
+      lzTestEach([1])('x', () => {}, {});
+    }, signatures);
     const second = () => {};
-    // @ts-expect-error -- a second function, which the types refuse and the check must catch
-    assert.throws(() => lzTestFor([1])('x', () => {}, second), signatures);
-    // @ts-expect-error -- null options, which the types refuse and the check must catch
-    assert.throws(() => lzTestEach([1])('x', null, () => {}), signatures);
+    assert.throws(() => {
+      // @ts-expect-error -- a second function, which the types refuse and the check must catch
+      lzTestFor([1])('x', () => {}, second);
+    }, signatures);
+    assert.throws(() => {
+      // @ts-expect-error -- null options, which the types refuse and the check must catch
+      lzTestEach([1])('x', null, () => {});
+    }, signatures);
   });
 });
 

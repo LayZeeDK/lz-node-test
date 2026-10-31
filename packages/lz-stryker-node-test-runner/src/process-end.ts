@@ -107,7 +107,9 @@ export function processEnd(
       ended = true;
       // A process that failed to start has no pid, and no group to end.
       const grouped = child.pid === undefined ? Promise.resolve() : endGroup(child.pid, platform, kill);
-      grouped.then(() => done({ exitCode: code, stderr: wholeCharacters(errors) }), fail);
+      grouped.then(() => {
+        done({ exitCode: code, stderr: wholeCharacters(errors) });
+      }, fail);
     };
     child.stderr.on('data', (chunk: Buffer) => {
       const all = Buffer.concat([errors, chunk]);

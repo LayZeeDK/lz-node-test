@@ -10,7 +10,9 @@ import { memoryLimits } from '../../src/memory-limits.ts';
 
 function setup(t: TestContext, maxMemoryMB?: number) {
   const parent = mkdtempSync(join(tmpdir(), 'memory-limits-'));
-  t.after(() => rmSync(parent, { recursive: true, force: true }));
+  t.after(() => {
+    rmSync(parent, { recursive: true, force: true });
+  });
   const dir = join(parent, 'peaks');
   const warnings: string[] = [];
   const limits = () => memoryLimits(maxMemoryMB, dir, logger({ warnings }));

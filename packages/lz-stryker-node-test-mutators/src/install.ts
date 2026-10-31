@@ -55,21 +55,25 @@ export async function install(
 ): Promise<void> {
   const instrumenters = await resolve();
 
-  instrumenters.forEach(({ allMutators }) => checkNames(operators, allMutators));
-  instrumenters.forEach((instrumenter) => putInto(instrumenter, mode, operators));
+  instrumenters.forEach(({ allMutators }) => {
+    checkNames(operators, allMutators);
+  });
+  instrumenters.forEach((instrumenter) => {
+    putInto(instrumenter, mode, operators);
+  });
   await Promise.all(instrumenters.map((instrumenter) => selfCheck(instrumenter, operators)));
   const range = corePeerRange();
   const { major, minor, patch } = parseCaretFloor(range);
 
   [...new Set(instrumenters.map(({ version }) => version))]
     .filter((version) => !inPeerRange(version, range))
-    .forEach((version) =>
+    .forEach((version) => {
       warn(
         `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${String(major)}.${String(minor)}.${String(patch)} or a later ` +
           `${String(major)}.x, not ${version}. Its install check passed, but it sees only this process, so mutants ` +
           'of its mutators may be missing.',
-      ),
-    );
+      );
+    });
 }
 
 function resolveEachCore(): Promise<readonly Instrumenter[]> {

@@ -35,5 +35,7 @@ export function checkMemory(
 }
 
 export function watch(data: WatchdogData, rss: () => number = process.memoryUsage.rss): void {
-  setInterval(() => checkMemory(data, rss()), 50);
+  setInterval(() => {
+    checkMemory(data, rss());
+  }, 50);
 }

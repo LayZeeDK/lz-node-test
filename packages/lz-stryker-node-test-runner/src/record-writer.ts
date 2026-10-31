@@ -109,7 +109,9 @@ export function lzPersistRecord(
     writeOnNewHits(
       deps.every,
       () => record(natural),
-      (current) => deps.writeRecord(path, current),
+      (current) => {
+        deps.writeRecord(path, current);
+      },
     );
   }
 }
@@ -173,9 +175,13 @@ function writeOnEndingSignals(signals: LzProcessSignals, write: () => void): voi
         return;
       }
 
-      listeners.forEach((entry) => signals.off(entry.signal, entry.listener));
+      listeners.forEach((entry) => {
+        signals.off(entry.signal, entry.listener);
+      });
       signals.raise(signal);
     },
   }));
-  listeners.forEach(({ signal, listener }) => signals.on(signal, listener));
+  listeners.forEach(({ signal, listener }) => {
+    signals.on(signal, listener);
+  });
 }

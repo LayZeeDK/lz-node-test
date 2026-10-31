@@ -338,7 +338,9 @@ export function ending(
     }
 
     armed = true;
-    deps.later(() => end(undefined, opened()), graceMs);
+    deps.later(() => {
+      end(undefined, opened());
+    }, graceMs);
     check();
   };
   const settle = (failed: boolean) => {

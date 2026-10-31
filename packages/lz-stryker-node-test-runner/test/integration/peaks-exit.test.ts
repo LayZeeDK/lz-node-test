@@ -34,7 +34,9 @@ describe("the runner module in Stryker's main process", () => {
     ['calls process.exit', 'process.exit(1);'],
   ])('removes the dry-run peaks directory when the process %s', ([, end], t) => {
     const tmp = mkdtempSync(join(tmpdir(), 'lz-peaks-exit-'));
-    t.after(() => rmSync(tmp, { recursive: true, force: true }));
+    t.after(() => {
+      rmSync(tmp, { recursive: true, force: true });
+    });
 
     const child = spawnSync(
       process.execPath,

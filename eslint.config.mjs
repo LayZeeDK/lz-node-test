@@ -139,6 +139,7 @@ export default [
           allowRegExp: false,
         },
       ],
+      '@typescript-eslint/no-confusing-void-expression': 'error',
       // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature
       // refuses; this one allows it under that flag.
       'dot-notation': 'off',

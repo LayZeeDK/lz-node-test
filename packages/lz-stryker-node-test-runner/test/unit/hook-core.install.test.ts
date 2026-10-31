@@ -704,7 +704,9 @@ describe('install', () => {
       const passed: unknown[] = [];
       let callBack = () => {};
       h.wrapped().after((_context: unknown, done: (error?: unknown) => void) => {
-        callBack = () => done(error);
+        callBack = () => {
+          done(error);
+        };
       });
       h.wrapped().after(() => {});
       const [finished, callbackHook] = afterHooks(h.fake);

@@ -441,7 +441,9 @@ describe('resolveFromCore', () => {
   it('constructs the Instrumenter from the entry that core resolves for the package', async (t) => {
     const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'lz-mutators-entry-')));
 
-    t.after(() => rmSync(root, { recursive: true, force: true }));
+    t.after(() => {
+      rmSync(root, { recursive: true, force: true });
+    });
     const packageFiles: Readonly<Record<string, string>> = {
       'node_modules/@stryker-mutator/instrumenter/package.json': JSON.stringify({
         name: '@stryker-mutator/instrumenter',

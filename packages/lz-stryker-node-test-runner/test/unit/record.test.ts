@@ -113,7 +113,7 @@ describe('lzWriteRecord', () => {
   function writeRecord(platform: NodeJS.Platform, failures: readonly string[]) {
     const calls: unknown[][] = [];
     let attempt = 0;
-    const write = () =>
+    const write = () => {
       lzWriteRecord(
         path,
         { tests: [] },
@@ -132,6 +132,7 @@ describe('lzWriteRecord', () => {
           platform,
         },
       );
+    };
 
     return { calls, write };
   }

@@ -605,7 +605,9 @@ describe('wrapNodeTest', () => {
     it('passes the error given to `done` on', () => {
       const { module, registrations } = wrapped();
       const failure = new Error('called back with an error');
-      module.it('fails', (_t: unknown, done: (error?: unknown) => void) => done(failure));
+      module.it('fails', (_t: unknown, done: (error?: unknown) => void) => {
+        done(failure);
+      });
       const calls: unknown[][] = [];
 
       rawBodyOf(registrations, 'fails')(testContext(), (...args: unknown[]) => calls.push(args));
@@ -810,7 +812,9 @@ describe('wrapNodeTest', () => {
     });
     module.suite('unwanted group', { timeout: 6 }, () => {});
     module.test('other', () => {});
-    module.test('calls back', (_t: unknown, done: () => void) => done());
+    module.test('calls back', (_t: unknown, done: () => void) => {
+      done();
+    });
 
     assert.deepEqual(
       registrations.map(({ name, rest }) => [name, rest[0]]),

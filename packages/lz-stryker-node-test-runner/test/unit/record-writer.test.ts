@@ -65,7 +65,11 @@ function fakeProcess(overrides: Partial<LzRecordDependencies>) {
     records,
     intervals,
     raised,
-    exit: () => [...exitListeners].forEach((listener) => listener()),
+    exit: () => {
+      [...exitListeners].forEach((listener) => {
+        listener();
+      });
+    },
     /** Sets what the hook finds as signal-exit's emitters; at first none. */
     useSignalExit: (emitters: readonly unknown[]) => {
       signalExitEmitters = emitters;
@@ -76,7 +80,11 @@ function fakeProcess(overrides: Partial<LzRecordDependencies>) {
     },
     /** Runs the listeners of `signal` as Node.js does when the process gets it. */
     signal: (signal: LzEndingSignal) => {
-      signalListeners.filter((entry) => entry.signal === signal).forEach((entry) => entry.listener());
+      signalListeners
+        .filter((entry) => entry.signal === signal)
+        .forEach((entry) => {
+          entry.listener();
+        });
     },
     listenerCounts: () =>
       Object.fromEntries(lzEndingSignals.map((signal) => [signal, deps.signals?.listenerCount(signal)])),
@@ -231,7 +239,11 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
 
   it('writes the record of a process the tests started every 250 ms, once its coverage has grown, as it writes every record', () => {
     const p = persisted(descendant);
-    const tick = () => p.intervals.forEach(({ fire }) => fire());
+    const tick = () => {
+      p.intervals.forEach(({ fire }) => {
+        fire();
+      });
+    };
 
     assert.deepEqual(
       p.intervals.map(({ ms }) => ms),
@@ -271,7 +283,9 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
     });
     p.hit('1');
 
-    p.intervals.forEach(({ fire }) => fire());
+    p.intervals.forEach(({ fire }) => {
+      fire();
+    });
 
     assert.equal(p.intervals.length, 1);
   });

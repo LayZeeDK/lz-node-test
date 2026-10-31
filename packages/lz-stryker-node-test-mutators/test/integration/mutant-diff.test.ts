@@ -8,7 +8,9 @@ import { describe, it } from 'node:test';
 describe('corpusDiff', () => {
   it("runs from the command line over the files it is given, with Stryker's instrumenter", (t) => {
     const dir = mkdtempSync(join(tmpdir(), 'corpus-diff-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    t.after(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
     const file = join(dir, 'sample.ts');
     writeFileSync(file, "f('x');\n");
 
