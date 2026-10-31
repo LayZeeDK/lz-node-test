@@ -6,7 +6,6 @@
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": false,
     "declarationMap": false,
-    "importHelpers": false,
     "rewriteRelativeImportExtensions": true,
     "resolveJsonModule": true,
     "types": ["node"]
