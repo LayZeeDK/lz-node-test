@@ -26,7 +26,7 @@ lzTestEach([
 lzTestEach([{ a: 1 }, { a: 2 }])('object', (row) => {
   row.a satisfies number;
   // @ts-expect-error The rows have no b.
-  void row.b;
+  row.b satisfies unknown;
 });
 lzTestEach([1, 2])('scalar', (n) => {
   n satisfies number;

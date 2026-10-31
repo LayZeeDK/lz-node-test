@@ -21,7 +21,7 @@ export const exit: HookDependencies['exit'] = (code) => process.exit(code ?? pro
 
 export const activeResources: HookDependencies['activeResources'] = () => {
   // The runner reads stderr through a pipe, which Node.js lists from the first time process.stderr is read.
-  void process.stderr;
+  Reflect.get(process, 'stderr');
 
   return process.getActiveResourcesInfo();
 };

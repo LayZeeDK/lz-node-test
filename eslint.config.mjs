@@ -179,6 +179,7 @@ export default [
       '@typescript-eslint/no-base-to-string': 'error',
       '@typescript-eslint/no-extraneous-class': 'error',
       '@typescript-eslint/no-misused-spread': 'error',
+      '@typescript-eslint/no-meaningless-void-operator': 'error',
       'no-implied-eval': 'off',
       '@typescript-eslint/no-implied-eval': 'error',
       // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature

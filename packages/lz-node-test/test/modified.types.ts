@@ -13,4 +13,4 @@ lzTestFor.fails.skipIf(1)([1])('modifiers', (n, t) => {
   t satisfies TestContext;
 });
 // @ts-expect-error The modifiers go before the table.
-void lzTestEach([1]).skip;
+lzTestEach([1]).skip satisfies unknown;
