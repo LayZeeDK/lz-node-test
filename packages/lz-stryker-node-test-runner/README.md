@@ -51,7 +51,16 @@ All options sit under `lzStrykerNodeTest`.
 
 - **One process per test file.** Each file runs in a fresh `node` process, so a mutant cannot leak state from one file
   into another. Processes that a test starts, such as child processes and worker threads, load the runner's hook
-  through `NODE_OPTIONS`, so the code under test that they run counts too.
+  through `NODE_OPTIONS`, so the code under test that they run counts too, by these rules:
+  - A process that ends by itself or through `process.exit()` counts in full. So does one that SIGTERM, SIGINT or
+    SIGHUP ends on Linux or macOS, such as `child.kill()` sends; it still ends by that signal, unless it listens for
+    the signal itself.
+  - A worker thread that `worker.terminate()` ends, and on Windows a child process that anything ends, counts up to
+    its last write: in the dry run, each such process writes its coverage every 250 ms.
+  - Lost: what such a process covered in its last 250 ms, what a process that SIGKILL ends covered since its last
+    write, and what a process whose event loop is busy when it is ended covered since its last write.
+  - When a test file's process exits, the runner ends the processes its tests left running: on Linux and macOS with
+    SIGTERM and, 200 ms later, SIGKILL; on Windows at once.
 - **Coverage analysis.** The runner supports Stryker's `coverageAnalysis` values `off`, `all` and `perTest`. With
   `perTest`, a mutant runs only the tests that reach it. A child process or worker thread that ends before the test
   that started it counts toward that test alone. One that keeps running after its test, such as a worker that the
