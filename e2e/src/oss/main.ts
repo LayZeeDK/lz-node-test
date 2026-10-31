@@ -45,22 +45,31 @@ interface LzLeftover {
   readonly endedByDriver: boolean;
 }
 
-interface LzSideResult extends LzScore {
+interface LzStrykerResult extends LzScore {
   readonly exitCode: number;
   readonly timedOut: boolean;
   readonly reported: boolean;
-  readonly wallMs: number;
   readonly mutants: number;
-  readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
   readonly leftoverInRunTmp: readonly string[];
+}
+
+interface LzSideResult {
+  /** Null when the Stryker run itself threw; `errors` says why. */
+  readonly stryker: LzStrykerResult | null;
+  /** Each step that threw, so a failed step leaves the result of the others. */
+  readonly errors: readonly string[];
+  readonly wallMs: number;
+  readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
   readonly newInOsTmp: readonly string[];
   readonly leftoverStrykerTmp: readonly string[];
 }
 
 /** Without a report on both sides there is nothing to compare, which an empty disagreement list would hide. */
 type LzComparison =
-  | { readonly compared: false }
+  | { readonly compared: false; readonly reason: string }
   | { readonly compared: true; readonly disagreements: readonly LzVerdict[]; readonly verdicts: readonly LzVerdict[] };
+
+type LzSettled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: string };
 
 /** The shape of result.json. */
 type LzOssResult = LzOssHeader &
@@ -70,7 +79,7 @@ type LzOssResult = LzOssHeader &
   );
 
 interface LzSideRun {
-  readonly run: LzStrykerRun;
+  readonly run: LzStrykerRun | null;
   readonly result: LzSideResult;
 }
 
@@ -122,49 +131,80 @@ if (options.prepareOnly) {
   writeResult({ ...header, sides: { lz: lz.result, command: command.result }, ...comparison(lz.run, command.run) });
 }
 
+/** Each step is settled, so a throw in the run, the sampler or an ending still stops the sampler and ends leftovers. */
 async function runSide(side: LzSide): Promise<LzSideRun> {
   const osTmpBefore = readdirSync(tmpdir());
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
   const started = performance.now();
-  const run = await lzStryker(dir, configFile(side), options.concurrency);
+  const run = await settled('Stryker run', lzStryker(dir, configFile(side), options.concurrency));
   const wallMs = Math.round(performance.now() - started);
-  const samples = (await sampler.stop()).map((sample) => lzDescendants(sample, process.pid, excluded));
+  const stopped = await settled('Sampler', sampler.stop());
+  const samples = stopped.ok ? stopped.value.map((sample) => lzDescendants(sample, process.pid, excluded)) : [];
 
   await timers.setTimeout(settleMs);
   // Ended once recorded, so that one side's leftovers cannot load the next side's run.
-  const leftovers = await Promise.all(
-    lzLeftovers(samples.flat(), await lzSnapshot()).map(async (leftover) => ({
-      pid: leftover.pid,
-      name: leftover.name,
-      endedByDriver: await end(leftover),
+  const found = await settled(
+    'Leftover snapshot',
+    lzSnapshot().then((now) => lzLeftovers(samples.flat(), now)),
+  );
+  const ended = await Promise.all(
+    (found.ok ? found.value : []).map(async (leftover) => ({
+      leftover,
+      ending: await settled(`Ending ${leftover.pid}`, end(leftover)),
     })),
   );
+  const strykerTmp = join(dir, '.stryker-tmp');
 
-  writeFileSync(join(out, `${side}.log`), run.output);
+  if (run.ok) {
+    writeFileSync(join(out, `${side}.log`), run.value.output);
+  }
 
-  if (run.reported) {
+  if (run.ok && run.value.reported) {
     copyFileSync(join(dir, lzReportFile), join(out, `${side}.mutation.json`));
   }
 
-  const strykerTmp = join(dir, '.stryker-tmp');
-  const mutants = run.reported ? [...run.report.values()].flat() : [];
-
   return {
-    run,
+    run: run.ok ? run.value : null,
     result: {
-      exitCode: run.exitCode,
-      timedOut: run.timedOut,
-      reported: run.reported,
+      stryker: run.ok ? strykerResult(run.value) : null,
+      errors: [run, stopped, found, ...ended.map(({ ending }) => ending)].flatMap((step) =>
+        step.ok ? [] : [step.error],
+      ),
       wallMs,
-      ...lzScore(mutants),
-      mutants: mutants.length,
-      processes: { ...lzPeaks(samples), leftover: leftovers },
-      leftoverInRunTmp: run.leftover,
+      processes: {
+        ...lzPeaks(samples),
+        leftover: ended.map(({ leftover: { pid, name }, ending }) => ({
+          pid,
+          name,
+          endedByDriver: ending.ok && ending.value,
+        })),
+      },
       newInOsTmp: lzNewEntries(osTmpBefore, readdirSync(tmpdir())),
       leftoverStrykerTmp: existsSync(strykerTmp) ? readdirSync(strykerTmp) : [],
     },
   };
+}
+
+function strykerResult(run: LzStrykerRun): LzStrykerResult {
+  const mutants = run.reported ? [...run.report.values()].flat() : [];
+
+  return {
+    exitCode: run.exitCode,
+    timedOut: run.timedOut,
+    reported: run.reported,
+    ...lzScore(mutants),
+    mutants: mutants.length,
+    leftoverInRunTmp: run.leftover,
+  };
+}
+
+async function settled<T>(step: string, promise: Promise<T>): Promise<LzSettled<T>> {
+  try {
+    return { ok: true, value: await promise };
+  } catch (error) {
+    return { ok: false, error: `${step}: ${error instanceof Error ? error.message : String(error)}` };
+  }
 }
 
 /** False when the process ended, or its id went to another process, before the driver could end it. */
@@ -186,14 +226,18 @@ async function end(leftover: LzProcessRow): Promise<boolean> {
   }
 }
 
-function comparison(lz: LzStrykerRun, command: LzStrykerRun): LzComparison {
-  if (!lz.reported || !command.reported) {
-    return { compared: false };
+function comparison(lz: LzStrykerRun | null, command: LzStrykerRun | null): LzComparison {
+  if (lz?.reported !== true || command?.reported !== true) {
+    return { compared: false, reason: 'A side wrote no report.' };
   }
 
-  const verdicts = lzCompare(lz.report, command.report);
+  try {
+    const verdicts = lzCompare(lz.report, command.report);
 
-  return { compared: true, disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command), verdicts };
+    return { compared: true, disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command), verdicts };
+  } catch (error) {
+    return { compared: false, reason: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function configFile(side: LzSide): string {
