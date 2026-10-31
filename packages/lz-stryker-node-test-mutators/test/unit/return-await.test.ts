@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe } from 'node:test';
+import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { returnAwait } from '../../src/return-await.ts';
@@ -16,14 +16,25 @@ describe('LzReturnAwait', () => {
       'const read = async () => {\n  try {\n    return await load();\n  } finally {\n    done();\n  }\n};',
     ],
     ['a block nested in the try block', guarded('if (ready) {\n      return await load();\n    }')],
+    [
+      'a function, through a catch block with no finally block',
+      guarded('try {\n      check();\n    } catch {\n      return await load();\n    }'),
+    ],
   ])('returns the promise unawaited from the try block of %s', async (_title, source) => {
+    assert.deepEqual(await mutantsOf(returnAwait, source), ['load()']);
+  });
+
+  it('returns the promise unawaited from a catch block that a finally block follows', async () => {
+    const source =
+      'export async function read() {\n  try {\n    return 1;\n  } catch {\n    return await load();\n  } finally {\n    done();\n  }\n}';
+
     assert.deepEqual(await mutantsOf(returnAwait, source), ['load()']);
   });
 
   lzTestEach([
     ['a return await outside a try', 'export async function read() {\n  return await load();\n}'],
     [
-      'a return await in a catch block',
+      'a return await in a catch block with no finally block',
       'export async function read() {\n  try {\n    return 1;\n  } catch {\n    return await load();\n  }\n}',
     ],
     [
