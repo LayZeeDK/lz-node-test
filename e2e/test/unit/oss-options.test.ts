@@ -85,6 +85,17 @@ describe('lzParseOptions', () => {
     assert.throws(() => lzParseOptions(required.with(7, '0')), { message: /--concurrency is a positive integer/ });
   });
 
+  it('prints the usage and exits 0 on --help', () => {
+    const main = join(import.meta.dirname, '..', '..', 'src', 'oss', 'main.ts');
+    const { status, stdout, stderr } = spawnSync(process.execPath, [main, '--help'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+
+    assert.deepEqual({ status, stderr }, { status: 0, stderr: '' });
+    assert.match(stdout, /^Usage: node e2e\/src\/oss\/main\.ts --project <name> .*--help/);
+  });
+
   it('refuses an option it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
   });

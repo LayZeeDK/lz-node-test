@@ -64,9 +64,13 @@ const projects: readonly LzOssProject[] = [
   { name: 'restartable', mutate: ['index.js', 'lib/server.js'], testFiles: ['test/*.test.js'], command: 'node --test' },
 ];
 
-const usage =
+export const lzOssUsage =
   'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
-  '[--tarballs <folder>] [--prepare-only]';
+  '[--tarballs <folder>] [--prepare-only] [--help]';
+
+export function lzWantsHelp(args: readonly string[]): boolean {
+  return args.includes('--help') || args.includes('-h');
+}
 
 export function lzParseOptions(args: readonly string[]): LzOssOptions {
   const { values } = parseArgs({
@@ -86,15 +90,15 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
   const project = projects.find(({ name }) => name === values.project);
 
   if (project === undefined) {
-    throw new Error(`${usage}\n--project is one of ${projects.map(({ name }) => name).join(', ')}.`);
+    throw new Error(`${lzOssUsage}\n--project is one of ${projects.map(({ name }) => name).join(', ')}.`);
   }
 
   if (source === undefined || out === undefined) {
-    throw new Error(`${usage}\n--source and --out are required.`);
+    throw new Error(`${lzOssUsage}\n--source and --out are required.`);
   }
 
   if (concurrency === undefined || !/^[1-9]\d*$/.test(concurrency)) {
-    throw new Error(`${usage}\n--concurrency is a positive integer; size it to the machine's current load.`);
+    throw new Error(`${lzOssUsage}\n--concurrency is a positive integer; size it to the machine's current load.`);
   }
 
   return { project, source, out, concurrency: Number(concurrency), tarballs, prepareOnly: values['prepare-only'] };
