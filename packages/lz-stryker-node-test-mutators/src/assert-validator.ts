@@ -6,6 +6,14 @@ import type { Operator } from './operator.ts';
 const message = 'Stryker';
 const testFunctions: ReadonlySet<string | undefined> = new Set(['it', 'test']);
 const testModifiers: ReadonlySet<string | undefined> = new Set(['only', 'skip', 'todo']);
+const labelKeys: ReadonlySet<string | undefined> = new Set(['label', 'match']);
+const matcherTypes: ReadonlySet<string> = new Set([
+  'RegExpLiteral',
+  'FunctionExpression',
+  'ArrowFunctionExpression',
+  'ClassExpression',
+  'MemberExpression',
+]);
 
 /**
  * Makes the code that `assert.throws` or `assert.rejects` checks, or the test function of a node:test test whose
@@ -55,37 +63,47 @@ function expectsMatchedFailure(path: NodePath, call: types.CallExpression): bool
 }
 
 /**
- * A string or `true` only labels the expected failure. So does an object with a `label` or a `match`, whose `match`
- * is a matcher unless it is a string, which node:test passes to `assert.throws` as its message.
+ * What node:test checks the failure against: a RegExp, a function or class, an object of what the error must hold, or
+ * a variable or member that may hold one. An object of only `label` and `match` is a label, and its `match` is the
+ * matcher unless it is a string, which node:test passes to `assert.throws` as its message. Anything else, such as a
+ * string, `true` or a number, only labels the failure.
  */
 function isMatcher(value: types.Node | undefined): boolean {
-  if (value === undefined || isLabel(value)) {
+  if (value === undefined) {
     return false;
   }
 
   if (value.type !== 'ObjectExpression') {
+    return mayHoldMatcher(value);
+  }
+
+  if (!isLabelObject(value)) {
     return true;
   }
 
   const match = propertyValue(value, 'match');
 
-  return (match === undefined && propertyValue(value, 'label') === undefined) || isMatcher(match);
+  return match !== undefined && (match.type === 'ObjectExpression' || mayHoldMatcher(match));
 }
 
-function isLabel(value: types.Node): boolean {
-  return value.type === 'StringLiteral' || value.type === 'TemplateLiteral' || value.type === 'BooleanLiteral';
+function mayHoldMatcher(value: types.Node): boolean {
+  return value.type === 'Identifier' ? value.name !== 'undefined' : matcherTypes.has(value.type);
+}
+
+function isLabelObject(object: types.ObjectExpression): boolean {
+  return object.properties.length > 0 && object.properties.every((property) => labelKeys.has(keyOf(property)));
 }
 
 function propertyValue(object: types.ObjectExpression, key: string): types.Node | undefined {
-  const property = object.properties.find(
-    (candidate) =>
-      candidate.type === 'ObjectProperty' &&
-      !candidate.computed &&
-      candidate.key.type === 'Identifier' &&
-      candidate.key.name === key,
-  );
+  const property = object.properties.find((candidate) => keyOf(candidate) === key);
 
   return property?.type === 'ObjectProperty' ? property.value : undefined;
+}
+
+function keyOf(property: types.ObjectExpression['properties'][number]): string | undefined {
+  return property.type === 'ObjectProperty' && !property.computed && property.key.type === 'Identifier'
+    ? property.key.name
+    : undefined;
 }
 
 /**

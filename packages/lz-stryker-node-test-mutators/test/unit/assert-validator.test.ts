@@ -47,6 +47,11 @@ describe('LzAssertValidator', () => {
     ['a variable', expecting('badId')],
     ['the match of a label', expecting("{ label: 'bad ids fail', match: /bad id/ }")],
     ['a match with no label', expecting('{ match: /bad id/ }')],
+    ['an object with a label and other keys', expecting("{ label: 'bad ids fail', code: 'ERR_BAD_ID' }")],
+    ['an empty object', expecting('{}')],
+    ['a member of an object', expecting('errors.badId')],
+    ['a class expression', expecting('class extends TypeError {}')],
+    ['an object match of a label', expecting("{ label: 'bad ids fail', match: { code: 'ERR_BAD_ID' } }")],
   ])('replaces the test function of an expectFailure that matches through %s', async (_title, source) => {
     assert.deepEqual(await mutantsOf(assertValidator, source), [throws]);
   });
@@ -81,6 +86,11 @@ describe('LzAssertValidator', () => {
     ['true', expecting('true')],
     ['a label with no match', expecting("{ label: 'a known bug' }")],
     ["a match that is a string, which node:test reads as the assertion's message", expecting("{ match: 'bad id' }")],
+    ['a number', expecting('1')],
+    ['a ternary', expecting("process.platform === 'win32' ? /bad id/ : 'a known bug'")],
+    ['a comparison', expecting("process.platform === 'win32'")],
+    ['undefined', expecting('undefined')],
+    ['a match of undefined', expecting('{ match: undefined }')],
     ['no expectFailure', `${nodeTest}it('parses', { timeout: 10 }, () => parse('x'));`],
     ['no options', `${nodeTest}it('parses', () => parse('x'));`],
     ['options passed whole', `${nodeTest}it('fails', options, f);`],
