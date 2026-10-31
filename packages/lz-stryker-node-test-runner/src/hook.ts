@@ -19,12 +19,7 @@ const watchdog = `Promise.all([
 // eslint-disable-next-line n/no-process-exit -- the hook ends a test file's process once its tests are done, though something may hold it open
 export const exit: HookDependencies['exit'] = (code) => process.exit(code ?? process.exitCode);
 
-export const activeResources: HookDependencies['activeResources'] = () => {
-  // The runner reads stderr through a pipe, which Node.js lists from the first time process.stderr is read.
-  Reflect.get(process, 'stderr');
-
-  return process.getActiveResourcesInfo();
-};
+export const activeResources: HookDependencies['activeResources'] = () => process.getActiveResourcesInfo();
 
 export const later: HookDependencies['later'] = (callback, ms) => {
   setTimeout(callback, ms).unref();
