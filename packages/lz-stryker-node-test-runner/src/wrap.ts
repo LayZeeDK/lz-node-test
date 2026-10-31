@@ -271,7 +271,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
     if (id === undefined) {
       delete ns.currentTestId;
-      delete env[envNames.current];
+      Reflect.deleteProperty(env, envNames.current);
     } else {
       ns.currentTestId = id;
       env[envNames.current] = id;

@@ -43,11 +43,11 @@ async function loadRunnerStartedHook(
   const signalListeners = lzEndingSignals.map((signal) => ({ signal, before: process.listeners(signal) }));
 
   for (const [key] of previousEnv) {
-    delete process.env[key];
+    Reflect.deleteProperty(process.env, key);
   }
 
   Object.assign(process.env, { [envNames.out]: outDir, ...env });
-  delete global[installed];
+  Reflect.deleteProperty(global, installed);
 
   try {
     // A query of its own makes each load run the hook's module again.
@@ -55,7 +55,7 @@ async function loadRunnerStartedHook(
   } finally {
     for (const [key, value] of previousEnv) {
       if (value === undefined) {
-        delete process.env[key];
+        Reflect.deleteProperty(process.env, key);
       } else {
         process.env[key] = value;
       }
@@ -64,7 +64,7 @@ async function loadRunnerStartedHook(
     if (previousMark) {
       global[installed] = previousMark;
     } else {
-      delete global[installed];
+      Reflect.deleteProperty(global, installed);
     }
   }
 
@@ -194,7 +194,7 @@ describe('hook', () => {
     process.env[envNames.bail] = 'true';
     t.after(() => {
       if (bail === undefined) {
-        delete process.env[envNames.bail];
+        Reflect.deleteProperty(process.env, envNames.bail);
       } else {
         process.env[envNames.bail] = bail;
       }
@@ -907,11 +907,11 @@ describe('reporter', () => {
       global[reporting] = (received) => events.push(received);
       reporter.write(event('first'));
       reporter.write(event('second'));
-      delete global[reporting];
+      Reflect.deleteProperty(global, reporting);
       reporter.write(event('elsewhere'));
     } finally {
       if (previous === undefined) {
-        delete global[reporting];
+        Reflect.deleteProperty(global, reporting);
       } else {
         global[reporting] = previous;
       }
