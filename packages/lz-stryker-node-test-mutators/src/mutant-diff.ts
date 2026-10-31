@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { relative, sep } from 'node:path';
 
-import { resolveFromCore, type Instrumenter, type InstrumentedMutant } from './install.ts';
+import { resolveFromCore, type Instrumenter, type InstrumentedMutant } from './instrumenter.ts';
 import { toNodeMutator, type Operator } from './operator.ts';
 
 interface MutantDiff {

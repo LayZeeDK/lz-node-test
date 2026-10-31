@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import { types } from '@babel/core';
 
-import type { Instrumenter, InstrumentedMutant, SourceFile } from '../../src/install.ts';
+import type { Instrumenter, InstrumentedMutant, SourceFile } from '../../src/instrumenter.ts';
 import { corpusDiff, mutantDiff } from '../../src/mutant-diff.ts';
 import type { NodeMutatorLike, Operator } from '../../src/operator.ts';
 

@@ -45,7 +45,8 @@ export interface NodeMutatorLike {
   readonly filter?: ((mutantsInScope: readonly unknown[]) => boolean) | undefined;
 }
 
-export const own = Symbol.for('lz-stryker-node-test-mutators');
+export const lzPackageName = 'lz-stryker-node-test-mutators';
+export const own = Symbol.for(lzPackageName);
 
 interface OwnMutator extends NodeMutatorLike {
   readonly [own]: true;

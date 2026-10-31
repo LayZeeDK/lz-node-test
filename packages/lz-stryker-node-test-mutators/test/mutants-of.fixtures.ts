@@ -1,4 +1,4 @@
-import { resolveFromCore, type InstrumentedMutant, type ListedMutator } from '../src/install.ts';
+import { resolveFromCore, type InstrumentedMutant, type ListedMutator } from '../src/instrumenter.ts';
 import { isOwn, toNodeMutator, type Operator } from '../src/operator.ts';
 
 export const strict = "import assert from 'node:assert/strict';\n";
