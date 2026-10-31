@@ -40,6 +40,7 @@ load, while a failed import stops the run.
 | `LzNodeEventName`   | Swaps a lifecycle event that a listener waits for with one that fires at another time, such as a child process's `exit` and `close`, or a stream's `finish`, `end` and `close`.                                                   |
 | `LzAssertStatement` | Removes a `node:assert` statement. A survivor is an invariant that no test breaks.                                                                                                                                                |
 | `LzAwaitStatement`  | Removes a statement that only awaits a call, such as `await flush();`. Stryker removes a call statement but not an awaited one, so a lint rule that adds `await` to a floating promise would hide the call from mutation testing. |
+| `LzReturnAwait`     | Turns `return await x` into `return x` inside a `try` block, where the `catch` and `finally` then no longer wait for `x`. A survivor is a rejection or a cleanup whose timing no test sees.                                       |
 
 ## Mutate test files
 

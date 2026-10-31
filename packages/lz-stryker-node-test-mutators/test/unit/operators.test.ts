@@ -9,7 +9,7 @@ describe('the catalogues', () => {
     [
       'production',
       productionOperators,
-      ['LzNodeTimerDelay', 'LzNodeEventName', 'LzAssertStatement', 'LzAwaitStatement'],
+      ['LzNodeTimerDelay', 'LzNodeEventName', 'LzAssertStatement', 'LzAwaitStatement', 'LzReturnAwait'],
     ],
     ['test', testOperators, ['LzAssertCall', 'LzAssertValidator']],
   ])('name the %s operators', (_title, operators, names) => {

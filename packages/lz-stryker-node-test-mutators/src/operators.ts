@@ -5,12 +5,14 @@ import { awaitStatement } from './await-statement.ts';
 import { nodeEventName } from './node-event-name.ts';
 import { nodeTimerDelay } from './node-timer-delay.ts';
 import type { Operator } from './operator.ts';
+import { returnAwait } from './return-await.ts';
 
 export const productionOperators: readonly Operator[] = [
   nodeTimerDelay,
   nodeEventName,
   assertStatement,
   awaitStatement,
+  returnAwait,
 ];
 
 export const testOperators: readonly Operator[] = [assertCall, assertValidator];
