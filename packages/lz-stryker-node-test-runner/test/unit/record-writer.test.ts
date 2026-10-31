@@ -130,6 +130,19 @@ describe('lzPersistRecord, for a process that a signal ends', () => {
     },
   );
 
+  it('stops listening and raises the signal again also when the record can no longer be written', () => {
+    const { raised, signal, listenerCounts } = persisted(undefined, {
+      writeRecord: () => {
+        throw new Error('ENOENT: no such file or directory');
+      },
+    });
+
+    signal('SIGTERM');
+
+    assert.deepEqual(listenerCounts(), noListeners);
+    assert.deepEqual(raised, ['SIGTERM']);
+  });
+
   it("only writes the record when the process listens for the signal itself, so that the process's listener decides", () => {
     const { records, raised, signal, listen, listenerCounts } = persisted();
     const own: string[] = [];

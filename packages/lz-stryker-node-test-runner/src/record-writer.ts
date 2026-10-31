@@ -146,7 +146,12 @@ function writeOnEndingSignals(signals: LzProcessSignals, write: () => void): voi
   const listeners = lzEndingSignals.map((signal) => ({
     signal,
     listener: () => {
-      write();
+      try {
+        write();
+      } catch {
+        // The process still ends by the signal: a process that swallows uncaught errors would otherwise outlive it.
+      }
+
       const othersDecide = signals.listenerCount(signal) - ownListener > signalExitListeners(signals);
 
       if (othersDecide) {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
-import { mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
@@ -712,18 +712,22 @@ describe('hook, in a process that a signal ends', () => {
   const noSignals = process.platform === 'win32' && 'Windows has no signals to catch: every kill is TerminateProcess';
 
   /** Starts a process the runner's test file started, running `script` once it says it is ready, and sends `signal`. */
-  async function signalled(t: TestContext, script: string, signal: NodeJS.Signals) {
-    const outDir = tempDir(t);
+  async function signalled(t: TestContext, script: string, signal: NodeJS.Signals, outDir = tempDir(t)) {
     const child = spawn(process.execPath, ['--import', hookUrl, '-e', `${script} process.send('ready');`], {
       env: hookedEnv({ [envNames.out]: outDir }),
       stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     });
+    t.after(() => child.kill('SIGKILL'));
     const exited = once(child, 'exit');
     await once(child, 'message');
     child.kill(signal);
     await exited;
 
-    return { code: child.exitCode, signalCode: child.signalCode, records: Object.keys(readRecords(outDir)) };
+    return {
+      code: child.exitCode,
+      signalCode: child.signalCode,
+      records: existsSync(outDir) ? Object.keys(readRecords(outDir)) : [],
+    };
   }
 
   lzTestFor<readonly [NodeJS.Signals]>([['SIGTERM'], ['SIGINT'], ['SIGHUP']])(
@@ -748,6 +752,19 @@ describe('hook, in a process that a signal ends', () => {
 
       assert.deepEqual([code, signalCode], [7, null]);
       assert.equal(records.length, 1);
+    },
+  );
+
+  it(
+    'ends a process that swallows uncaught errors by the signal, also once its record can no longer be written',
+    // eslint-disable-next-line node-test/no-skip-test -- POSIX only, with the reason as its value
+    { skip: noSignals, timeout: 10_000 },
+    async (t) => {
+      const script = "process.on('uncaughtException', () => {}); setInterval(() => {}, 1_000);";
+
+      const { code, signalCode } = await signalled(t, script, 'SIGTERM', join(tempDir(t), 'removed'));
+
+      assert.deepEqual([code, signalCode], [null, 'SIGTERM']);
     },
   );
 });
