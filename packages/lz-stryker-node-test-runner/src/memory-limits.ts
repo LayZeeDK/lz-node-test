@@ -25,7 +25,7 @@ export function peakMemoryDir(strykerPid: number): string {
 export function removePeaksOnExit(): void {
   process.once('exit', () => {
     try {
-      rmSync(peakMemoryDir(process.pid), { recursive: true, force: true });
+      rmSync(peakMemoryDir(process.pid), { recursive: true });
     } catch {
       // Left for a later runner's removeLeftDirs.
     }
