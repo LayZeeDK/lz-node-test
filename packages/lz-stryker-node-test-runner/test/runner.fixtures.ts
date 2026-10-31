@@ -133,12 +133,16 @@ export function strykerOptions({
 export async function initRunner(
   testFiles?: string[],
   lzStrykerNodeTest?: LzStrykerNodeTestOptions,
-  { log = logger(), ...options }: Omit<RunnerOptions, 'lzStrykerNodeTest'> & { readonly log?: Logger } = {},
+  {
+    log = logger(),
+    heldOpenMs,
+    ...options
+  }: Omit<RunnerOptions, 'lzStrykerNodeTest'> & { readonly log?: Logger; readonly heldOpenMs?: number } = {},
 ): Promise<LzStrykerNodeTestRunner> {
   const lzOptions = (testFiles ?? lzStrykerNodeTest) && {
     lzStrykerNodeTest: { ...lzStrykerNodeTest, ...(testFiles && { testFiles }) },
   };
-  const runner = new LzStrykerNodeTestRunner(strykerOptions({ ...options, ...lzOptions }), log);
+  const runner = new LzStrykerNodeTestRunner(strykerOptions({ ...options, ...lzOptions }), log, heldOpenMs);
   await runner.init();
 
   return runner;

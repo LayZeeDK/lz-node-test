@@ -507,6 +507,19 @@ describe('lzRunEnv', () => {
     assert.deepEqual(base, before);
   });
 
+  it("leaves the test file the hook's own held-open time whatever the parent's environment sets", () => {
+    const env = lzRunEnv(
+      { [envNames.heldOpen]: '200' },
+      file,
+      out,
+      tmp,
+      { dryRun: false, disableBail: true },
+      undefined,
+    );
+
+    assert.equal(env[envNames.heldOpen], undefined);
+  });
+
   it('drops the node:test reporters and destinations of inherited options, also quoted ones', () => {
     const nodeOptions = [
       '--test-reporter=spec',

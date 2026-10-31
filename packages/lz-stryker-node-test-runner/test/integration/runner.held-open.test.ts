@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { describe, it, type TestContext } from 'node:test';
+import { describe, it } from 'node:test';
 
 import { DryRunStatus, MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
-import { envNames } from '../../src/record.ts';
 import {
   dryRun,
   fixture,
@@ -20,19 +19,6 @@ shareCompileCache();
 const server = "import { createServer } from 'node:http';";
 const listen = 'await new Promise((resolve) => createServer().listen(0, resolve));';
 
-/** Shortens the time a test file may stay alive after its tests, for this test only. */
-function heldOpenFor(t: TestContext, ms: number): void {
-  const previous = process.env[envNames.heldOpen];
-  process.env[envNames.heldOpen] = String(ms);
-  t.after(() => {
-    if (previous === undefined) {
-      delete process.env[envNames.heldOpen];
-    } else {
-      process.env[envNames.heldOpen] = previous;
-    }
-  });
-}
-
 describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', () => {
   it('reports a mutant killed at once when a failed test leaves a server listening', async (t) => {
     const dir = project(t, {
@@ -47,7 +33,6 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
   });
 
   it('reports a mutant killed at once when a failed test leaves a server listening and node:test filters out a top-level test', async (t) => {
-    heldOpenFor(t, 5000);
     const dir = project(t, {
       'a.test.mjs': fixture(
         server,
@@ -55,7 +40,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
         "it('filtered out', () => {});",
       ),
     });
-    const runner = await initRunner(['a.test.mjs'], { nodeArgs: ['--test-name-pattern=fails'] });
+    const runner = await initRunner(['a.test.mjs'], { nodeArgs: ['--test-name-pattern=fails'] }, { heldOpenMs: 5000 });
     const started = Date.now();
 
     const result = await settle(runner.mutantRun(mutantRunOptions()));
@@ -66,9 +51,8 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
   });
 
   it('ends the dry run of a test file whose passing test leaves a server listening as an error that says what to do', async (t) => {
-    heldOpenFor(t, 200);
     const dir = project(t, { 'a.test.mjs': fixture(server, `it('passes', async () => { ${listen} });`) });
-    const runner = await initRunner(['a.test.mjs']);
+    const runner = await initRunner(['a.test.mjs'], undefined, { heldOpenMs: 200 });
 
     assert.deepEqual(await settle(runner.dryRun(dryRun)), {
       status: DryRunStatus.Error,
@@ -81,11 +65,10 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
   });
 
   it('ends the dry run of a held-open file as held open also when node:test filters out a top-level test', async (t) => {
-    heldOpenFor(t, 200);
     project(t, {
       'a.test.mjs': fixture(server, `it('passes', async () => { ${listen} });`, "it('filtered out', () => {});"),
     });
-    const runner = await initRunner(['a.test.mjs'], { nodeArgs: ['--test-name-pattern=passes'] });
+    const runner = await initRunner(['a.test.mjs'], { nodeArgs: ['--test-name-pattern=passes'] }, { heldOpenMs: 200 });
 
     const result = await settle(runner.dryRun(dryRun));
 
@@ -94,9 +77,8 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
   });
 
   it('reports a mutant whose passing test leaves servers listening as timed out, naming them', async (t) => {
-    heldOpenFor(t, 200);
     const dir = project(t, { 'a.test.mjs': fixture(server, `it('passes', async () => { ${listen} ${listen} });`) });
-    const runner = await initRunner(['a.test.mjs']);
+    const runner = await initRunner(['a.test.mjs'], undefined, { heldOpenMs: 200 });
 
     assert.deepEqual(await settle(runner.mutantRun(mutantRunOptions())), {
       status: MutantRunStatus.Timeout,
@@ -105,14 +87,13 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
   });
 
   it('reports an error raised after a test ended, while a server holds the process, as an error', async (t) => {
-    heldOpenFor(t, 500);
     project(t, {
       'a.test.mjs': fixture(
         server,
         `it('passes', async () => { ${listen} setTimeout(() => { throw new Error('late'); }, 10); });`,
       ),
     });
-    const runner = await initRunner(['a.test.mjs']);
+    const runner = await initRunner(['a.test.mjs'], undefined, { heldOpenMs: 500 });
 
     const result = await settle(runner.mutantRun(mutantRunOptions()));
 
@@ -124,7 +105,6 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
   });
 
   it("starts the held-open time once the test file's root after hooks end", async (t) => {
-    heldOpenFor(t, 200);
     project(t, {
       'a.test.mjs': fixture(
         server,
@@ -137,7 +117,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
         "it('passes', async () => { await new Promise((resolve) => server.listen(0, resolve)); });",
       ),
     });
-    const runner = await initRunner(['a.test.mjs']);
+    const runner = await initRunner(['a.test.mjs'], undefined, { heldOpenMs: 200 });
 
     assert.equal((await settle(runner.mutantRun(mutantRunOptions()))).status, MutantRunStatus.Survived);
   });
@@ -163,7 +143,6 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
   });
 
   it('runs a file past the held-open time when an after hook added inside a before hook ran early', async (t) => {
-    heldOpenFor(t, 200);
     project(t, {
       'a.test.mjs': fixture(
         "import { after, before } from 'node:test';",
@@ -171,7 +150,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
         "it('passes slowly', async () => { await new Promise((resolve) => setTimeout(resolve, 600)); });",
       ),
     });
-    const runner = await initRunner(['a.test.mjs']);
+    const runner = await initRunner(['a.test.mjs'], undefined, { heldOpenMs: 200 });
 
     assert.equal((await settle(runner.mutantRun(mutantRunOptions()))).status, MutantRunStatus.Survived);
   });

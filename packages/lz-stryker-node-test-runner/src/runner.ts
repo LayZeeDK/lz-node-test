@@ -454,8 +454,15 @@ export function lzRunEnv(
   cacheDir: string | undefined,
   memoryLimitMB?: number,
 ): NodeJS.ProcessEnv & { NODE_OPTIONS: string } {
+  const runState = new Set([
+    // Set when Stryker itself runs under `node --test`; node:test in the test file would then ignore `.only` and
+    // write its report to stdout for an outer runner instead of using its reporters.
+    'NODE_TEST_CONTEXT',
+    INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE,
+    ...Object.values(envNames),
+  ]);
   const env: NodeJS.ProcessEnv & { NODE_OPTIONS: string } = {
-    ...base,
+    ...Object.fromEntries(Object.entries(base).filter(([key]) => !runState.has(key))),
     // The hook comes first, so a copy of this runner under test takes precedence over the runner running it.
     NODE_OPTIONS: [
       `--import ${JSON.stringify(hookUrl)}`,
@@ -470,23 +477,6 @@ export function lzRunEnv(
     TEMP: tmpDir,
     TMP: tmpDir,
   };
-
-  const runState = [
-    // Set when Stryker itself runs under `node --test`; node:test in the test file would then ignore `.only` and
-    // write its report to stdout for an outer runner instead of using its reporters.
-    'NODE_TEST_CONTEXT',
-    envNames.current,
-    envNames.hitLimit,
-    envNames.memoryLimit,
-    envNames.filter,
-    envNames.bail,
-    envNames.activeMutant,
-    INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE,
-  ];
-
-  for (const key of runState) {
-    delete env[key];
-  }
 
   if (env['NODE_COMPILE_CACHE'] === undefined && cacheDir !== undefined) {
     env['NODE_COMPILE_CACHE'] = cacheDir;
@@ -539,8 +529,10 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   readonly #memoryLimits: MemoryLimits;
   readonly #allowEmpty: boolean;
   readonly #log: Logger;
+  readonly #heldOpenMs: number | undefined;
 
-  constructor(options: RunnerStrykerOptions, log: Logger) {
+  /** `heldOpenMs` shortens the time a test file may stay alive after its tests, for the runner's own tests. */
+  constructor(options: RunnerStrykerOptions, log: Logger, heldOpenMs?: number) {
     const lzStrykerNodeTest = parseOptions(options.lzStrykerNodeTest);
     const patterns = lzStrykerNodeTest.testFiles ?? defaults.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
@@ -554,6 +546,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, peakMemoryDir(process.ppid), log);
     this.#allowEmpty = options.allowEmpty;
     this.#log = log;
+    this.#heldOpenMs = heldOpenMs;
   }
 
   capabilities(): TestRunnerCapabilities {
@@ -687,6 +680,11 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       mkdirSync(outDir);
       mkdirSync(tmpDir);
       const env = lzRunEnv(process.env, file, outDir, tmpDir, run, this.#cacheDir, memoryLimitMB);
+
+      if (this.#heldOpenMs !== undefined) {
+        env[envNames.heldOpen] = String(this.#heldOpenMs);
+      }
+
       const args = [`--test-reporter=${reporterUrl}`, ...this.#nodeArgs, file];
 
       if (this.#log.isDebugEnabled()) {

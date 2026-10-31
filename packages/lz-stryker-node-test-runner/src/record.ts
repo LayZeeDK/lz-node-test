@@ -102,7 +102,8 @@ export const envNames = Object.freeze({
 
 /**
  * How long a test file's process may stay alive after its tests and root `after` hooks when the ending does not end it
- * at once for a failed test. The tests shorten it through envNames.heldOpen; it is not an option.
+ * at once for a failed test. The runner's own tests shorten it through envNames.heldOpen, which the runner never
+ * passes on from its environment; it is not an option.
  */
 export const heldOpenMs = 30_000;
 
