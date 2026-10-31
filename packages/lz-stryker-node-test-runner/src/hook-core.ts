@@ -167,10 +167,11 @@ export function install(deps: HookDependencies): boolean {
   const bail = deps.env[envNames.bail] === 'true';
   const dryRun = deps.env[envNames.dryRun] === 'true';
   delete deps.env[envNames.bail];
+  const testFile = deps.env[envNames.file];
+  delete deps.env[envNames.file];
   const tests: RecordedTest[] = [];
   const testSpans = new Map<string, readonly LzTimeWindow[]>();
   const diagnostics: string[] = [];
-  const testFile = deps.env[envNames.file];
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
   let summarized = false;
   let end: Ending | undefined;

@@ -9,7 +9,8 @@ const global: GlobalSlots = globalThis;
 export default new Transform({
   writableObjectMode: true,
   transform(event: TestEvent, _encoding, callback) {
-    // Processes forked from the test file inherit the reporter, but only the test file's own process records.
+    // Processes the test file starts inherit the reporter, even one started on the test file itself, but the hook hides
+    // the test file from them, so only the test file's own process records.
     global[reporting]?.(event);
     callback();
   },

@@ -214,6 +214,37 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.ok(!existsSync(dirname(outDir)));
   });
 
+  lzTestFor([
+    "fork(import.meta.filename, ['child'])",
+    "fork(process.argv[1], ['child'])",
+    "spawn(process.execPath, [import.meta.filename, 'child'], { stdio: 'ignore', windowsHide: true })",
+  ])("takes the test file's own record, not that of a process it starts with %s", async (start, t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "import { fork, spawn } from 'node:child_process';",
+        "if (process.argv[2] === 'child') {",
+        '  process.exit(0);',
+        '} else {',
+        "  it('starts itself', async () => {",
+        `    const child = ${start};`,
+        "    assert.equal(await new Promise((resolve) => child.on('exit', resolve)), 0);",
+        '  });',
+        '}',
+      ),
+    });
+    const file = join(dir, 'a.test.mjs');
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { records } = await settle(
+      runner.runFile(file, { dryRun: true, disableBail: false, coverageAnalysis: 'off' }),
+    );
+
+    assert.deepEqual(
+      records.filter((record) => record.main).map((record) => record.tests.map(({ id }) => id)),
+      [[`${file} > starts itself`]],
+    );
+  });
+
   lzTestFor<readonly [string, string]>([
     ['exits', ''],
     ['exits through process.exit', 'process.exit(1);'],

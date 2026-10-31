@@ -284,8 +284,8 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
 export const lifetime = { start: 0, end: 0 };
 export const spans = (...ran: string[]) => Object.fromEntries(ran.map((name) => [`${testFile} > ${name}`, [lifetime]]));
 
-/** The environment of the process that runs the test file. */
-export const fileEnv = { [envNames.out]: out, [envNames.file]: testFile };
+/** The environment of the process that runs the test file, new each time as the hook changes it. */
+export const fileEnv = () => ({ [envNames.out]: out, [envNames.file]: testFile });
 
 export function installedHarness(
   env: Record<string, string | undefined>,

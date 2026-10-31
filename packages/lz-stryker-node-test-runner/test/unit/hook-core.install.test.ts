@@ -85,7 +85,7 @@ describe('install', () => {
   });
 
   it('does nothing when a hook is already installed in the process', () => {
-    const { deps, calls } = harness(fileEnv);
+    const { deps, calls } = harness(fileEnv());
 
     assert.equal(install(deps), true);
 
@@ -194,7 +194,7 @@ describe('install', () => {
   });
 
   it('wraps node:test in the process that runs the test file, and makes imports of node:test give it', async () => {
-    const { deps, fake, calls, hooks, wrapped } = installedHarness(fileEnv);
+    const { deps, fake, calls, hooks, wrapped } = installedHarness(fileEnv());
 
     assert.deepEqual(calls, ['nodeTest', 'registerHooks', 'onExit']);
     const [hook, ...more] = hooks;
@@ -227,7 +227,7 @@ describe('install', () => {
   });
 
   it("records the tests node:test reports in a file named after the process, marked as the test file's", () => {
-    const { deps, records, exit } = installedHarness({ ...fileEnv, [envNames.dryRun]: 'false' });
+    const { deps, records, exit } = installedHarness({ ...fileEnv(), [envNames.dryRun]: 'false' });
     report(deps, 'passes', 'pass');
     report(deps, 'fails', 'fail');
 
@@ -250,7 +250,7 @@ describe('install', () => {
   });
 
   it("writes a worker thread's record to a file of its own, never as the test file's", () => {
-    const { records, exit } = installedHarness(fileEnv, { threadId: 3 });
+    const { records, exit } = installedHarness(fileEnv(), { threadId: 3 });
 
     exit();
 
@@ -278,7 +278,7 @@ describe('install', () => {
   });
 
   it('writes no record in a process that may not write one', () => {
-    const { deps, records, exit } = installedHarness(fileEnv, { canWriteRecords: false });
+    const { deps, records, exit } = installedHarness(fileEnv(), { canWriteRecords: false });
     report(deps, 'passes', 'pass');
 
     exit();
@@ -310,7 +310,7 @@ describe('install', () => {
   });
 
   it('writes the diagnostics of errors raised after a test ended', () => {
-    const { deps, records, exit } = installedHarness(fileEnv);
+    const { deps, records, exit } = installedHarness(fileEnv());
     const message = 'Error: Test "t" at a.test.mjs:1:1 generated asynchronous activity after the test ended.';
     send(deps, { type: 'test:diagnostic', data: { name: '', nesting: 0, message } });
 
@@ -332,7 +332,7 @@ describe('install', () => {
     ['leaves the record as it is when it ends through process.exit() after', false, [summary], {}],
     ['leaves the record as it is when it ends by itself without', true, [], {}],
   ])("%s node:test's summary", ([, natural, last, unfinished]) => {
-    const { deps, records, exit, wrapped } = installedHarness(fileEnv);
+    const { deps, records, exit, wrapped } = installedHarness(fileEnv());
     wrapped().it('passes', () => {});
     report(deps, 'passes', 'pass');
 
@@ -377,7 +377,7 @@ describe('install', () => {
     ],
   ])('records the position from %s', ([, mappedFile, reads, startPosition]) => {
     const sourceMaps: boolean[] = [];
-    const { deps, records, exit, wrapped } = installedHarness(fileEnv, {
+    const { deps, records, exit, wrapped } = installedHarness(fileEnv(), {
       callSites: (frameCount, { sourceMap }) => {
         assert.equal(frameCount, 64);
         sourceMaps.push(sourceMap);
@@ -399,7 +399,7 @@ describe('install', () => {
   });
 
   it('activates the mutant the runner names for runtime activation once a test starts', async () => {
-    const { deps, fake, wrapped } = installedHarness({ ...fileEnv, [envNames.activeMutant]: '5' });
+    const { deps, fake, wrapped } = installedHarness({ ...fileEnv(), [envNames.activeMutant]: '5' });
 
     assert.equal(deps.global.__stryker__?.activeMutant, undefined);
 
@@ -411,7 +411,7 @@ describe('install', () => {
 
   it('runs only the filtered tests', () => {
     const { fake, wrapped } = installedHarness({
-      ...fileEnv,
+      ...fileEnv(),
       [envNames.filter]: JSON.stringify([`${testFile} > wanted`]),
     });
     wrapped().it('wanted', () => {});
@@ -429,7 +429,7 @@ describe('install', () => {
   lzTestEach(['null', '{"0":"id"}', '["id",1]'])(
     'fails to install with the filter %s, which is no list of test ids',
     (filter) => {
-      const { deps } = harness({ ...fileEnv, [envNames.filter]: filter });
+      const { deps } = harness({ ...fileEnv(), [envNames.filter]: filter });
 
       assert.throws(() => install(deps), { message: `${envNames.filter} is no JSON array of test ids: ${filter}` });
     },
@@ -438,7 +438,7 @@ describe('install', () => {
   const bails = ['true', 'false', undefined].map((bail) => ({ bail, verb: bail === 'true' ? 'skips' : 'runs' }));
 
   lzTestEach(bails)('$verb later tests with bail $bail; children never bail', async ({ bail }) => {
-    const env = { ...fileEnv, [envNames.bail]: bail };
+    const env = { ...fileEnv(), [envNames.bail]: bail };
     const { deps, fake, wrapped } = installedHarness(env);
     const ran: string[] = [];
     wrapped().it('later', () => {
@@ -451,9 +451,17 @@ describe('install', () => {
     assert.ok(!(envNames.bail in env));
   });
 
+  it('hides the test file from the processes that the test file starts', () => {
+    const env = fileEnv();
+
+    installedHarness(env);
+
+    assert.ok(!(envNames.file in env));
+  });
+
   describe('a process that outlives its tests', () => {
     it("registers a root `after` hook with node:test itself at the test file's first registration, before it", () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
 
       assert.deepEqual(h.fake.registrations, []);
 
@@ -471,7 +479,7 @@ describe('install', () => {
     });
 
     it('ends a file whose test failed with exit code 1 once its tests finish, and does not mark it unfinished', async () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       await ranAndReported(h, 'passes', 'pass');
       await ranAndReported(h, 'fails', 'fail');
 
@@ -493,7 +501,7 @@ describe('install', () => {
     });
 
     it('ends a failed file only once node:test has reported each top-level suite and test, which comes last', () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().it('fails', () => {});
       h.wrapped().describe('suite', () => {
         h.wrapped().it('inner', () => {});
@@ -527,7 +535,7 @@ describe('install', () => {
     });
 
     it('ends a failed file at once when node:test filters out a top-level test, as it reports no `test:enqueue` for it', () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().it('fails', () => {});
       h.wrapped().it('filtered out', () => {});
       afterHooks(h.fake)[0]?.();
@@ -538,7 +546,7 @@ describe('install', () => {
     });
 
     it('ends no file whose tests all passed before the grace ends', async () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       await ranAndReported(h, 'passes', 'pass');
       afterHooks(h.fake)[0]?.();
       report(h.deps, 'passes', 'pass');
@@ -555,7 +563,7 @@ describe('install', () => {
       ['the default of, for 0,', '0', 30_000],
       ['250 ms, as set in', '250', 250],
     ])('waits %s the held-open variable', ([, heldOpen, ms]) => {
-      const h = installedHarness({ ...fileEnv, [envNames.heldOpen]: heldOpen });
+      const h = installedHarness({ ...fileEnv(), [envNames.heldOpen]: heldOpen });
       h.wrapped().it('passes', () => {});
       afterHooks(h.fake)[0]?.();
 
@@ -571,7 +579,7 @@ describe('install', () => {
     ])(
       "ends a file still alive when the grace ends with node:test's exit code, naming what its tests opened, when %s",
       async ([, reported, marks]) => {
-        const h = installedHarness(fileEnv);
+        const h = installedHarness(fileEnv());
         h.wrapped().it('passes', () => {});
         enqueue(h.deps, 'passes');
         await bodyOf(h.fake.registrations, 'passes')(testContext());
@@ -597,7 +605,7 @@ describe('install', () => {
     );
 
     it('names only what the tests opened, also when something the process had before is gone', () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().it('passes', () => {});
       afterHooks(h.fake)[0]?.();
       h.listResources(['TCPServerWrap', 'Timeout']);
@@ -608,7 +616,7 @@ describe('install', () => {
     });
 
     it("starts the grace once the test file's root `after` hooks have settled, also one added while they run", async () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       const { promise: firstSettles, resolve: resolveFirst } = Promise.withResolvers<void>();
       h.wrapped().after(() => firstSettles);
       h.wrapped().after(() => {});
@@ -639,7 +647,7 @@ describe('install', () => {
       ],
       ['rejects', (): unknown => Promise.reject(new Error('after failed'))],
     ])('stops waiting at a root `after` hook that %s, as node:test runs none after it', async ([, hook]) => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().after(hook);
       h.wrapped().after(() => {});
       const [finished, failing] = afterHooks(h.fake);
@@ -654,7 +662,7 @@ describe('install', () => {
       ['with no error, once it calls back', undefined],
       ['with an error, stopping the wait', new Error('after failed')],
     ])('passes a callback hook its `done` and settles %s', ([, error]) => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       const passed: unknown[] = [];
       let callBack = () => {};
       h.wrapped().after((_context: unknown, done: (error?: unknown) => void) => {
@@ -676,7 +684,7 @@ describe('install', () => {
     });
 
     it('starts the grace only once its own root `after` hook has run, as one added inside another hook runs earlier', async () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().after(() => {});
       const [finished, early] = afterHooks(h.fake);
       await early?.();
@@ -711,7 +719,7 @@ describe('install', () => {
     ])(
       '%s the grace at a root `after` hook that never settles when %s, as node:test times out such a hook',
       ([, , event, timers]) => {
-        const h = installedHarness(fileEnv);
+        const h = installedHarness(fileEnv());
         h.wrapped().after(() => new Promise(() => {}));
         const [finished] = afterHooks(h.fake);
 
@@ -723,7 +731,7 @@ describe('install', () => {
     );
 
     it('does not start the grace at a root `after` hook that never settles when node:test reports the file failed before the tests finished, as node:test times out such a hook', () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().after(() => new Promise(() => {}));
       const [finished] = afterHooks(h.fake);
 
@@ -734,7 +742,7 @@ describe('install', () => {
     });
 
     it('starts the grace once, whatever settles after it started', () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().after(() => {
         throw new Error('after failed');
       });
@@ -750,7 +758,7 @@ describe('install', () => {
     });
 
     it('waits for no `after` hook of a suite, nor one registered without a function', () => {
-      const h = installedHarness(fileEnv);
+      const h = installedHarness(fileEnv());
       h.wrapped().describe('suite', () => {
         h.wrapped().after(() => {});
       });
@@ -765,7 +773,7 @@ describe('install', () => {
     let time = 10;
     const now = () => ++time;
     const descendant = installedHarness({ [envNames.out]: out }, { now });
-    const main = installedHarness(fileEnv, { now });
+    const main = installedHarness(fileEnv(), { now });
 
     await ranAndReported(main, 'runs', 'pass');
     main.exit();
@@ -821,7 +829,7 @@ describe('passing `done` as node:test does', () => {
   };
 
   it('passes no `done` to a root `after` hook with three parameters', async () => {
-    const h = installedHarness(fileEnv);
+    const h = installedHarness(fileEnv());
     const seen: unknown[] = [];
     h.wrapped().after(threeParameters(seen));
 
@@ -831,7 +839,7 @@ describe('passing `done` as node:test does', () => {
   });
 
   it('passes no `done` to a beforeEach hook with three parameters that runs for a test', async () => {
-    const h = installedHarness(fileEnv);
+    const h = installedHarness(fileEnv());
     const seen: unknown[] = [];
     h.wrapped().beforeEach(threeParameters(seen));
     h.wrapped().it('first', () => {});
@@ -843,7 +851,7 @@ describe('passing `done` as node:test does', () => {
   });
 
   it('passes no `done` to a test body with three parameters', async () => {
-    const h = installedHarness(fileEnv);
+    const h = installedHarness(fileEnv());
     const seen: unknown[] = [];
     h.wrapped().it('three', threeParameters(seen));
 
