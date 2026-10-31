@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { describe, it } from 'node:test';
+import timers from 'node:timers/promises';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { endGroup, groupOptions, processEnd } from '../../src/process-end.ts';
@@ -90,7 +91,7 @@ describe('processEnd', () => {
       (error: unknown) => (state = error),
     );
     const settled = async () => {
-      await new Promise(setImmediate);
+      await timers.setImmediate();
 
       return state;
     };

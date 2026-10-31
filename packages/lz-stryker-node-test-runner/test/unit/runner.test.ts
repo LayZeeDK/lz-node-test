@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+import { setImmediate } from 'node:timers/promises';
 
 import { TestStatus } from '@stryker-mutator/api/test-runner';
 
@@ -233,7 +234,7 @@ describe('lzRunInPool', () => {
       },
       stops,
     );
-    const turn = () => new Promise((resolve) => setImmediate(resolve));
+    const turn = () => setImmediate();
 
     return { started, settle, fail, pool, turn };
   }

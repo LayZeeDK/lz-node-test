@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+import { setImmediate } from 'node:timers/promises';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { activeMutantEnv, envNames } from '../../src/record.ts';
@@ -313,10 +314,7 @@ describe('wrapNodeTest', () => {
 
   it('keeps a subtest that its parent does not await current until it ends, after its parent ends', async () => {
     const { module, registrations, ns, env, seen, see } = wrapped();
-    let release = () => {};
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+    const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     let child: Promise<unknown> | undefined;
     module.it('parent', (t: Subtests) => {
       t.test('child', async () => {
@@ -342,7 +340,7 @@ describe('wrapNodeTest', () => {
 
   it('names the suites and tests a running test registers with the module after it, as node:test nests them', async () => {
     const { module, registrations, seen, see } = wrapped();
-    const tick = () => new Promise((resolve) => setImmediate(resolve));
+    const tick = () => setImmediate();
     module.it('parent', async (t: Subtests) => {
       module.it('inner', see);
       module.describe('suite', () => {

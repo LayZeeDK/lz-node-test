@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
+import { setTimeout } from 'node:timers/promises';
 
 import { DryRunStatus } from '@stryker-mutator/api/test-runner';
 
@@ -184,7 +185,7 @@ describe('LzStrykerNodeTestRunner', () => {
     );
 
     // Node emits close after the error; letting it fire within this test keeps its coverage attributed to the test.
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await setTimeout(100);
   });
 
   it('removes the directories that runners of ended processes left behind when it is initialized', async (t) => {

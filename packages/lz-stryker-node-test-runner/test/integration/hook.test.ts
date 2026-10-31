@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { once } from 'node:events';
 import { mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -92,24 +93,21 @@ function tempDir(t: TestContext): string {
 }
 
 /** It keeps Stryker's active mutant, so a mutant in hook.ts reaches the process that loads it. */
-function runWithHook(args: string[], env: Record<string, string>): Promise<{ code: number | null; pid: number }> {
+async function runWithHook(args: string[], env: Record<string, string>): Promise<{ code: number | null; pid: number }> {
   const dropped: string[] = ['NODE_OPTIONS', 'NODE_TEST_CONTEXT', ...Object.values(envNames)];
   const base = Object.fromEntries(Object.entries(process.env).filter(([key]) => !dropped.includes(key)));
-
-  return new Promise((done, fail) => {
-    const child = spawn(process.execPath, ['--import', hookUrl, reporterArg, ...args], {
-      env: { ...base, ...env },
-      stdio: 'ignore',
-    });
-    child.on('error', fail);
-    child.on('close', (code) => {
-      if (child.pid === undefined) {
-        fail(new Error('The child process started without a pid.'));
-      } else {
-        done({ code, pid: child.pid });
-      }
-    });
+  const child = spawn(process.execPath, ['--import', hookUrl, reporterArg, ...args], {
+    env: { ...base, ...env },
+    stdio: 'ignore',
   });
+
+  await once(child, 'close');
+
+  if (child.pid === undefined) {
+    throw new Error('The child process started without a pid.');
+  }
+
+  return { code: child.exitCode, pid: child.pid };
 }
 
 function readRecords(outDir: string): Record<string, ProcessRecord> {
