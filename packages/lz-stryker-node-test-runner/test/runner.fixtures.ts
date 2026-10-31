@@ -215,7 +215,7 @@ const stalledExitDelayMs = 10_000;
 
 export function ownCacheDirs(): string[] {
   return readdirSync(tmpdir())
-    .filter((name) => name.startsWith(`lz-stryker-node-test-cache-${String(process.pid)}-`))
+    .filter((name) => name.startsWith(`lz-stryker-node-test-cache-${process.pid}-`))
     .sort();
 }
 
@@ -236,7 +236,7 @@ export async function settle<T>(run: Promise<T>, ms = 15_000): Promise<T> {
           setTimeout(() => {
             process.exit(1);
           }, stalledExitDelayMs).unref();
-          fail(new Error(`the run did not end within ${String(ms)} ms`));
+          fail(new Error(`the run did not end within ${ms} ms`));
         }, ms);
       }),
     ]);

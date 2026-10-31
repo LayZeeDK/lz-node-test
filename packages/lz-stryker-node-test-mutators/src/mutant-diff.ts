@@ -39,7 +39,7 @@ export async function corpusDiff(
 
     sections.push(
       `### ${relative(process.cwd(), name).split(sep).join('/')}\n\n` +
-        `${String(before.length)} mutants without the operators, ${String(after.length)} with them.\n\n` +
+        `${before.length} mutants without the operators, ${after.length} with them.\n\n` +
         `${lines.length > 0 ? lines.join('\n') : '    (no difference)'}\n`,
     );
   }
@@ -50,7 +50,7 @@ export async function corpusDiff(
 function line({ mutatorName, location, replacement }: InstrumentedMutant): string {
   const { line: row, column } = location.start;
 
-  return `${String(row + 1)}:${String(column + 1)} ${mutatorName} ${replacement.replace(/\s+/g, ' ')}`;
+  return `${row + 1}:${column + 1} ${mutatorName} ${replacement.replace(/\s+/g, ' ')}`;
 }
 
 function without(from: readonly string[], other: readonly string[]): string[] {

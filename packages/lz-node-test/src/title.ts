@@ -59,17 +59,13 @@ function format(placeholder: string, value: unknown): string {
       return string(value);
     }
     case '%d': {
-      return typeof value === 'bigint'
-        ? `${String(value)}n`
-        : typeof value === 'symbol'
-          ? 'NaN'
-          : String(Number(value));
+      return typeof value === 'bigint' ? `${value}n` : typeof value === 'symbol' ? 'NaN' : String(Number(value));
     }
     case '%i': {
-      return typeof value === 'bigint' ? `${String(value)}n` : String(Number.parseInt(String(value)));
+      return typeof value === 'bigint' ? `${value}n` : String(Number.parseInt(String(value)));
     }
     case '%f': {
-      return `${negative(value) ? '-' : ''}${String(Number.parseFloat(String(value)))}`;
+      return `${negative(value) ? '-' : ''}${Number.parseFloat(String(value))}`;
     }
     case '%j': {
       return json(value);
@@ -85,7 +81,7 @@ function format(placeholder: string, value: unknown): string {
 
 function string(value: unknown): string {
   if (typeof value === 'bigint') {
-    return `${String(value)}n`;
+    return `${value}n`;
   }
 
   if (Object.is(value, -0)) {

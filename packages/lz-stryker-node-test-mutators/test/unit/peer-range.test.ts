@@ -31,15 +31,14 @@ describe('inPeerRange', () => {
 
 describe('the Stryker versions of the peer range', () => {
   const { major, minor, patch } = parseCaretFloor(pkg.peerDependencies['@stryker-mutator/core']);
-  const semver = (...parts: readonly number[]) => parts.join('.');
-  const floor = semver(major, minor, patch);
+  const floor = `${major}.${minor}.${patch}`;
 
   function belowFloor(): string {
     if (patch > 0) {
-      return semver(major, minor, patch - 1);
+      return `${major}.${minor}.${patch - 1}`;
     }
 
-    return minor > 0 ? semver(major, minor - 1, 999) : semver(major - 1, 999, 999);
+    return minor > 0 ? `${major}.${minor - 1}.999` : `${major - 1}.999.999`;
   }
 
   function warningsFor(version: string): readonly string[] {
@@ -50,7 +49,7 @@ describe('the Stryker versions of the peer range', () => {
     return warnings;
   }
 
-  lzTestEach([floor, semver(major, minor, patch + 1), semver(major, minor + 1, 0)])(
+  lzTestEach([floor, `${major}.${minor}.${patch + 1}`, `${major}.${minor + 1}.0`])(
     'installs into the instrumenter version %s without a warning',
     (version) => {
       assert.deepEqual(warningsFor(version), []);
@@ -59,10 +58,10 @@ describe('the Stryker versions of the peer range', () => {
 
   lzTestEach([
     belowFloor(),
-    semver(major + 1, 0, 0),
-    semver(major - 1, minor, patch),
+    `${major + 1}.0.0`,
+    `${major - 1}.${minor}.${patch}`,
     `1${floor}`,
-    `${semver(major, minor + 1, 0)}-beta.0`,
+    `${major}.${minor + 1}.0-beta.0`,
   ])('warns about the instrumenter version %s', (version) => {
     assert.equal(warningsFor(version).length, 1);
   });
@@ -70,6 +69,6 @@ describe('the Stryker versions of the peer range', () => {
   it('is the range the README names', () => {
     const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8').replaceAll(/\s+/g, ' ');
 
-    assert.ok(readme.includes(`It accepts Stryker ${floor} or a later ${String(major)}.x version`));
+    assert.ok(readme.includes(`It accepts Stryker ${floor} or a later ${major}.x version`));
   });
 });

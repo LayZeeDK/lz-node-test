@@ -260,7 +260,7 @@ describe('hook', () => {
     assert.ok(peakMB, 'The record has no peak memory.');
 
     assert.ok(Number.isInteger(peakMB), String(peakMB));
-    assert.ok(peakMB >= rssMB, `${String(peakMB)} MB, below the ${String(rssMB)} MB held`);
+    assert.ok(peakMB >= rssMB, `${peakMB} MB, below the ${rssMB} MB held`);
     assert.ok(peakMB < 100_000, String(peakMB));
   });
 
@@ -405,7 +405,7 @@ describe('hook', () => {
       process.hrtime = real;
     }
 
-    assert.ok(read >= before, `${String(read)} ms, before the ${String(before)} ms read ahead of it`);
+    assert.ok(read >= before, `${read} ms, before the ${before} ms read ahead of it`);
   });
 
   it("lists the process's active resources", () => {
@@ -598,10 +598,7 @@ describe('hook', () => {
 
   it('records where the test file declares a test through helpers many calls deep', async (t) => {
     const dir = tempDir(t);
-    const levels = Array.from(
-      { length: 12 },
-      (_, level) => `export const level${String(level)} = () => level${String(level + 1)}();`,
-    );
+    const levels = Array.from({ length: 12 }, (_, level) => `export const level${level} = () => level${level + 1}();`);
     writeFileSync(
       join(dir, 'helper.mjs'),
       ["import { it } from 'node:test';", ...levels, "export const level12 = () => it('deep', () => {});", ''].join(

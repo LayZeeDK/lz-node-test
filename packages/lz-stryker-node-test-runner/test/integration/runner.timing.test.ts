@@ -37,7 +37,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
     assert.deepEqual(
       tests.map((test) => test.timeSpentMs >= 20 && test.timeSpentMs <= wall),
       [true, true],
-      `${tests.map((test) => test.timeSpentMs).join(' and ')} ms of a ${String(wall)} ms run`,
+      `${tests.map((test) => test.timeSpentMs).join(' and ')} ms of a ${wall} ms run`,
     );
   });
 
@@ -94,7 +94,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
   });
 
   it("reports a mutant run's duration as the time of its file processes, once per file", async (t) => {
-    const tests = Array.from({ length: 10 }, (_, index) => `it('passes ${String(index)}', () => {});`);
+    const tests = Array.from({ length: 10 }, (_, index) => `it('passes ${index}', () => {});`);
     project(t, { 'a.test.mjs': fixture('await new Promise((resolve) => setTimeout(resolve, 300));', ...tests) });
     const runner = await initRunner(['a.test.mjs']);
 
@@ -109,7 +109,7 @@ describe('LzStrykerNodeTestRunner timing', () => {
     );
     // eslint-disable-next-line node-test/prefer-equality-assertion -- notStrictEqual does not narrow result.duration
     assert.ok(result.duration !== undefined, 'expected a duration');
-    assert.ok(result.duration >= 300, `${String(result.duration)} ms of ${String(elapsed)} ms`);
-    assert.ok(result.duration <= Math.ceil(elapsed), `${String(result.duration)} ms of ${String(elapsed)} ms`);
+    assert.ok(result.duration >= 300, `${result.duration} ms of ${elapsed} ms`);
+    assert.ok(result.duration <= Math.ceil(elapsed), `${result.duration} ms of ${elapsed} ms`);
   });
 });

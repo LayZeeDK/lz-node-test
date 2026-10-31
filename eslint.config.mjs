@@ -122,6 +122,15 @@ export default [
         { allowForKnownSafeCalls: [{ from: 'package', package: 'node:test', name: ['it', 'describe', 'suite'] }] },
       ],
       '@typescript-eslint/return-await': ['error', 'in-try-catch'],
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        {
+          ...strictTypeChecked['@typescript-eslint/restrict-template-expressions'][1],
+          // Looser than the preset: a number has one rendering in a template literal, so String() around it adds
+          // noise and catches nothing. Nullish, boolean, object and any values are still reported.
+          allowNumber: true,
+        },
+      ],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       // src passes on a caught value, typed unknown, that may be no Error; tests reject with such values to cover it.
       '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],

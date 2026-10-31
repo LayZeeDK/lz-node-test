@@ -52,7 +52,7 @@ export function lzParseReport(json: string): LzReport {
 }
 
 export function lzMutantLine({ line, column, mutator, replacement, status }: LzMutantDetail): string {
-  return [`${String(line)}:${String(column)}`, mutator, replacement.replaceAll(/\s+/g, ' '), status]
+  return [`${line}:${column}`, mutator, replacement.replaceAll(/\s+/g, ' '), status]
     .filter((part) => part !== '')
     .join(' ');
 }
@@ -68,7 +68,7 @@ function parseFile(entry: unknown, path: string): LzMutantDetail[] {
 
   const mutants: unknown[] = entry['mutants'];
 
-  return mutants.map((mutant, index) => parseMutant(mutant, `${path}.mutants[${String(index)}]`)).sort(byPosition);
+  return mutants.map((mutant, index) => parseMutant(mutant, `${path}.mutants[${index}]`)).sort(byPosition);
 }
 
 function parseMutant(mutant: unknown, path: string): LzMutantDetail {

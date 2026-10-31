@@ -71,7 +71,7 @@ describe('lzMutants', () => {
 
   it('refuses a run with no report, and says when it timed out', () => {
     assert.throws(() => lzMutants(unreported(true), 'src/a.ts'), {
-      message: `Stryker wrote no report (exit code 1, ended after ${String(lzStrykerTimeoutMs / 60_000)} minutes):\nError during import`,
+      message: `Stryker wrote no report (exit code 1, ended after ${lzStrykerTimeoutMs / 60_000} minutes):\nError during import`,
     });
   });
 });

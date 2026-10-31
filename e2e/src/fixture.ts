@@ -40,7 +40,7 @@ export async function lzFixture(name: string): Promise<LzFixture> {
   const concurrency = lzConcurrency(process.env);
 
   removeDeadRunDirs(tmpdir());
-  const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${String(process.pid)}-`)));
+  const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${process.pid}-`)));
 
   removeOnExit(dir);
   cpSync(join(fixturesDir, name), dir, { recursive: true });
@@ -94,15 +94,12 @@ export function lzLeftover(run: LzStrykerRun): string[] {
 
 export function lzMutant(run: LzStrykerRun, { at, replacement }: { at: string; replacement: string }): LzMutantDetail {
   const matches = [...reportOf(run)].flatMap(([file, mutants]) =>
-    mutants.filter(
-      (mutant) =>
-        `${file}:${String(mutant.line)}:${String(mutant.column)}` === at && mutant.replacement === replacement,
-    ),
+    mutants.filter((mutant) => `${file}:${mutant.line}:${mutant.column}` === at && mutant.replacement === replacement),
   );
   const [mutant] = matches;
 
   if (mutant === undefined || matches.length > 1) {
-    throw new Error(`Expected one mutant at ${at} with replacement "${replacement}", found ${String(matches.length)}.`);
+    throw new Error(`Expected one mutant at ${at} with replacement "${replacement}", found ${matches.length}.`);
   }
 
   return mutant;
@@ -111,7 +108,7 @@ export function lzMutant(run: LzStrykerRun, { at, replacement }: { at: string; r
 function reportOf(run: LzStrykerRun): LzReport {
   if (!run.reported) {
     throw new Error(
-      `Stryker wrote no report (exit code ${String(run.exitCode)}${run.timedOut ? `, ended after ${String(lzStrykerTimeoutMs / 60_000)} minutes` : ''}):\n` +
+      `Stryker wrote no report (exit code ${run.exitCode}${run.timedOut ? `, ended after ${lzStrykerTimeoutMs / 60_000} minutes` : ''}):\n` +
         run.output,
     );
   }
@@ -200,7 +197,7 @@ async function npm(cwd: string, args: readonly string[]): Promise<string> {
   const { exitCode, stdout, stderr } = await lzExec(process.execPath, [npmCli(), ...args], { cwd });
 
   if (exitCode !== 0) {
-    throw new Error(`npm ${args.join(' ')} ended with exit code ${String(exitCode)}:\n${stdout}${stderr}`);
+    throw new Error(`npm ${args.join(' ')} ended with exit code ${exitCode}:\n${stdout}${stderr}`);
   }
 
   return stdout;

@@ -77,7 +77,7 @@ function dryRunPeaks(dir: string, log: Logger): MemoryLimits {
         unmeasured.add(file);
         log.warn(
           `The dry run left no readable memory peak for "${file}", ` +
-            `so each process of its mutant runs may hold ${String(limitMB)} MB. ` +
+            `so each process of its mutant runs may hold ${limitMB} MB. ` +
             'Set lzStrykerNodeTest.maxMemoryMB to choose the limit.',
         );
       }

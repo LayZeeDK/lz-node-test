@@ -93,21 +93,20 @@ function fixtureFile(index: number): string {
   for (let test = 0; test < testsPerFile; test++) {
     const body =
       spawns && test === 0
-        ? `const child = spawnSync(process.execPath, ['-e', ${JSON.stringify(`${cover} cover('child-${String(index)}');`)}]); assert.equal(child.status, 0, String(child.stderr));`
-        : `assert.equal([${String(test)}].length, 1);`;
-    tests.push(`  it('test ${String(test)}', () => { cover('m-${String(index)}-${String(test)}'); ${body} });`);
+        ? `const child = spawnSync(process.execPath, ['-e', ${JSON.stringify(`${cover} cover('child-${index}');`)}]); assert.equal(child.status, 0, String(child.stderr));`
+        : `assert.equal([${test}].length, 1);`;
+    tests.push(`  it('test ${test}', () => { cover('m-${index}-${test}'); ${body} });`);
   }
 
-  return fixture(`cover('static-${String(index)}');`, `describe('suite ${String(index)}', () => {`, ...tests, '});');
+  return fixture(`cover('static-${index}');`, `describe('suite ${index}', () => {`, ...tests, '});');
 }
 
 function scenarios(files: string[]): Scenario[] {
-  const testId = (file: number, test: number) =>
-    `${String(files[file])} > suite ${String(file)} > test ${String(test)}`;
+  const testId = (file: number, test: number) => `${String(files[file])} > suite ${file} > test ${test}`;
 
   return [
     {
-      name: `dry run, ${String(fileCount)} files x ${String(testsPerFile)} tests`,
+      name: `dry run, ${fileCount} files x ${testsPerFile} tests`,
       run: async (runner) => {
         const result = await runner.dryRun({ ...dryRun, timeout: 60_000 });
         const tests = member(result, 'tests');
@@ -170,7 +169,7 @@ function stat(ms: number[]): Stat {
 function format(name: string, { runs, medianMs, minMs, maxMs, spread }: Stat, unit = 'ms'): string {
   const fixed = (value: number) => (unit === 'ms' ? value.toFixed(0) : value.toFixed(3)).padStart(7);
 
-  return `${name.padEnd(44)} median ${fixed(medianMs)} ${unit}  min ${fixed(minMs)}  max ${fixed(maxMs)}  spread ${(spread * 100).toFixed(0).padStart(3)}%  runs ${String(runs)}`;
+  return `${name.padEnd(44)} median ${fixed(medianMs)} ${unit}  min ${fixed(minMs)}  max ${fixed(maxMs)}  spread ${(spread * 100).toFixed(0).padStart(3)}%  runs ${runs}`;
 }
 
 async function round(tasks: [name: string, fn: () => unknown][]): Promise<Map<string, number>> {
@@ -253,7 +252,7 @@ async function main(): Promise<void> {
 
   try {
     for (let index = 0; index < fileCount; index++) {
-      const file = join(dir, `file-${String(index)}.test.mjs`);
+      const file = join(dir, `file-${index}.test.mjs`);
       writeFileSync(file, fixtureFile(index));
       files.push(file);
     }
@@ -263,12 +262,8 @@ async function main(): Promise<void> {
     const samples = new Map<string, number[]>();
     const add = (label: string, ms: number) => samples.set(label, [...(samples.get(label) ?? []), ms]);
 
-    console.log(
-      `node ${process.version} on ${process.platform} ${process.arch}, ${String(availableParallelism())} cores`,
-    );
-    console.log(
-      `fixtures: ${String(fileCount)} files x ${String(testsPerFile)} tests, ${String(spawningFiles)} files spawn a child process`,
-    );
+    console.log(`node ${process.version} on ${process.platform} ${process.arch}, ${availableParallelism()} cores`);
+    console.log(`fixtures: ${fileCount} files x ${testsPerFile} tests, ${spawningFiles} files spawn a child process`);
 
     for (const scenario of scenarios(files)) {
       const sides = runners.map((runner, index): [string, () => Promise<void>] => [
