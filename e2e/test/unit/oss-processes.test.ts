@@ -63,6 +63,15 @@ describe('lzDescendants', () => {
       [3],
     );
   });
+
+  it('keeps a child that started in the same clock tick as its parent', () => {
+    const rows = [row(1, 0, 50), row(2, 1, 50)];
+
+    assert.deepEqual(
+      lzDescendants(rows, 1, new Set()).map(({ pid }) => pid),
+      [2],
+    );
+  });
 });
 
 describe('lzPeaks', () => {

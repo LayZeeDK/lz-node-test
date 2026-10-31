@@ -42,8 +42,9 @@ function parseRow(line: string): LzProcessRow {
 }
 
 /**
- * The processes below `rootPid`, leaving out `excluded` and what runs below it. A child counts only if it started
- * after its parent, as one whose parent id was reused by a later process did not.
+ * The processes below `rootPid`, leaving out `excluded` and what runs below it. A child counts only if it started no
+ * earlier than its parent, as one whose parent id was reused by a later process did not. Equal counts, because a
+ * Linux start time is in clock ticks and a fast child often shares its parent's tick.
  */
 export function lzDescendants(
   rows: readonly LzProcessRow[],
@@ -57,7 +58,7 @@ export function lzDescendants(
           row.ppid === pid &&
           row.pid !== pid &&
           !excluded.has(row.pid) &&
-          (parent === undefined || row.created > parent.created),
+          (parent === undefined || row.created >= parent.created),
       )
       .flatMap((row) => [row, ...childrenOf(row, row.pid)]);
 
