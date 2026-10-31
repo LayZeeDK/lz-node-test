@@ -3,6 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "keywords": [
+    "stryker",
+    "node:test",
+    "@stryker-mutator/test-runner-plugin"
+  ],
+  "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/lz-stryker-node-test-runner#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -32,6 +38,12 @@
   },
   "devDependencies": {
     "@layzee/lz-node-test": "*"
+  },
+  "initStrykerConfig": {
+    "testRunner": "lz-stryker-node-test",
+    "appendPlugins": [
+      "@layzee/lz-stryker-node-test-runner"
+    ]
   },
   "nx": {
     "name": "lz-stryker-node-test-runner",

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import type { StrykerOptions } from '@stryker-mutator/api/core';
 import { PluginKind } from '@stryker-mutator/api/plugin';
 import ajvModule from 'ajv';
 
@@ -55,6 +56,18 @@ describe('plugin declaration', () => {
     { lzStrykerNodeTest: { maxMemoryMB: 1.5 } },
   ])('rejects the options %j', (options) => {
     assert.ok(!validator()(options));
+  });
+
+  it('gives stryker init the keyword it lists test runners by, a homepage, and a config that names and loads the runner', () => {
+    // stryker init merges initStrykerConfig over the config it writes, so its fields must be Stryker options.
+    const initConfig: Partial<StrykerOptions> = pkg.initStrykerConfig;
+
+    assert.ok(pkg.keywords.includes('@stryker-mutator/test-runner-plugin'));
+    assert.match(pkg.homepage, /^https:\/\/github\.com\/.+\/packages\/lz-stryker-node-test-runner#readme$/);
+    assert.deepEqual(
+      [initConfig],
+      strykerPlugins.map((plugin) => ({ testRunner: plugin.name, appendPlugins: [pkg.name] })),
+    );
   });
 
   it('supports the Node.js versions that package.json supports', () => {
