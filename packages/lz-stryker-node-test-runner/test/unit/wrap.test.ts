@@ -520,6 +520,29 @@ describe('wrapNodeTest', () => {
     await assert.rejects(bodyOf(registrations, 'rejects with 0')(testContext()), (error) => error === 0);
   });
 
+  it('fails a test body that node:test runs without a test context', () => {
+    const { module, registrations } = wrapped();
+    module.it('runs', () => {});
+
+    assert.throws(() => rawBodyOf(registrations, 'runs')({}), {
+      name: 'TypeError',
+      message: `node:test ran "${testFile} > runs" without a test context`,
+    });
+  });
+
+  it('rejects with what a promise-style test body throws synchronously', async () => {
+    const { module, registrations } = wrapped();
+    const failure = new Error('thrown synchronously');
+    module.it('throws', () => {
+      throw failure;
+    });
+
+    const thrown = rawBodyOf(registrations, 'throws')(testContext());
+
+    assert.ok(thrown instanceof Promise);
+    await assert.rejects(thrown, (error) => error === failure);
+  });
+
   describe('callback-style tests', () => {
     it('declares `done`, so node:test passes it, and keeps the test current until `done` is called and its after hooks ran', async () => {
       const { module, registrations, ns, env } = wrapped();
@@ -566,6 +589,17 @@ describe('wrapNodeTest', () => {
       rawBodyOf(registrations, 'fails')(testContext(), (...args: unknown[]) => calls.push(args));
 
       assert.deepEqual(calls, [[failure]]);
+    });
+
+    it('returns what the body returns, so node:test sees a promise that a callback-style body returns', () => {
+      const { module, registrations } = wrapped();
+      const returned = Promise.resolve();
+      module.it('returns a promise', (_t: unknown, _done: unknown) => returned);
+
+      assert.equal(
+        rawBodyOf(registrations, 'returns a promise')(testContext(), () => {}),
+        returned,
+      );
     });
 
     it('rethrows a synchronous throw and leaves the test once its after hooks ran', async () => {

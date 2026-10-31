@@ -777,7 +777,7 @@ describe('install', () => {
       assert.equal(h.timers.length, 0);
     });
 
-    it('starts the grace once, whatever settles after it started', () => {
+    it('starts the grace once, whatever settles after it started', async () => {
       const h = installedHarness(fileEnv());
       h.wrapped().after(() => {
         throw new Error('after failed');
@@ -786,7 +786,9 @@ describe('install', () => {
       const [finished, failing, later] = afterHooks(h.fake);
 
       finished?.();
-      assert.throws(() => failing?.(), { message: 'after failed' });
+      const thrown = failing?.();
+      assert.ok(thrown instanceof Promise);
+      await assert.rejects(thrown, { message: 'after failed' });
       later?.();
       finished?.();
 

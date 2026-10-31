@@ -1,8 +1,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { HookFn, TestContext as NodeTestContext, TestFn } from 'node:test';
+import type { HookFn } from 'node:test';
 
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
+import { isObject } from './guards.ts';
 import {
   activeMutantEnv,
   afterHookId,
@@ -54,60 +55,81 @@ export type NodeTestModule = NodeTestShape<Registrar, HookRegistrar>;
 
 export type NodeTestTarget = NodeTestShape<Body, Body>;
 
+/** Whether `context` has the functions of node:test's test context that the wrapper calls, or replaces for the body. */
+function isTestContext(context: unknown): context is { test: Body; after: Body; beforeEach: Body; skip: Body } {
+  return (
+    isObject(context) && ['test', 'after', 'beforeEach', 'skip'].every((key) => typeof context[key] === 'function')
+  );
+}
+
 /**
- * Runs `hook` as node:test would, in its callback or promise style, and calls what `begin` returns when it settles: with
- * whether it failed. A `begin` that returns nothing leaves the call as it is.
+ * Runs `fn`, a test body or hook, as node:test would, in its callback or promise style, through `run`, and calls what
+ * `begin` returns when it settles: with whether it failed. A `begin` that returns nothing leaves the call as it is, and
+ * one that returns `skip` leaves it out, calling back at once. A promise-style `fn` that throws synchronously rejects;
+ * a callback-style one throws.
  */
-export function settling(hook: Body, begin: (context: unknown) => ((failed: boolean) => void) | undefined): Body {
-  const call = (self: unknown, args: unknown[]): unknown => Reflect.apply(hook, self, args);
-  const callSettling = (self: unknown, args: unknown[], settle: (failed: boolean) => void) => {
-    try {
-      return call(self, args);
-    } catch (error) {
-      settle(true);
-      throw error;
-    }
-  };
+export function settling(
+  fn: Body,
+  begin: (context: unknown) => ((failed: boolean) => void) | 'skip' | undefined,
+  run: (call: () => unknown) => unknown = (call) => call(),
+): Body {
+  const call = (self: unknown, args: unknown[]): unknown => run(() => Reflect.apply(fn, self, args));
   const callingBack: HookFn = function (this: unknown, context, done) {
     const settle = begin(context);
+
+    if (settle === 'skip') {
+      done();
+
+      return undefined;
+    }
 
     if (settle === undefined) {
       return call(this, [context, done]);
     }
 
-    return callSettling(
-      this,
-      [
+    try {
+      return call(this, [
         context,
         (error?: unknown) => {
           settle(Boolean(error));
           done(error);
         },
-      ],
-      settle,
-    );
+      ]);
+    } catch (error) {
+      settle(true);
+      throw error;
+    }
+  };
+  const callPromising = async (self: unknown, args: unknown[], settle: (failed: boolean) => void) => {
+    let value: unknown;
+
+    try {
+      value = await call(self, args);
+    } catch (error) {
+      settle(true);
+      throw error;
+    }
+
+    settle(false);
+
+    return value;
   };
   const promising = function (this: unknown, ...args: unknown[]) {
     const settle = begin(args[0]);
+
+    if (settle === 'skip') {
+      return undefined;
+    }
 
     if (settle === undefined) {
       return call(this, args);
     }
 
-    return Promise.resolve(callSettling(this, args, settle)).then(
-      (value) => {
-        settle(false);
-
-        return value;
-      },
-      (error: unknown) => {
-        settle(true);
-        throw error;
-      },
-    );
+    return callPromising(this, args, settle);
   };
 
-  return hook.length === 2 ? callingBack : promising;
+  // node:test passes a `done` callback only to a function whose length is exactly 2.
+  return fn.length === 2 ? callingBack : promising;
 }
 
 interface WrapOptions {
@@ -383,54 +405,20 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
         return leave;
       };
-      const wrap = (body: Body) => {
-        // node:test passes a `done` callback only to a function whose length is exactly 2.
-        if (body.length === 2) {
-          const callingBack: TestFn = function (this: unknown, context, done) {
-            if (bailed()) {
-              context.skip();
-              done();
-
-              return;
-            }
-
-            const leave = enter(context);
-
-            try {
-              running.run(id, (): unknown =>
-                Reflect.apply(body, this, [
-                  context,
-                  (error?: unknown) => {
-                    leave();
-                    done(error);
-                  },
-                ]),
-              );
-            } catch (error) {
-              leave();
-              throw error;
-            }
-          };
-
-          return callingBack;
+      const begin = (context: unknown) => {
+        if (!isTestContext(context)) {
+          throw new TypeError(`node:test ran "${id}" without a test context`);
         }
 
-        return async function (this: unknown, context: NodeTestContext, ...rest: unknown[]) {
-          if (bailed()) {
-            context.skip();
+        if (bailed()) {
+          context.skip();
 
-            return;
-          }
+          return 'skip';
+        }
 
-          const leave = enter(context);
-
-          try {
-            return await running.run(id, (): unknown => Reflect.apply(body, this, [context, ...rest]));
-          } finally {
-            leave();
-          }
-        };
+        return enter(context);
       };
+      const wrap = (body: Body) => settling(body, begin, (call) => running.run(id, call));
 
       // A test registered as skipped runs neither its body nor its beforeEach and afterEach hooks.
       const skip = !selected(id) && { skip: true };

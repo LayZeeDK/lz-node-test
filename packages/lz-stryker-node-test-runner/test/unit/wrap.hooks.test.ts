@@ -57,8 +57,11 @@ describe('wrapNodeTest', () => {
 
       assert.deepEqual(calls, [[failure]]);
       assert.equal(ns.currentTestId, undefined);
-      assert.throws(() => throwing(testContext([], 'first')), failure);
+      const thrown = throwing(testContext([], 'first'));
+
       assert.equal(ns.currentTestId, undefined);
+      assert.ok(thrown instanceof Promise);
+      await assert.rejects(thrown, failure);
       assert.deepEqual(seen, [
         `${testFile} > suite > second`,
         `${testFile} > suite > second`,
