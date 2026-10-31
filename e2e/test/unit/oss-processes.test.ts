@@ -1,0 +1,104 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import {
+  lzDescendants,
+  lzLeftovers,
+  lzNewEntries,
+  lzParseSamples,
+  lzPeaks,
+  type LzProcessRow,
+} from '../../src/oss/processes.ts';
+
+function row(pid: number, ppid: number, created = pid, workingSetBytes = 100): LzProcessRow {
+  return { pid, ppid, workingSetBytes, created: BigInt(created), name: `p${pid}.exe` };
+}
+
+describe('lzParseSamples', () => {
+  it('reads each sample up to its -- line, with CRLF line ends and spaces in a name', () => {
+    const text = '4 0 10 0 System\r\n10 4 2048 133000000000000001 my tool.exe\r\n--\r\n4 0 10 0 System\r\n--\r\n';
+
+    assert.deepEqual(lzParseSamples(text), [
+      [
+        { pid: 4, ppid: 0, workingSetBytes: 10, created: 0n, name: 'System' },
+        { pid: 10, ppid: 4, workingSetBytes: 2048, created: 133000000000000001n, name: 'my tool.exe' },
+      ],
+      [{ pid: 4, ppid: 0, workingSetBytes: 10, created: 0n, name: 'System' }],
+    ]);
+  });
+
+  it('drops a sample that the stop cut short', () => {
+    assert.equal(lzParseSamples('4 0 10 0 System\n--\n5 4 1').length, 1);
+  });
+
+  it('refuses a line that is no process', () => {
+    assert.throws(() => lzParseSamples('WARNING: slow\n--\n'), { message: 'Not a process line: "WARNING: slow"' });
+  });
+});
+
+describe('lzDescendants', () => {
+  it('walks the tree below the root and leaves the root out', () => {
+    const rows = [row(1, 0), row(2, 1), row(3, 2), row(4, 0)];
+
+    assert.deepEqual(
+      lzDescendants(rows, 1, new Set()).map(({ pid }) => pid),
+      [2, 3],
+    );
+  });
+
+  it('leaves out an excluded process and its children', () => {
+    const rows = [row(1, 0), row(2, 1), row(3, 2), row(5, 1)];
+
+    assert.deepEqual(
+      lzDescendants(rows, 1, new Set([2])).map(({ pid }) => pid),
+      [5],
+    );
+  });
+
+  it('leaves out a process that started before the parent its id names', () => {
+    const rows = [row(1, 0, 50), row(2, 1, 40), row(3, 1, 60)];
+
+    assert.deepEqual(
+      lzDescendants(rows, 1, new Set()).map(({ pid }) => pid),
+      [3],
+    );
+  });
+});
+
+describe('lzPeaks', () => {
+  it('takes the largest count and the largest summed working set of any sample', () => {
+    const samples = [[row(1, 0, 1, 500)], [row(1, 0, 1, 100), row(2, 1, 2, 300)]];
+
+    assert.deepEqual(lzPeaks(samples), { samples: 2, peakCount: 2, peakWorkingSetBytes: 500 });
+  });
+
+  it('reads zero from no samples', () => {
+    assert.deepEqual(lzPeaks([]), { samples: 0, peakCount: 0, peakWorkingSetBytes: 0 });
+  });
+});
+
+describe('lzLeftovers', () => {
+  it('finds a seen process that still runs, and a child of an ended one that no sample saw', () => {
+    const seen = [row(10, 1), row(11, 10), row(12, 11)];
+    const now = [row(1, 0), row(12, 11), row(13, 11)];
+
+    assert.deepEqual(
+      lzLeftovers(seen, now, 1).map(({ pid }) => pid),
+      [12, 13],
+    );
+  });
+
+  it('leaves out a child of the root that no sample saw, such as the snapshot itself', () => {
+    assert.deepEqual(lzLeftovers([row(10, 1)], [row(1, 0), row(20, 1)], 1), []);
+  });
+
+  it('leaves out a process that reuses the id of an ended one', () => {
+    assert.deepEqual(lzLeftovers([row(10, 1), row(11, 10)], [row(1, 0), row(11, 7, 99)], 1), []);
+  });
+});
+
+describe('lzNewEntries', () => {
+  it('lists what the second listing adds, sorted', () => {
+    assert.deepEqual(lzNewEntries(['a', 'b'], ['c', 'a', 'b', 'Z']), ['Z', 'c']);
+  });
+});

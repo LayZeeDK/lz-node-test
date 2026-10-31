@@ -1,0 +1,103 @@
+import { parseArgs } from 'node:util';
+
+export interface LzOssProject {
+  readonly name: string;
+  readonly mutate: readonly string[];
+  readonly testFiles: readonly string[];
+  /** The project's own `node:test` command, without its coverage wrapper. */
+  readonly command: string;
+}
+
+export type LzSide = 'lz' | 'command';
+
+export interface LzOssOptions {
+  readonly project: LzOssProject;
+  /** The OSS clone, which the driver copies and never writes to. */
+  readonly source: string;
+  readonly out: string;
+  readonly concurrency: number;
+  /** A folder of `.tgz` files to install instead of packing the workspace. */
+  readonly tarballs: string | undefined;
+  /** Install and write the configurations, keep the copy, and run no Stryker. */
+  readonly prepareOnly: boolean;
+}
+
+const projects: readonly LzOssProject[] = [
+  { name: 'env-schema', mutate: ['index.js'], testFiles: ['test/**/*.test.js'], command: 'node --test' },
+  {
+    name: 'fastify-cookie',
+    mutate: ['index.js', 'signer.js'],
+    testFiles: ['test/**/*.test.js'],
+    command: 'node --test',
+  },
+  {
+    name: 'fast-json-stringify',
+    mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
+    testFiles: ['test/*.test.js'],
+    command: 'node --test',
+  },
+  {
+    name: 'fastify',
+    mutate: ['fastify.js', 'lib/**/*.js', '!lib/error-serializer.js', '!lib/config-validator.js'],
+    testFiles: ['test/**/*.test.js', 'test/**/*.test.mjs'],
+    command: 'node --test "test/**/*.test.js" "test/**/*.test.mjs"',
+  },
+];
+
+const usage =
+  'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
+  '[--tarballs <folder>] [--prepare-only]';
+
+export function lzParseOptions(args: readonly string[]): LzOssOptions {
+  const { values } = parseArgs({
+    args: [...args],
+    options: {
+      project: { type: 'string' },
+      source: { type: 'string' },
+      out: { type: 'string' },
+      concurrency: { type: 'string' },
+      tarballs: { type: 'string' },
+      'prepare-only': { type: 'boolean', default: false },
+    },
+    strict: true,
+    allowPositionals: false,
+  });
+  const { source, out, concurrency, tarballs } = values;
+  const project = projects.find(({ name }) => name === values.project);
+
+  if (project === undefined) {
+    throw new Error(`${usage}\n--project is one of ${projects.map(({ name }) => name).join(', ')}.`);
+  }
+
+  if (source === undefined || out === undefined) {
+    throw new Error(`${usage}\n--source and --out are required.`);
+  }
+
+  if (concurrency === undefined || !/^[1-9]\d*$/.test(concurrency)) {
+    throw new Error(`${usage}\n--concurrency is a positive integer; size it to the machine's current load.`);
+  }
+
+  return { project, source, out, concurrency: Number(concurrency), tarballs, prepareOnly: values['prepare-only'] };
+}
+
+/**
+ * Both sides import the operators, so they mutate the same code into the same mutants. The command side runs the
+ * project's own command, with coverage analysis off as that runner reports no coverage.
+ */
+export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: LzOssProject): Record<string, unknown> {
+  return side === 'lz'
+    ? {
+        mutate,
+        plugins: ['@stryker-mutator/*', '@layzee/lz-stryker-node-test-runner'],
+        testRunner: 'lz-stryker-node-test',
+        lzStrykerNodeTest: { testFiles },
+      }
+    : { mutate, testRunner: 'command', commandRunner: { command }, coverageAnalysis: 'off' };
+}
+
+export function lzStrykerConfig(side: LzSide, project: LzOssProject): string {
+  return (
+    "import '@layzee/lz-stryker-node-test-mutators';\n\n" +
+    `export default ${JSON.stringify(lzStrykerOptions(side, project), null, 2)};\n`
+  );
+}

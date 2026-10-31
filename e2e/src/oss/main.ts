@@ -15,18 +15,10 @@ import timers from 'node:timers/promises';
 
 import { lzExec } from '../exec.ts';
 import { lzInstall, lzPack, lzRemoveOnExit, lzStryker } from '../fixture.ts';
-import {
-  lzCompare,
-  lzDescendants,
-  lzLeftovers,
-  lzNewEntries,
-  lzParseOptions,
-  lzPeaks,
-  lzScore,
-  lzStrykerConfig,
-  type LzSide,
-} from './driver.ts';
+import { lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
+import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks } from './processes.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
+import { lzCompare, lzScore } from './verdicts.ts';
 
 const sides: readonly LzSide[] = ['lz', 'command'];
 const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');

@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import { lzParseOptions, lzStrykerConfig, lzStrykerOptions, type LzOssProject } from '../../src/oss/options.ts';
+
+const required = ['--project', 'env-schema', '--source', 'D:/clone', '--out', 'D:/out', '--concurrency', '5'];
+
+describe('lzParseOptions', () => {
+  it('reads the options and looks the project up', () => {
+    const options = lzParseOptions(required);
+
+    assert.deepEqual(
+      { ...options, project: options.project.name },
+      {
+        project: 'env-schema',
+        source: 'D:/clone',
+        out: 'D:/out',
+        concurrency: 5,
+        tarballs: undefined,
+        prepareOnly: false,
+      },
+    );
+  });
+
+  it('reads the tarball folder and --prepare-only', () => {
+    const options = lzParseOptions([...required, '--tarballs', 'D:/tgz', '--prepare-only']);
+
+    assert.deepEqual([options.tarballs, options.prepareOnly], ['D:/tgz', true]);
+  });
+
+  it('refuses a project it has no settings for, and names those it has', () => {
+    assert.throws(() => lzParseOptions(required.with(1, 'pino')), {
+      message: /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify\.$/,
+    });
+  });
+
+  it('refuses a missing --out', () => {
+    assert.throws(() => lzParseOptions(required.slice(0, 4).concat(required.slice(6))), {
+      message: /--source and --out are required\.$/,
+    });
+  });
+
+  it('refuses a concurrency of 0', () => {
+    assert.throws(() => lzParseOptions(required.with(7, '0')), { message: /--concurrency is a positive integer/ });
+  });
+
+  it('refuses an option it does not know', () => {
+    assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
+  });
+});
+
+const project: LzOssProject = {
+  name: 'p',
+  mutate: ['index.js'],
+  testFiles: ['test/*.test.js'],
+  command: 'node --test',
+};
+
+describe('lzStrykerOptions', () => {
+  it('selects the runner of this workspace with the test files on the lz side', () => {
+    assert.deepEqual(lzStrykerOptions('lz', project), {
+      mutate: ['index.js'],
+      plugins: ['@stryker-mutator/*', '@layzee/lz-stryker-node-test-runner'],
+      testRunner: 'lz-stryker-node-test',
+      lzStrykerNodeTest: { testFiles: ['test/*.test.js'] },
+    });
+  });
+
+  it("runs the project's command with coverage analysis off on the command side", () => {
+    assert.deepEqual(lzStrykerOptions('command', project), {
+      mutate: ['index.js'],
+      testRunner: 'command',
+      commandRunner: { command: 'node --test' },
+      coverageAnalysis: 'off',
+    });
+  });
+});
+
+describe('lzStrykerConfig', () => {
+  it('imports the operators and exports the options on either side', () => {
+    const config = lzStrykerConfig('command', project);
+
+    assert.match(config, /^import '@layzee\/lz-stryker-node-test-mutators';\n\nexport default \{\n/);
+    assert.match(config, /"testRunner": "command"/);
+  });
+});

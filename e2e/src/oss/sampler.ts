@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 
 import { lzExec } from '../exec.ts';
-import { lzParseSamples, type LzProcessRow } from './driver.ts';
+import { lzParseSamples, type LzProcessRow } from './processes.ts';
 
 export interface LzSampler {
   readonly pid: number;
