@@ -2,7 +2,7 @@ import type { LoadHookSync, ResolveHookSync } from 'node:module';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
+import type { InstrumenterContext, MutantCoverage, Position } from '@stryker-mutator/api/core';
 
 import { isNumber, isObject } from './guards.ts';
 import {
@@ -68,6 +68,10 @@ export interface HookDependencies {
   /** Registers a `beforeExit` listener, which a process that ends by itself calls and `process.exit()` skips. */
   readonly onBeforeExit: (listener: () => void) => void;
   readonly writeRecord: (path: string, record: ProcessRecord) => void;
+  /** Writes the record to `<path>.tmp` and renames that over `path`, so a reader finds either record whole. */
+  readonly replaceRecord: (path: string, record: ProcessRecord) => void;
+  /** Calls `callback` every `ms` without keeping the process alive. */
+  readonly every: (callback: () => void, ms: number) => void;
   /** Ends the process as `process.exit` does, with `process.exitCode` when no code is given. */
   readonly exit: (code?: number) => void;
   /** `process.getActiveResourcesInfo`. */
@@ -101,6 +105,23 @@ export interface HookDependencies {
    * SIGINT listener would keep Ctrl+C from ending the process.
    */
   readonly signals: LzProcessSignals | undefined;
+}
+
+/**
+ * How often a process the tests started writes its record in the dry run. One write of a 500 KiB coverage map takes
+ * about 10 ms, and counting its hits to see whether it changed about 2 ms.
+ */
+const recordIntervalMs = 250;
+
+/** How many hits `coverage` counts; it only grows, as instrumented code adds mutants and counts up. */
+export function lzHits(coverage: MutantCoverage | undefined): number {
+  if (coverage === undefined) {
+    return 0;
+  }
+
+  return [coverage.static, ...Object.values(coverage.perTest)]
+    .flatMap((hits) => Object.values(hits))
+    .reduce((sum, count) => sum + count, 0);
 }
 
 export type LzEndingSignal = 'SIGTERM' | 'SIGINT' | 'SIGHUP';
@@ -260,13 +281,11 @@ export function install(deps: HookDependencies): boolean {
     deps.registerHooks(redirectNodeTest(Object.keys(wrapped)));
   }
 
-  const write = () => {
-    if (!deps.canWriteRecords) {
-      return;
-    }
-
+  const recordPath = join(outDir, recordName(deps.pid, deps.threadId));
+  const record = (): ProcessRecord => {
     const outcome = end?.outcome();
-    deps.writeRecord(join(outDir, recordName(deps.pid, deps.threadId)), {
+
+    return {
       ...(main && { main }),
       tests,
       hitCount: ns.hitCount,
@@ -277,7 +296,12 @@ export function install(deps: HookDependencies): boolean {
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
       lifetime: { start: started, end: deps.now() },
       ...(main && { testSpans: Object.fromEntries(testSpans) }),
-    });
+    };
+  };
+  const write = () => {
+    if (deps.canWriteRecords) {
+      deps.writeRecord(recordPath, record());
+    }
   };
 
   // Node.js runs no exit listener that is added while the process exits, so the record goes behind the exit listeners
@@ -293,7 +317,34 @@ export function install(deps: HookDependencies): boolean {
     writeOnEndingSignals(deps.signals, write);
   }
 
+  // A process the tests started can end without its exit listeners, as `worker.terminate()` and every kill on Windows
+  // end it, so in the one run that reads coverage its record follows the coverage while it runs. The test file's own
+  // process does not need it: the runner reads its record only once it has exited.
+  if (dryRun && !main && deps.canWriteRecords) {
+    replaceOnNewHits(deps.every, ns, () => deps.replaceRecord(recordPath, record()));
+  }
+
   return true;
+}
+
+/** Calls `replace` every `recordIntervalMs` once `ns` has counted more hits than at its last call. */
+function replaceOnNewHits(every: HookDependencies['every'], ns: InstrumenterContext, replace: () => void): void {
+  let replacedHits = 0;
+  every(() => {
+    const hits = lzHits(ns.mutantCoverage);
+
+    if (hits === replacedHits) {
+      return;
+    }
+
+    replacedHits = hits;
+
+    try {
+      replace();
+    } catch {
+      // The run that reads the record can be over, with its directory removed, while the process still runs.
+    }
+  }, recordIntervalMs);
 }
 
 /** How many listeners signal-exit has for each signal, which leave how the process ends to any other listener. */

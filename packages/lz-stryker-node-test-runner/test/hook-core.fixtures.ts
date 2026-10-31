@@ -202,6 +202,10 @@ export interface Harness {
   /** Runs the listeners of `signal` as Node.js does when the process gets it. */
   readonly signal: (signal: LzEndingSignal) => void;
   readonly listenerCounts: () => Record<string, number | undefined>;
+  /** The records the hook wrote in place of the ones before, as it does while the process runs. */
+  readonly replaced: readonly { readonly path: string; readonly record: ProcessRecord }[];
+  /** The repeating timers the hook set, by interval, which a test fires by calling them. */
+  readonly intervals: readonly { readonly ms: number; readonly fire: () => void }[];
 }
 
 export function harness(env: Record<string, string | undefined>, overrides: Partial<HookDependencies> = {}): Harness {
@@ -217,6 +221,8 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
   const signalListeners: { readonly signal: LzEndingSignal; readonly listener: () => void }[] = [];
   let signalExitEmitters: readonly unknown[] = [];
   const raised: LzEndingSignal[] = [];
+  const replaced: Harness['replaced'][number][] = [];
+  const intervals: Harness['intervals'][number][] = [];
   const deps: HookDependencies = {
     env,
     mainFile: testFile,
@@ -245,6 +251,12 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     },
     writeRecord: (path, record) => {
       records.push({ path, record: lzParseRecord(JSON.stringify(record)) });
+    },
+    replaceRecord: (path, record) => {
+      replaced.push({ path, record: lzParseRecord(JSON.stringify(record)) });
+    },
+    every: (fire, ms) => {
+      intervals.push({ ms, fire });
     },
     exit: (code) => {
       exits.push(code);
@@ -289,6 +301,8 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     exits,
     timers,
     raised,
+    replaced,
+    intervals,
     useSignalExit: (emitters) => {
       signalExitEmitters = emitters;
     },

@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { renameSync, writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { extname, resolve } from 'node:path';
 import { getCallSites } from 'node:util';
@@ -43,6 +43,13 @@ install({
   offExit: (listener) => process.off('exit', listener),
   onBeforeExit: (listener) => process.on('beforeExit', listener),
   writeRecord: (path, record) => writeFileSync(path, JSON.stringify(record)),
+  replaceRecord: (path, record) => {
+    writeFileSync(`${path}.tmp`, JSON.stringify(record));
+    renameSync(`${path}.tmp`, path);
+  },
+  every: (callback, ms) => {
+    setInterval(callback, ms).unref();
+  },
   exit,
   activeResources,
   later,

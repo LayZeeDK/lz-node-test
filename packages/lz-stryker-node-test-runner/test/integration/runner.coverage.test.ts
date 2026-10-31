@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 
 import type { DryRunOptions } from '@stryker-mutator/api/test-runner';
 
+import { envNames } from '../../src/record.ts';
 import {
   complete,
   cover,
@@ -248,6 +249,76 @@ describe('LzStrykerNodeTestRunner coverage', () => {
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
       static: { m: 1 },
       perTest: { [`${a} > starts`]: { m: 1 }, [`${a} > covers too`]: { m: 2 } },
+    });
+  });
+
+  /**
+   * Waits, at most 2 s, for the record of a process the test started, which the process writes while it runs in the
+   * dry run.
+   */
+  const recorded = [
+    "import { existsSync } from 'node:fs';",
+    "import { join } from 'node:path';",
+    'const recorded = async (name) => {',
+    `  const path = join(process.env.${envNames.out}, name);`,
+    '  for (let wait = 0; wait < 100 && !existsSync(path); wait++) await new Promise((resolve) => setTimeout(resolve, 20));',
+    '};',
+  ];
+
+  it('keeps the coverage of a worker thread that the test ends with worker.terminate() after it covered a line', async (t) => {
+    const dir = project(t, {
+      'worker.mjs': [
+        "import { parentPort } from 'node:worker_threads';",
+        cover,
+        "cover('terminated');",
+        "parentPort.postMessage('covered');",
+        'setInterval(() => {}, 1_000);',
+      ].join('\n'),
+      'a.test.mjs': fixture(
+        "import { once } from 'node:events';",
+        "import { Worker } from 'node:worker_threads';",
+        ...recorded,
+        "it('terminates', async () => {",
+        "  const worker = new Worker(new URL('./worker.mjs', import.meta.url));",
+        "  await once(worker, 'message');",
+        '  await recorded(`${process.pid}.${worker.threadId}.json`);',
+        '  await worker.terminate();',
+        '});',
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), {
+      static: {},
+      perTest: { [`${join(dir, 'a.test.mjs')} > terminates`]: { terminated: 1 } },
+    });
+  });
+
+  it('keeps the coverage of a child process that the test ends with child.kill() after it covered a line', async (t) => {
+    const child = `${cover} cover('killed'); process.send('covered'); setInterval(() => {}, 1_000);`;
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "import { spawn } from 'node:child_process';",
+        "import { once } from 'node:events';",
+        ...recorded,
+        "it('kills', async () => {",
+        `  const child = spawn(process.execPath, ['-e', ${JSON.stringify(child)}], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });`,
+        "  await once(child, 'message');",
+        '  await recorded(`${child.pid}.0.json`);',
+        '  child.kill();',
+        "  await once(child, 'exit');",
+        '});',
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), {
+      static: {},
+      perTest: { [`${join(dir, 'a.test.mjs')} > kills`]: { killed: 1 } },
     });
   });
 
