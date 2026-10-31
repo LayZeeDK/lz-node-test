@@ -7,7 +7,7 @@ export const nodeAssert: ReadonlySet<string> = new Set([
   'assert/strict',
 ]);
 
-export interface ImportOf {
+interface ImportOf {
   readonly source: string;
   readonly imported: string | undefined;
 }

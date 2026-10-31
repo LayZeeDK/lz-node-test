@@ -4,7 +4,7 @@ import { relative, sep } from 'node:path';
 import { resolveFromCore, type Instrumenter, type InstrumentedMutant } from './install.ts';
 import { toNodeMutator, type Operator } from './operator.ts';
 
-export interface MutantDiff {
+interface MutantDiff {
   readonly added: readonly string[];
   readonly removed: readonly string[];
 }

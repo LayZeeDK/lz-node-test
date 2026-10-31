@@ -22,7 +22,7 @@ export interface NodeMutatorLike {
 
 export const own = Symbol.for('lz-stryker-node-test-mutators');
 
-export interface OwnMutator extends NodeMutatorLike {
+interface OwnMutator extends NodeMutatorLike {
   readonly [own]: true;
 }
 

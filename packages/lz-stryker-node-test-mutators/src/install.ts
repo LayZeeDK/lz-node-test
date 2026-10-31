@@ -42,7 +42,7 @@ export interface Instrumenter {
   instrument(files: readonly SourceFile[], mutators?: readonly ListedMutator[]): Promise<readonly InstrumentedMutant[]>;
 }
 
-export type Mode = 'add' | 'replace';
+type Mode = 'add' | 'replace';
 
 /**
  * Puts `operators` into the mutator list of Stryker's instrumenter, and throws unless each makes a mutant of its

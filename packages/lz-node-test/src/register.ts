@@ -34,7 +34,7 @@ export type Register<TCallback> = (
 ) => void;
 
 /** One test of the table: the values its name formats, and how it calls the table's function. */
-export interface Case<TCallback> {
+interface Case<TCallback> {
   readonly items: readonly unknown[];
   readonly run: (fn: TCallback, t: TestContext) => void | Promise<void>;
 }
