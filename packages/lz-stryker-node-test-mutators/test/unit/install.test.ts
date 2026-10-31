@@ -198,6 +198,8 @@ describe('inPeerRange', () => {
     ['10.1.9', '^10.1.10', false],
     ['10.0.0', '^10.0.0', true],
     ['9.9.9', '^10.0.0', false],
+    ['v10.1.1', '^10.1.1', false],
+    ['10.12.0', '^10.1.1', true],
   ])('takes %s in %s: %s', (version, range, expected) => {
     assert.equal(inPeerRange(version, range), expected);
   });
@@ -302,6 +304,7 @@ describe('corePackageJsons', () => {
     ['in the case of this module', 'D:\\repo\\tools\\stryker.mjs', upperCore, [upperCore]],
     ['of another drive', 'e:\\tools\\stryker.mjs', upperCore, [upperCore]],
     ['of none', '/repo/tools/stryker.mjs', upperCore, [upperCore]],
+    ['of none, though a later folder is a letter and a colon', '/repo/d:/stryker.mjs', upperCore, [upperCore]],
   ])(
     "takes the core this module resolves in the drive-letter case of the script that started the process, and in its own, when the script's real path has a drive letter %s",
     (_title, script, resolvedCore, expected) => {
