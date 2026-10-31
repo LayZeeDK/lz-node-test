@@ -164,17 +164,12 @@ describe('install', () => {
     });
   });
 
-  lzTestEach(['11.0.0', '110.1.1'])(
-    'warns that mutants may be missing with the instrumenter version %s, outside the peer range',
-    async (version) => {
-      const { run, warnings } = setup({ version });
+  it('passes on one warning for an instrumenter version outside the peer range', async () => {
+    const { run, warnings } = setup({ version: '0.0.0' });
 
-      await run('add', [operator('Alpha')]);
+    await run('add', [operator('Alpha')]);
 
-      assert.deepEqual(warnings, [
-        `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter 10.1.1 or a later 10.x, not ${version}. ` +
-          'Its install check passed, but it sees only this process, so mutants of its mutators may be missing.',
-      ]);
-    },
-  );
+    assert.equal(warnings.length, 1);
+    assert.match(warnings.join('\n'), /, not 0\.0\.0\. /);
+  });
 });

@@ -29,7 +29,7 @@ describe('inPeerRange', () => {
   );
 });
 
-describe('the Stryker versions of the peer range', () => {
+describe('lzWarnOutsidePeerRange', () => {
   const { major, minor, patch } = parseCaretFloor(pkg.peerDependencies['@stryker-mutator/core']);
   const floor = `${major}.${minor}.${patch}`;
 
@@ -50,7 +50,7 @@ describe('the Stryker versions of the peer range', () => {
   }
 
   lzTestEach([floor, `${major}.${minor}.${patch + 1}`, `${major}.${minor + 1}.0`])(
-    'installs into the instrumenter version %s without a warning',
+    'gives no warning for the instrumenter version %s, in the peer range',
     (version) => {
       assert.deepEqual(warningsFor(version), []);
     },
@@ -62,11 +62,14 @@ describe('the Stryker versions of the peer range', () => {
     `${major - 1}.${minor}.${patch}`,
     `1${floor}`,
     `${major}.${minor + 1}.0-beta.0`,
-  ])('warns about the instrumenter version %s', (version) => {
-    assert.equal(warningsFor(version).length, 1);
+  ])('warns that mutants may be missing with the instrumenter version %s, outside the peer range', (version) => {
+    assert.deepEqual(warningsFor(version), [
+      `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${floor} or a later ${major}.x, not ${version}. ` +
+        'Its install check passed, but it sees only this process, so mutants of its mutators may be missing.',
+    ]);
   });
 
-  it('is the range the README names', () => {
+  it('warns from the range the README names', () => {
     const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8').replaceAll(/\s+/g, ' ');
 
     assert.ok(readme.includes(`It accepts Stryker ${floor} or a later ${major}.x version`));
