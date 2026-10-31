@@ -22,6 +22,20 @@ export interface LzOssOptions {
   readonly prepareOnly: boolean;
 }
 
+export type LzStrykerOptions =
+  | {
+      readonly mutate: readonly string[];
+      readonly plugins: readonly string[];
+      readonly testRunner: 'lz-stryker-node-test';
+      readonly lzStrykerNodeTest: { readonly testFiles: readonly string[] };
+    }
+  | {
+      readonly mutate: readonly string[];
+      readonly testRunner: 'command';
+      readonly commandRunner: { readonly command: string };
+      readonly coverageAnalysis: 'off';
+    };
+
 const projects: readonly LzOssProject[] = [
   { name: 'env-schema', mutate: ['index.js'], testFiles: ['test/**/*.test.js'], command: 'node --test' },
   {
@@ -84,7 +98,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
  * Both sides import the operators, so they mutate the same code into the same mutants. The command side runs the
  * project's own command, with coverage analysis off as that runner reports no coverage.
  */
-export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: LzOssProject): Record<string, unknown> {
+export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: LzOssProject): LzStrykerOptions {
   return side === 'lz'
     ? {
         mutate,

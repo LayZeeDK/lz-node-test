@@ -14,11 +14,64 @@ import { performance } from 'node:perf_hooks';
 import timers from 'node:timers/promises';
 
 import { lzExec } from '../exec.ts';
-import { lzInstall, lzPack, lzRemoveOnExit, lzReportFile, lzStryker } from '../fixture.ts';
+import { lzInstall, lzPack, lzRemoveOnExit, lzReportFile, lzStryker, type LzStrykerRun } from '../fixture.ts';
 import { lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
-import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessRow } from './processes.ts';
+import {
+  lzDescendants,
+  lzLeftovers,
+  lzNewEntries,
+  lzPeaks,
+  type LzProcessPeaks,
+  type LzProcessRow,
+} from './processes.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
-import { lzCompare, lzScore } from './verdicts.ts';
+import { lzCompare, lzScore, type LzScore, type LzVerdict } from './verdicts.ts';
+
+interface LzOssHeader {
+  readonly project: string;
+  readonly source: string;
+  readonly sourceCommit: string;
+  readonly workspaceCommit: string;
+  readonly node: string;
+  readonly platform: string;
+  readonly concurrency: number;
+  readonly tarballs: readonly string[];
+  readonly startedAt: string;
+}
+
+interface LzLeftover {
+  readonly pid: number;
+  readonly name: string;
+  readonly endedByDriver: boolean;
+}
+
+interface LzSideResult extends LzScore {
+  readonly exitCode: number;
+  readonly timedOut: boolean;
+  readonly reported: boolean;
+  readonly wallMs: number;
+  readonly mutants: number;
+  readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
+  readonly leftoverInRunTmp: readonly string[];
+  readonly newInOsTmp: readonly string[];
+  readonly leftoverStrykerTmp: readonly string[];
+}
+
+/** The shape of result.json. */
+type LzOssResult = LzOssHeader &
+  (
+    | { readonly preparedIn: string }
+    | {
+        readonly sides: { readonly lz: LzSideResult; readonly command: LzSideResult };
+        readonly disagreements: readonly LzVerdict[];
+        readonly verdicts: readonly LzVerdict[];
+      }
+  );
+
+interface LzSideRun {
+  readonly run: LzStrykerRun;
+  readonly result: LzSideResult;
+}
 
 const sides: readonly LzSide[] = ['lz', 'command'];
 const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
@@ -46,7 +99,7 @@ sides.forEach((side) => {
   writeFileSync(join(dir, configFile(side)), lzStrykerConfig(side, options.project));
 });
 
-const header = {
+const header: LzOssHeader = {
   project: options.project.name,
   source: options.source,
   sourceCommit: await commitOf(options.source),
@@ -64,7 +117,7 @@ if (options.prepareOnly) {
 } else {
   const lz = await runSide('lz');
   const command = await runSide('command');
-  const verdicts = lz.report === undefined || command.report === undefined ? [] : lzCompare(lz.report, command.report);
+  const verdicts = lz.run.reported && command.run.reported ? lzCompare(lz.run.report, command.run.report) : [];
 
   writeResult({
     ...header,
@@ -74,7 +127,7 @@ if (options.prepareOnly) {
   });
 }
 
-async function runSide(side: LzSide) {
+async function runSide(side: LzSide): Promise<LzSideRun> {
   const osTmpBefore = readdirSync(tmpdir());
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
@@ -103,7 +156,7 @@ async function runSide(side: LzSide) {
   const mutants = run.reported ? [...run.report.values()].flat() : [];
 
   return {
-    report: run.reported ? run.report : undefined,
+    run,
     result: {
       exitCode: run.exitCode,
       timedOut: run.timedOut,
@@ -164,7 +217,7 @@ async function commitOf(cwd: string): Promise<string> {
   return stdout.trim();
 }
 
-function writeResult(result: Record<string, unknown>): void {
+function writeResult(result: LzOssResult): void {
   const file = join(out, 'result.json');
 
   writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
