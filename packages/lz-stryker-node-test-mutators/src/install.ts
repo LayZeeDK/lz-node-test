@@ -139,7 +139,7 @@ async function selfCheck(instrumenter: Instrumenter, operators: readonly Operato
 /**
  * The package.json of the @stryker-mutator/core that runs this process, from the script that started it when that is
  * core's bin, as when Stryker runs from a global install; otherwise, as when a program uses Stryker's API, the core
- * that this module resolves.
+ * that this module resolves, in the drive-letter case of that program's script.
  */
 export function corePackageJson(
   argv: readonly string[] = process.argv,
@@ -147,25 +147,40 @@ export function corePackageJson(
   resolveHere: (specifier: string) => string = createRequire(import.meta.url).resolve,
 ): string {
   const [, script] = argv;
-  const bin = coreBin(script, realpath);
+  const real = realScript(script, realpath);
 
-  return bin === undefined ? resolveHere('@stryker-mutator/core/package.json') : join(bin, '..', '..', 'package.json');
+  if (real === undefined) {
+    return resolveHere('@stryker-mutator/core/package.json');
+  }
+
+  return coreBinPattern.test(real)
+    ? join(real, '..', '..', 'package.json')
+    : withDriveLetterOf(real, resolveHere('@stryker-mutator/core/package.json'));
 }
 
-function coreBin(script: string | undefined, realpath: (path: string) => string): string | undefined {
+function realScript(script: string | undefined, realpath: (path: string) => string): string | undefined {
   // `node --eval` and the REPL run no script file.
   if (script === undefined) {
     return undefined;
   }
 
   try {
-    const bin = realpath(script);
-
-    return coreBinPattern.test(bin) ? bin : undefined;
+    return realpath(script);
   } catch {
     // What `node --eval` passes on after its code is no script file either.
     return undefined;
   }
+}
+
+/**
+ * Stryker's modules load with the drive-letter case of the script that started the process, and this module with the
+ * case of the working directory. ESM caches modules by URL, which keeps that case, so `d:` and `D:` would load two
+ * instrumenters, and the self-check would pass on the one Stryker does not run.
+ */
+function withDriveLetterOf(script: string, path: string): string {
+  const [drive] = /^[A-Za-z]:/.exec(script) ?? [];
+
+  return drive !== undefined && path.slice(0, 2).toLowerCase() === drive.toLowerCase() ? drive + path.slice(2) : path;
 }
 
 /**

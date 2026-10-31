@@ -254,6 +254,31 @@ describe('corePackageJson', () => {
     assert.equal(coreFor(real), here);
   });
 
+  const resolvedCore = 'D:\\repo\\node_modules\\@stryker-mutator\\core\\package.json';
+
+  lzTestEach([
+    [
+      'in the other case',
+      'd:\\repo\\tools\\stryker.mjs',
+      'd:\\repo\\node_modules\\@stryker-mutator\\core\\package.json',
+    ],
+    ['in the same case', 'D:\\repo\\tools\\stryker.mjs', resolvedCore],
+    ['on another drive', 'e:\\tools\\stryker.mjs', resolvedCore],
+    ['with no drive letter', '/repo/tools/stryker.mjs', resolvedCore],
+  ])(
+    "takes the drive-letter case of the script that started the process, which Stryker's modules load with, " +
+      'when its real path has the drive letter %s',
+    (_title, script, expected) => {
+      const core = corePackageJson(
+        ['node', script],
+        (path) => path,
+        () => resolvedCore,
+      );
+
+      assert.equal(core, expected);
+    },
+  );
+
   it('takes the core this module resolves when the process runs no script, as `node --eval` does', () => {
     const core = corePackageJson(
       ['/usr/local/bin/node'],
