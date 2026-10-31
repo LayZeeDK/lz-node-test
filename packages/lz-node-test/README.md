@@ -1,7 +1,7 @@
 # @layzee/lz-node-test
 
 Table tests for `node:test`: `lzTestEach` and `lzTestFor` work like Vitest's `test.each` and `test.for`. It is ESM
-only and needs Node.js 22.18 or later.
+only, needs Node.js 22.18 or later, and is tested on Node.js 22 and 24.
 
 ## Install
 
@@ -57,6 +57,8 @@ lzTestEach`
 });
 ```
 
+A last row with fewer values than the table has columns is dropped.
+
 ### `lzTestFor(cases)(name, fn?, timeout?)`
 
 Registers one test per case, as `lzTestEach` does, except that `fn` always gets the case whole and the test context
@@ -67,6 +69,13 @@ as its second argument.
 Both functions take the options as the second argument instead of a timeout: `(name, options, fn?)`. The options are
 `node:test`'s test options (`timeout`, `skip`, `only`, `todo`, and the others), plus `fails`, which makes a test pass
 only when its body fails.
+
+### Differences from Vitest
+
+The tests run on `node:test`, which makes two outcomes differ from Vitest's:
+
+- A todo test that has a body runs it, and `node:test` ignores its outcome.
+- A `fails` test that times out fails, as `node:test`'s timeout applies outside the body that `fails` inverts.
 
 ### Types
 
