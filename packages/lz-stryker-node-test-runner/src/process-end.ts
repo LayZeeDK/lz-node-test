@@ -1,6 +1,7 @@
 /**
  * How a test file's process is spawned: on POSIX in a process group of its own, so that `endGroup` can end the
- * processes its tests leave running. On Windows libuv's job object already ends them with the test file's process.
+ * processes its tests leave running. On Windows libuv's job object ends the processes that the test file's process
+ * started directly with it; one started through a shell (`shell: true`, a `.cmd` file) or with `detached: true` stays.
  */
 export function groupOptions(platform: NodeJS.Platform): { detached: boolean; windowsHide: true } {
   return { detached: platform !== 'win32', windowsHide: true };
