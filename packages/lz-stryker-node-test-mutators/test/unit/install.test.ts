@@ -156,15 +156,15 @@ describe('install', () => {
   });
 
   lzTestEach(['11.0.0', '110.1.1'])(
-    'warns about the instrumenter version %s, which it was not written for',
+    'warns that mutants may be missing with the instrumenter version %s, outside the tested range',
     async (version) => {
       const { run, warnings } = setup({ version });
 
       await run('add', [operator('Alpha')]);
 
       assert.deepEqual(warnings, [
-        `lz-stryker-node-test-mutators was written for @stryker-mutator/instrumenter 10.1, not ${version}; its install check ` +
-          'passed.',
+        `lz-stryker-node-test-mutators is tested with @stryker-mutator/instrumenter 10.1.1 or a later 10.x, not ${version}. ` +
+          'Its install check passed, but it sees only this process, so mutants of its mutators may be missing.',
       ]);
     },
   );

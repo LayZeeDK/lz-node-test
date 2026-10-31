@@ -13,7 +13,9 @@ npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/lz-stryker-node-tes
 to the instrumenter of the Stryker that runs it. It accepts Stryker 10.1.1 or a later 10.x version and is tested with
 10.1.1. The install checks that the instrumenter
 makes a mutant of each added mutator from a sample, and stops the run with an error if it does not. With a
-version of `@stryker-mutator/instrumenter` outside that range that passes the check, it logs a warning.
+version of `@stryker-mutator/instrumenter` outside that range that passes the check, it logs a warning that mutants
+may be missing: the check sees only the process that imports the configuration, and a Stryker release that
+instruments in another process would leave the mutators out.
 
 ## Mutate production code
 

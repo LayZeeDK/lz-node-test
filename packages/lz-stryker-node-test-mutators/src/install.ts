@@ -72,9 +72,12 @@ export async function install(
   await selfCheck(instrumenter, operators);
 
   if (!isTested(instrumenter.version)) {
+    const { major, minor, patch } = testedFloor;
+
     warn(
-      `lz-stryker-node-test-mutators was written for @stryker-mutator/instrumenter 10.1, not ${instrumenter.version}; ` +
-        'its install check passed.',
+      `lz-stryker-node-test-mutators is tested with @stryker-mutator/instrumenter ${major}.${minor}.${patch} or a later ` +
+        `${major}.x, not ${instrumenter.version}. Its install check passed, but it sees only this process, so mutants ` +
+        'of its mutators may be missing.',
     );
   }
 }
