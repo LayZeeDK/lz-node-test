@@ -244,6 +244,13 @@ export function install(deps: HookDependencies): boolean {
 
   const record = (natural: boolean): ProcessRecord => {
     const outcome = end?.outcome();
+    const written = deps.now();
+    const current = ns.currentTestId;
+    const spans = current === undefined ? [] : (testSpans.get(current) ?? []);
+    const open = spans.at(-1);
+    // The span of the test that runs as the record is written ends then.
+    const closed =
+      current !== undefined && open ? { [current]: [...spans.slice(0, -1), { start: open.start, end: written }] } : {};
 
     return {
       ...(main && { main }),
@@ -254,8 +261,8 @@ export function install(deps: HookDependencies): boolean {
       ...(diagnostics.length > 0 && { diagnostics }),
       ...(main && !summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
-      lifetime: { start: started, end: deps.now() },
-      ...(main && { testSpans: Object.fromEntries(testSpans) }),
+      lifetime: { start: started, end: written },
+      ...(main && { testSpans: { ...Object.fromEntries(testSpans), ...closed } }),
     };
   };
   lzPersistRecord(deps, join(outDir, recordName(deps.pid, deps.threadId, deps.nonce)), record, { main, dryRun });

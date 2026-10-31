@@ -835,6 +835,21 @@ describe('install', () => {
     );
   });
 
+  it('ends the span of a test that runs as the record is written at the time it is written', async () => {
+    let time = 10;
+    const main = installedHarness(fileEnv(), { now: () => ++time });
+    main.wrapped().it('exits', () => {
+      main.exit({ natural: false });
+    });
+
+    await bodyOf(main.fake.registrations, 'exits')(testContext());
+
+    assert.deepEqual(
+      [main.records[0]?.record.lifetime, main.records[0]?.record.testSpans],
+      [{ start: 11, end: 13 }, { [`${testFile} > exits`]: [{ start: 12, end: 13 }] }],
+    );
+  });
+
   it('writes the hit count and, only in the dry run, the mutant coverage and the peak memory', () => {
     const coverage = { static: { 1: 2 }, perTest: { [`${testFile} > t`]: { 3: 1 } } };
     const written = ['true', 'false', undefined].map((dryRun) => {
