@@ -109,16 +109,13 @@ export const heldOpenMs = 30_000;
 /** Stryker's variable for the active mutant, which instrumented code reads when it loads. */
 export const activeMutantEnv = '__STRYKER_ACTIVE_MUTANT__';
 
-/**
- * Tells apart the records of processes that had the same pid, as a pid can come back within one file run. The test
- * file's own record goes without one, so the runner finds it by the pid of the process it started.
- */
+/** Tells apart the records of processes that had the same pid, as a pid can come back within one file run. */
 export function lzRecordNonce(): string {
   return randomUUID();
 }
 
-export function recordName(pid: number, threadId: number, nonce?: string): string {
-  return nonce === undefined ? `${pid}.${threadId}.json` : `${pid}.${threadId}.${nonce}.json`;
+export function recordName(pid: number, threadId: number, nonce: string): string {
+  return `${pid}.${threadId}.${nonce}.json`;
 }
 
 /** The record the memory watchdog writes when it ends its process. */
@@ -189,23 +186,23 @@ export interface LzRecordName {
   readonly pid: number;
   /** The id of the thread that wrote the record, or `memory` for the record the memory watchdog writes. */
   readonly thread: number | 'memory';
-  readonly nonce: string | undefined;
+  readonly nonce: string;
 }
 
-const threadRecordPattern = /^(\d+)\.(\d+)(?:\.([\da-f-]+))?\.json$/;
+const threadRecordPattern = /^(\d+)\.(\d+)\.([\da-f-]+)\.json$/;
 const memoryRecordPattern = /^(\d+)\.([\da-f-]+)\.memory\.json$/;
 
 /** The parts of a record's name, as `recordName` and `memoryRecordName` put them together; undefined for another name. */
 export function lzParseRecordName(name: string): LzRecordName | undefined {
   const [, pid, threadId, nonce] = threadRecordPattern.exec(name) ?? [];
 
-  if (pid !== undefined) {
+  if (nonce !== undefined) {
     return { pid: Number(pid), thread: Number(threadId), nonce };
   }
 
   const [, memoryPid, memoryNonce] = memoryRecordPattern.exec(name) ?? [];
 
-  return memoryPid === undefined ? undefined : { pid: Number(memoryPid), thread: 'memory', nonce: memoryNonce };
+  return memoryNonce === undefined ? undefined : { pid: Number(memoryPid), thread: 'memory', nonce: memoryNonce };
 }
 
 /** Whether `name` is the name of a record, which a record's temporary file is not. */

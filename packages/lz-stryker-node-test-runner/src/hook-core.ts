@@ -254,8 +254,7 @@ export function install(deps: HookDependencies): boolean {
       ...(main && { testSpans: Object.fromEntries(testSpans) }),
     };
   };
-  const name = main ? recordName(deps.pid, deps.threadId) : recordName(deps.pid, deps.threadId, deps.nonce);
-  lzPersistRecord(deps, join(outDir, name), record, { main, dryRun });
+  lzPersistRecord(deps, join(outDir, recordName(deps.pid, deps.threadId, deps.nonce)), record, { main, dryRun });
 
   return true;
 }

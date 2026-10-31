@@ -235,7 +235,7 @@ describe('install', () => {
 
     assert.deepEqual(records, [
       {
-        path: join(out, '4321.0.json'),
+        path: join(out, `4321.0.${deps.nonce}.json`),
         record: {
           main: true,
           tests: [

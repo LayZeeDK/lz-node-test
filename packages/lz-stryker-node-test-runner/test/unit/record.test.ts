@@ -66,19 +66,17 @@ describe('uniqueIds', () => {
 describe('lzIsRecordName', () => {
   const nonce = lzRecordNonce();
 
-  lzTestEach([
-    recordName(4321, 0),
-    recordName(4321, 0, nonce),
-    recordName(4321, 3, nonce),
-    memoryRecordName(4321, nonce),
-  ])('takes %s as a record', (name) => {
-    assert.equal(lzIsRecordName(name), true);
-  });
+  lzTestEach([recordName(4321, 0, nonce), recordName(4321, 3, nonce), memoryRecordName(4321, nonce)])(
+    'takes %s as a record',
+    (name) => {
+      assert.equal(lzIsRecordName(name), true);
+    },
+  );
 
   lzTestEach([
-    lzTempRecordPath(recordName(4321, 0)),
-    lzTempRecordPath(recordName(4321, 3, nonce)),
+    lzTempRecordPath(recordName(4321, 0, nonce)),
     lzTempRecordPath(memoryRecordName(4321, nonce)),
+    '4321.0.json',
     'notes.json',
     '4321.0.js',
   ])('takes %s as no record', (name) => {
@@ -90,7 +88,6 @@ describe('lzParseRecordName', () => {
   const nonce = lzRecordNonce();
 
   lzTestFor<readonly [string, LzRecordName | undefined]>([
-    [recordName(4321, 0), { pid: 4321, thread: 0, nonce: undefined }],
     [recordName(4321, 3, nonce), { pid: 4321, thread: 3, nonce }],
     [memoryRecordName(4321, nonce), { pid: 4321, thread: 'memory', nonce }],
     [lzTempRecordPath(recordName(4321, 3, nonce)), undefined],
@@ -100,7 +97,7 @@ describe('lzParseRecordName', () => {
 });
 
 describe('lzWriteRecord', () => {
-  const path = join('/out', recordName(4321, 0));
+  const path = join('/out', recordName(4321, 0, lzRecordNonce()));
   const written = ['write', lzTempRecordPath(path), '{"tests":[]}'];
   const renamed = ['rename', lzTempRecordPath(path), path];
 

@@ -345,7 +345,7 @@ describe('LzStrykerNodeTestRunner', () => {
       'a.test.mjs': fixture(
         "import { writeFileSync } from 'node:fs';",
         "import { join } from 'node:path';",
-        'it(\'passes\', () => { writeFileSync(join(process.env.LZ_STRYKER_NODE_TEST_OUT, `${process.pid}.1.json`), "{"); });',
+        'it(\'passes\', () => { writeFileSync(join(process.env.LZ_STRYKER_NODE_TEST_OUT, `${process.pid}.1.f00d.json`), "{"); });',
       ),
     });
     const runner = await initRunner(['a.test.mjs']);
@@ -355,7 +355,7 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.strictEqual(result.status, DryRunStatus.Error);
     const prefix = `Unreadable test results for "${join(dir, 'a.test.mjs')}": `;
     assert.ok(result.errorMessage.startsWith(prefix), result.errorMessage);
-    assert.match(result.errorMessage.slice(prefix.length), /^\d+\.1\.json: /);
+    assert.match(result.errorMessage.slice(prefix.length), /^\d+\.1\.f00d\.json: /);
   });
 
   lzTestFor<readonly [string, string]>([
@@ -364,14 +364,16 @@ describe('LzStrykerNodeTestRunner', () => {
   ])('reports a test file whose own record %s as an error', async ([, content], t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
-        "import { writeFileSync } from 'node:fs';",
+        "import { readdirSync, writeFileSync } from 'node:fs';",
         "import { join } from 'node:path';",
         "it('passes', () => {});",
         // The hook's beforeExit listener runs first and moves its exit listener last, so this exit listener comes after
-        // it and replaces the record the hook has written.
-        "process.on('beforeExit', () => process.on('exit', () => writeFileSync(" +
-          'join(process.env.LZ_STRYKER_NODE_TEST_OUT, `${process.pid}.0.json`), ' +
-          `${JSON.stringify(content)})));`,
+        // it and replaces the record the hook has written, whose name starts with the pid and thread.
+        "process.on('beforeExit', () => process.on('exit', () => {",
+        '  const out = process.env.LZ_STRYKER_NODE_TEST_OUT;',
+        '  const name = readdirSync(out).find((name) => name.startsWith(`${process.pid}.0.`));',
+        `  writeFileSync(join(out, name), ${JSON.stringify(content)});`,
+        '}));',
       ),
     });
     const runner = await initRunner(['a.test.mjs']);

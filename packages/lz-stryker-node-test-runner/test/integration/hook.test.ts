@@ -285,7 +285,7 @@ describe('hook', () => {
       workers.map(([name, worker]) => {
         const parsed = lzParseRecordName(name);
 
-        return [parsed?.pid === pid && parsed.thread !== 0 && parsed.nonce !== undefined, worker.main, worker.hitCount];
+        return [parsed?.pid === pid && parsed.thread !== 0, worker.main, worker.hitCount];
       }),
       [[true, undefined, 999]],
     );
@@ -406,14 +406,14 @@ describe('hook', () => {
   );
 
   it('records the tests and coverage of the test file it runs in, in a file named after the process', async (t) => {
-    const { code, pid, testFile, records, record } = await runTestFile(
+    const { code, testFile, records, record } = await runTestFile(
       t,
       fixture("it('covers', () => { cover('fixture-1'); });"),
       { env: { [envNames.dryRun]: 'true' } },
     );
 
     assert.equal(code, 0);
-    assert.deepEqual(Object.keys(records), [`${pid}.0.json`]);
+    assert.deepEqual(Object.values(records), [record]);
     assert.ok(record);
     const id = `${testFile} > covers`;
     assert.deepEqual(
