@@ -22,7 +22,7 @@ import {
   type ModuleHooks,
   type TestEvent,
 } from '../../src/hook-core.ts';
-import { envNames, lzParseRecord, testId, uniqueIds, type ProcessRecord, type RecordedTest } from '../../src/record.ts';
+import { envNames, lzParseRecord, type ProcessRecord, type RecordedTest } from '../../src/record.ts';
 import type { NodeTestModule } from '../../src/wrap.ts';
 import {
   bodyOf,
@@ -65,49 +65,6 @@ function record(
 
   return tests;
 }
-
-describe('testId', () => {
-  lzTestFor<readonly [string, string]>([
-    ['a > b', `${testFile} > a \\> b`],
-    ['x > > y', `${testFile} > x \\> \\> y`],
-    ['> a', `${testFile} > \\> a`],
-    ['a >', `${testFile} > a \\>`],
-    ['>', `${testFile} > \\>`],
-    ['a \\ > b', `${testFile} > a \\\\ \\> b`],
-  ])('escapes `>` and `\\` in a name whose `>` could form the separator: %j', ([name, id]) => {
-    assert.equal(testId(testFile, name), id);
-  });
-
-  lzTestEach(['a name', 'a \\ b', 'a \\> b', '<anonymous>', 'a -> b', 'a >b', 'a> b', ' >b', 'b> '])(
-    'leaves a name whose `>` cannot form the separator as it is: %j',
-    (name) => {
-      assert.equal(testId(testFile, name), `${testFile} > ${name}`);
-    },
-  );
-});
-
-describe('uniqueIds', () => {
-  it('numbers the suites and tests that would share an id from 2, in the order they are named', () => {
-    const idOf = uniqueIds();
-
-    assert.deepEqual(
-      [
-        idOf(testFile, 'works'),
-        idOf(testFile, 'works'),
-        idOf(testFile, 'works (2)'),
-        idOf(testFile, 'works'),
-        idOf(testId(testFile, 's'), 'works'),
-      ],
-      [
-        `${testFile} > works`,
-        `${testFile} > works (2)`,
-        `${testFile} > works (2) (2)`,
-        `${testFile} > works (3)`,
-        `${testFile} > s > works`,
-      ],
-    );
-  });
-});
 
 describe('recordEvents', () => {
   const testDetails: TestDetails = { type: 'test', duration_ms: 1.5 };

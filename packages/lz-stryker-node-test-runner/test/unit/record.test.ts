@@ -1,0 +1,123 @@
+import assert from 'node:assert/strict';
+import { join } from 'node:path';
+import { describe, it } from 'node:test';
+
+import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/lz-node-test';
+import { lzParseRecord, testId, uniqueIds } from '../../src/record.ts';
+
+const file = join('/repo', 'a.test.mjs');
+
+describe('testId', () => {
+  lzTestFor<readonly [string, string]>([
+    ['a > b', `${file} > a \\> b`],
+    ['x > > y', `${file} > x \\> \\> y`],
+    ['> a', `${file} > \\> a`],
+    ['a >', `${file} > a \\>`],
+    ['>', `${file} > \\>`],
+    ['a \\ > b', `${file} > a \\\\ \\> b`],
+  ])('escapes `>` and `\\` in a name whose `>` could form the separator: %j', ([name, id]) => {
+    assert.equal(testId(file, name), id);
+  });
+
+  lzTestEach(['a name', 'a \\ b', 'a \\> b', '<anonymous>', 'a -> b', 'a >b', 'a> b', ' >b', 'b> '])(
+    'leaves a name whose `>` cannot form the separator as it is: %j',
+    (name) => {
+      assert.equal(testId(file, name), `${file} > ${name}`);
+    },
+  );
+});
+
+describe('uniqueIds', () => {
+  it('numbers the suites and tests that would share an id from 2, in the order they are named', () => {
+    const idOf = uniqueIds();
+
+    assert.deepEqual(
+      [
+        idOf(file, 'works'),
+        idOf(file, 'works'),
+        idOf(file, 'works (2)'),
+        idOf(file, 'works'),
+        idOf(testId(file, 's'), 'works'),
+      ],
+      [
+        `${file} > works`,
+        `${file} > works (2)`,
+        `${file} > works (2) (2)`,
+        `${file} > works (3)`,
+        `${file} > s > works`,
+      ],
+    );
+  });
+});
+
+describe('lzParseRecord', () => {
+  it('returns the record a process wrote', () => {
+    const record = { main: true, tests: [{ id: `${file} > t`, status: 'passed', timeSpentMs: 1 }], hitCount: 3 };
+
+    assert.deepEqual(lzParseRecord(JSON.stringify(record)), record);
+  });
+
+  it('returns a record with every field', () => {
+    const record = {
+      main: true,
+      tests: [
+        { id: `${file} > t`, status: 'passed', timeSpentMs: 1, startPosition: { line: 2, column: 3 } },
+        { id: `${file} > u`, status: 'failed', failureMessage: 'boom', timeSpentMs: 0 },
+        { id: `${file} > v`, status: 'skipped', timeSpentMs: 0 },
+      ],
+      hitCount: 3,
+      mutantCoverage: { static: { '1': 2 }, perTest: { [`${file} > t`]: { '3': 1 } } },
+      peakMemoryMB: 40,
+      memoryLimitReached: { rssMB: 300, limitMB: 200 },
+      diagnostics: ['late error'],
+      unfinished: true,
+      heldOpen: ['TCPServerWrap'],
+    };
+
+    assert.deepEqual(lzParseRecord(JSON.stringify(record)), record);
+  });
+
+  lzTestFor(['null', '[]', '1'])('refuses %s, which is no record', (json) => {
+    assert.throws(() => lzParseRecord(json), { message: 'not a record of test results' });
+  });
+
+  const test = { id: `${file} > t`, status: 'passed', timeSpentMs: 1 };
+  const withFields = (fields: object) => JSON.stringify({ tests: [test], ...fields });
+  const withTestFields = (fields: object) => JSON.stringify({ tests: [{ ...test, ...fields }] });
+
+  lzTestEach([
+    ['{}', 'tests'],
+    ['{"tests":{}}', 'tests'],
+    ['{"tests":[1]}', 'tests[0]'],
+    [withTestFields({ id: 1 }), 'tests[0].id'],
+    [JSON.stringify({ tests: [test, { ...test, id: null }] }), 'tests[1].id'],
+    [withTestFields({ status: 'done' }), 'tests[0].status'],
+    [withTestFields({ failureMessage: 1 }), 'tests[0].failureMessage'],
+    [withTestFields({ timeSpentMs: '1' }), 'tests[0].timeSpentMs'],
+    [withTestFields({ startPosition: { line: 1 } }), 'tests[0].startPosition'],
+    [withTestFields({ startPosition: { line: '1', column: 2 } }), 'tests[0].startPosition'],
+    [withTestFields({ startPosition: null }), 'tests[0].startPosition'],
+    [withFields({ main: false }), 'main'],
+    [withFields({ hitCount: '3' }), 'hitCount'],
+    [withFields({ mutantCoverage: { static: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { perTest: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: { '1': '2' }, perTest: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: { '1': 2, '3': '4' }, perTest: {} } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: {}, perTest: { t: 1 } } }), 'mutantCoverage'],
+    [withFields({ mutantCoverage: { static: {}, perTest: { t: { '1': '2' } } } }), 'mutantCoverage'],
+    [withFields({ peakMemoryMB: '40' }), 'peakMemoryMB'],
+    [withFields({ memoryLimitReached: { rssMB: 300 } }), 'memoryLimitReached'],
+    [withFields({ memoryLimitReached: { limitMB: 200 } }), 'memoryLimitReached'],
+    [withFields({ diagnostics: 'late error' }), 'diagnostics'],
+    [withFields({ diagnostics: [1] }), 'diagnostics'],
+    [withFields({ unfinished: false }), 'unfinished'],
+    [withFields({ heldOpen: [null] }), 'heldOpen'],
+  ])('refuses %s, naming %s', (json, field) => {
+    assert.throws(() => lzParseRecord(json), { message: `not a record of test results: ${field}` });
+  });
+
+  it('refuses what does not parse', () => {
+    assert.throws(() => lzParseRecord('{'), SyntaxError);
+  });
+});
