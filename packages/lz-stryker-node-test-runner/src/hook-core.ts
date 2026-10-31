@@ -303,8 +303,8 @@ export function ending(
   let armed = false;
   let ended: ReturnType<Ending['outcome']> = { complete: false };
   const before = deps.activeResources();
-  // What the tests opened, not what the process had before they ran, such as the pipes the runner reads stdout and
-  // stderr from, which loading node:test opens.
+  // What the tests opened, not what the process had before they ran, such as the stdio pipes that loading node:test
+  // opens.
   const opened = () => {
     const resources = [...deps.activeResources()];
 
