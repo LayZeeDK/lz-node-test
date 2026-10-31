@@ -58,6 +58,7 @@ function expectsMatchedFailure(path: NodePath, call: types.CallExpression): bool
   return (
     options?.type === 'ObjectExpression' &&
     isMatcher(propertyValue(options, 'expectFailure')) &&
+    options.properties.every((property) => property.type !== 'SpreadElement') &&
     !uncountedOptions.some((key) => isSet(propertyValue(options, key))) &&
     isNodeTest(path, call.callee)
   );
@@ -121,9 +122,7 @@ function isNodeTest(path: NodePath, callee: types.Node): boolean {
   const test = callee.type === 'MemberExpression' && propertyName(callee) === 'only' ? callee.object : callee;
 
   if (test.type === 'Identifier') {
-    const from = importOf(path, test.name);
-
-    return from?.source === 'node:test' && (from.imported === undefined || testFunctions.has(from.imported));
+    return isTestImport(importOf(path, test.name));
   }
 
   if (test.type !== 'MemberExpression' || test.object.type !== 'Identifier' || !testFunctions.has(propertyName(test))) {
@@ -132,7 +131,10 @@ function isNodeTest(path: NodePath, callee: types.Node): boolean {
 
   const from = importOf(path, test.object.name);
 
-  return from === undefined
-    ? propertyName(test) === 'test' && isTestContext(path, test.object)
-    : from.source === 'node:test' && from.imported === undefined;
+  return from === undefined ? propertyName(test) === 'test' && isTestContext(path, test.object) : isTestImport(from);
+}
+
+/** node:test's default or namespace import, or its `it` or `test`, which also carry the other test functions. */
+function isTestImport(from: ReturnType<typeof importOf>): boolean {
+  return from?.source === 'node:test' && (from.imported === undefined || testFunctions.has(from.imported));
 }

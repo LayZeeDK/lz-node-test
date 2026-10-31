@@ -44,6 +44,7 @@ describe('LzAssertValidator', () => {
     ['an error class', expecting('TypeError')],
     ['an object', expecting("{ code: 'ERR_BAD_ID' }")],
     ['a function', expecting("(error) => error.code === 'ERR_BAD_ID'")],
+    ['a function expression', expecting("function (error) { return error.code === 'ERR_BAD_ID'; }")],
     ['a variable', expecting('badId')],
     ['the match of a label', expecting("{ label: 'bad ids fail', match: /bad id/ }")],
     ['a match with no label', expecting('{ match: /bad id/ }')],
@@ -71,6 +72,7 @@ describe('LzAssertValidator', () => {
     ['a namespace import', "import * as nt from 'node:test';\nnt.test('fails', { expectFailure: /x/ }, f);"],
     ['the it of a namespace import', "import * as nt from 'node:test';\nnt.it('fails', { expectFailure: /x/ }, f);"],
     ['the it of the default import', "import test from 'node:test';\ntest.it('fails', { expectFailure: /x/ }, f);"],
+    ['the it of the imported test', "import { test } from 'node:test';\ntest.it('fails', { expectFailure: /x/ }, f);"],
     [
       'the it.only of a namespace import',
       "import * as nt from 'node:test';\nnt.it.only('fails', { expectFailure: /x/ }, f);",
@@ -98,6 +100,18 @@ describe('LzAssertValidator', () => {
     ['it.todo, whose failure fails nothing', `${nodeTest}it.todo('fails', { expectFailure: /x/ }, f);`],
     ['a skip option', `${nodeTest}it('fails', { expectFailure: /x/, skip: 'flaky' }, f);`],
     ['a todo option', `${nodeTest}it('fails', { expectFailure: /x/, todo: true }, f);`],
+    [
+      'options that spread another object, which may set skip',
+      `${nodeTest}it('fails', { ...flaky, expectFailure: /x/ }, f);`,
+    ],
+    [
+      'another import of node:test',
+      "import { describe } from 'node:test';\ndescribe('fails', { expectFailure: /x/ }, f);",
+    ],
+    [
+      'the test of another import of node:test',
+      "import { mock } from 'node:test';\nmock.test('fails', { expectFailure: /x/ }, f);",
+    ],
     ['no options', `${nodeTest}it('parses', () => parse('x'));`],
     ['options passed whole', `${nodeTest}it('fails', options, f);`],
     ['an it of another library', "import { it } from 'vitest';\nit('fails', { expectFailure: /x/ }, f);"],
