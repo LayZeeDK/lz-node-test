@@ -61,6 +61,7 @@ const projects: readonly LzOssProject[] = [
     testFiles: ['test/**/*.test.js', 'test/**/*.test.mjs'],
     command: 'node --test "test/**/*.test.js" "test/**/*.test.mjs"',
   },
+  { name: 'restartable', mutate: ['index.js', 'lib/server.js'], testFiles: ['test/*.test.js'], command: 'node --test' },
 ];
 
 const usage =

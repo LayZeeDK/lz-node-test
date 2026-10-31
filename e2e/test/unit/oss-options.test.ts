@@ -60,7 +60,18 @@ describe('lzParseOptions', () => {
 
   it('refuses a project it has no settings for, and names those it has', () => {
     assert.throws(() => lzParseOptions(required.with(1, 'pino')), {
-      message: /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify\.$/,
+      message: /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify, restartable\.$/,
+    });
+  });
+
+  it("mutates restartable's two source files and runs its two test files", () => {
+    const { project } = lzParseOptions(required.with(1, 'restartable'));
+
+    assert.deepEqual(project, {
+      name: 'restartable',
+      mutate: ['index.js', 'lib/server.js'],
+      testFiles: ['test/*.test.js'],
+      command: 'node --test',
     });
   });
 
