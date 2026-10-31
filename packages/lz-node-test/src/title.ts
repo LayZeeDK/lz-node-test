@@ -114,7 +114,10 @@ function negative(value: unknown): boolean {
 
 function json(value: unknown): string {
   try {
-    return String(JSON.stringify(value));
+    // Its declared return type leaves out the undefined it gives for undefined, a function or a symbol.
+    const text: string | undefined = JSON.stringify(value);
+
+    return text ?? 'undefined';
   } catch (error) {
     if (error instanceof Error && error.message.includes('circular structure')) {
       return '[Circular]';

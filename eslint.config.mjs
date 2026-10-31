@@ -174,6 +174,7 @@ export default [
         },
       ],
       '@typescript-eslint/unified-signatures': 'error',
+      '@typescript-eslint/no-unnecessary-type-conversion': 'error',
       // The core rule rewrites a bracket access to an index signature, which noPropertyAccessFromIndexSignature
       // refuses; this one allows it under that flag.
       'dot-notation': 'off',
