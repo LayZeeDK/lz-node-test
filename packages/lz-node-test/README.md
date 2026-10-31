@@ -81,6 +81,7 @@ The package exports a type for each value its functions take or return:
 | `LzTestForFunction`           | `lzTestFor`, without its modifiers                                     |
 | `LzTestForFunctionReturn<T>`  | what `lzTestFor(cases)` returns, for the case type `T`                 |
 | `LzTableReturn<TCallback>`    | the function both tables return, for its callback type `TCallback`     |
+| `LzModified<TFunction>`       | the table function `TFunction` with its modifiers, as both values are  |
 
 ### Modifiers
 

@@ -5,13 +5,13 @@ import type { Flags, Register } from './register.ts';
  * flag on, so they compose in any order. `skipIf` and `runIf` set `skip` to true or false, as in Vitest, so they
  * override a `skip` before them and are overridden by one after them.
  */
-export type Modified<TFunction> = TFunction & {
-  readonly skip: Modified<TFunction>;
-  readonly only: Modified<TFunction>;
-  readonly todo: Modified<TFunction>;
-  readonly fails: Modified<TFunction>;
-  skipIf(condition: unknown): Modified<TFunction>;
-  runIf(condition: unknown): Modified<TFunction>;
+export type LzModified<TFunction> = TFunction & {
+  readonly skip: LzModified<TFunction>;
+  readonly only: LzModified<TFunction>;
+  readonly todo: LzModified<TFunction>;
+  readonly fails: LzModified<TFunction>;
+  skipIf(condition: unknown): LzModified<TFunction>;
+  runIf(condition: unknown): LzModified<TFunction>;
 };
 
 type Table<TCallback> = (cases: readonly unknown[], ...values: unknown[]) => Register<TCallback>;
@@ -20,7 +20,7 @@ type Table<TCallback> = (cases: readonly unknown[], ...values: unknown[]) => Reg
 export function modified<TCallback>(
   cases: (flags: Flags, rows: readonly unknown[]) => Register<TCallback>,
   flags: Flags,
-): Modified<Table<TCallback>> {
+): LzModified<Table<TCallback>> {
   const table: Table<TCallback> = (rows, ...values) =>
     cases(flags, values.length > 0 ? templateRows(rows, values) : rows);
   const flag = (key: keyof Flags) => () => modified(cases, { ...flags, [key]: true });

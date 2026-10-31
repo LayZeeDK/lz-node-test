@@ -6,8 +6,6 @@ import { it, type TestContext, type TestOptions } from 'node:test';
 
 import { formatName, formatTitle } from './title.ts';
 
-export type Awaitable<T> = T | Promise<T>;
-
 /** A test's name: a string, or a function, which names it by its own name and is never called. */
 // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- a class names a test too, so a callable type is too narrow
 export type LzName = string | Function;
@@ -19,8 +17,8 @@ export interface LzEachOptions extends TestOptions {
 
 export type Flags = Pick<LzEachOptions, 'skip' | 'only' | 'todo' | 'fails'>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unknown[] would reject a callback with typed parameters
-export type EachCallback = (...args: any[]) => Awaitable<void>;
-type Body = (t: TestContext) => Awaitable<void>;
+export type EachCallback = (...args: any[]) => void | Promise<void>;
+type Body = (t: TestContext) => void | Promise<void>;
 
 /** The typed function a table returns, with the callback type its table function gives `fn`. */
 export interface LzTableReturn<TCallback> {
@@ -38,7 +36,7 @@ export type Register<TCallback> = (
 /** One test of the table: the values its name formats, and how it calls the table's function. */
 export interface Case<TCallback> {
   readonly items: readonly unknown[];
-  readonly run: (fn: TCallback, t: TestContext) => Awaitable<void>;
+  readonly run: (fn: TCallback, t: TestContext) => void | Promise<void>;
 }
 
 const signatures =
