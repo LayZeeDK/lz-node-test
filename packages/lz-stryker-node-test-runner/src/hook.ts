@@ -60,4 +60,5 @@ install({
     return worker;
   },
   callSites: getCallSites,
+  now: Date.now,
 });

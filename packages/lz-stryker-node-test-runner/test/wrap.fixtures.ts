@@ -1,6 +1,6 @@
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
-import type { RecordedTest } from '../src/record.ts';
+import type { LzTimeWindow, RecordedTest } from '../src/record.ts';
 import { wrapNodeTest, type CallSite } from '../src/wrap.ts';
 import { bodyOf, fakeNodeTest, testContext, testFile, type Fn, type Registration } from './hook-core.fixtures.ts';
 
@@ -32,6 +32,8 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
   /** Each call of `registering`: whether top-level, and how many registrations node:test had then. */
   const registering: [boolean, number][] = [];
   const rootAfters: unknown[] = [];
+  const testWindows = new Map<string, LzTimeWindow>();
+  let time = 0;
   const module = wrapNodeTest({
     ns,
     testFile: testFile,
@@ -51,6 +53,8 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
 
       return hook;
     },
+    testWindows,
+    now: () => ++time,
   });
 
   const see = () => seen.push(ns.currentTestId);
@@ -68,5 +72,6 @@ export function wrapped({ filter, bail = false, activeMutant, expectFailure }: W
     see,
     registering,
     rootAfters,
+    testWindows,
   };
 }

@@ -122,6 +122,37 @@ export function lzMergeCoverage(coverages: (MutantCoverage | undefined)[], perTe
 }
 
 /**
+ * A process or thread that a test starts reads its current test once, when it starts, so its hits belong to that test
+ * only while the test is current. Its per-test hits count as static unless it lived inside that test's window, which
+ * makes Stryker run every test against those mutants: slower, but never a false Survived.
+ */
+export function lzWindowedCoverage(
+  record: ProcessRecord,
+  testWindows: ProcessRecord['testWindows'],
+): MutantCoverage | undefined {
+  const { mutantCoverage: coverage, lifetime } = record;
+
+  if (!coverage || record.main) {
+    return coverage;
+  }
+
+  const inside = (test: string) => {
+    const window = testWindows?.[test];
+
+    return (
+      lifetime !== undefined && window !== undefined && window.start <= lifetime.start && lifetime.end <= window.end
+    );
+  };
+  const entries = Object.entries(coverage.perTest);
+  const outside = entries.filter(([test]) => !inside(test));
+
+  return {
+    static: lzMergeCoverage([{ static: coverage.static, perTest: Object.fromEntries(outside) }], false).static,
+    perTest: Object.fromEntries(entries.filter(([test]) => inside(test))),
+  };
+}
+
+/**
  * A test's name leaves out the test file, which its id starts with, as Stryker's runners name tests after their suites
  * only.
  *
@@ -334,7 +365,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
     );
   }
 
-  return { results, coverages: records.map((record) => record.mutantCoverage), failed };
+  return { results, coverages: records.map((record) => lzWindowedCoverage(record, main.testWindows)), failed };
 }
 
 function errorEnd(errorMessage: string): FileOutcome {

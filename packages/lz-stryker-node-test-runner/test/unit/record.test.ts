@@ -73,6 +73,8 @@ describe('lzParseRecord', () => {
       diagnostics: ['late error'],
       unfinished: true,
       heldOpen: ['TCPServerWrap'],
+      lifetime: { start: 10, end: 20 },
+      testWindows: { [`${file} > t`]: { start: 11, end: 19 } },
     };
 
     assert.deepEqual(lzParseRecord(JSON.stringify(record)), record);
@@ -113,6 +115,10 @@ describe('lzParseRecord', () => {
     [withFields({ diagnostics: [1] }), 'diagnostics'],
     [withFields({ unfinished: false }), 'unfinished'],
     [withFields({ heldOpen: [null] }), 'heldOpen'],
+    [withFields({ lifetime: { start: 1 } }), 'lifetime'],
+    [withFields({ lifetime: { start: '1', end: 2 } }), 'lifetime'],
+    [withFields({ testWindows: [] }), 'testWindows'],
+    [withFields({ testWindows: { t: { end: 2 } } }), 'testWindows'],
   ])('refuses %s, naming %s', (json, field) => {
     assert.throws(() => lzParseRecord(json), { message: `not a record of test results: ${field}` });
   });

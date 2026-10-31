@@ -116,6 +116,20 @@ function readRecords(outDir: string): Record<string, ProcessRecord> {
   );
 }
 
+/** The record without its lifetime, once that runs from when the hook ran up to now. */
+function untimed(record: ProcessRecord | undefined): Omit<ProcessRecord, 'lifetime'> | undefined {
+  if (record === undefined) {
+    return undefined;
+  }
+
+  const { lifetime, ...rest } = record;
+  assert.ok(lifetime, 'The record has no lifetime.');
+  assert.ok(lifetime.start <= lifetime.end, JSON.stringify(lifetime));
+  assert.ok(lifetime.end <= Date.now(), JSON.stringify(lifetime));
+
+  return rest;
+}
+
 async function runTestFile(
   t: TestContext,
   source: string,
@@ -399,7 +413,7 @@ describe('hook', () => {
     const { code, record } = await runTestFile(t, `import 'node:test';\n${exits}`);
 
     assert.equal(code, 0);
-    assert.deepEqual(record, { main: true, tests: [], ...unfinished });
+    assert.deepEqual(untimed(record), { main: true, tests: [], testWindows: {}, ...unfinished });
   });
 
   it('records where a CommonJS test file declares its tests', async (t) => {
@@ -515,9 +529,11 @@ describe('hook', () => {
       [envNames.out]: outDir,
       [envNames.file]: join(outDir, 'some.test.mjs'),
     });
+    const records = readRecords(outDir);
 
     assert.equal(code, 0);
-    assert.deepEqual(readRecords(outDir), { [`${pid}.0.json`]: { tests: [] } });
+    assert.deepEqual(Object.keys(records), [`${pid}.0.json`]);
+    assert.deepEqual(untimed(records[`${pid}.0.json`]), { tests: [] });
   });
 
   lzTestFor<readonly [string, Record<string, string>]>([
@@ -637,9 +653,11 @@ describe('hook', () => {
     const args = ['--permission', '--allow-fs-read=*', '--allow-fs-write=*', '-e', 'setTimeout(() => {}, 500);'];
 
     const { code, pid } = await runWithHook(args, { [envNames.out]: outDir, [envNames.memoryLimit]: '1500' });
+    const records = readRecords(outDir);
 
     assert.equal(code, 0);
-    assert.deepEqual(readRecords(outDir), { [`${pid}.0.json`]: { tests: [] } });
+    assert.deepEqual(Object.keys(records), [`${pid}.0.json`]);
+    assert.deepEqual(untimed(records[`${pid}.0.json`]), { tests: [] });
   });
 
   it('runs a process under the permission model without write access as it would without the hook, with no record', async (t) => {

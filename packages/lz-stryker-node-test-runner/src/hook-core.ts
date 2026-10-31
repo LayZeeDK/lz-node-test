@@ -11,6 +11,7 @@ import {
   memoryRecordName,
   recordName,
   uniqueIds,
+  type LzTimeWindow,
   type ProcessRecord,
   type RecordedTest,
 } from './record.ts';
@@ -92,6 +93,8 @@ export interface HookDependencies {
     options: { readonly sourceMap: boolean },
   ) => readonly { readonly scriptName: string; readonly lineNumber: number; readonly columnNumber: number }[];
   readonly global: { -readonly [TKey in keyof GlobalSlots]: GlobalSlots[TKey] };
+  /** The clock of every `LzTimeWindow`. */
+  readonly now: () => number;
 }
 
 /**
@@ -133,6 +136,7 @@ export function install(deps: HookDependencies): boolean {
   }
 
   deps.global[installed] = true;
+  const started = deps.now();
   const ns = (deps.global.__stryker__ ??= {});
   const hitLimit = Number(deps.env[envNames.hitLimit]);
 
@@ -168,6 +172,7 @@ export function install(deps: HookDependencies): boolean {
   const dryRun = deps.env[envNames.dryRun] === 'true';
   delete deps.env[envNames.bail];
   const tests: RecordedTest[] = [];
+  const testWindows = new Map<string, LzTimeWindow>();
   const diagnostics: string[] = [];
   const testFile = deps.env[envNames.file];
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
@@ -224,6 +229,8 @@ export function install(deps: HookDependencies): boolean {
       nodeTest,
       registering: ends.registering,
       rootAfter: ends.track,
+      testWindows,
+      now: deps.now,
     });
     deps.global[wrappedNodeTest] = wrapped;
     deps.registerHooks(redirectNodeTest(Object.keys(wrapped)));
@@ -244,6 +251,8 @@ export function install(deps: HookDependencies): boolean {
       ...(diagnostics.length > 0 && { diagnostics }),
       ...(main && !summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
+      lifetime: { start: started, end: deps.now() },
+      ...(main && { testWindows: Object.fromEntries(testWindows) }),
     });
   };
 

@@ -3,7 +3,15 @@ import type { HookFn, TestContext as NodeTestContext, TestFn } from 'node:test';
 
 import type { InstrumenterContext, Position } from '@stryker-mutator/api/core';
 
-import { activeMutantEnv, afterHookId, envNames, uniqueIds, within, type RecordedTest } from './record.ts';
+import {
+  activeMutantEnv,
+  afterHookId,
+  envNames,
+  uniqueIds,
+  within,
+  type LzTimeWindow,
+  type RecordedTest,
+} from './record.ts';
 
 /** A function call on the stack: its file path and its 1-based position. */
 export interface CallSite {
@@ -117,6 +125,12 @@ interface WrapOptions {
   readonly registering: (topLevel: boolean) => void;
   /** Wraps a function registered as an `after` hook outside any suite, a root `after` hook of the test file. */
   readonly rootAfter: (hook: Body) => Body;
+  /**
+   * Each test's window, by id. The wrapper widens it just before the test becomes current and just after it stops, so
+   * it holds every moment a process the test starts can read the test as current.
+   */
+  readonly testWindows: Map<string, LzTimeWindow>;
+  readonly now: () => number;
 }
 
 /**
@@ -138,6 +152,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     nodeTest,
     registering,
     rootAfter,
+    testWindows,
+    now,
   } = options;
   const idOf = uniqueIds();
   /**
@@ -160,13 +176,19 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       env[envNames.current] = id;
     }
   };
+  const widenWindow = (id: string) => {
+    const time = now();
+    testWindows.set(id, { start: testWindows.get(id)?.start ?? time, end: time });
+  };
   const makeCurrent = (id: string) => {
+    widenWindow(id);
     active.add(id);
     setCurrent();
 
     return () => {
       active.delete(id);
       setCurrent();
+      widenWindow(id);
     };
   };
   /**

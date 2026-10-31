@@ -21,6 +21,7 @@ import {
   type LzRunOptions,
   lzTestRunnerConcurrency,
   lzToTestResults,
+  lzWindowedCoverage,
 } from '../../src/runner.ts';
 
 const file = join('/repo', 'a.test.mjs');
@@ -55,6 +56,51 @@ describe('lzMergeCoverage', () => {
       ),
       { static: { 1: 2, 2: 4, 4: 1 }, perTest: {} },
     );
+  });
+});
+
+describe('lzWindowedCoverage', () => {
+  const window = { start: 10, end: 20 };
+  const coverage = { static: { 1: 1 }, perTest: { first: { 1: 2, 2: 1 } } };
+
+  lzTestEach([window, { start: 11, end: 19 }])(
+    "keeps a descendant's hits per test when it lived inside that test's window, ends included: %j",
+    (lifetime) => {
+      assert.deepEqual(
+        lzWindowedCoverage({ tests: [], mutantCoverage: coverage, lifetime }, { first: window }),
+        coverage,
+      );
+    },
+  );
+
+  lzTestFor<readonly [string, object]>([
+    ['ended after the window', { lifetime: { start: 11, end: 21 } }],
+    ['started before the window', { lifetime: { start: 9, end: 19 } }],
+    ['has no lifetime', {}],
+  ])("counts a descendant's hits as static when it %s", ([, fields]) => {
+    assert.deepEqual(lzWindowedCoverage({ tests: [], mutantCoverage: coverage, ...fields }, { first: window }), {
+      static: { 1: 3, 2: 1 },
+      perTest: {},
+    });
+  });
+
+  it("counts a descendant's hits as static for a test without a window, and keeps those of a test with one", () => {
+    assert.deepEqual(
+      lzWindowedCoverage(
+        { tests: [], mutantCoverage: { static: {}, perTest: { first: { 1: 1 }, second: { 2: 1 } } }, lifetime: window },
+        { first: window },
+      ),
+      { static: { 2: 1 }, perTest: { first: { 1: 1 } } },
+    );
+    assert.deepEqual(lzWindowedCoverage({ tests: [], mutantCoverage: coverage, lifetime: window }, undefined), {
+      static: { 1: 3, 2: 1 },
+      perTest: {},
+    });
+  });
+
+  it("leaves the test file's own coverage per test, and a record without coverage without it", () => {
+    assert.deepEqual(lzWindowedCoverage({ main: true, tests: [], mutantCoverage: coverage }, {}), coverage);
+    assert.equal(lzWindowedCoverage({ tests: [], lifetime: window }, { first: window }), undefined);
   });
 });
 

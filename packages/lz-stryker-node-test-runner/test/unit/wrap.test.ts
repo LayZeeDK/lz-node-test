@@ -605,6 +605,21 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(seen, [`${testFile} > observes`, `${testFile} > observes`]);
   });
 
+  it("notes each test's window, from when it first becomes current to when it last stops being current", async () => {
+    const { module, registrations, testWindows } = wrapped();
+    module.it('first', (t: { after: (hook: () => void) => void }) => {
+      t.after(() => {});
+    });
+    module.it('second', () => {});
+
+    await runBodies(registrations, ['first', 'second']);
+
+    assert.deepEqual(Object.fromEntries(testWindows), {
+      [`${testFile} > first`]: { start: 1, end: 4 },
+      [`${testFile} > second`]: { start: 5, end: 6 },
+    });
+  });
+
   it('activates the runtime mutant when a test starts and keeps it active, also for processes it starts', async () => {
     const { module, registrations, ns, env } = wrapped({ activeMutant: '7' });
     const seen: unknown[] = [];

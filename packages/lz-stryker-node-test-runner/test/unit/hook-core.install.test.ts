@@ -109,6 +109,7 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
       return 'the watchdog';
     },
     callSites: () => [],
+    now: () => 0,
     ...overrides,
   };
 
@@ -143,6 +144,10 @@ function harness(env: Record<string, string | undefined>, overrides: Partial<Hoo
     },
   };
 }
+
+/** The harness's clock stays at 0. */
+const lifetime = { start: 0, end: 0 };
+const windows = (...ran: string[]) => Object.fromEntries(ran.map((name) => [`${testFile} > ${name}`, lifetime]));
 
 /** The environment of the process that runs the test file. */
 const fileEnv = { [envNames.out]: out, [envNames.file]: testFile };
@@ -352,6 +357,8 @@ describe('install', () => {
             { id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 },
             { id: `${testFile} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
           ],
+          lifetime,
+          testWindows: windows(),
         },
       },
     ]);
@@ -407,7 +414,13 @@ describe('install', () => {
 
     exit();
 
-    assert.deepEqual(records[0]?.record, { main: true, tests: [], diagnostics: [message] });
+    assert.deepEqual(records[0]?.record, {
+      main: true,
+      tests: [],
+      diagnostics: [message],
+      lifetime,
+      testWindows: windows(),
+    });
   });
 
   const summary: TestEvent = { type: 'test:summary', data: { name: '', nesting: 0 } };
@@ -429,6 +442,8 @@ describe('install', () => {
       main: true,
       tests: [{ id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 }],
       ...unfinished,
+      lifetime,
+      testWindows: windows(),
     });
   });
 
@@ -570,6 +585,8 @@ describe('install', () => {
           { id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 },
           { id: `${testFile} > fails`, status: 'failed', failureMessage: 'fails failed', timeSpentMs: 2 },
         ],
+        lifetime,
+        testWindows: windows('passes', 'fails'),
       });
     });
 
@@ -658,6 +675,8 @@ describe('install', () => {
           main: true,
           tests: reported ? [{ id: `${testFile} > passes`, status: 'passed', timeSpentMs: 2 }] : [],
           ...marks,
+          lifetime,
+          testWindows: windows('passes'),
         });
       },
     );
@@ -827,6 +846,25 @@ describe('install', () => {
     });
   });
 
+  it("writes when the hook ran and when it wrote, and in the test file's record each test's window", async () => {
+    let time = 10;
+    const now = () => ++time;
+    const descendant = installedHarness({ [envNames.out]: out }, { now });
+    const main = installedHarness(fileEnv, { now });
+
+    await ranAndReported(main, 'runs', 'pass');
+    main.exit();
+    descendant.exit();
+
+    assert.deepEqual(
+      [main, descendant].map(({ records }) => [records[0]?.record.lifetime, records[0]?.record.testWindows]),
+      [
+        [{ start: 12, end: 15 }, { [`${testFile} > runs`]: { start: 13, end: 14 } }],
+        [{ start: 11, end: 16 }, undefined],
+      ],
+    );
+  });
+
   it('writes the hit count and, only in the dry run, the mutant coverage and the peak memory', () => {
     const coverage = { static: { 1: 2 }, perTest: { [`${testFile} > t`]: { 3: 1 } } };
     const written = ['true', 'false', undefined].map((dryRun) => {
@@ -849,9 +887,9 @@ describe('install', () => {
     });
 
     assert.deepEqual(written, [
-      { tests: [], hitCount: 7, mutantCoverage: coverage, peakMemoryMB: 123 },
-      { tests: [], hitCount: 7 },
-      { tests: [], hitCount: 7 },
+      { tests: [], hitCount: 7, mutantCoverage: coverage, peakMemoryMB: 123, lifetime },
+      { tests: [], hitCount: 7, lifetime },
+      { tests: [], hitCount: 7, lifetime },
     ]);
   });
 });

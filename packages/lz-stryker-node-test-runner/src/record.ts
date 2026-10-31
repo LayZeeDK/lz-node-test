@@ -42,6 +42,15 @@ export interface RecordedTest {
   readonly startPosition?: Position;
 }
 
+/**
+ * A span of time in milliseconds since the epoch, as `Date.now()` gives it: the system clock, which every process on
+ * the machine reads alike.
+ */
+export interface LzTimeWindow {
+  readonly start: number;
+  readonly end: number;
+}
+
 interface MemoryLimitReached {
   readonly rssMB: number;
   readonly limitMB: number;
@@ -64,6 +73,13 @@ export interface ProcessRecord {
   readonly unfinished?: true;
   /** What kept the test file's process alive after its tests and root `after` hooks, when the hook ended it for that. */
   readonly heldOpen?: readonly string[];
+  /** From when the hook ran in the process or thread to when it wrote this record. */
+  readonly lifetime?: LzTimeWindow;
+  /**
+   * The test file's own record: by test id, from when each test first became current to when it last stopped being
+   * current, which is when a process or thread it starts reads it as its current test.
+   */
+  readonly testWindows?: Readonly<Record<string, LzTimeWindow>>;
 }
 
 export const envNames = Object.freeze({
@@ -109,6 +125,10 @@ const isPosition = (value: unknown): value is Position =>
   isObject(value) && isNumber(value['line']) && isNumber(value['column']);
 const isMemoryLimit = (value: unknown): value is MemoryLimitReached =>
   isObject(value) && isNumber(value['rssMB']) && isNumber(value['limitMB']);
+const isWindow = (value: unknown): value is LzTimeWindow =>
+  isObject(value) && isNumber(value['start']) && isNumber(value['end']);
+const isWindows = (value: unknown): value is Record<string, LzTimeWindow> =>
+  isObject(value) && Object.values(value).every(isWindow);
 const isCoverage = (value: unknown): value is MutantCoverage =>
   isObject(value) &&
   isCounts(value['static']) &&
@@ -150,8 +170,19 @@ export function lzParseRecord(json: string): ProcessRecord {
     notARecord();
   }
 
-  const { tests, main, hitCount, mutantCoverage, peakMemoryMB, memoryLimitReached, diagnostics, unfinished, heldOpen } =
-    record;
+  const {
+    tests,
+    main,
+    hitCount,
+    mutantCoverage,
+    peakMemoryMB,
+    memoryLimitReached,
+    diagnostics,
+    unfinished,
+    heldOpen,
+    lifetime,
+    testWindows,
+  } = record;
 
   if (!Array.isArray(tests)) {
     notARecord('tests');
@@ -167,5 +198,7 @@ export function lzParseRecord(json: string): ProcessRecord {
     ...optional('diagnostics', diagnostics, isStrings, notARecord),
     ...optional('unfinished', unfinished, isTrue, notARecord),
     ...optional('heldOpen', heldOpen, isStrings, notARecord),
+    ...optional('lifetime', lifetime, isWindow, notARecord),
+    ...optional('testWindows', testWindows, isWindows, notARecord),
   };
 }

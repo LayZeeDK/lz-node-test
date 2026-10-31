@@ -140,6 +140,59 @@ describe('LzStrykerNodeTestRunner coverage', () => {
     });
   });
 
+  /**
+   * A file whose first test starts a descendant that the second test tells to cover `late` and end, and whose third
+   * test starts one that covers `inside` and ends while the test waits for it.
+   */
+  const outliving = (start: string, ...imports: string[]) =>
+    fixture(
+      "import { once } from 'node:events';",
+      ...imports,
+      `const start = () => ${start};`,
+      'let outlives;',
+      "it('starts', () => { outlives = start(); });",
+      "it('covers later', async () => { cover('b'); outlives.send('late'); await once(outlives, 'exit'); });",
+      "it('waits', async () => { const inside = start(); inside.send('inside'); await once(inside, 'exit'); });",
+    );
+  const outlivingCoverage = (file: string) => ({
+    static: { late: 1 },
+    perTest: { [`${file} > covers later`]: { b: 1 }, [`${file} > waits`]: { inside: 1 } },
+  });
+
+  it('counts the coverage of a worker thread that outlives the test that started it as static', async (t) => {
+    const dir = project(t, {
+      'worker.mjs': [
+        "import { parentPort } from 'node:worker_threads';",
+        cover,
+        "parentPort.once('message', (id) => { cover(id); parentPort.close(); });",
+      ].join('\n'),
+      'a.test.mjs': outliving(
+        "Object.assign(new Worker(new URL('./worker.mjs', import.meta.url)), { send(id) { this.postMessage(id); } })",
+        "import { Worker } from 'node:worker_threads';",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), outlivingCoverage(join(dir, 'a.test.mjs')));
+  });
+
+  it('counts the coverage of a child process that outlives the test that started it as static', async (t) => {
+    const child = `${cover} process.once('message', (id) => { cover(id); process.disconnect(); });`;
+    const dir = project(t, {
+      'a.test.mjs': outliving(
+        `spawn(process.execPath, ['-e', ${JSON.stringify(child)}], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] })`,
+        "import { spawn } from 'node:child_process';",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), outlivingCoverage(join(dir, 'a.test.mjs')));
+  });
+
   it('runs the tests of a suite or test asking for concurrency one at a time, for coverage of their own', async (t) => {
     const interleaved = (name: string) =>
       `async () => { cover('${name} 1'); await new Promise((resolve) => setImmediate(resolve)); cover('${name} 2'); }`;
