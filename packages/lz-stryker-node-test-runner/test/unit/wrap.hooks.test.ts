@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { lzTestEach } from '@layzee/lz-node-test';
 import { envNames } from '../../src/record.ts';
 import { bodyOf, callable, hooksOf, rawBodyOf, testFile, testContext, type Fn } from '../hook-core.fixtures.ts';
 import { wrapped, type Subtests } from '../wrap.fixtures.ts';
@@ -168,6 +169,39 @@ describe('wrapNodeTest', () => {
         `${testFile} > parent > child`,
         `${testFile} > parent`,
       ]);
+    });
+
+    lzTestEach([
+      ['makes t.runOnly do nothing in every hook without --test-only', false, []],
+      ['leaves t.runOnly in every hook to node:test under --test-only', true, [[true], [true], [true], [true], [true]]],
+    ])('%s', async (_title, testOnly, expected) => {
+      const { module, registrations } = wrapped({ testOnly });
+      const calls: unknown[][] = [];
+      const runOnly = (t: { readonly runOnly: (only: boolean) => void }) => {
+        t.runOnly(true);
+      };
+      module.before(runOnly);
+      module.beforeEach(runOnly);
+      module.afterEach(runOnly);
+      module.after(runOnly);
+      module.it('parent', (t: { readonly beforeEach: (hook: typeof runOnly) => void }) => {
+        t.beforeEach(runOnly);
+      });
+
+      await bodyOf(registrations, 'parent')(testContext(registrations, 'parent'));
+      const hooks = ['before', 'beforeEach', 'afterEach', 'after', 't.beforeEach'].flatMap((kind) =>
+        hooksOf(registrations, kind),
+      );
+      const contextWithRunOnly = () =>
+        Object.assign(testContext(), {
+          runOnly: (...args: unknown[]) => {
+            calls.push(args);
+          },
+        });
+      await Promise.all(hooks.map((hook) => hook(contextWithRunOnly())));
+
+      assert.equal(hooks.length, 5);
+      assert.deepEqual(calls, expected);
     });
   });
 });

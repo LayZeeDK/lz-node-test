@@ -61,8 +61,6 @@ interface LzTestContext {
   readonly after: Body;
   readonly beforeEach: Body;
   readonly skip: Body;
-  /** Replaced only, so a context without it passes the guard. */
-  readonly runOnly?: Body;
 }
 
 const lzTestContextKeys: readonly (keyof LzTestContext)[] = ['test', 'after', 'beforeEach', 'skip'];
@@ -212,6 +210,12 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const ignoringOnly = <T>(withOnly: T, without: T): T => (testOnly ? withOnly : without);
   const withoutOnly = (options: object | null | undefined): object =>
     ignoringOnly(options ?? {}, Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only')));
+  /** Makes `t.runOnly` do nothing on a context node:test passes to a test body or hook, as `ignoringOnly` says. */
+  const turnOffRunOnly = (context: unknown) => {
+    if (!testOnly && isObject(context) && typeof context['runOnly'] === 'function') {
+      Object.assign(context, { runOnly: () => undefined });
+    }
+  };
   // The last is current, also when a subtest that its parent does not await outlives the parent's body.
   const active = new Set<string>();
   /** The test whose span is open, and the test of the span opened last. */
@@ -290,7 +294,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
       registering();
 
-      return Reflect.apply(register, this, [prepare(hook, suite), ...rest]);
+      return Reflect.apply(register, this, [ignoringRunOnly(prepare(hook, suite)), ...rest]);
     };
   /**
    * node:test's `fullName` of each suite and test, by id, and the test each `fullName` names, or none for a suite or
@@ -320,14 +324,15 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
     return settling(hook, attribute);
   };
-  const activating = (hook: Body | undefined): Body | undefined => {
+  /** `hook` calling `first` with its context before it runs. */
+  const preceded = (hook: Body | undefined, first: (context: unknown) => void): Body | undefined => {
     // node:test registers a hook without a function, as one that does nothing.
     if (typeof hook !== 'function') {
       return hook;
     }
 
     const wrapped = function (this: unknown, ...args: unknown[]): unknown {
-      activate();
+      first(args[0]);
 
       return Reflect.apply(hook, this, args);
     };
@@ -336,6 +341,8 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
 
     return wrapped;
   };
+  const activating = (hook: Body | undefined) => preceded(hook, activate);
+  const ignoringRunOnly = (hook: Body | undefined) => (testOnly ? hook : preceded(hook, turnOffRunOnly));
 
   /** node:test takes the position from its caller, which is a wrapper, so the wrapper finds it itself. */
   const declare = (id: string) => {
@@ -418,9 +425,9 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
           after: (hook?: Body, ...rest: unknown[]): unknown =>
             Reflect.apply(after, context, [attributing(hook, () => id), ...rest]),
           beforeEach: (hook?: Body, ...rest: unknown[]): unknown =>
-            Reflect.apply(beforeEach, context, [attributing(hook, testOf), ...rest]),
-          ...ignoringOnly<Partial<LzTestContext>>({}, { runOnly: () => undefined }),
+            Reflect.apply(beforeEach, context, [attributing(ignoringRunOnly(hook), testOf), ...rest]),
         } satisfies Partial<LzTestContext>);
+        turnOffRunOnly(context);
         activate();
 
         return leave;

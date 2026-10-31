@@ -413,6 +413,41 @@ describe('LzStrykerNodeTestRunner results', () => {
     ]);
   });
 
+  it('runs every test of a file whose before hook calls t.runOnly(true), as node --test does without --test-only', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "import { before } from 'node:test';",
+        'before((t) => { t.runOnly(true); });',
+        "it('plain', () => {});",
+        "it('only', { only: true }, () => {});",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+    const a = join(dir, 'a.test.mjs');
+
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
+      passed(`${a} > plain`),
+      passed(`${a} > only`),
+    ]);
+  });
+
+  it('runs the plain subtests of a test whose beforeEach hook calls t.runOnly(true) without --test-only', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "import { beforeEach } from 'node:test';",
+        'beforeEach((t) => { t.runOnly(true); });',
+        "it('parent', async (t) => { await t.test('plain', () => {}); });",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+    const a = join(dir, 'a.test.mjs');
+
+    assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [
+      passed(`${a} > parent > plain`),
+      passed(`${a} > parent`),
+    ]);
+  });
+
   it('runs only the only tests of a file under --test-only', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
