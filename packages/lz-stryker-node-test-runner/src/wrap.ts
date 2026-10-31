@@ -102,7 +102,7 @@ export function settling(hook: Body, begin: (context: unknown) => ((failed: bool
   return hook.length === 2 ? callingBack : promising;
 }
 
-export interface WrapOptions {
+interface WrapOptions {
   readonly ns: InstrumenterContext;
   readonly testFile: string;
   readonly tests: readonly RecordedTest[];

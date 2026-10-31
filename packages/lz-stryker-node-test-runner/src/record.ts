@@ -40,7 +40,7 @@ export interface RecordedTest {
   readonly startPosition?: Position;
 }
 
-export interface MemoryLimitReached {
+interface MemoryLimitReached {
   readonly rssMB: number;
   readonly limitMB: number;
 }

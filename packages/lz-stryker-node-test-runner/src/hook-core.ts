@@ -259,7 +259,7 @@ export function install(deps: HookDependencies): boolean {
   return true;
 }
 
-export interface Ending {
+interface Ending {
   /**
    * The test file registers a suite, test or hook through node:test, `topLevel` when it is a suite or test outside any
    * other. The first registration also registers a root `after` hook of the ending's own, ahead of the file's.

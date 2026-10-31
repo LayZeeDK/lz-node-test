@@ -77,7 +77,7 @@ export function processEnd(
   });
 }
 
-export interface EndingProcess {
+interface EndingProcess {
   /** undefined for a process that failed to start, as on ChildProcess. */
   readonly pid?: number | undefined;
   readonly stderr: {

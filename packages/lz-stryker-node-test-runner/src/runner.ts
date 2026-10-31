@@ -85,7 +85,7 @@ export type LzRunOptions =
       readonly testFilter?: readonly string[] | undefined;
     };
 
-export interface LzFileRun {
+interface LzFileRun {
   readonly records: readonly ProcessRecord[];
   readonly exitCode: number | null;
   readonly stderr: string;
