@@ -441,18 +441,31 @@ export function lzTestRunnerConcurrency(
   return checkers ? Math.max(Math.ceil(total / 2), 1) + Math.max(Math.floor(total / 2), 1) : total;
 }
 
-export function lzRunEnv(
-  base: NodeJS.ProcessEnv,
-  file: string,
-  outDir: string,
-  tmpDir: string,
-  run: LzRunOptions,
-  cacheDir: string | undefined,
-  {
-    memoryLimitMB,
-    heldOpenMs,
-  }: { readonly memoryLimitMB?: number | undefined; readonly heldOpenMs?: number | undefined } = {},
-): NodeJS.ProcessEnv & { NODE_OPTIONS: string } {
+/** What a test file's environment is made from: the runner's own environment, the file, and the run. */
+export interface LzRunEnvInput {
+  readonly base: NodeJS.ProcessEnv;
+  readonly file: string;
+  readonly outDir: string;
+  readonly tmpDir: string;
+  readonly run: LzRunOptions;
+  readonly cacheDir: string | undefined;
+  /** The consumer's NODE_OPTIONS, which follow the runner's hook, as `lzConsumerNodeOptions` gives them. */
+  readonly nodeOptions: readonly string[];
+  readonly memoryLimitMB?: number | undefined;
+  readonly heldOpenMs?: number | undefined;
+}
+
+export function lzRunEnv({
+  base,
+  file,
+  outDir,
+  tmpDir,
+  run,
+  cacheDir,
+  nodeOptions,
+  memoryLimitMB,
+  heldOpenMs,
+}: LzRunEnvInput): NodeJS.ProcessEnv & { NODE_OPTIONS: string } {
   const runState = new Set([
     // Set when Stryker itself runs under `node --test`; node:test in the test file would then ignore `.only` and
     // write its report to stdout for an outer runner instead of using its reporters.
@@ -463,7 +476,7 @@ export function lzRunEnv(
   const env: NodeJS.ProcessEnv & { NODE_OPTIONS: string } = {
     ...Object.fromEntries(Object.entries(base).filter(([key]) => !runState.has(key))),
     // The hook comes first, so a copy of this runner under test takes precedence over the runner running it.
-    NODE_OPTIONS: [`--import ${JSON.stringify(hookUrl)}`, ...lzConsumerNodeOptions(base)].join(' '),
+    NODE_OPTIONS: [`--import ${JSON.stringify(hookUrl)}`, ...nodeOptions].join(' '),
     [envNames.out]: outDir,
     [envNames.file]: file,
     [envNames.dryRun]: String(run.dryRun),
@@ -682,7 +695,15 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     try {
       mkdirSync(outDir);
       mkdirSync(tmpDir);
-      const env = lzRunEnv(process.env, file, outDir, tmpDir, run, this.#cacheDir, {
+      const nodeOptions = lzConsumerNodeOptions(process.env);
+      const env = lzRunEnv({
+        base: process.env,
+        file,
+        outDir,
+        tmpDir,
+        run,
+        cacheDir: this.#cacheDir,
+        nodeOptions,
         memoryLimitMB,
         heldOpenMs: shortenedHeldOpen.get(this),
       });
@@ -719,7 +740,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         exitCode,
         stderr,
         fileArgs,
-        nodeOptions: lzConsumerNodeOptions(process.env),
+        nodeOptions,
         ...(unreadable && { unreadable }),
       };
     } finally {

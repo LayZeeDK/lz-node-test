@@ -17,6 +17,24 @@ describe('lzNodeOptionArgs', () => {
 });
 
 describe('lzConsumerNodeOptions', () => {
+  it('drops the node:test reporters and destinations, also quoted ones', () => {
+    const nodeOptions = [
+      '--test-reporter=spec',
+      '--max-old-space-size=100',
+      '--test-reporter dot',
+      '"--test-reporter-destination=a b"',
+      '--test-reporter-destination  stdout',
+      '--title="a \\" --test-reporter=b"',
+      '--test-reporter-destinations=x',
+    ].join(' ');
+
+    assert.deepEqual(lzConsumerNodeOptions({ NODE_OPTIONS: nodeOptions }), [
+      '--max-old-space-size=100',
+      '--title="a \\" --test-reporter=b"',
+      '--test-reporter-destinations=x',
+    ]);
+  });
+
   it('drops the node:test reporters spelled with underscores, which node reads as dashes', () => {
     const nodeOptions = '--test_reporter=spec --test_reporter dot --test_reporter_destination=stdout --title=a_b';
 

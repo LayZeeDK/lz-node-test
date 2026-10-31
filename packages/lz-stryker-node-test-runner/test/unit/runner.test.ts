@@ -18,6 +18,7 @@ import {
   lzMergeAsStatic,
   lzMergeCoverage,
   lzRunEnv,
+  type LzRunEnvInput,
   lzRunInPool,
   type LzRunOptions,
   lzTestRunnerConcurrency,
@@ -492,15 +493,26 @@ describe('lzTestRunnerConcurrency', () => {
 describe('lzRunEnv', () => {
   const out = join('/tmp', 'out');
   const tmp = join('/tmp', 'tmp');
+  const envOf = (input: Partial<LzRunEnvInput>) =>
+    lzRunEnv({
+      base: {},
+      file,
+      outDir: out,
+      tmpDir: tmp,
+      run: { dryRun: false, disableBail: true },
+      cacheDir: undefined,
+      nodeOptions: [],
+      ...input,
+    });
 
   it("names Stryker's active mutant variable as the hook does", () => {
     assert.equal(activeMutantEnv, activeMutant);
   });
 
-  it('loads the hook before inherited options and drops the outer run state', () => {
+  it("loads the hook before the consumer's options and drops the outer run state", () => {
     const base = {
       PATH: 'path',
-      NODE_OPTIONS: '--max-old-space-size=100',
+      NODE_OPTIONS: '--outer',
       [envNames.out]: 'outer out',
       NODE_TEST_CONTEXT: 'child-v8',
       TEMP: 'outer temp',
@@ -514,7 +526,7 @@ describe('lzRunEnv', () => {
     };
     const before = { ...base };
 
-    assert.deepEqual(lzRunEnv(base, file, out, tmp, { dryRun: false, disableBail: true }, undefined), {
+    assert.deepEqual(envOf({ base, nodeOptions: ['--max-old-space-size=100'] }), {
       PATH: 'path',
       NODE_OPTIONS: `--import ${JSON.stringify(hookUrl)} --max-old-space-size=100`,
       [envNames.out]: out,
@@ -528,64 +540,30 @@ describe('lzRunEnv', () => {
   });
 
   it("leaves the test file the hook's own held-open time whatever the parent's environment sets", () => {
-    const env = lzRunEnv(
-      { [envNames.heldOpen]: '200' },
-      file,
-      out,
-      tmp,
-      { dryRun: false, disableBail: true },
-      undefined,
-    );
-
-    assert.equal(env[envNames.heldOpen], undefined);
-  });
-
-  it('drops the node:test reporters and destinations of inherited options, also quoted ones', () => {
-    const nodeOptions = [
-      '--test-reporter=spec',
-      '--max-old-space-size=100',
-      '--test-reporter dot',
-      '"--test-reporter-destination=a b"',
-      '--test-reporter-destination  stdout',
-      '--title="a \\" --test-reporter=b"',
-      '--test-reporter-destinations=x',
-    ].join(' ');
-    const kept = ['--max-old-space-size=100', '--title="a \\" --test-reporter=b"', '--test-reporter-destinations=x'];
-
-    assert.equal(
-      lzRunEnv({ NODE_OPTIONS: nodeOptions }, file, out, tmp, { dryRun: false, disableBail: true }, undefined)
-        .NODE_OPTIONS,
-      [`--import ${JSON.stringify(hookUrl)}`, ...kept].join(' '),
-    );
+    assert.equal(envOf({ base: { [envNames.heldOpen]: '200' } })[envNames.heldOpen], undefined);
   });
 
   it("uses the runner's compile cache directory unless the environment names one", () => {
-    const run = { dryRun: false, disableBail: false } satisfies LzRunOptions;
-
     const inherited = { NODE_COMPILE_CACHE: 'inherited' };
 
-    assert.equal(lzRunEnv({}, file, out, tmp, run, 'own')['NODE_COMPILE_CACHE'], 'own');
-    assert.equal(lzRunEnv(inherited, file, out, tmp, run, 'own')['NODE_COMPILE_CACHE'], 'inherited');
-    assert.equal(lzRunEnv(inherited, file, out, tmp, run, undefined)['NODE_COMPILE_CACHE'], 'inherited');
+    assert.equal(envOf({ cacheDir: 'own' })['NODE_COMPILE_CACHE'], 'own');
+    assert.equal(envOf({ base: inherited, cacheDir: 'own' })['NODE_COMPILE_CACHE'], 'inherited');
+    assert.equal(envOf({ base: inherited })['NODE_COMPILE_CACHE'], 'inherited');
   });
 
   it('passes the run state, the memory limit and a shortened held-open time on to the test file', () => {
     assert.deepEqual(
-      lzRunEnv(
-        {},
-        file,
-        out,
-        tmp,
-        {
+      envOf({
+        run: {
           dryRun: false,
           disableBail: true,
           activeMutant: '12',
           hitLimit: 40,
           testFilter: [`${file} > test`],
         },
-        undefined,
-        { memoryLimitMB: 1500, heldOpenMs: 200 },
-      ),
+        memoryLimitMB: 1500,
+        heldOpenMs: 200,
+      }),
       {
         NODE_OPTIONS: `--import ${JSON.stringify(hookUrl)}`,
         [envNames.out]: out,
@@ -606,7 +584,7 @@ describe('lzRunEnv', () => {
   it('activates the mutant from the start of the process, or for the hook to activate once the tests start', () => {
     const run = { dryRun: false, disableBail: false, activeMutant: '12' } satisfies LzRunOptions;
     const active = (mutantActivation: 'runtime' | 'static') => {
-      const env = lzRunEnv({}, file, out, tmp, { ...run, mutantActivation }, undefined);
+      const env = envOf({ run: { ...run, mutantActivation } });
 
       return { atStart: env[activeMutant], onceTestsStart: env[envNames.activeMutant] };
     };
@@ -623,7 +601,7 @@ describe('lzRunEnv', () => {
         { dryRun: true, disableBail: false, coverageAnalysis: 'perTest' },
         { dryRun: true, disableBail: true, coverageAnalysis: 'perTest' },
       ] satisfies LzRunOptions[]
-    ).map((run) => lzRunEnv({}, file, out, tmp, run, undefined)[envNames.bail]);
+    ).map((run) => envOf({ run })[envNames.bail]);
 
     assert.deepEqual(bails, ['true', undefined, undefined, undefined]);
   });
