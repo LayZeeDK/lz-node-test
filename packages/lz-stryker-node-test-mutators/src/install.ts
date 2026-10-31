@@ -221,7 +221,7 @@ function realScript(script: string | undefined, realpath: (path: string) => stri
  * instrumenters, and a self-check of one would pass while Stryker runs the other.
  */
 function withDriveLetterOf(script: string, path: string): string {
-  const [drive] = /^[A-Za-z]:/.exec(script) ?? [];
+  const drive = /^[A-Za-z]:/.exec(script)?.[0];
 
   return drive !== undefined && path.slice(0, 2).toLowerCase() === drive.toLowerCase() ? drive + path.slice(2) : path;
 }
@@ -312,6 +312,7 @@ function isFunction(value: unknown): value is AnyFunction {
 }
 
 function isObject(value: unknown): value is object {
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent, as this package's own peerDependencies is an object, and the member read after it fails a non-object too
   return typeof value === 'object' && value !== null;
 }
 
