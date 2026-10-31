@@ -5,7 +5,6 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { types as babelTypes } from '@babel/core';
 import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
 import { isOwn, toNodeMutator, type BabelTypes, type Operator } from './operator.ts';
@@ -15,6 +14,24 @@ const testedFloor = { major: 10, minor: 1, patch: 1 };
 const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
 const namePattern = /^[A-Za-z]+$/;
+/** The members of the instrumenter's Babel types that the operators call. */
+export const operatorBuilders: readonly (keyof BabelTypes)[] = [
+  'arrowFunctionExpression',
+  'binaryExpression',
+  'blockStatement',
+  'booleanLiteral',
+  'callExpression',
+  'cloneNode',
+  'conditionalExpression',
+  'emptyStatement',
+  'identifier',
+  'memberExpression',
+  'newExpression',
+  'numericLiteral',
+  'parenthesizedExpression',
+  'stringLiteral',
+  'throwStatement',
+];
 const nothing = () => undefined;
 const silent = { debug: nothing, info: nothing, warn: nothing, isDebugEnabled: nothing };
 
@@ -287,12 +304,13 @@ function isListedMutator(value: unknown): value is ListedMutator {
   return hasMember(value, 'name', isString) && hasMember(value, 'mutate', isFunction);
 }
 
-/** Has every member of the @babel/core types this module is built against, each of the same kind. */
+/**
+ * Has a function for each member of the Babel types that the operators call. The other members can differ, as when the
+ * consumer's @babel/core is a newer patch than the instrumenter's.
+ */
 function isBabelTypes(value: unknown): value is BabelTypes {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    Object.entries(babelTypes).every(([key, own]) => typeof Reflect.get(value, key) === typeof own)
+    typeof value === 'object' && value !== null && operatorBuilders.every((key) => isFunction(Reflect.get(value, key)))
   );
 }
 
