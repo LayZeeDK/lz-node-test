@@ -17,7 +17,9 @@ export const assertStatement: Operator = {
       return;
     }
 
-    if (isNodeAssertCall(path, awaited(path.node.expression))) {
+    const call = awaited(path.node.expression);
+
+    if (call.type === 'CallExpression' && isNodeAssertCall(path, call)) {
       yield t.emptyStatement();
     }
   },

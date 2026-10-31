@@ -68,8 +68,8 @@ function propertyName(member: types.Node): string | undefined {
     : undefined;
 }
 
-export function isNodeAssertCall(path: NodePath, expression: types.Expression): boolean {
-  const root = expression.type === 'CallExpression' ? calleeRoot(expression.callee) : undefined;
+export function isNodeAssertCall(path: NodePath, call: types.CallExpression): boolean {
+  const root = calleeRoot(call.callee);
   const source = root && importOf(path, root.name)?.source;
 
   return source !== undefined && nodeAssert.has(source);
