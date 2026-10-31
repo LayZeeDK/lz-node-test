@@ -1,8 +1,8 @@
-export type { LzModified } from './modified.ts';
-export type { LzEachOptions, LzName, LzTableReturn } from './register.ts';
+export type { LzTestModified } from './modified.ts';
+export type { LzTestName, LzTestTableOptions, LzTestTableReturn } from './register.ts';
 export {
   lzTestEach,
-  type LzExtractEachCallbackArgs,
+  type LzTestEachCallbackArgs,
   type LzTestEachFunction,
   type LzTestEachFunctionReturn,
 } from './test-each.ts';

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- the types copy Vitest's test.each, whose any lets TypeScript infer each row's arguments */
-import { modified, type LzModified } from './modified.ts';
-import { register, type EachCallback, type Flags, type LzTableReturn, type Register } from './register.ts';
+import { modified, type LzTestModified } from './modified.ts';
+import { register, type EachCallback, type Flags, type LzTestTableReturn, type Register } from './register.ts';
 
 /** The arguments of a `lzTestEach` callback for a readonly tuple row of up to 10 values, as in Vitest and Jest. */
-export type LzExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
+export type LzTestEachCallbackArgs<T extends ReadonlyArray<any>> = {
   readonly 1: [T[0]];
   readonly 2: [T[0], T[1]];
   readonly 3: [T[0], T[1], T[2]];
@@ -38,11 +38,13 @@ export type LzExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
                     : 'fallback'];
 
 /** Registers the tests of a `lzTestEach` table. Without `fn`, each test is a todo test. */
-export type LzTestEachFunctionReturn<T extends readonly any[]> = LzTableReturn<(...args: T) => void | Promise<void>>;
+export type LzTestEachFunctionReturn<T extends readonly any[]> = LzTestTableReturn<
+  (...args: T) => void | Promise<void>
+>;
 
 export interface LzTestEachFunction {
   <T extends any[] | [any]>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T>;
-  <T extends ReadonlyArray<any>>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<LzExtractEachCallbackArgs<T>>;
+  <T extends ReadonlyArray<any>>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<LzTestEachCallbackArgs<T>>;
   <T>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T[]>;
   (...args: [TemplateStringsArray, ...any]): LzTestEachFunctionReturn<any[]>;
 }
@@ -53,7 +55,7 @@ export interface LzTestEachFunction {
  * A template literal table names its columns in its first line and gives `fn` one object per row. The name formats
  * the case as in Vitest's `test.each`: `%s %d %i %f %j %o %O %c`, `%#`, `%$`, `%%` and `$` paths.
  */
-export const lzTestEach: LzModified<LzTestEachFunction> = modified(eachCases, {});
+export const lzTestEach: LzTestModified<LzTestEachFunction> = modified(eachCases, {});
 
 function eachCases(flags: Flags, cases: readonly unknown[]): Register<EachCallback> {
   const spread = cases.every(Array.isArray);

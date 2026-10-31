@@ -8,28 +8,28 @@ import { formatName, formatTitle } from './title.ts';
 
 /** A test's name: a string, or a function, which names it by its own name and is never called. */
 // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- a class names a test too, so a callable type is too narrow
-export type LzName = string | Function;
+export type LzTestName = string | Function;
 
 /** node:test's options for each test of the table, and `fails`, which makes a test pass only when its body fails. */
-export interface LzEachOptions extends TestOptions {
+export interface LzTestTableOptions extends TestOptions {
   readonly fails?: boolean;
 }
 
-export type Flags = Pick<LzEachOptions, 'skip' | 'only' | 'todo' | 'fails'>;
+export type Flags = Pick<LzTestTableOptions, 'skip' | 'only' | 'todo' | 'fails'>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unknown[] would reject a callback with typed parameters
 export type EachCallback = (...args: any[]) => void | Promise<void>;
 type Body = (t: TestContext) => void | Promise<void>;
 
 /** The typed function a table returns, with the callback type its table function gives `fn`. */
-export interface LzTableReturn<TCallback> {
-  (name: LzName, fn?: TCallback, timeout?: number): void;
-  (name: LzName, options: LzEachOptions, fn?: TCallback): void;
+export interface LzTestTableReturn<TCallback> {
+  (name: LzTestName, fn?: TCallback, timeout?: number): void;
+  (name: LzTestName, options: LzTestTableOptions, fn?: TCallback): void;
 }
 
 /** What the table's returned function takes, in any of Vitest's call shapes. */
 export type Register<TCallback> = (
-  name: LzName,
-  optionsOrFn?: TCallback | LzEachOptions,
+  name: LzTestName,
+  optionsOrFn?: TCallback | LzTestTableOptions,
   fnOrTimeout?: TCallback | number,
 ) => void;
 
@@ -48,9 +48,9 @@ const signatures =
  * other shapes, which throw.
  */
 export function parseArguments<TCallback extends EachCallback>(
-  optionsOrFn: TCallback | LzEachOptions | undefined,
+  optionsOrFn: TCallback | LzTestTableOptions | undefined,
   fnOrTimeout: TCallback | number | undefined,
-): { options: LzEachOptions; fn?: TCallback } {
+): { options: LzTestTableOptions; fn?: TCallback } {
   if (
     optionsOrFn === null ||
     (typeof fnOrTimeout === 'object' && fnOrTimeout !== null) ||
@@ -77,7 +77,7 @@ export function register<TCallback extends EachCallback>(
     const template = formatName(name);
     const { options, fn } = parseArguments(optionsOrFn, fnOrTimeout);
     const defined = Object.entries(options).filter(([, value]) => value !== undefined);
-    const { fails, ...testOptions }: LzEachOptions = { ...flags, ...Object.fromEntries(defined) };
+    const { fails, ...testOptions }: LzTestTableOptions = { ...flags, ...Object.fromEntries(defined) };
 
     if (!fn) {
       testOptions.todo ||= true;
