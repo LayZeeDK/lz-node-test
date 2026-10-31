@@ -81,8 +81,7 @@ export default [
         'error',
         {
           enforceBuildableLibDependency: true,
-          // The OSS driver in tools/oss-driver runs consumer projects through the e2e suite's harness.
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$', '../../../e2e/src/*'],
+          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             {
               sourceTag: 'type:lib',

@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 
-import type { LzMutantDetail, LzMutantStatus, LzReport } from '../../../e2e/src/report.ts';
+import type { LzMutantDetail, LzMutantStatus, LzReport } from '../report.ts';
 
 export interface LzOssProject {
   readonly name: string;
@@ -75,7 +75,7 @@ const projects: readonly LzOssProject[] = [
 ];
 
 const usage =
-  'Usage: node tools/oss-driver/src/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
+  'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
   '[--tarballs <folder>] [--prepare-only]';
 
 export function lzParseOptions(args: readonly string[]): LzOssOptions {

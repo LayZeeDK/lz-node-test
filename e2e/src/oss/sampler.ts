@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 
-import { lzExec } from '../../../e2e/src/exec.ts';
+import { lzExec } from '../exec.ts';
 import { lzParseSamples, type LzProcessRow } from './driver.ts';
 
 export interface LzSampler {

@@ -17,9 +17,6 @@
     },
     {
       "path": "./e2e"
-    },
-    {
-      "path": "./tools/oss-driver"
     }
   ]
 }

@@ -13,8 +13,8 @@ import { basename, join, relative, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import timers from 'node:timers/promises';
 
-import { lzExec } from '../../../e2e/src/exec.ts';
-import { lzInstall, lzPack, lzRemoveOnExit, lzStryker } from '../../../e2e/src/fixture.ts';
+import { lzExec } from '../exec.ts';
+import { lzInstall, lzPack, lzRemoveOnExit, lzStryker } from '../fixture.ts';
 import {
   lzCompare,
   lzDescendants,

@@ -9,6 +9,13 @@
       "command": "node --test \"e2e/test/unit/*.test.ts\"",
       "options": { "cwd": "{workspaceRoot}" }
     },
+    "oss": {
+      "command": "node e2e/src/oss/main.ts",
+      "options": { "cwd": "{workspaceRoot}" },
+      "cache": false,
+      "parallelism": false,
+      "dependsOn": ["^build"]
+    },
     "e2e": {
       "command": "node --test --test-concurrency=1 \"e2e/test/*.e2e.ts\"",
       "options": { "cwd": "{workspaceRoot}" },

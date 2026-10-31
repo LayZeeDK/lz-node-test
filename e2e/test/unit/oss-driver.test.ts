@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { LzMutantDetail, LzMutantStatus } from '../../../e2e/src/report.ts';
+import type { LzMutantDetail, LzMutantStatus } from '../../src/report.ts';
 import {
   lzCompare,
   lzDescendants,
@@ -15,7 +15,7 @@ import {
   lzStrykerOptions,
   type LzOssProject,
   type LzProcessRow,
-} from '../src/driver.ts';
+} from '../../src/oss/driver.ts';
 
 const required = ['--project', 'env-schema', '--source', 'D:/clone', '--out', 'D:/out', '--concurrency', '5'];
 
