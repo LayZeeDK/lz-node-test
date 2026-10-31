@@ -433,6 +433,8 @@ describe('install', () => {
     ['without --test-only', ['--no-deprecation'], '--no-warnings', 'test'],
     ['with --test-only in its options', ['--test-only'], undefined, 'test.only'],
     ['with --test-only in NODE_OPTIONS', [], '--import x  --test-only', 'test.only'],
+    ['with --test-only=true in NODE_OPTIONS', [], '--test-only=true', 'test.only'],
+    ['with --test-only in NODE_OPTIONS and --no-test-only in its options', ['--no-test-only'], '--test-only', 'test'],
   ])('registers an only test as one %s', ([, execArgv, nodeOptions, kind]) => {
     const { fake, wrapped } = installedHarness({ ...fileEnv(), NODE_OPTIONS: nodeOptions }, { execArgv });
     wrapped().it.only('only', () => {});

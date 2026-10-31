@@ -30,6 +30,7 @@ import {
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isNumber, isObject, isStrings, optional } from './guards.ts';
 import { memoryLimits, peakMemoryDir, removePeaksOnExit, type MemoryLimits } from './memory-limits.ts';
+import { lzNodeOptionArgs } from './node-options.ts';
 import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
   envNames,
@@ -472,8 +473,7 @@ export function lzRunEnv(
     // The hook comes first, so a copy of this runner under test takes precedence over the runner running it.
     NODE_OPTIONS: [
       `--import ${JSON.stringify(hookUrl)}`,
-      // node splits NODE_OPTIONS at spaces outside double quotes.
-      ...withoutReporters(base['NODE_OPTIONS']?.match(/(?:[^\s"]|"(?:[^"\\]|\\.)*")+/g) ?? []),
+      ...withoutReporters(lzNodeOptionArgs(base['NODE_OPTIONS'])),
     ].join(' '),
     [envNames.out]: outDir,
     [envNames.file]: file,

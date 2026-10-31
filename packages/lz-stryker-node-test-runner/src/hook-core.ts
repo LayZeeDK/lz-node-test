@@ -15,6 +15,7 @@ import {
   type ProcessRecord,
   type RecordedTest,
 } from './record.ts';
+import { lzTestOnly } from './node-options.ts';
 import { lzPersistRecord, type LzRecordDependencies } from './record-writer.ts';
 import type { WatchdogData } from './watchdog.ts';
 import { settling, wrapNodeTest, type Body, type NodeTestModule, type NodeTestTarget } from './wrap.ts';
@@ -216,7 +217,7 @@ export function install(deps: HookDependencies): boolean {
       tests,
       filter,
       bail,
-      testOnly: [...deps.execArgv, ...(deps.env['NODE_OPTIONS']?.split(/\s+/) ?? [])].includes('--test-only'),
+      testOnly: lzTestOnly(deps.execArgv, deps.env['NODE_OPTIONS']),
       activeMutant: deps.env[envNames.activeMutant],
       env: deps.env,
       positions,
