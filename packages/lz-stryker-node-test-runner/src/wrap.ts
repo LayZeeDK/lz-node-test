@@ -55,11 +55,18 @@ export type NodeTestModule = NodeTestShape<Registrar, HookRegistrar>;
 
 export type NodeTestTarget = NodeTestShape<Body, Body>;
 
-/** Whether `context` has the functions of node:test's test context that the wrapper calls, or replaces for the body. */
-function isTestContext(context: unknown): context is { test: Body; after: Body; beforeEach: Body; skip: Body } {
-  return (
-    isObject(context) && ['test', 'after', 'beforeEach', 'skip'].every((key) => typeof context[key] === 'function')
-  );
+/** The functions of node:test's test context that the wrapper calls, or replaces for the test body. */
+interface LzTestContext {
+  readonly test: Body;
+  readonly after: Body;
+  readonly beforeEach: Body;
+  readonly skip: Body;
+}
+
+const lzTestContextKeys: readonly (keyof LzTestContext)[] = ['test', 'after', 'beforeEach', 'skip'];
+
+function isLzTestContext(context: unknown): context is LzTestContext {
+  return isObject(context) && lzTestContextKeys.every((key) => typeof context[key] === 'function');
 }
 
 /**
@@ -385,7 +392,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
        * node:test waits for the test's subtests and plan in between. Its `t.after` hooks run after that.
        */
       // The wrapper replaces these functions on node:test's own context, which the test body calls them on.
-      const enter = (context: { test: Body; after: Body; beforeEach: Body }) => {
+      const enter = (context: LzTestContext) => {
         const endCurrent = makeCurrent(id);
         let open = 2;
         const leave = () => {
@@ -395,18 +402,20 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
         };
         const { after, beforeEach } = context;
         Reflect.apply(after, context, [leave]);
-        // `t.test` registers a subtest of `t`'s test, wherever it is called.
-        context.test = wrapTest(context.test, () => id);
-        context.after = (hook?: Body, ...rest: unknown[]) =>
-          Reflect.apply(after, context, [attributing(hook, () => id), ...rest]);
-        context.beforeEach = (hook?: Body, ...rest: unknown[]) =>
-          Reflect.apply(beforeEach, context, [attributing(hook, testOf), ...rest]);
+        Object.assign(context, {
+          // `t.test` registers a subtest of `t`'s test, wherever it is called.
+          test: wrapTest(context.test, () => id),
+          after: (hook?: Body, ...rest: unknown[]): unknown =>
+            Reflect.apply(after, context, [attributing(hook, () => id), ...rest]),
+          beforeEach: (hook?: Body, ...rest: unknown[]): unknown =>
+            Reflect.apply(beforeEach, context, [attributing(hook, testOf), ...rest]),
+        } satisfies Partial<LzTestContext>);
         activate();
 
         return leave;
       };
       const begin = (context: unknown) => {
-        if (!isTestContext(context)) {
+        if (!isLzTestContext(context)) {
           throw new TypeError(`node:test ran "${id}" without a test context`);
         }
 
