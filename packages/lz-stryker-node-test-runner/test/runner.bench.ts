@@ -1,12 +1,12 @@
-// Benchmarks the node:test runner on fixed synthetic fixtures, plus each Stryker suite that `npm run mutate` runs,
-// timed apart.
+// Benchmarks the node:test runner on fixed synthetic fixtures, plus each Stryker suite that the Nx `mutate` target
+// runs, timed apart.
 //
 //   npm run bench
 //   npm run bench -- --runs 9 --mutate-runs 0
 //   npm run bench -- --runner path/to/baseline/index.ts --runner packages/lz-stryker-node-test-runner/src/index.ts
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -23,7 +23,6 @@ import { Bench } from 'tinybench';
 
 import { callMember, construct, member } from './reflect.fixtures.ts';
 import { cover, dryRun, fixture, logger, mutantRunOptions, strykerOptions } from './runner.fixtures.ts';
-import pkg from '../package.json' with { type: 'json' };
 
 /**
  * A runner loaded from any path, this package's source or a baseline build of it, so the bench checks what its methods
@@ -66,6 +65,8 @@ interface Stat {
   readonly spread: number;
 }
 
+const workspaceRoot = join(import.meta.dirname, '..', '..', '..');
+const projectRoot = 'packages/lz-stryker-node-test-runner';
 const fileCount = 6;
 const testsPerFile = 5;
 const spawningFiles = 2;
@@ -216,17 +217,25 @@ async function loadRunner(path: string, dir: string): Promise<BenchRunner> {
 }
 
 function mutateSuites(): string[] {
-  const { scripts } = pkg;
+  const nx: unknown = JSON.parse(readFileSync(join(workspaceRoot, 'nx.json'), 'utf8'));
+  const commands = field(field(field(field(nx, 'targetDefaults'), 'mutate'), 'options'), 'commands');
 
-  if (!('mutate' in scripts) || typeof scripts.mutate !== 'string') {
-    throw new Error(`${pkg.name} has no mutate script whose Stryker suites the bench could time`);
+  if (!Array.isArray(commands) || !commands.every((command) => typeof command === 'string')) {
+    throw new Error('nx.json has no mutate target commands whose Stryker suites the bench could time');
   }
 
-  return scripts.mutate.split(' && ');
+  return commands.map((command: string) => command.replaceAll('{projectRoot}', projectRoot));
+}
+
+function field(value: unknown, key: string): unknown {
+  return typeof value === 'object' && value !== null
+    ? Object.entries(value).find(([name]) => name === key)?.[1]
+    : undefined;
 }
 
 function mutate(suite: string): void {
-  const result = spawnSync(`npx ${suite}`, {
+  const result = spawnSync(suite, {
+    cwd: workspaceRoot,
     shell: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
