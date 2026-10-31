@@ -21,16 +21,22 @@ export async function lzExec(
   args: readonly string[],
   { cwd, env = process.env, timeoutMs = 0 }: LzExecOptions,
 ): Promise<LzExecResult> {
+  const timeoutSignal = 'SIGTERM';
   const child = spawn(file, args, {
     cwd,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: timeoutMs,
+    killSignal: timeoutSignal,
     windowsHide: true,
   });
   const closed: Promise<unknown[]> = once(child, 'close');
-  const [stdout, stderr, [code]] = await Promise.all([text(child.stdout), text(child.stderr), closed]);
+  const [stdout, stderr, [code, signal]] = await Promise.all([text(child.stdout), text(child.stderr), closed]);
 
-  // Only the timeout kills the child, so `killed` means it timed out.
-  return { exitCode: typeof code === 'number' ? code : 1, stdout, stderr, timedOut: child.killed };
+  return {
+    exitCode: typeof code === 'number' ? code : 1,
+    stdout,
+    stderr,
+    timedOut: timeoutMs > 0 && signal === timeoutSignal,
+  };
 }
