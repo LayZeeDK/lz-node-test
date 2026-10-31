@@ -290,17 +290,14 @@ function importFile(path: string): Promise<unknown> {
 /** Every function is assignable to it, and `Reflect.apply` and `Reflect.construct` call it. */
 type AnyFunction = (...args: never) => unknown;
 
-function member<TKey extends string, T>(
-  value: unknown,
-  key: TKey,
-  check: (member: unknown) => member is T,
-  source: string,
-): T {
-  if (!hasMember(value, key, check)) {
+function member<T>(value: unknown, key: string, check: (member: unknown) => member is T, source: string): T {
+  const found: unknown = isObject(value) ? Reflect.get(value, key) : undefined;
+
+  if (!check(found)) {
     throw new Error(`lz-stryker-node-test-mutators: ${source} has no ${key} of the shape this module reads.`);
   }
 
-  return value[key];
+  return found;
 }
 
 function hasMember<TKey extends string, T>(
@@ -316,7 +313,6 @@ function isFunction(value: unknown): value is AnyFunction {
 }
 
 function isObject(value: unknown): value is object {
-  // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent, as this package's own peerDependencies is an object, and the member read after it fails a non-object too
   return typeof value === 'object' && value !== null;
 }
 
