@@ -5,6 +5,7 @@ import { PluginKind } from '@stryker-mutator/api/plugin';
 import ajvModule from 'ajv';
 
 import { lzTestEach } from '@layzee/lz-node-test';
+import * as entry from '../../src/index.ts';
 import { LzStrykerNodeTestRunner, strykerPlugins, strykerValidationSchema } from '../../src/index.ts';
 import { lzMinNodeVersion } from '../../src/runner.ts';
 import pkg from '../../package.json' with { type: 'json' };
@@ -18,6 +19,14 @@ function validator() {
 }
 
 describe('plugin declaration', () => {
+  it('exports only the plugin, its schema and the runner class from the package entry', () => {
+    assert.deepEqual(Object.keys(entry).sort(), [
+      'LzStrykerNodeTestRunner',
+      'strykerPlugins',
+      'strykerValidationSchema',
+    ]);
+  });
+
   it('declares the lz-stryker-node-test test runner', () => {
     assert.deepEqual(strykerPlugins, [
       { kind: PluginKind.TestRunner, name: 'lz-stryker-node-test', injectableClass: LzStrykerNodeTestRunner },
