@@ -78,22 +78,26 @@ describe('lzPeaks', () => {
 });
 
 describe('lzLeftovers', () => {
-  it('finds a seen process that still runs, and a child of an ended one that no sample saw', () => {
+  it('finds the seen processes that still run', () => {
     const seen = [row(10, 1), row(11, 10), row(12, 11)];
-    const now = [row(1, 0), row(12, 11), row(13, 11)];
+    const now = [row(1, 0), row(12, 11), row(10, 1)];
 
     assert.deepEqual(
-      lzLeftovers(seen, now, 1).map(({ pid }) => pid),
-      [12, 13],
+      lzLeftovers(seen, now).map(({ pid }) => pid),
+      [12, 10],
     );
   });
 
   it('leaves out a child of the root that no sample saw, such as the snapshot itself', () => {
-    assert.deepEqual(lzLeftovers([row(10, 1)], [row(1, 0), row(20, 1)], 1), []);
+    assert.deepEqual(lzLeftovers([row(10, 1)], [row(1, 0), row(20, 1)]), []);
+  });
+
+  it('leaves out a child of an ended run process that no sample saw in the run', () => {
+    assert.deepEqual(lzLeftovers([row(10, 1), row(11, 10)], [row(1, 0), row(12, 10, 50)]), []);
   });
 
   it('leaves out a process that reuses the id of an ended one', () => {
-    assert.deepEqual(lzLeftovers([row(10, 1), row(11, 10)], [row(1, 0), row(11, 7, 99)], 1), []);
+    assert.deepEqual(lzLeftovers([row(10, 1), row(11, 10)], [row(1, 0), row(11, 7, 99)]), []);
   });
 });
 

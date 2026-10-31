@@ -79,26 +79,12 @@ export function lzPeaks(samples: readonly (readonly LzProcessRow[])[]): LzProces
 }
 
 /**
- * The processes of `now` that are, or descend from, a child of `rootPid` that a sample saw. The walk goes through
- * processes that ended, as a process whose parent ended still names that parent's id; children of `rootPid` that no
- * sample saw, such as the one taking `now`, are not part of the run.
+ * The processes of `now` that a sample saw in the run, matched by id and start time. A process that the run started
+ * between two samples and that outlived it is missed: walking from an ended process to its id's children would also
+ * reach the children of a later process that reused that id.
  */
-export function lzLeftovers(
-  seen: readonly LzProcessRow[],
-  now: readonly LzProcessRow[],
-  rootPid: number,
-): LzProcessRow[] {
-  const isNow = (row: LzProcessRow): boolean =>
-    now.some(({ pid, created }) => pid === row.pid && created === row.created);
-  const rows = [...now, ...uniqueByPid(seen.filter((row) => !isNow(row)))];
-
-  return uniqueByPid(seen.filter(({ ppid }) => ppid === rootPid))
-    .flatMap((run) => [run, ...lzDescendants(rows, run.pid, new Set())])
-    .filter(isNow);
-}
-
-function uniqueByPid(rows: readonly LzProcessRow[]): LzProcessRow[] {
-  return [...new Map(rows.map((row) => [row.pid, row])).values()];
+export function lzLeftovers(seen: readonly LzProcessRow[], now: readonly LzProcessRow[]): LzProcessRow[] {
+  return now.filter((row) => seen.some(({ pid, created }) => pid === row.pid && created === row.created));
 }
 
 export function lzNewEntries(before: readonly string[], after: readonly string[]): string[] {

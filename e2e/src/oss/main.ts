@@ -16,7 +16,7 @@ import timers from 'node:timers/promises';
 import { lzExec } from '../exec.ts';
 import { lzInstall, lzPack, lzRemoveOnExit, lzStryker } from '../fixture.ts';
 import { lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
-import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks } from './processes.ts';
+import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessRow } from './processes.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
 import { lzCompare, lzScore } from './verdicts.ts';
 
@@ -86,11 +86,13 @@ async function runSide(side: LzSide) {
 
   await timers.setTimeout(settleMs);
   // Ended once recorded, so that one side's leftovers cannot load the next side's run.
-  const leftovers = lzLeftovers(samples.flat(), await lzSnapshot(), process.pid).map(({ pid, name }) => ({
-    pid,
-    name,
-    endedByDriver: end(pid),
-  }));
+  const leftovers = await Promise.all(
+    lzLeftovers(samples.flat(), await lzSnapshot()).map(async (leftover) => ({
+      pid: leftover.pid,
+      name: leftover.name,
+      endedByDriver: await end(leftover),
+    })),
+  );
 
   writeFileSync(join(out, `${side}.log`), run.output);
 
@@ -118,10 +120,14 @@ async function runSide(side: LzSide) {
   };
 }
 
-/** False when the process ended by itself before the driver could end it. */
-function end(pid: number): boolean {
+/** False when the process ended, or its id went to another process, before the driver could end it. */
+async function end(leftover: LzProcessRow): Promise<boolean> {
+  if (lzLeftovers([leftover], await lzSnapshot()).length === 0) {
+    return false;
+  }
+
   try {
-    process.kill(pid);
+    process.kill(leftover.pid);
 
     return true;
   } catch (error) {
