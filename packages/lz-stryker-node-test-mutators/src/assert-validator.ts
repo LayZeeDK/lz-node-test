@@ -21,10 +21,10 @@ export const assertValidator: Operator = {
       return;
     }
 
-    const method = path.key === 0 ? assertMethod(path, call.callee) : undefined;
+    const method = checkedBy(path, call);
     const error = t.newExpression(t.identifier('Error'), [t.stringLiteral(message)]);
 
-    if (method === 'throws' || expectsMatchedFailure(path, call)) {
+    if (method === 'throws') {
       yield t.arrowFunctionExpression([], t.blockStatement([t.throwStatement(error)]));
     }
 
@@ -34,12 +34,19 @@ export const assertValidator: Operator = {
   },
 };
 
+/** How a validator expects the argument at `path` to fail: the assertion's method, or `throws` for a test function. */
+function checkedBy(path: NodePath, call: types.CallExpression): string | undefined {
+  if (path.key === 0) {
+    return assertMethod(path, call.callee);
+  }
+
+  return path.key === call.arguments.length - 1 && expectsMatchedFailure(path, call) ? 'throws' : undefined;
+}
+
 function expectsMatchedFailure(path: NodePath, call: types.CallExpression): boolean {
-  const last = call.arguments.length - 1;
-  const options = call.arguments[last - 1];
+  const options = call.arguments.at(-2);
 
   return (
-    path.key === last &&
     options?.type === 'ObjectExpression' &&
     isMatcher(propertyValue(options, 'expectFailure')) &&
     isNodeTest(path, call.callee)
