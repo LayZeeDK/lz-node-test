@@ -137,7 +137,7 @@ export interface LzRecordFiles {
   readonly platform: NodeJS.Platform;
 }
 
-const nodeFiles: LzRecordFiles = {
+export const lzNodeRecordFiles: LzRecordFiles = {
   write: writeFileSync,
   rename: renameSync,
   pause: (ms) => {
@@ -162,7 +162,7 @@ function isBusy(error: unknown): boolean {
  * Writes `record` to `lzTempRecordPath(path)` and renames that over `path`, so that a reader finds the record whole, and
  * a kill during the write leaves the one before.
  */
-export function lzWriteRecord(path: string, record: ProcessRecord, files: LzRecordFiles = nodeFiles): void {
+export function lzWriteRecord(path: string, record: ProcessRecord, files: LzRecordFiles = lzNodeRecordFiles): void {
   const temp = lzTempRecordPath(path);
   files.write(temp, JSON.stringify(record));
 

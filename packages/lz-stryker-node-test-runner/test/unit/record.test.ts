@@ -6,6 +6,7 @@ import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
   lzIsRecordName,
+  lzNodeRecordFiles,
   lzParseRecord,
   lzParseRecordName,
   lzRecordNonce,
@@ -19,6 +20,8 @@ import {
 } from '../../src/record.ts';
 
 const file = join('/repo', 'a.test.mjs');
+// Fixed, as the record-name tests carry it in their names, which Stryker selects a mutant's tests by.
+const nonce = 'c2563c34-4f2f-439d-962d-51e1663f0dcd';
 
 describe('testId', () => {
   lzTestFor<readonly [string, string]>([
@@ -64,31 +67,36 @@ describe('uniqueIds', () => {
 });
 
 describe('lzIsRecordName', () => {
-  const nonce = lzRecordNonce();
-
-  lzTestEach([recordName(4321, 0, nonce), recordName(4321, 3, nonce), memoryRecordName(4321, nonce)])(
-    'takes %s as a record',
-    (name) => {
-      assert.equal(lzIsRecordName(name), true);
-    },
-  );
+  lzTestEach([
+    recordName(4321, 0, nonce),
+    recordName(4321, 3, nonce),
+    recordName(4321, 12, nonce),
+    memoryRecordName(4321, nonce),
+  ])('takes %s as a record', (name) => {
+    assert.equal(lzIsRecordName(name), true);
+  });
 
   lzTestEach([
     lzTempRecordPath(recordName(4321, 0, nonce)),
     lzTempRecordPath(memoryRecordName(4321, nonce)),
+    `a${recordName(4321, 0, nonce)}`,
+    `a${memoryRecordName(4321, nonce)}`,
     '4321.0.json',
     'notes.json',
     '4321.0.js',
   ])('takes %s as no record', (name) => {
     assert.equal(lzIsRecordName(name), false);
   });
+
+  it('takes the name of a record with a nonce from lzRecordNonce as a record', () => {
+    assert.equal(lzIsRecordName(recordName(4321, 0, lzRecordNonce())), true);
+  });
 });
 
 describe('lzParseRecordName', () => {
-  const nonce = lzRecordNonce();
-
   lzTestFor<readonly [string, LzRecordName | undefined]>([
     [recordName(4321, 3, nonce), { pid: 4321, thread: 3, nonce }],
+    [recordName(4321, 12, nonce), { pid: 4321, thread: 12, nonce }],
     [memoryRecordName(4321, nonce), { pid: 4321, thread: 'memory', nonce }],
     [lzTempRecordPath(recordName(4321, 3, nonce)), undefined],
   ])('reads %s as %j', ([name, parsed]) => {
@@ -162,6 +170,17 @@ describe('lzWriteRecord', () => {
 
     assert.throws(write, { code });
     assert.deepEqual(calls, [written, renamed]);
+  });
+});
+
+describe('lzNodeRecordFiles', () => {
+  it('blocks the thread for the pause it is asked for', () => {
+    const started = performance.now();
+
+    lzNodeRecordFiles.pause(50);
+
+    const waited = performance.now() - started;
+    assert.ok(waited >= 50, `${waited} ms`);
   });
 });
 
@@ -239,6 +258,7 @@ describe('lzParseRecord', () => {
     [withFields({ testSpans: [] }), 'testSpans'],
     [withFields({ testSpans: { t: { start: 1, end: 2 } } }), 'testSpans'],
     [withFields({ testSpans: { t: [{ end: 2 }] } }), 'testSpans'],
+    [withFields({ testSpans: { t: [{ start: 1, end: 2 }, { end: 4 }] } }), 'testSpans'],
   ])('refuses %s, naming %s', (json, field) => {
     assert.throws(() => lzParseRecord(json), { message: `not a record of test results: ${field}` });
   });
