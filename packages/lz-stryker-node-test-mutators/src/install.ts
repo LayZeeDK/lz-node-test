@@ -10,7 +10,8 @@ import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
 import { isOwn, toNodeMutator, type BabelTypes, type Operator } from './operator.ts';
 
-const testedVersion = /^10\.1\./;
+/** The first release of the peer range, which takes the later releases of the same major too. */
+const testedFloor = { major: 10, minor: 1, patch: 1 };
 const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
 const namePattern = /^[A-Za-z]+$/;
@@ -70,12 +71,28 @@ export async function install(
 
   await selfCheck(instrumenter, operators);
 
-  if (!testedVersion.test(instrumenter.version)) {
+  if (!isTested(instrumenter.version)) {
     warn(
       `lz-stryker-node-test-mutators was written for @stryker-mutator/instrumenter 10.1, not ${instrumenter.version}; ` +
         'its install check passed.',
     );
   }
+}
+
+/** Whether the peer range takes `version`; as with npm's caret ranges, it takes no prerelease. */
+function isTested(version: string): boolean {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+
+  if (match === null) {
+    return false;
+  }
+
+  const minor = Number(match[2]);
+
+  return (
+    Number(match[1]) === testedFloor.major &&
+    (minor > testedFloor.minor || (minor === testedFloor.minor && Number(match[3]) >= testedFloor.patch))
+  );
 }
 
 function checkNames(operators: readonly Operator[], present: readonly ListedMutator[]): void {

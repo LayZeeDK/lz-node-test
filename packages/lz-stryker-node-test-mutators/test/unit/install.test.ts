@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
@@ -16,6 +17,7 @@ import {
   type SourceFile,
 } from '../../src/install.ts';
 import { isOwn, type NodeMutatorLike, type Operator } from '../../src/operator.ts';
+import pkg from '../../package.json' with { type: 'json' };
 
 const sampleLocation = { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } };
 
@@ -153,7 +155,7 @@ describe('install', () => {
     });
   });
 
-  lzTestEach(['10.2.0', '110.1.0'])(
+  lzTestEach(['11.0.0', '110.1.1'])(
     'warns about the instrumenter version %s, which it was not written for',
     async (version) => {
       const { run, warnings } = setup({ version });
@@ -166,6 +168,53 @@ describe('install', () => {
       ]);
     },
   );
+});
+
+describe('the Stryker versions of the peer range', () => {
+  const { major, minor, patch } = corePeerFloor();
+  const floor = `${major}.${minor}.${patch}`;
+
+  function corePeerFloor() {
+    const range = pkg.peerDependencies['@stryker-mutator/core'];
+    const match = /^\^(\d+)\.(\d+)\.(\d+)$/.exec(range);
+
+    if (match === null) {
+      throw new Error(`The peer range of @stryker-mutator/core is no caret range: ${range}`);
+    }
+
+    return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
+  }
+
+  async function warningsFor(version: string): Promise<readonly string[]> {
+    const { run, warnings } = setup({ version });
+
+    await run('add', [operator('Alpha')]);
+
+    return warnings;
+  }
+
+  lzTestEach([floor, `${major}.${minor}.${patch + 1}`, `${major}.${minor + 1}.0`])(
+    'installs into the instrumenter version %s without a warning',
+    async (version) => {
+      assert.deepEqual(await warningsFor(version), []);
+    },
+  );
+
+  lzTestEach([
+    `${major}.${minor}.${patch - 1}`,
+    `${major + 1}.0.0`,
+    `${major - 1}.${minor}.${patch}`,
+    `1${floor}`,
+    `${major}.${minor + 1}.0-beta.0`,
+  ])('warns about the instrumenter version %s', async (version) => {
+    assert.equal((await warningsFor(version)).length, 1);
+  });
+
+  it('is the range the README names', () => {
+    const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8').replaceAll(/\s+/g, ' ');
+
+    assert.ok(readme.includes(`It accepts Stryker ${floor} or a later ${major}.x version`));
+  });
 });
 
 describe('corePackageJson', () => {
