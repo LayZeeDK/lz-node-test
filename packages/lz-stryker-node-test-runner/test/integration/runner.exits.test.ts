@@ -177,7 +177,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
         process.env['NODE_OPTIONS'] = nodeOptions;
       }
     });
-    process.env['NODE_OPTIONS'] = '--max-old-space-size=4096 --test-reporter=spec';
+    process.env['NODE_OPTIONS'] = `${nodeOptions ?? ''} --max-old-space-size=4096 --test-reporter=spec`;
     const runner = await initRunner(['*.test.mjs'], { nodeArgs: ['--no-deprecation'] });
     const b = join(dir, 'b.test.mjs');
     const errorMessage = lzFileError(b, {
@@ -185,7 +185,7 @@ describe('LzStrykerNodeTestRunner endings', () => {
       exitCode: 3,
       stderr: 'first\nsecond\n',
       fileArgs: ['--no-deprecation', b],
-      nodeOptions: ['--max-old-space-size=4096'],
+      nodeOptions: [...lzConsumerNodeOptions({ NODE_OPTIONS: nodeOptions }), '--max-old-space-size=4096'],
     });
 
     assert.deepEqual(await settle(runner.dryRun(dryRun)), { status: DryRunStatus.Error, errorMessage });
