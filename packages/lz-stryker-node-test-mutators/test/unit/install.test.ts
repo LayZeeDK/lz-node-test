@@ -463,7 +463,7 @@ describe('resolveFromCore', () => {
     const load = async (path: string): Promise<unknown> => {
       loaded.push(path);
 
-      return { allMutators: [], transformBabel() {}, Instrumenter: class {}, types };
+      return { allMutators: [], transformBabel() {}, Instrumenter() {}, types };
     };
 
     await resolveFromCore(join(root, 'package.json'), load);
@@ -492,7 +492,7 @@ describe('resolveFromCore', () => {
   lzTestEach([
     [
       'an Instrumenter with no instrument method',
-      class {},
+      function Instrumenter() {},
       (index: string) => refusal(`the Instrumenter of ${index}`, 'instrument'),
     ],
     ['an instrument result of nothing', resolvingTo(undefined), noMutants],
