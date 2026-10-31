@@ -4,7 +4,7 @@ import type { LoadHookContext, ResolveHookContext } from 'node:module';
 import { join } from 'node:path';
 
 import { install, wrappedNodeTest, type HookDependencies, type ModuleHooks, type TestEvent } from '../src/hook-core.ts';
-import { envNames, lzParseRecord, type ProcessRecord } from '../src/record.ts';
+import { envNames, lzParseRecord, lzRecordNonce, type ProcessRecord } from '../src/record.ts';
 import type { NodeTestModule } from '../src/wrap.ts';
 
 export type Fn = (this: unknown, ...args: unknown[]) => unknown;
@@ -201,6 +201,7 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     env,
     mainFile: testFile,
     pid: 4321,
+    nonce: lzRecordNonce(),
     threadId: 0,
     global: { globalThis: undefined },
     nodeTest: () => {

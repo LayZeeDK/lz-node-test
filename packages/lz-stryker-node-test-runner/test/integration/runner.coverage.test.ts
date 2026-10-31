@@ -254,14 +254,13 @@ describe('LzStrykerNodeTestRunner coverage', () => {
 
   /**
    * Waits, at most 2 s, for the record of a process the test started, which the process writes while it runs in the
-   * dry run.
+   * dry run. The name after `prefix` is the process's nonce.
    */
   const recorded = [
-    "import { existsSync } from 'node:fs';",
-    "import { join } from 'node:path';",
-    'const recorded = async (name) => {',
-    `  const path = join(process.env.${envNames.out}, name);`,
-    '  for (let wait = 0; wait < 100 && !existsSync(path); wait++) await new Promise((resolve) => setTimeout(resolve, 20));',
+    "import { readdirSync } from 'node:fs';",
+    'const recorded = async (prefix) => {',
+    `  const written = () => readdirSync(process.env.${envNames.out}).some((name) => name.startsWith(prefix) && name.endsWith('.json'));`,
+    '  for (let wait = 0; wait < 100 && !written(); wait++) await new Promise((resolve) => setTimeout(resolve, 20));',
     '};',
   ];
 
@@ -281,7 +280,7 @@ describe('LzStrykerNodeTestRunner coverage', () => {
         "it('terminates', async () => {",
         "  const worker = new Worker(new URL('./worker.mjs', import.meta.url));",
         "  await once(worker, 'message');",
-        '  await recorded(`${process.pid}.${worker.threadId}.json`);',
+        '  await recorded(`${process.pid}.${worker.threadId}.`);',
         '  await worker.terminate();',
         '});',
       ),
@@ -306,7 +305,7 @@ describe('LzStrykerNodeTestRunner coverage', () => {
         "it('kills', async () => {",
         `  const child = spawn(process.execPath, ['-e', ${JSON.stringify(child)}], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });`,
         "  await once(child, 'message');",
-        '  await recorded(`${child.pid}.0.json`);',
+        '  await recorded(`${child.pid}.0.`);',
         '  child.kill();',
         "  await once(child, 'exit');",
         '});',

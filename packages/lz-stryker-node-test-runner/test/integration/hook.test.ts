@@ -132,6 +132,23 @@ function readRecords(outDir: string): Record<string, ProcessRecord> {
   );
 }
 
+/** The record of a process that is not the test file's own, whose name carries the process's nonce between the two. */
+function recordNamed(
+  records: Record<string, ProcessRecord>,
+  prefix: string,
+  suffix: string,
+): ProcessRecord | undefined {
+  return Object.entries(records).find(([name]) => name.startsWith(prefix) && name.endsWith(suffix))?.[1];
+}
+
+function memoryRecord(records: Record<string, ProcessRecord>, pid: number): ProcessRecord | undefined {
+  return recordNamed(records, `${pid}.`, '.memory.json');
+}
+
+function childRecord(records: Record<string, ProcessRecord>, pid: number): ProcessRecord | undefined {
+  return recordNamed(records, `${pid}.0.`, '.json');
+}
+
 /** The record without its lifetime, once that runs from when the hook ran up to now on the clock this process reads. */
 function untimed(record: ProcessRecord | undefined): Omit<ProcessRecord, 'lifetime'> | undefined {
   if (record === undefined) {
@@ -197,8 +214,9 @@ describe('hook', () => {
     added.exit[0]?.(0);
 
     const records = readRecords(outDir);
-    assert.deepEqual(Object.keys(records), [`${process.pid}.0.json`]);
-    assert.deepEqual(records[`${process.pid}.0.json`]?.tests, []);
+    const record = childRecord(records, process.pid);
+    assert.deepEqual(Object.values(records), [record]);
+    assert.deepEqual(record?.tests, []);
   });
 
   it("moves its exit listener behind the process's others when the process ends by itself", async (t) => {
@@ -240,7 +258,7 @@ describe('hook', () => {
 
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);
     added.exit[0]?.(0);
-    const peakMB = readRecords(outDir)[`${process.pid}.0.json`]?.peakMemoryMB;
+    const peakMB = childRecord(readRecords(outDir), process.pid)?.peakMemoryMB;
     assert.ok(peakMB, 'The record has no peak memory.');
 
     assert.ok(Number.isInteger(peakMB), String(peakMB));
@@ -268,7 +286,11 @@ describe('hook', () => {
     const workers = Object.keys(records).filter((name) => name !== `${pid}.0.json`);
     assert.equal(record?.main, true);
     assert.deepEqual(
-      workers.map((name) => [/^\d+\.[1-9]\d*\.json$/.test(name), records[name]?.main, records[name]?.hitCount]),
+      workers.map((name) => [
+        /^\d+\.[1-9]\d*\.[\da-f-]+\.json$/.test(name),
+        records[name]?.main,
+        records[name]?.hitCount,
+      ]),
       [[true, undefined, 999]],
     );
   });
@@ -566,10 +588,11 @@ describe('hook', () => {
       [envNames.file]: join(outDir, 'some.test.mjs'),
     });
     const records = readRecords(outDir);
+    const record = childRecord(records, pid);
 
     assert.equal(code, 0);
-    assert.deepEqual(Object.keys(records), [`${pid}.0.json`]);
-    assert.deepEqual(untimed(records[`${pid}.0.json`]), { tests: [] });
+    assert.deepEqual(Object.values(records), [record]);
+    assert.deepEqual(untimed(record), { tests: [] });
   });
 
   lzTestFor<readonly [string, Record<string, string>]>([
@@ -589,8 +612,8 @@ describe('hook', () => {
 
       assert.notEqual(code, 0);
       const records = readRecords(outDir);
-      assert.deepEqual(Object.keys(records), [`${pid}.memory.json`]);
-      const record = records[`${pid}.memory.json`];
+      const record = memoryRecord(records, pid);
+      assert.deepEqual(Object.values(records), [record]);
       assert.ok(record);
       const { tests, memoryLimitReached } = record;
       assert.deepEqual(tests, []);
@@ -608,7 +631,7 @@ describe('hook', () => {
       [envNames.dryRun]: 'true',
     });
 
-    const peakMB = readRecords(outDir)[`${pid}.0.json`]?.peakMemoryMB;
+    const peakMB = childRecord(readRecords(outDir), pid)?.peakMemoryMB;
     assert.ok(peakMB, 'The record has no peak memory.');
 
     assert.ok(Number.isInteger(peakMB), String(peakMB));
@@ -681,7 +704,7 @@ describe('hook', () => {
     });
 
     assert.notEqual(code, 0);
-    assert.equal(readRecords(outDir)[`${pid}.memory.json`]?.memoryLimitReached?.limitMB, 200);
+    assert.equal(memoryRecord(readRecords(outDir), pid)?.memoryLimitReached?.limitMB, 200);
   });
 
   it('runs a process under the permission model without workers with a memory limit as it would without one', async (t) => {
@@ -692,8 +715,9 @@ describe('hook', () => {
     const records = readRecords(outDir);
 
     assert.equal(code, 0);
-    assert.deepEqual(Object.keys(records), [`${pid}.0.json`]);
-    assert.deepEqual(untimed(records[`${pid}.0.json`]), { tests: [] });
+    const record = childRecord(records, pid);
+    assert.deepEqual(Object.values(records), [record]);
+    assert.deepEqual(untimed(record), { tests: [] });
   });
 
   it('runs a process under the permission model without write access as it would without the hook, with no record', async (t) => {

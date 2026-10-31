@@ -126,7 +126,7 @@ describe('install', () => {
     const { deps, calls } = installedHarness({ [envNames.out]: out, [envNames.memoryLimit]: '1500' });
 
     const options = {
-      workerData: { limitMB: 1500, recordPath: join(out, '4321.memory.json') },
+      workerData: { limitMB: 1500, recordPath: join(out, `4321.${deps.nonce}.memory.json`) },
       execArgv: [],
       env: {},
     };
@@ -250,14 +250,35 @@ describe('install', () => {
   });
 
   it("writes a worker thread's record to a file of its own, never as the test file's", () => {
-    const { records, exit } = installedHarness(fileEnv(), { threadId: 3 });
+    const { deps, records, exit } = installedHarness(fileEnv(), { threadId: 3 });
 
     exit();
 
     assert.deepEqual(
       records.map(({ path, record }) => [path, record.main]),
-      [[join(out, '4321.3.json'), undefined]],
+      [[join(out, `4321.3.${deps.nonce}.json`), undefined]],
     );
+  });
+
+  it('writes the records of two processes the test file starts to different files, though they have the same pid', () => {
+    const paths = [0, 1].flatMap(() => {
+      const { records, exit } = installedHarness({ [envNames.out]: out }, { mainFile: '/repo/child.mjs' });
+      exit();
+
+      return records.map(({ path }) => path);
+    });
+
+    assert.equal(new Set(paths).size, 2);
+  });
+
+  it('gives the memory records of two processes with the same pid different files', () => {
+    const paths = [0, 1].map(() => {
+      const { calls } = installedHarness({ [envNames.out]: out, [envNames.memoryLimit]: '1500' });
+
+      return calls[0];
+    });
+
+    assert.equal(new Set(paths).size, 2);
   });
 
   it('neither listens for the end nor follows the coverage of a process that may not write its record', () => {

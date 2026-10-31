@@ -7,6 +7,7 @@ import { lzTestFor } from '@layzee/lz-node-test';
 import {
   lzIsRecordName,
   lzParseRecord,
+  lzRecordNonce,
   lzTempRecordPath,
   memoryRecordName,
   recordName,
@@ -60,13 +61,21 @@ describe('uniqueIds', () => {
 });
 
 describe('lzIsRecordName', () => {
-  lzTestEach([recordName(4321, 0), recordName(4321, 3), memoryRecordName(4321)])('takes %s as a record', (name) => {
+  const nonce = lzRecordNonce();
+
+  lzTestEach([
+    recordName(4321, 0),
+    recordName(4321, 0, nonce),
+    recordName(4321, 3, nonce),
+    memoryRecordName(4321, nonce),
+  ])('takes %s as a record', (name) => {
     assert.equal(lzIsRecordName(name), true);
   });
 
   lzTestEach([
     lzTempRecordPath(recordName(4321, 0)),
-    lzTempRecordPath(memoryRecordName(4321)),
+    lzTempRecordPath(recordName(4321, 3, nonce)),
+    lzTempRecordPath(memoryRecordName(4321, nonce)),
     'notes.json',
     '4321.0.js',
   ])('takes %s as no record', (name) => {

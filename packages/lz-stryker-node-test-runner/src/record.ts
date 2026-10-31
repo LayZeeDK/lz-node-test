@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { MutantCoverage, Position } from '@stryker-mutator/api/core';
 
 import { isNumber, isObject, isString, isStrings, optional } from './guards.ts';
@@ -106,13 +108,21 @@ export const heldOpenMs = 30_000;
 /** Stryker's variable for the active mutant, which instrumented code reads when it loads. */
 export const activeMutantEnv = '__STRYKER_ACTIVE_MUTANT__';
 
-export function recordName(pid: number, threadId: number): string {
-  return `${pid}.${threadId}.json`;
+/**
+ * Tells apart the records of processes that had the same pid, as a pid can come back within one file run. The test
+ * file's own record goes without one, so the runner finds it by the pid of the process it started.
+ */
+export function lzRecordNonce(): string {
+  return randomUUID();
+}
+
+export function recordName(pid: number, threadId: number, nonce?: string): string {
+  return nonce === undefined ? `${pid}.${threadId}.json` : `${pid}.${threadId}.${nonce}.json`;
 }
 
 /** The record the memory watchdog writes when it ends its process. */
-export function memoryRecordName(pid: number): string {
-  return `${pid}.memory.json`;
+export function memoryRecordName(pid: number, nonce: string): string {
+  return `${pid}.${nonce}.memory.json`;
 }
 
 /** Where a record is written before it is renamed to `path`, so that a reader finds every record whole. */
@@ -120,7 +130,7 @@ export function lzTempRecordPath(path: string): string {
   return `${path}.tmp`;
 }
 
-const recordNamePattern = /^\d+\.(?:\d+|memory)\.json$/;
+const recordNamePattern = /^\d+\.(?:\d+(?:\.[\da-f-]+)?|[\da-f-]+\.memory)\.json$/;
 
 /** Whether `name` is the name of a record, which a record's temporary file is not. */
 export function lzIsRecordName(name: string): boolean {

@@ -59,6 +59,8 @@ export interface HookDependencies extends LzRecordDependencies {
   readonly env: Record<string, string | undefined>;
   readonly mainFile: string | undefined;
   readonly pid: number;
+  /** `lzRecordNonce()` once per process or thread. */
+  readonly nonce: string;
   /** Worker threads load the hook too; 0 is the main thread. */
   readonly threadId: number;
   readonly nodeTest: () => NodeTestTarget;
@@ -146,7 +148,7 @@ export function install(deps: HookDependencies): boolean {
   if (memoryLimit > 0 && deps.canWatchMemory) {
     const { NODE_COMPILE_CACHE } = deps.env;
     deps.global[watchdog] = deps.watchMemory({
-      workerData: { limitMB: memoryLimit, recordPath: join(outDir, memoryRecordName(deps.pid)) },
+      workerData: { limitMB: memoryLimit, recordPath: join(outDir, memoryRecordName(deps.pid, deps.nonce)) },
       // Without the process's options, such as --require ts-node/register, which would load in the thread again, and
       // without its environment, whose NODE_OPTIONS Node.js would read for the thread: its --require preloads would
       // run there too, and --input-type=module would make the thread an ES module, which also loads the --import
@@ -252,7 +254,8 @@ export function install(deps: HookDependencies): boolean {
       ...(main && { testSpans: Object.fromEntries(testSpans) }),
     };
   };
-  lzPersistRecord(deps, join(outDir, recordName(deps.pid, deps.threadId)), record, { main, dryRun });
+  const name = main ? recordName(deps.pid, deps.threadId) : recordName(deps.pid, deps.threadId, deps.nonce);
+  lzPersistRecord(deps, join(outDir, name), record, { main, dryRun });
 
   return true;
 }

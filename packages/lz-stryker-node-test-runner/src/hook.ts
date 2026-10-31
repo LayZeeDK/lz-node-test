@@ -5,7 +5,7 @@ import { getCallSites } from 'node:util';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 
 import { install, writesAllowed, type HookDependencies } from './hook-core.ts';
-import { envNames, lzTempRecordPath } from './record.ts';
+import { envNames, lzRecordNonce, lzTempRecordPath } from './record.ts';
 import { workersAllowed } from './watchdog.ts';
 
 // The memory watchdog's thread runs this script, where Stryker sees no coverage, so it only starts watchdog.ts's watch,
@@ -40,6 +40,7 @@ install({
   env: process.env,
   mainFile: process.argv[1] ? resolve(process.argv[1]) : undefined,
   pid: process.pid,
+  nonce: lzRecordNonce(),
   threadId,
   global: globalThis,
   nodeTest: () => process.getBuiltinModule('node:test'),
