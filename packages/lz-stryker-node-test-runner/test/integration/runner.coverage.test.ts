@@ -351,6 +351,24 @@ describe('LzStrykerNodeTestRunner coverage', () => {
     },
   );
 
+  it('reads no temporary file that a process ended between writing its record and renaming it leaves behind', async (t) => {
+    const temp = JSON.stringify({ tests: [], mutantCoverage: { static: { stray: 1 }, perTest: {} } });
+    project(t, {
+      'a.test.mjs': fixture(
+        "import { writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        "it('passes', () => {",
+        `  writeFileSync(join(process.env.${envNames.out}, '1.0.json.tmp'), ${JSON.stringify(temp)});`,
+        '});',
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), { static: {}, perTest: {} });
+  });
+
   it('runs the tests of a suite or test asking for concurrency one at a time, for coverage of their own', async (t) => {
     const interleaved = (name: string) =>
       `async () => { cover('${name} 1'); await new Promise((resolve) => setImmediate(resolve)); cover('${name} 2'); }`;

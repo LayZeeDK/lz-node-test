@@ -115,6 +115,18 @@ export function memoryRecordName(pid: number): string {
   return `${pid}.memory.json`;
 }
 
+/** Where a record is written before it is renamed to `path`, so that a reader finds every record whole. */
+export function lzTempRecordPath(path: string): string {
+  return `${path}.tmp`;
+}
+
+const recordNamePattern = /^\d+\.(?:\d+|memory)\.json$/;
+
+/** Whether `name` is the name of a record, which a record's temporary file is not. */
+export function lzIsRecordName(name: string): boolean {
+  return recordNamePattern.test(name);
+}
+
 function notARecord(field?: string): never {
   const message = 'not a record of test results';
 

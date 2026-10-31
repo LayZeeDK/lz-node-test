@@ -4,7 +4,15 @@ import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
-import { lzParseRecord, testId, uniqueIds } from '../../src/record.ts';
+import {
+  lzIsRecordName,
+  lzParseRecord,
+  lzTempRecordPath,
+  memoryRecordName,
+  recordName,
+  testId,
+  uniqueIds,
+} from '../../src/record.ts';
 
 const file = join('/repo', 'a.test.mjs');
 
@@ -48,6 +56,21 @@ describe('uniqueIds', () => {
         `${file} > s > works`,
       ],
     );
+  });
+});
+
+describe('lzIsRecordName', () => {
+  lzTestEach([recordName(4321, 0), recordName(4321, 3), memoryRecordName(4321)])('takes %s as a record', (name) => {
+    assert.equal(lzIsRecordName(name), true);
+  });
+
+  lzTestEach([
+    lzTempRecordPath(recordName(4321, 0)),
+    lzTempRecordPath(memoryRecordName(4321)),
+    'notes.json',
+    '4321.0.js',
+  ])('takes %s as no record', (name) => {
+    assert.equal(lzIsRecordName(name), false);
   });
 });
 

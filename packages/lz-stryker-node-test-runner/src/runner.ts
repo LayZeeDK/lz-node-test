@@ -33,6 +33,7 @@ import { memoryLimits, peakMemoryDir, removePeaksOnExit, type MemoryLimits } fro
 import { groupOptions, processEnd } from './process-end.ts';
 import {
   envNames,
+  lzIsRecordName,
   lzParseRecord,
   recordName,
   testId,
@@ -676,19 +677,21 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       // processEnd rejects for a process that failed to start, the only kind without a pid.
       const mainRecord = child.pid === undefined ? undefined : recordName(child.pid, 0);
       let unreadable: string | undefined;
-      const records = readdirSync(outDir).flatMap((name) => {
-        try {
-          return [lzParseRecord(readFileSync(join(outDir, name), 'utf8'))];
-        } catch (error) {
-          // A process that the tests started can still be writing its record when the grace period ends. The test
-          // file's own process writes its record before it exits, unless the memory watchdog ends it mid-write.
-          if (name === mainRecord) {
-            unreadable = error instanceof Error ? error.message : String(error);
-          }
+      const records = readdirSync(outDir)
+        .filter(lzIsRecordName)
+        .flatMap((name) => {
+          try {
+            return [lzParseRecord(readFileSync(join(outDir, name), 'utf8'))];
+          } catch (error) {
+            // A process that the tests started can still be writing its record when the grace period ends. The test
+            // file's own process writes its record before it exits, unless the memory watchdog ends it mid-write.
+            if (name === mainRecord) {
+              unreadable = error instanceof Error ? error.message : String(error);
+            }
 
-          return [];
-        }
-      });
+            return [];
+          }
+        });
 
       return { records, exitCode, stderr, args, nodeOptions: env.NODE_OPTIONS, ...(unreadable && { unreadable }) };
     } finally {
