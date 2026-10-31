@@ -107,23 +107,22 @@ removePeaksOnExit();
  * A test's name leaves out the test file, which its id starts with, as Stryker's runners name tests after their suites
  * only.
  *
- * Each test's time includes an equal share, among all the file's tests, subtests too, of the time the file's run,
- * `fileMs`, spent outside its outermost tests, whose time includes their subtests': running any test of the file runs
- * the file's whole process. Stryker's mutant timeout scales with the summed time of the tests it runs, so a mutant that
- * runs all of a file's tests counts that time once and one that runs some of them counts their share of it.
+ * Each test's time includes the time the file's run, `fileMs`, spent outside its outermost tests, whose time includes
+ * their subtests': running any test of the file runs the file's whole process. Stryker's mutant timeout scales with
+ * the summed time of the tests it runs, so it then scales with the processes it starts, which Stryker's other workers
+ * slow down as well.
  */
 export function lzToTestResults(testFile: string, recorded: RecordedTest[], fileMs: number): TestResult[] {
   const prefix = testId(testFile, '');
   const outermost = recorded.filter((test) => !recorded.some((other) => other !== test && within(test.id, other.id)));
   const outside = fileMs - outermost.reduce((sum, test) => sum + test.timeSpentMs, 0);
-  const share = outside / recorded.length;
 
   return recorded.map((test) => {
     const base = {
       id: test.id,
       name: test.id.slice(prefix.length),
       fileName: testFile,
-      timeSpentMs: Math.round(test.timeSpentMs + share),
+      timeSpentMs: Math.round(test.timeSpentMs + outside),
       ...(test.startPosition && { startPosition: test.startPosition }),
     };
 
@@ -565,9 +564,9 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     );
     const mutantResult = toMutantRunResult(result);
 
-    // toMutantRunResult sums the test times, which count only each test's share of its file's time outside its tests.
-    // A mutant run runs one file at a time, so its own time is the time of the file runs it made, each its process with
-    // the setup and removal of its run directory.
+    // toMutantRunResult sums the test times, which count each file's time outside its tests once per test. A mutant
+    // run runs one file at a time, so its own time is the time of the file runs it made, each its process with the
+    // setup and removal of its run directory.
     return 'duration' in mutantResult
       ? { ...mutantResult, duration: Math.round(performance.now() - started) }
       : mutantResult;
