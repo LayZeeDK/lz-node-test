@@ -24,6 +24,9 @@ export interface LzMutantDetail {
   readonly line: number;
   /** 1-based, as the report's `location.start` has it. */
   readonly column: number;
+  /** As the report's `location.end` has it, which tells apart mutants that start at one place. */
+  readonly endLine: number;
+  readonly endColumn: number;
   readonly mutator: string;
   readonly replacement: string;
   readonly status: LzMutantStatus;
@@ -78,9 +81,14 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
 
   const { mutatorName, replacement = '', location, status, statusReason = '', killedBy = [], coveredBy = [] } = mutant;
   const start = lzIsRecord(location) ? location['start'] : undefined;
+  const end = lzIsRecord(location) ? location['end'] : undefined;
 
   if (!lzIsRecord(start) || typeof start['line'] !== 'number' || typeof start['column'] !== 'number') {
     notAReport(`${path}.location.start`);
+  }
+
+  if (!lzIsRecord(end) || typeof end['line'] !== 'number' || typeof end['column'] !== 'number') {
+    notAReport(`${path}.location.end`);
   }
 
   if (typeof mutatorName !== 'string') {
@@ -110,6 +118,8 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
   return {
     line: start['line'],
     column: start['column'],
+    endLine: end['line'],
+    endColumn: end['column'],
     mutator: mutatorName,
     replacement,
     status,
@@ -124,7 +134,9 @@ function byPosition(a: LzMutantDetail, b: LzMutantDetail): number {
     a.line - b.line ||
     a.column - b.column ||
     compareText(a.mutator, b.mutator) ||
-    compareText(a.replacement, b.replacement)
+    compareText(a.replacement, b.replacement) ||
+    a.endLine - b.endLine ||
+    a.endColumn - b.endColumn
   );
 }
 

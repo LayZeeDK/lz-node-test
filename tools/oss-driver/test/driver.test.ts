@@ -186,10 +186,12 @@ describe('lzLeftovers', () => {
   });
 });
 
-function mutant(line: number, status: LzMutantStatus, replacement = 'x'): LzMutantDetail {
+function mutant(line: number, status: LzMutantStatus, replacement = 'x', endColumn = 9): LzMutantDetail {
   return {
     line,
     column: 3,
+    endLine: line,
+    endColumn,
     mutator: 'StringLiteral',
     replacement,
     status,
@@ -222,10 +224,20 @@ describe('lzCompare', () => {
     const command = new Map([['index.js', [mutant(1, 'Killed'), mutant(2, 'Killed', 'a\n  b'), mutant(4, 'Timeout')]]]);
 
     assert.deepEqual(lzCompare(lz, command), [
-      { mutant: 'index.js:1:3 StringLiteral x', lz: 'Killed', command: 'Killed' },
-      { mutant: 'index.js:2:3 StringLiteral a b', lz: 'Survived', command: 'Killed' },
-      { mutant: 'index.js:4:3 StringLiteral x', lz: null, command: 'Timeout' },
+      { mutant: 'index.js:1:3-1:9 StringLiteral x', lz: 'Killed', command: 'Killed' },
+      { mutant: 'index.js:2:3-2:9 StringLiteral a b', lz: 'Survived', command: 'Killed' },
+      { mutant: 'index.js:4:3-4:9 StringLiteral x', lz: null, command: 'Timeout' },
     ]);
+  });
+
+  it('keeps apart two mutants that start at one place and end at two', () => {
+    const lz = new Map([['index.js', [mutant(1, 'Killed', 'true', 20), mutant(1, 'Survived', 'true', 40)]]]);
+    const command = new Map([['index.js', [mutant(1, 'Killed', 'true', 20), mutant(1, 'Killed', 'true', 40)]]]);
+
+    assert.deepEqual(
+      lzCompare(lz, command).map(({ lz: status }) => status),
+      ['Killed', 'Survived'],
+    );
   });
 });
 

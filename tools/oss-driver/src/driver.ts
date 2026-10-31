@@ -46,7 +46,7 @@ export interface LzScore {
 }
 
 export interface LzVerdict {
-  /** `file:line:column mutator replacement`, as both reports locate the mutant. */
+  /** `file:line:column-endLine:endColumn mutator replacement`, as both reports locate the mutant. */
   readonly mutant: string;
   readonly lz: LzMutantStatus | null;
   readonly command: LzMutantStatus | null;
@@ -248,8 +248,8 @@ export function lzCompare(lz: LzReport, command: LzReport): LzVerdict[] {
 function statusesOf(report: LzReport): Map<string, LzMutantStatus> {
   return new Map(
     [...report].flatMap(([file, mutants]) =>
-      mutants.map(({ line, column, mutator, replacement, status }): [string, LzMutantStatus] => [
-        `${file}:${line}:${column} ${mutator} ${replacement.replaceAll(/\s+/g, ' ')}`,
+      mutants.map(({ line, column, endLine, endColumn, mutator, replacement, status }): [string, LzMutantStatus] => [
+        `${file}:${line}:${column}-${endLine}:${endColumn} ${mutator} ${replacement.replaceAll(/\s+/g, ' ')}`,
         status,
       ]),
     ),

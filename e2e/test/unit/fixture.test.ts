@@ -24,6 +24,8 @@ function mutant(line: number, replacement: string): LzMutantDetail {
   return {
     line,
     column: 1,
+    endLine: line,
+    endColumn: 5,
     mutator: 'StringLiteral',
     replacement,
     status: 'Killed',

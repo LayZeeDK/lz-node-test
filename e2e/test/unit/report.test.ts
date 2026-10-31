@@ -37,6 +37,8 @@ describe('lzParseReport', () => {
       {
         line: 1,
         column: 39,
+        endLine: 3,
+        endColumn: 2,
         mutator: 'BlockStatement',
         replacement: '{}',
         status: 'CompileError',
@@ -78,6 +80,15 @@ describe('lzParseReport', () => {
     assert.throws(() => lzParseReport(reportOf([{ ...timeout, location: { start: { line: 2 } } }])), {
       message: 'not a mutation report: files["src/grow.ts"].mutants[0].location.start',
     });
+  });
+
+  it('names a location without an end position', () => {
+    assert.throws(
+      () => lzParseReport(reportOf([{ ...timeout, location: { ...timeout.location, end: { line: 2 } } }])),
+      {
+        message: 'not a mutation report: files["src/grow.ts"].mutants[0].location.end',
+      },
+    );
   });
 
   it('refuses a report without files', () => {
