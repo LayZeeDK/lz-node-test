@@ -28,6 +28,7 @@ function isWaitedFor(path: NodePath): boolean {
 function isWaitedForBlock(path: NodePath): boolean {
   const { parentPath } = path;
 
+  // Stryker disable next-line ConditionalExpression: equivalent, as a return lies in a function, which the search meets before the root, the one path with no parent
   if (parentPath === null || !parentPath.isTryStatement()) {
     return false;
   }
