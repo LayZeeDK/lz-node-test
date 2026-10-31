@@ -383,6 +383,7 @@ describe('LzStrykerNodeTestRunner results', () => {
         "it.only('only shorthand', () => {});",
         "it('only option', { only: true }, () => {});",
         "it('other', () => {});",
+        "it.skip('skipped only', { only: true }, () => {});",
       ),
     });
     const runner = await initRunner(['a.test.mjs']);
@@ -392,6 +393,7 @@ describe('LzStrykerNodeTestRunner results', () => {
       passed(`${a} > only shorthand`),
       passed(`${a} > only option`),
       passed(`${a} > other`),
+      skipped(`${a} > skipped only`),
     ]);
   });
 

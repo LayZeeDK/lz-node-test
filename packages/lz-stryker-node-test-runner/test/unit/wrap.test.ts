@@ -267,6 +267,7 @@ describe('wrapNodeTest', () => {
     });
     module.suite.only('suite.only', () => {});
     module.test('only option', { only: true }, () => {});
+    module.it.skip('skipped only', { only: true, timeout: 5 }, () => {});
 
     assert.deepEqual(
       registrations.map(({ kind, name, rest }) => [kind, name, rest[0]]),
@@ -275,6 +276,7 @@ describe('wrapNodeTest', () => {
         ['test', 'it.only', { concurrency: false }],
         ['suite', 'suite.only', { concurrency: false }],
         ['test', 'only option', { concurrency: false }],
+        ['test.skip', 'skipped only', { timeout: 5 }],
       ],
     );
   });

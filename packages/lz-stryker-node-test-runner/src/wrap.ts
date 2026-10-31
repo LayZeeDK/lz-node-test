@@ -452,7 +452,11 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       registering();
       declare(idOf(parentId(), parse(args).name));
 
-      return Reflect.apply(register, this, args);
+      return Reflect.apply(
+        register,
+        this,
+        args.map((arg) => (typeof arg === 'object' && arg !== null ? withoutOnly(arg) : arg)),
+      );
     };
   const withShorthands = (original: WithShorthands<Body>, wrap: (register: Body) => Registrar): Register =>
     Object.assign(wrap(original), original, {
