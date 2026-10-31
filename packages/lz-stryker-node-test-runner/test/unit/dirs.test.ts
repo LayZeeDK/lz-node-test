@@ -68,7 +68,8 @@ describe('removeDir', () => {
   });
 
   it('names what the removal rejected with in the warning, also when it is no Error', async (t) => {
-    const { warnings, settled } = removal(t, () => Promise.reject('EBUSY'));
+    const reason: unknown = 'EBUSY';
+    const { warnings, settled } = removal(t, () => Promise.reject(reason));
 
     assert.equal(await settled(), 'done');
 

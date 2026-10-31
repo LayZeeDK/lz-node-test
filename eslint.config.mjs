@@ -249,6 +249,8 @@ export default [
       // The tests' empty functions are no-op test doubles.
       '@typescript-eslint/no-empty-function': 'off',
       '@nx/workspace-no-assertion-in-iteration': 'error',
+      // A test rejects with a value typed unknown that is no Error, to cover src that takes any rejection.
+      '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true }],
       'no-restricted-syntax': [
         'error',
         {
