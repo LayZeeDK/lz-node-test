@@ -202,6 +202,22 @@ describe('processEnd', () => {
     assert.deepEqual(sent(staysOpen.kills), groupEnded);
   });
 
+  it("signals a POSIX process's group through process.kill by default", async (t) => {
+    const kill = t.mock.method(process, 'kill', () => {
+      throw Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
+    });
+    const child = Object.assign(new EventEmitter(), { pid: 123, stderr: new PassThrough() });
+    const end = processEnd(child, 'linux');
+    child.emit('exit', 0);
+    child.emit('close', 0);
+    await end;
+
+    assert.deepEqual(
+      kill.mock.calls.map((call) => call.arguments),
+      [[-123, 'SIGTERM']],
+    );
+  });
+
   it('ends no group of a process that failed to start, which has no pid', async () => {
     const { child, settled, kills } = ending('linux', { pid: undefined });
     const failure = new Error('spawn EAGAIN');
@@ -234,9 +250,10 @@ describe('processEnd', () => {
     assert.deepEqual(await settled(), { exitCode: 3, stderr: 'first second' });
   });
 
-  lzTestFor<readonly [string, readonly string[], string]>([
+  lzTestFor<readonly [string, readonly (string | Buffer)[], string]>([
     ['the last 8 KiB of stderr', ['dropped', 'x'.repeat(8191), 'y'], `${'x'.repeat(8191)}y`],
     ['whole characters of the last 8 KiB of stderr', ['€'.repeat(3000)], '€'.repeat(2730)],
+    ['nothing of a stderr that holds only the end of a character', [Buffer.from('€').subarray(1)], ''],
   ])('keeps %s', async ([, writes, kept]) => {
     const { child, settled } = ending();
     writes.forEach((chunk) => child.stderr.write(chunk));
