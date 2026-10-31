@@ -443,6 +443,7 @@ export function lzTestRunnerConcurrency(
 
 /** What a test file's environment is made from: the runner's own environment, the file, and the run. */
 export interface LzRunEnvInput {
+  /** The runner's environment; its NODE_OPTIONS gives way to the hook and `nodeOptions`. */
   readonly base: NodeJS.ProcessEnv;
   readonly file: string;
   readonly outDir: string;

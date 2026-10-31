@@ -225,13 +225,16 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
    */
   const ignoringOnly = <T>(withOnly: T, without: T): T => (testOnly ? withOnly : without);
   const withoutOnly = (options: object | null | undefined): object =>
-    testOnly ? (options ?? {}) : Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only'));
+    ignoringOnly(options ?? {}, Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only')));
   /** Makes `t.runOnly` do nothing on a context node:test passes to a test body or hook, as `ignoringOnly` says. */
-  const turnOffRunOnly = (context: unknown) => {
-    if (!testOnly && isObject(context) && typeof context['runOnly'] === 'function') {
-      Object.assign(context, { runOnly: () => undefined });
-    }
-  };
+  const turnOffRunOnly = ignoringOnly(
+    (_context: unknown) => undefined,
+    (context: unknown) => {
+      if (isObject(context) && typeof context['runOnly'] === 'function') {
+        Object.assign(context, { runOnly: () => undefined });
+      }
+    },
+  );
   // The last is current, also when a subtest that its parent does not await outlives the parent's body.
   const active = new Set<string>();
   /** The test whose span is open, and the test of the span opened last. */
@@ -358,7 +361,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     return wrapped;
   };
   const activating = (hook: Body | undefined) => preceded(hook, activate);
-  const ignoringRunOnly = (hook: Body | undefined) => (testOnly ? hook : preceded(hook, turnOffRunOnly));
+  const ignoringRunOnly = (hook: Body | undefined) => ignoringOnly(hook, preceded(hook, turnOffRunOnly));
 
   /** node:test takes the position from its caller, which is a wrapper, so the wrapper finds it itself. */
   const declare = (id: string) => {
