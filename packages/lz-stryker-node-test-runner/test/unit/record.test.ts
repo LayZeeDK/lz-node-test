@@ -85,23 +85,71 @@ describe('lzIsRecordName', () => {
 });
 
 describe('lzWriteRecord', () => {
-  it('writes the record to its temporary file and renames that over the record', () => {
-    const path = join('/out', recordName(4321, 0));
+  const path = join('/out', recordName(4321, 0));
+  const written = ['write', lzTempRecordPath(path), '{"tests":[]}'];
+  const renamed = ['rename', lzTempRecordPath(path), path];
+
+  /** Writes a record on `platform` where each rename fails with the next code of `failures`, and then succeeds. */
+  function writeRecord(platform: NodeJS.Platform, failures: readonly string[]) {
     const calls: unknown[][] = [];
+    let attempt = 0;
+    const write = () =>
+      lzWriteRecord(
+        path,
+        { tests: [] },
+        {
+          write: (to, data) => calls.push(['write', to, data]),
+          rename: (from, to) => {
+            calls.push(['rename', from, to]);
+            const code = failures[attempt];
+            attempt += 1;
 
-    lzWriteRecord(
-      path,
-      { tests: [] },
-      {
-        write: (to, data) => calls.push(['write', to, data]),
-        rename: (from, to) => calls.push(['rename', from, to]),
-      },
-    );
+            if (code !== undefined) {
+              throw Object.assign(new Error(code), { code });
+            }
+          },
+          pause: (ms) => calls.push(['pause', ms]),
+          platform,
+        },
+      );
 
-    assert.deepEqual(calls, [
-      ['write', lzTempRecordPath(path), '{"tests":[]}'],
-      ['rename', lzTempRecordPath(path), path],
-    ]);
+    return { calls, write };
+  }
+
+  it('writes the record to its temporary file and renames that over the record', () => {
+    const { calls, write } = writeRecord('linux', []);
+
+    write();
+
+    assert.deepEqual(calls, [written, renamed]);
+  });
+
+  lzTestEach(['EPERM', 'EBUSY'])(
+    'renames again 10 ms later on Windows when the rename fails with %s, as while another process reads the record',
+    (code) => {
+      const { calls, write } = writeRecord('win32', [code]);
+
+      write();
+
+      assert.deepEqual(calls, [written, renamed, ['pause', 10], renamed]);
+    },
+  );
+
+  it('throws the error of the fifth rename on Windows when every rename fails', () => {
+    const { calls, write } = writeRecord('win32', ['EPERM', 'EBUSY', 'EPERM', 'EBUSY', 'EPERM', 'EBUSY']);
+
+    assert.throws(write, { code: 'EPERM' });
+    assert.deepEqual(calls, [written, ...[1, 2, 3, 4].flatMap(() => [renamed, ['pause', 10]]), renamed]);
+  });
+
+  lzTestFor<readonly [NodeJS.Platform, string]>([
+    ['linux', 'EPERM'],
+    ['win32', 'ENOENT'],
+  ])('throws the error of a failed rename at once on %s for %s', ([platform, code]) => {
+    const { calls, write } = writeRecord(platform, [code]);
+
+    assert.throws(write, { code });
+    assert.deepEqual(calls, [written, renamed]);
   });
 });
 

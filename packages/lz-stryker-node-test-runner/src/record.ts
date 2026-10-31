@@ -131,13 +131,35 @@ export function lzTempRecordPath(path: string): string {
   return `${path}.tmp`;
 }
 
-/** The file system calls `lzWriteRecord` makes. */
+/** What `lzWriteRecord` takes from the process. */
 export interface LzRecordFiles {
   readonly write: (path: string, data: string) => void;
   readonly rename: (from: string, to: string) => void;
+  /** Blocks the thread for `ms`: a record is written in exit listeners, which run no timer. */
+  readonly pause: (ms: number) => void;
+  readonly platform: NodeJS.Platform;
 }
 
-const nodeFiles: LzRecordFiles = { write: writeFileSync, rename: renameSync };
+const nodeFiles: LzRecordFiles = {
+  write: writeFileSync,
+  rename: renameSync,
+  pause: (ms) => {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  },
+  platform: process.platform,
+};
+
+/**
+ * How often, and how far apart, `lzWriteRecord` renames on Windows, where a rename over a file that another process has
+ * open, as the runner reading the record or a virus scanner the new temporary file, fails with EPERM or EBUSY: at most
+ * 40 ms in all.
+ */
+const renameAttempts = 5;
+const renameRetryMs = 10;
+
+function isBusy(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && (error.code === 'EPERM' || error.code === 'EBUSY');
+}
 
 /**
  * Writes `record` to `lzTempRecordPath(path)` and renames that over `path`, so that a reader finds the record whole, and
@@ -146,7 +168,20 @@ const nodeFiles: LzRecordFiles = { write: writeFileSync, rename: renameSync };
 export function lzWriteRecord(path: string, record: ProcessRecord, files: LzRecordFiles = nodeFiles): void {
   const temp = lzTempRecordPath(path);
   files.write(temp, JSON.stringify(record));
-  files.rename(temp, path);
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      files.rename(temp, path);
+
+      return;
+    } catch (error) {
+      if (files.platform !== 'win32' || attempt === renameAttempts || !isBusy(error)) {
+        throw error;
+      }
+    }
+
+    files.pause(renameRetryMs);
+  }
 }
 
 const recordNamePattern = /^\d+\.(?:\d+(?:\.[\da-f-]+)?|[\da-f-]+\.memory)\.json$/;

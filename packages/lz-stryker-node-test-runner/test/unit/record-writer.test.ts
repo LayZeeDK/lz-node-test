@@ -177,6 +177,35 @@ describe('lzPersistRecord, for a process that a signal ends', () => {
   });
 });
 
+describe('lzPersistRecord, at exit', () => {
+  /** A process whose record writes fail, counting them. */
+  function failingWrites(options: { readonly main: boolean; readonly dryRun: boolean }) {
+    let writes = 0;
+    const { exit } = persisted(options, {
+      writeRecord: () => {
+        writes += 1;
+        throw new Error('EPERM: operation not permitted, rename');
+      },
+    });
+
+    return { exit, writes: () => writes };
+  }
+
+  it('exits without an error when the record of a process the tests started cannot be written', () => {
+    const { exit, writes } = failingWrites({ main: false, dryRun: false });
+
+    exit();
+
+    assert.equal(writes(), 1);
+  });
+
+  it("lets the error through when the test file's own record cannot be written", () => {
+    const { exit } = failingWrites({ main: true, dryRun: false });
+
+    assert.throws(exit, /EPERM/);
+  });
+});
+
 describe('lzHits', () => {
   it('counts no hits without coverage', () => {
     assert.equal(lzHits(undefined), 0);
