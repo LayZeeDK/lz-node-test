@@ -5,8 +5,8 @@ import {
   type Awaitable,
   type EachCallback,
   type Flags,
+  type LzTableReturn,
   type Register,
-  type TableReturn,
 } from './register.ts';
 
 /** The arguments of a `lzTestEach` callback for a readonly tuple row of up to 10 values, as in Vitest and Jest. */
@@ -45,7 +45,7 @@ type ExtractEachCallbackArgs<T extends ReadonlyArray<any>> = {
                     : 'fallback'];
 
 /** Registers the tests of a `lzTestEach` table. Without `fn`, each test is a todo test. */
-export type LzTestEachFunctionReturn<T extends readonly any[]> = TableReturn<(...args: T) => Awaitable<void>>;
+export type LzTestEachFunctionReturn<T extends readonly any[]> = LzTableReturn<(...args: T) => Awaitable<void>>;
 
 export interface LzTestEachFunction {
   <T extends any[] | [any]>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T>;

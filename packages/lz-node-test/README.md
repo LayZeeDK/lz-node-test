@@ -80,6 +80,7 @@ The package exports a type for each value its functions take or return:
 | `LzTestEachFunctionReturn<T>` | what `lzTestEach(cases)` returns, for `fn`'s arguments `T`             |
 | `LzTestForFunction`           | `lzTestFor`, without its modifiers                                     |
 | `LzTestForFunctionReturn<T>`  | what `lzTestFor(cases)` returns, for the case type `T`                 |
+| `LzTableReturn<TCallback>`    | the function both tables return, for its callback type `TCallback`     |
 
 ### Modifiers
 

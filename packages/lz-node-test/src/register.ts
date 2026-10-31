@@ -23,7 +23,7 @@ export type EachCallback = (...args: any[]) => Awaitable<void>;
 type Body = (t: TestContext) => Awaitable<void>;
 
 /** The typed function a table returns, with the callback type its table function gives `fn`. */
-export interface TableReturn<TCallback> {
+export interface LzTableReturn<TCallback> {
   (name: LzName, fn?: TCallback, timeout?: number): void;
   (name: LzName, options: LzEachOptions, fn?: TCallback): void;
 }
