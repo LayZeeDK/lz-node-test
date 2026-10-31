@@ -4,7 +4,8 @@ import { assertMethod, importOf, isTestContext, propertyName } from './bindings.
 import type { Operator } from './operator.ts';
 
 const message = 'Stryker';
-const testFunctions: ReadonlySet<string | undefined> = new Set(['it', 'test', undefined]);
+const testFunctions: ReadonlySet<string | undefined> = new Set(['it', 'test']);
+const testModifiers: ReadonlySet<string | undefined> = new Set(['only', 'skip', 'todo']);
 
 /**
  * Makes the code that `assert.throws` or `assert.rejects` checks, or the test function of a node:test test whose
@@ -87,18 +88,26 @@ function propertyValue(object: types.ObjectExpression, key: string): types.Node 
   return property?.type === 'ObjectProperty' ? property.value : undefined;
 }
 
-/** node:test's `it` or `test`, imported, or the test context's `test`. */
+/**
+ * node:test's `it` or `test`, as an import or a member of the module's default or namespace import, or the test
+ * context's `test`; called as it is or through `only`, `skip` or `todo`.
+ */
 function isNodeTest(path: NodePath, callee: types.Node): boolean {
-  if (callee.type === 'Identifier') {
-    const from = importOf(path, callee.name);
+  const test = callee.type === 'MemberExpression' && testModifiers.has(propertyName(callee)) ? callee.object : callee;
 
-    return from?.source === 'node:test' && testFunctions.has(from.imported);
+  if (test.type === 'Identifier') {
+    const from = importOf(path, test.name);
+
+    return from?.source === 'node:test' && (from.imported === undefined || testFunctions.has(from.imported));
   }
 
-  return (
-    callee.type === 'MemberExpression' &&
-    propertyName(callee) === 'test' &&
-    callee.object.type === 'Identifier' &&
-    isTestContext(path, callee.object)
-  );
+  if (test.type !== 'MemberExpression' || test.object.type !== 'Identifier' || !testFunctions.has(propertyName(test))) {
+    return false;
+  }
+
+  const from = importOf(path, test.object.name);
+
+  return from === undefined
+    ? propertyName(test) === 'test' && isTestContext(path, test.object)
+    : from.source === 'node:test' && from.imported === undefined;
 }

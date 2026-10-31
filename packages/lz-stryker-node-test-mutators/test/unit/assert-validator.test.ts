@@ -61,6 +61,16 @@ describe('LzAssertValidator', () => {
       "the test context's test",
       "it('parent', async (t) => {\n  await t.test('fails', { expectFailure: /x/ }, f);\n});",
     ],
+    ['it.only', `${nodeTest}it.only('fails', { expectFailure: /x/ }, f);`],
+    ['test.skip', "import { test } from 'node:test';\ntest.skip('fails', { expectFailure: /x/ }, f);"],
+    ['it.todo', `${nodeTest}it.todo('fails', { expectFailure: /x/ }, f);`],
+    ['a namespace import', "import * as nt from 'node:test';\nnt.test('fails', { expectFailure: /x/ }, f);"],
+    ['the it of a namespace import', "import * as nt from 'node:test';\nnt.it('fails', { expectFailure: /x/ }, f);"],
+    ['the it of the default import', "import test from 'node:test';\ntest.it('fails', { expectFailure: /x/ }, f);"],
+    [
+      'the it.only of a namespace import',
+      "import * as nt from 'node:test';\nnt.it.only('fails', { expectFailure: /x/ }, f);",
+    ],
   ])('replaces the test function of an expectFailure test made through %s', async (_title, source) => {
     assert.deepEqual(await mutantsOf(assertValidator, source), [throws]);
   });
@@ -76,6 +86,21 @@ describe('LzAssertValidator', () => {
     ['options passed whole', `${nodeTest}it('fails', options, f);`],
     ['an it of another library', "import { it } from 'vitest';\nit('fails', { expectFailure: /x/ }, f);"],
     ['an it of its own', "function it(...args: unknown[]) {}\nit('fails', { expectFailure: /x/ }, f);"],
+    ['an it.only of another library', "import { it } from 'vitest';\nit.only('fails', { expectFailure: /x/ }, f);"],
+    ['a namespace of another library', "import * as v from 'vitest';\nv.it('fails', { expectFailure: /x/ }, f);"],
+    [
+      'a parameter that shadows the imported it',
+      `${nodeTest}[f].forEach((it) => {\n  it('fails', { expectFailure: /x/ }, f);\n});`,
+    ],
+    ['a test method of a variable', "const re = /x/;\nre.test('fails', { expectFailure: /x/ }, f);"],
+    [
+      'an it of the test context',
+      "it('parent', async (t) => {\n  await t.it('fails', { expectFailure: /x/ }, f);\n});",
+    ],
+    [
+      'a computed test of the test context',
+      "it('parent', async (t) => {\n  await t['test']('fails', { expectFailure: /x/ }, f);\n});",
+    ],
   ])('leaves a test with %s alone', async (_title, source) => {
     assert.deepEqual(await mutantsOf(assertValidator, source), []);
   });
