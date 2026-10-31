@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzConcurrency, lzMutant, lzMutants, type LzStrykerRun } from '../../src/fixture.ts';
+import { lzConcurrency, lzMutant, lzMutants, lzStrykerTimeoutMs, type LzStrykerRun } from '../../src/fixture.ts';
 import type { LzMutantDetail } from '../../src/report.ts';
 
 describe('lzConcurrency', () => {
@@ -71,7 +71,7 @@ describe('lzMutants', () => {
 
   it('refuses a run with no report, and says when it timed out', () => {
     assert.throws(() => lzMutants(unreported(true), 'src/a.ts'), {
-      message: 'Stryker wrote no report (exit code 1, ended after 15 minutes):\nError during import',
+      message: `Stryker wrote no report (exit code 1, ended after ${lzStrykerTimeoutMs / 60_000} minutes):\nError during import`,
     });
   });
 });

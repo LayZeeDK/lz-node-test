@@ -16,7 +16,7 @@ const pinnedNames: readonly string[] = [
 ];
 const strykerBin = join('node_modules', '@stryker-mutator', 'core', 'bin', 'stryker.js');
 const reportFile = join('reports', 'mutation', 'mutation.json');
-const strykerTimeoutMs = 15 * 60_000;
+export const lzStrykerTimeoutMs = 15 * 60_000;
 const dirPrefix = 'lz-node-test-e2e-';
 const concurrencyVariable = 'LZ_E2E_CONCURRENCY';
 
@@ -110,7 +110,7 @@ export function lzMutant(run: LzStrykerRun, { at, replacement }: { at: string; r
 function reportOf(run: LzStrykerRun): LzReport {
   if (!run.reported) {
     throw new Error(
-      `Stryker wrote no report (exit code ${run.exitCode}${run.timedOut ? `, ended after ${strykerTimeoutMs / 60_000} minutes` : ''}):\n` +
+      `Stryker wrote no report (exit code ${run.exitCode}${run.timedOut ? `, ended after ${lzStrykerTimeoutMs / 60_000} minutes` : ''}):\n` +
         run.output,
     );
   }
@@ -128,7 +128,7 @@ async function stryker(dir: string, configFile: string, concurrency: number): Pr
   const { exitCode, stdout, stderr, timedOut } = await lzExec(
     process.execPath,
     [strykerBin, 'run', configFile, '--concurrency', String(concurrency), '--reporters', 'clear-text,json'],
-    { cwd: dir, env: consumerEnv(tmp), timeoutMs: strykerTimeoutMs },
+    { cwd: dir, env: consumerEnv(tmp), timeoutMs: lzStrykerTimeoutMs },
   );
   const outcome: LzStrykerOutcome = {
     exitCode,
