@@ -30,6 +30,27 @@ export const later: HookDependencies['later'] = (callback, ms) => {
   setTimeout(callback, ms).unref();
 };
 
+export const lzEvery: HookDependencies['every'] = (callback, ms) => {
+  setInterval(callback, ms).unref();
+};
+
+export function lzSignals(platform: NodeJS.Platform): HookDependencies['signals'] {
+  return platform === 'win32'
+    ? undefined
+    : {
+        on: (signal, listener) => process.on(signal, listener),
+        off: (signal, listener) => process.off(signal, listener),
+        listenerCount: (signal) => process.listenerCount(signal),
+        signalExitEmitters: () => {
+          const version4: unknown = Reflect.get(globalThis, Symbol.for('signal-exit emitter'));
+          const version3: unknown = Reflect.get(process, '__signal_exit_emitter__');
+
+          return [version4, version3];
+        },
+        raise: (signal) => process.kill(process.pid, signal),
+      };
+}
+
 // Found once, so that a test that fakes process.hrtime, as fake timers do, leaves the clock of every span alone.
 const hrtime = process.hrtime.bigint;
 
@@ -48,9 +69,7 @@ install({
   offExit: (listener) => process.off('exit', listener),
   onBeforeExit: (listener) => process.on('beforeExit', listener),
   writeRecord: lzWriteRecord,
-  every: (callback, ms) => {
-    setInterval(callback, ms).unref();
-  },
+  every: lzEvery,
   exit,
   activeResources,
   later,
@@ -69,19 +88,5 @@ install({
   },
   callSites: getCallSites,
   now,
-  signals:
-    process.platform === 'win32'
-      ? undefined
-      : {
-          on: (signal, listener) => process.on(signal, listener),
-          off: (signal, listener) => process.off(signal, listener),
-          listenerCount: (signal) => process.listenerCount(signal),
-          signalExitEmitters: () => {
-            const version4: unknown = Reflect.get(globalThis, Symbol.for('signal-exit emitter'));
-            const version3: unknown = Reflect.get(process, '__signal_exit_emitter__');
-
-            return [version4, version3];
-          },
-          raise: (signal) => process.kill(process.pid, signal),
-        },
+  signals: lzSignals(process.platform),
 });
