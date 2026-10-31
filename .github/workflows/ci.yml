@@ -45,14 +45,90 @@ jobs:
       - run: npx nx run-many -t e2e
 
   mutation:
-    name: Mutation testing
+    name: Mutation testing (${{ matrix.project }}:mutate-${{ matrix.config }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Sized for a full run, which main does on every push.
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # `mutated` lists, as exclusions, the files the config mutates. Stryker's incremental mode sees changes to
+        # those and to the test files; every other input goes into the cache key below.
+        include:
+          - project: eslint-rules
+            root: tools/eslint-rules
+            config: src
+            mutated: '!tools/eslint-rules/*.ts'
+            timeout: 30
+          - project: eslint-rules
+            root: tools/eslint-rules
+            config: test-code
+            mutated: '!tools/eslint-rules/*.test.ts'
+            timeout: 30
+          - project: lz-node-test
+            root: packages/lz-node-test
+            config: src
+            mutated: '!packages/lz-node-test/src/**'
+            timeout: 30
+          - project: lz-node-test
+            root: packages/lz-node-test
+            config: test-code
+            mutated: '!packages/lz-node-test/test/**/*.test.ts'
+            timeout: 30
+          - project: lz-stryker-node-test-mutators
+            root: packages/lz-stryker-node-test-mutators
+            config: src
+            mutated: "!packages/lz-stryker-node-test-mutators/src/**\n!packages/lz-stryker-node-test-mutators/test/synthetic/node-apis.ts"
+            timeout: 45
+          - project: lz-stryker-node-test-mutators
+            root: packages/lz-stryker-node-test-mutators
+            config: test-code
+            mutated: '!packages/lz-stryker-node-test-mutators/test/**/*.test.ts'
+            timeout: 30
+          - project: lz-stryker-node-test-runner
+            root: packages/lz-stryker-node-test-runner
+            config: src
+            mutated: '!packages/lz-stryker-node-test-runner/src/**'
+            timeout: 180
+          - project: lz-stryker-node-test-runner
+            root: packages/lz-stryker-node-test-runner
+            config: test-code
+            mutated: '!packages/lz-stryker-node-test-runner/test/**/*.test.ts'
+            timeout: 30
+    env:
+      INCREMENTAL_FILE: reports/stryker-incremental/${{ matrix.project }}.${{ matrix.config }}.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        id: node
         with:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - run: npx nx run-many -t mutate
+      # Every config loads the runner and the operators from source, so their source is an outside input unless the
+      # config mutates it. A change to any outside input misses the cache and runs the config in full.
+      - name: Key the incremental file
+        id: key
+        run: >-
+          echo "prefix=stryker-inc-${{ matrix.project }}.${{ matrix.config }}-${{ runner.os }}-node-${{
+          steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
+          'tsconfig.base.json', 'packages/lz-node-test/package.json', 'packages/lz-node-test/src/**',
+          'packages/lz-stryker-node-test-mutators/src/**', 'packages/lz-stryker-node-test-runner/src/**',
+          format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
+          '!**/out-tsc/**', matrix.mutated) }}-" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.INCREMENTAL_FILE }}
+          key: ${{ steps.key.outputs.prefix }}${{ github.sha }}
+          restore-keys: ${{ steps.key.outputs.prefix }}
+      # Main runs every mutant and saves the baseline, so a reused result never outlives a push to main: an
+      # incremental run can reuse a static mutant's Survived result after a test that kills it was added.
+      - run: >-
+          npx nx run ${{ matrix.project }}:mutate-${{ matrix.config }} --incremental
+          ${{ github.event_name == 'push' && '--force' || '' }}
+      # Also after a failure or a timeout: Stryker saves the results it has when it is interrupted.
+      - if: always() && steps.key.outcome == 'success'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.INCREMENTAL_FILE }}
+          key: ${{ steps.key.outputs.prefix }}${{ github.sha }}
