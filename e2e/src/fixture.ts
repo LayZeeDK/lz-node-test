@@ -19,7 +19,6 @@ const strykerBin = join('node_modules', '@stryker-mutator', 'core', 'bin', 'stry
 export const lzReportFile = join('reports', 'mutation', 'mutation.json');
 export const lzStrykerTimeoutMs = 15 * 60_000;
 const dirPrefix = 'lz-node-test-e2e-';
-const runDirPattern = new RegExp(`^${dirPrefix}(\\d+)-`);
 const concurrencyVariable = 'LZ_E2E_CONCURRENCY';
 
 interface LzStrykerOutcome {
@@ -40,7 +39,7 @@ export interface LzFixture {
 export async function lzFixture(name: string): Promise<LzFixture> {
   const concurrency = lzConcurrency(process.env);
 
-  removeDeadRunDirs(tmpdir());
+  lzRemoveDeadRunDirs(tmpdir(), dirPrefix);
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${process.pid}-`)));
 
   lzRemoveOnExit(dir);
@@ -230,8 +229,10 @@ function npmCli(): string {
   return found;
 }
 
-/** A killed run cannot remove its own fixture directory. */
-function removeDeadRunDirs(dir: string): void {
+/** A killed run cannot remove its own `<prefix><pid>-*` directory, so a later run removes those of dead pids. */
+export function lzRemoveDeadRunDirs(dir: string, prefix: string): void {
+  const runDirPattern = new RegExp(`^${prefix}(\\d+)-`);
+
   for (const name of readdirSync(dir)) {
     const pid = runDirPattern.exec(name)?.[1];
 

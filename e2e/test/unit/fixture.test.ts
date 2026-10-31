@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { lzConcurrency, lzMutant, lzMutants, lzStrykerTimeoutMs, type LzStrykerRun } from '../../src/fixture.ts';
+import {
+  lzConcurrency,
+  lzMutant,
+  lzMutants,
+  lzRemoveDeadRunDirs,
+  lzStrykerTimeoutMs,
+  type LzStrykerRun,
+} from '../../src/fixture.ts';
 import type { LzMutantDetail } from '../../src/report.ts';
 
 describe('lzConcurrency', () => {
@@ -104,5 +115,24 @@ describe('lzMutant', () => {
     assert.throws(() => lzMutant(unreported(false), { at: 'src/a.ts:1:1', replacement: '""' }), {
       message: 'Stryker wrote no report (exit code 1):\nError during import',
     });
+  });
+});
+
+describe('lzRemoveDeadRunDirs', () => {
+  it("removes the prefix's folders of a dead pid, and keeps a live pid's and another prefix's", (t) => {
+    const dir = mkdtempSync(join(tmpdir(), 'lz-remove-dead-'));
+    const deadPid = spawnSync(process.execPath, ['-e', ''], { windowsHide: true }).pid;
+
+    t.after(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    ['p-', 'q-'].forEach((prefix) => {
+      mkdirSync(join(dir, `${prefix}${deadPid}-a`));
+    });
+    mkdirSync(join(dir, `p-${process.pid}-a`));
+
+    lzRemoveDeadRunDirs(dir, 'p-');
+
+    assert.deepEqual(readdirSync(dir).sort(), [`p-${process.pid}-a`, `q-${deadPid}-a`]);
   });
 });

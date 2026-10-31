@@ -14,7 +14,15 @@ import { performance } from 'node:perf_hooks';
 import timers from 'node:timers/promises';
 
 import { lzExec } from '../exec.ts';
-import { lzInstall, lzPack, lzRemoveOnExit, lzReportFile, lzStryker, type LzStrykerRun } from '../fixture.ts';
+import {
+  lzInstall,
+  lzPack,
+  lzRemoveDeadRunDirs,
+  lzRemoveOnExit,
+  lzReportFile,
+  lzStryker,
+  type LzStrykerRun,
+} from '../fixture.ts';
 import { lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
 import {
   lzDescendants,
@@ -84,6 +92,7 @@ interface LzSideRun {
 }
 
 const sides: readonly LzSide[] = ['lz', 'command'];
+const dirPrefix = 'lz-oss-driver-';
 const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
 /** How long processes that a run left get to end by themselves before they count as left behind. */
 const settleMs = 2_000;
@@ -92,7 +101,8 @@ const options = lzParseOptions(process.argv.slice(2));
 const out = resolve(options.out);
 
 mkdirSync(out, { recursive: true });
-const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `lz-oss-driver-${process.pid}-`)));
+lzRemoveDeadRunDirs(tmpdir(), dirPrefix);
+const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `${dirPrefix}${process.pid}-`)));
 
 if (!options.prepareOnly) {
   lzRemoveOnExit(dir);
