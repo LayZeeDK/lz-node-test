@@ -347,7 +347,7 @@ describe('wrapNodeTest', () => {
 
   it('keeps a subtest that its parent does not await current until it ends, after its parent ends', async () => {
     const { module, registrations, ns, env, seen, see, testSpans } = wrapped();
-    const { promise: gate, resolve: release } = Promise.withResolvers<void>();
+    const { promise: gate, resolve: release }: PromiseWithResolvers<void> = Promise.withResolvers();
     let child: Promise<unknown> | undefined;
     module.it('parent', (t: Subtests) => {
       t.test('child', async () => {

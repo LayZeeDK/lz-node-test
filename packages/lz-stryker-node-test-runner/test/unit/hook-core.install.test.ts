@@ -655,7 +655,7 @@ describe('install', () => {
 
     it("starts the grace once the test file's root `after` hooks have settled, also one added while they run", async () => {
       const h = installedHarness(fileEnv());
-      const { promise: firstSettles, resolve: resolveFirst } = Promise.withResolvers<void>();
+      const { promise: firstSettles, resolve: resolveFirst }: PromiseWithResolvers<void> = Promise.withResolvers();
       h.wrapped().after(() => firstSettles);
       h.wrapped().after(() => {});
       const [finished, first, second] = afterHooks(h.fake);

@@ -112,7 +112,7 @@ describe('wrapNodeTest', () => {
 
     it('keeps a test current after its body until its after hooks run, and through them while its body runs', async () => {
       const { module, registrations, ns, seen, see } = wrapped();
-      const { promise: gate, resolve: release } = Promise.withResolvers<void>();
+      const { promise: gate, resolve: release }: PromiseWithResolvers<void> = Promise.withResolvers();
       module.it('waits', async (t: { after: (hook: Fn) => void }) => {
         t.after(see);
         await gate;
