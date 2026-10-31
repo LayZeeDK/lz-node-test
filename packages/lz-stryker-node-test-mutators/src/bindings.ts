@@ -75,6 +75,21 @@ export function isNodeAssertCall(path: NodePath, call: types.CallExpression): bo
   return source !== undefined && nodeAssert.has(source);
 }
 
+const nodeProcess: ReadonlySet<string> = new Set(['node:process', 'process']);
+
+/** The global `process`, or the default or namespace import of `node:process`. */
+export function isProcess(path: NodePath, receiver: types.Node): boolean {
+  if (receiver.type !== 'Identifier') {
+    return false;
+  }
+
+  const from = importOf(path, receiver.name);
+
+  return from === undefined
+    ? receiver.name === 'process' && !path.scope.hasBinding('process')
+    : nodeProcess.has(from.source) && from.imported === undefined;
+}
+
 export function awaited(expression: types.Expression): types.Expression {
   return expression.type === 'AwaitExpression' ? expression.argument : expression;
 }

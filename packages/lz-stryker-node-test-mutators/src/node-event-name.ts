@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { importOf } from './bindings.ts';
+import { importOf, isProcess } from './bindings.ts';
 import type { Operator } from './operator.ts';
 
 const listenMethods: ReadonlySet<string> = new Set([
@@ -11,7 +11,6 @@ const listenMethods: ReadonlySet<string> = new Set([
   'prependOnceListener',
 ]);
 const nodeEvents: ReadonlySet<string> = new Set(['node:events', 'events']);
-const nodeProcess: ReadonlySet<string> = new Set(['node:process', 'process']);
 const processSwaps: ReadonlyMap<string, readonly string[]> = new Map([
   ['exit', ['beforeExit']],
   ['beforeExit', ['exit']],
@@ -96,16 +95,4 @@ function isEventsFunction(path: NodePath, callee: types.Node): boolean {
 
 function isOnceOrOn(name: string | undefined): boolean {
   return name === 'once' || name === 'on';
-}
-
-function isProcess(path: NodePath, receiver: types.Node): boolean {
-  if (receiver.type !== 'Identifier') {
-    return false;
-  }
-
-  const from = importOf(path, receiver.name);
-
-  return from === undefined
-    ? receiver.name === 'process' && !path.scope.hasBinding('process')
-    : nodeProcess.has(from.source) && from.imported === undefined;
 }

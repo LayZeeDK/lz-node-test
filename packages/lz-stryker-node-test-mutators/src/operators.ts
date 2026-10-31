@@ -3,6 +3,7 @@ import { assertStatement } from './assert-statement.ts';
 import { assertValidator } from './assert-validator.ts';
 import { awaitStatement } from './await-statement.ts';
 import { nodeEventName } from './node-event-name.ts';
+import { nodeExitCode } from './node-exit-code.ts';
 import { nodeTimerDelay } from './node-timer-delay.ts';
 import type { Operator } from './operator.ts';
 import { returnAwait } from './return-await.ts';
@@ -13,6 +14,7 @@ export const productionOperators: readonly Operator[] = [
   assertStatement,
   awaitStatement,
   returnAwait,
+  nodeExitCode,
 ];
 
 export const testOperators: readonly Operator[] = [assertCall, assertValidator];
