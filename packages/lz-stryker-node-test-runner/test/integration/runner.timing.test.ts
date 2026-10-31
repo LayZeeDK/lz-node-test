@@ -23,22 +23,21 @@ import {
 shareCompileCache();
 
 describe('LzStrykerNodeTestRunner timing', () => {
-  it("times each test with the time its file's run spent outside the tests, such as starting node", async (t) => {
+  it("shares among the tests the time their file's run spent outside them, such as starting node", async (t) => {
     project(t, { 'a.test.mjs': fixture("it('first', () => {});", "it('second', () => {});") });
     const runner = await initRunner(['*.test.mjs']);
     const started = performance.now();
 
     const { tests } = complete(await settle(runner.dryRun(dryRun)));
     const wall = Math.ceil(performance.now() - started);
+    const total = tests.reduce((sum, test) => sum + test.timeSpentMs, 0);
+    const message = `${tests.map((test) => test.timeSpentMs).join(' and ')} ms of a ${wall} ms run`;
 
     assert.equal(tests.length, 2);
 
     // Starting node takes tens of milliseconds, and neither test takes one.
-    assert.deepEqual(
-      tests.map((test) => test.timeSpentMs >= 20 && test.timeSpentMs <= wall),
-      [true, true],
-      `${tests.map((test) => test.timeSpentMs).join(' and ')} ms of a ${wall} ms run`,
-    );
+    assert.ok(total >= 20, message);
+    assert.ok(total <= wall, message);
   });
 
   async function meetingFiles(t: TestContext, concurrency: number, checkers: string[] = []) {

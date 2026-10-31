@@ -28,7 +28,7 @@ const file = join('/repo', 'a.test.mjs');
 describe('lzToTestResults', () => {
   const base = (id: string) => ({ id, name: id.slice(`${file} > `.length), fileName: file });
 
-  it('reports each recorded test with its status, failure message, and rounded time plus the time the file spent outside its tests', () => {
+  it('reports each recorded test with its status, failure message, and rounded time plus its share of the time the file spent outside its tests', () => {
     assert.deepEqual(
       lzToTestResults(
         file,
@@ -41,15 +41,15 @@ describe('lzToTestResults', () => {
         10.4,
       ),
       [
-        { ...base(`${file} > passes`), timeSpentMs: 8, status: TestStatus.Success },
-        { ...base(`${file} > fails`), timeSpentMs: 8, status: TestStatus.Failed, failureMessage: 'boom' },
+        { ...base(`${file} > passes`), timeSpentMs: 3, status: TestStatus.Success },
+        { ...base(`${file} > fails`), timeSpentMs: 4, status: TestStatus.Failed, failureMessage: 'boom' },
         {
           ...base(`${file} > fails silently`),
-          timeSpentMs: 6,
+          timeSpentMs: 2,
           status: TestStatus.Failed,
           failureMessage: 'Test failed',
         },
-        { ...base(`${file} > skipped`), timeSpentMs: 6, status: TestStatus.Skipped },
+        { ...base(`${file} > skipped`), timeSpentMs: 2, status: TestStatus.Skipped },
       ],
     );
   });
@@ -67,7 +67,22 @@ describe('lzToTestResults', () => {
         ],
         10,
       ).map((result) => result.timeSpentMs),
-      [5, 6, 7, 9, 5],
+      [2, 3, 4, 6, 2],
+    );
+  });
+
+  it('shares the time the file spent outside its tests equally among its tests, subtests included, so together they count it once', () => {
+    assert.deepEqual(
+      lzToTestResults(
+        file,
+        [
+          { id: `${file} > parent > child`, status: 'passed', timeSpentMs: 2 },
+          { id: `${file} > parent`, status: 'passed', timeSpentMs: 4 },
+          { id: `${file} > sibling`, status: 'passed', timeSpentMs: 2 },
+        ],
+        12,
+      ).map((result) => result.timeSpentMs),
+      [4, 6, 4],
     );
   });
 

@@ -89,10 +89,12 @@ once per run as under `node --test`.
 - **The dry run runs files in parallel.** It runs as many test files at once as Stryker later runs test runners for
   the mutants, so the test times include the slowdown of processes that share the cores. Each mutant run runs its
   test files one after another.
-- **Test times include the start of the process.** Each test's time includes the time its file's process spent
-  outside the file's tests, such as starting `node` and loading modules, because running one test of a file runs the
-  file's whole process. Stryker sizes a mutant's timeout from the times of the tests it runs, so the timeout grows
-  with that start-up time too.
+- **Test times include a share of the start of the process.** The time a file's process spent outside its tests,
+  such as starting `node` and loading modules, is split equally among the file's tests, subtests included, because
+  running one test of a file runs the file's whole process. Stryker sizes a mutant's timeout from the summed times of
+  the tests it runs, so a mutant that runs all of a file's tests counts that start-up time once, and one that runs
+  some of them counts their share of it. Stryker's `timeoutMS`, 5 seconds by default, covers the rest; raise it for
+  test files whose processes take longer than that to start.
 - **Output.** The runner discards each test file's stdout. It keeps the last 8 KiB of stderr and shows it when a file
   fails outside its tests.
 - **Coverage analysis.** The runner supports Stryker's `coverageAnalysis` values `off`, `all` and `perTest`. With
