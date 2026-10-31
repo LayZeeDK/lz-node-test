@@ -143,9 +143,12 @@ if (options.prepareOnly) {
   writeResult({ ...header, sides: { lz: lz.result, command: command.result }, ...comparison(lz.run, command.run) });
 }
 
-/** Each step is settled, so a throw in the run, the sampler or an ending still stops the sampler and ends leftovers. */
+/**
+ * Each step is settled, so a throw in one still stops the sampler, ends leftovers, lets result.json be written and
+ * lets the next side run.
+ */
 async function runSide(side: LzSide): Promise<LzSideRun> {
-  const osTmpBefore = readdirSync(tmpdir());
+  const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
   const started = performance.now();
@@ -164,23 +167,38 @@ async function runSide(side: LzSide): Promise<LzSideRun> {
       ending: await settled(`Ending ${leftover.pid}`, () => end(leftover.pid)),
     })),
   );
+  const logged = await settled('Log', () => {
+    if (run.ok) {
+      writeFileSync(join(out, `${side}.log`), run.value.output);
+    }
+  });
+  const reportCopied = await settled('Report copy', () => {
+    if (run.ok && run.value.reported) {
+      copyFileSync(join(dir, lzReportFile), join(out, `${side}.mutation.json`));
+    }
+  });
+  const osTmpAfter = await settled('TMP listing after the run', () => readdirSync(tmpdir()));
   const strykerTmp = join(dir, '.stryker-tmp');
-
-  if (run.ok) {
-    writeFileSync(join(out, `${side}.log`), run.value.output);
-  }
-
-  if (run.ok && run.value.reported) {
-    copyFileSync(join(dir, lzReportFile), join(out, `${side}.mutation.json`));
-  }
+  const strykerTmpEntries = await settled('.stryker-tmp listing', () =>
+    existsSync(strykerTmp) ? readdirSync(strykerTmp) : [],
+  );
+  const steps = [
+    osTmpBefore,
+    run,
+    stopped,
+    found,
+    ...ended.map(({ ending }) => ending),
+    logged,
+    reportCopied,
+    osTmpAfter,
+    strykerTmpEntries,
+  ];
 
   return {
     run: run.ok ? run.value : null,
     result: {
       stryker: run.ok ? strykerResult(run.value) : null,
-      errors: [run, stopped, found, ...ended.map(({ ending }) => ending)].flatMap((step) =>
-        step.ok ? [] : [step.error],
-      ),
+      errors: steps.flatMap((step) => (step.ok ? [] : [step.error])),
       wallMs,
       processes: {
         ...lzPeaks(samples),
@@ -190,8 +208,8 @@ async function runSide(side: LzSide): Promise<LzSideRun> {
           endedByDriver: ending.ok && ending.value,
         })),
       },
-      newInOsTmp: lzNewEntries(osTmpBefore, readdirSync(tmpdir())),
-      leftoverStrykerTmp: existsSync(strykerTmp) ? readdirSync(strykerTmp) : [],
+      newInOsTmp: osTmpBefore.ok && osTmpAfter.ok ? lzNewEntries(osTmpBefore.value, osTmpAfter.value) : [],
+      leftoverStrykerTmp: strykerTmpEntries.ok ? strykerTmpEntries.value : [],
     },
   };
 }
