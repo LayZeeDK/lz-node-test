@@ -49,6 +49,7 @@ describe('endGroup', () => {
 
     const ended = end();
     t.mock.timers.tick(199);
+    await timers.setImmediate();
 
     assert.deepEqual(sent(calls), [[-123, 'SIGTERM']]);
 
@@ -66,8 +67,23 @@ describe('endGroup', () => {
 
     t.mock.timers.tick(10);
     await timers.setImmediate();
+    t.mock.timers.tick(200);
 
     assert.equal(ended, true);
+    assert.deepEqual(calls, [
+      [-123, 'SIGTERM'],
+      [-123, 0],
+    ]);
+  });
+
+  it('stops asking once asking whether the group is there throws', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+    const { calls, end } = setup('linux', Object.assign(new Error('kill EPERM'), { code: 'EPERM' }), 0);
+    const ended = end();
+    t.mock.timers.tick(10);
+    await assert.rejects(ended, { code: 'EPERM' });
+    t.mock.timers.tick(200);
+
     assert.deepEqual(calls, [
       [-123, 'SIGTERM'],
       [-123, 0],
