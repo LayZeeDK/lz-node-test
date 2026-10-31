@@ -3,9 +3,7 @@ import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { assertStatement } from '../../src/assert-statement.ts';
-import { resolveFromCore } from '../../src/install.ts';
-import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
-import { isOwn, toNodeMutator } from '../../src/operator.ts';
+import { mutantsOf, removalsNextToBuiltIns, strict } from '../mutants-of.fixtures.ts';
 
 describe('LzAssertStatement', () => {
   lzTestEach([
@@ -48,16 +46,6 @@ describe('LzAssertStatement', () => {
       ['CallExpression'],
     ],
   ])("gives an assertion %s exactly one removal next to Stryker's mutators, its own", async (_title, source, alone) => {
-    const instrumenter = await resolveFromCore();
-    const builtIns = instrumenter.allMutators.filter((mutator) => !isOwn(mutator));
-    const removals = async (mutators: typeof builtIns) =>
-      (await instrumenter.instrument([{ name: 'sample.ts', content: source }], mutators))
-        .filter(({ replacement }) => replacement === ';')
-        .map(({ mutatorName }) => mutatorName);
-
-    assert.deepEqual(
-      [await removals(builtIns), await removals([...builtIns, toNodeMutator(assertStatement, instrumenter.types)])],
-      [alone, ['LzAssertStatement']],
-    );
+    assert.deepEqual(await removalsNextToBuiltIns(assertStatement, source), [alone, ['LzAssertStatement']]);
   });
 });
