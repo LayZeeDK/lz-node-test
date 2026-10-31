@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -15,6 +15,21 @@ import type { ProcessRecord } from './record.ts';
  */
 export function peakMemoryDir(strykerPid: number): string {
   return join(tmpdir(), `${lzDirPrefix('peaks', strykerPid)}dry-run`);
+}
+
+/**
+ * Removes the dry-run peaks when Stryker's own process exits. Stryker imports every plugin in its own process before it
+ * forks a worker, so this process outlives every runner; in any other process no directory has its pid. A killed
+ * Stryker leaves the directory to a later runner's `removeLeftDirs`.
+ */
+export function removePeaksOnExit(): void {
+  process.once('exit', () => {
+    try {
+      rmSync(peakMemoryDir(process.pid), { recursive: true, force: true });
+    } catch {
+      // Left for a later runner's removeLeftDirs.
+    }
+  });
 }
 
 /**

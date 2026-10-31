@@ -88,8 +88,6 @@ export function lzMutants(run: LzStrykerRun, file: string): string[] {
   return mutants.map(lzMutantLine);
 }
 
-export const lzDryRunPeaks = 'lz-stryker-node-test-peaks-<pid>-dry-run';
-
 export function lzLeftover(run: LzStrykerRun): string[] {
   return run.leftover.map((name) => name.replace(/-\d+-/, '-<pid>-'));
 }

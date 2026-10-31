@@ -29,7 +29,7 @@ import {
 
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isNumber, isObject, isStrings, optional } from './guards.ts';
-import { memoryLimits, peakMemoryDir, type MemoryLimits } from './memory-limits.ts';
+import { memoryLimits, peakMemoryDir, removePeaksOnExit, type MemoryLimits } from './memory-limits.ts';
 import { groupOptions, processEnd } from './process-end.ts';
 import {
   envNames,
@@ -96,6 +96,8 @@ const ext = extname(import.meta.filename);
 const hookUrl = pathToFileURL(resolve(import.meta.dirname, `hook${ext}`)).href;
 const reporterUrl = pathToFileURL(resolve(import.meta.dirname, `reporter${ext}`)).href;
 const closeGraceMs = 1_500;
+
+removePeaksOnExit();
 
 /** Without `perTest`, the hits inside tests count as static, as Stryker's coverage analysis `all` expects. */
 export function lzMergeCoverage(coverages: (MutantCoverage | undefined)[], perTest: boolean): MutantCoverage {
