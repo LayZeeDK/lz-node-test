@@ -28,15 +28,12 @@ import {
 } from '@stryker-mutator/api/test-runner';
 
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
+import { isNumber, isObject, isStrings, optional } from './guards.ts';
 import { memoryLimits, peakMemoryDir, type MemoryLimits } from './memory-limits.ts';
 import { groupOptions, processEnd } from './process-end.ts';
 import {
   envNames,
-  isNumber,
-  isObject,
-  isStrings,
   lzParseRecord,
-  optional,
   recordName,
   testId,
   within,
@@ -210,9 +207,9 @@ function parseOptions(value: unknown): LzStrykerNodeTestOptions {
   const { testFiles, nodeArgs, maxMemoryMB } = value;
 
   return {
-    ...optional('testFiles', testFiles, isStrings, 'testFiles', notOptions),
-    ...optional('nodeArgs', nodeArgs, isStrings, 'nodeArgs', notOptions),
-    ...optional('maxMemoryMB', maxMemoryMB, isNumber, 'maxMemoryMB', notOptions),
+    ...optional('testFiles', testFiles, isStrings, notOptions),
+    ...optional('nodeArgs', nodeArgs, isStrings, notOptions),
+    ...optional('maxMemoryMB', maxMemoryMB, isNumber, notOptions),
   };
 }
 

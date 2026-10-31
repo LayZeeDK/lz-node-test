@@ -1,5 +1,7 @@
 import type { MutantCoverage, Position } from '@stryker-mutator/api/core';
 
+import { isNumber, isObject, isString, isStrings, optional } from './guards.ts';
+
 export function testId(parent: string, name: string): string {
   return `${parent} > ${/(^| )>( |$)/.test(name) ? name.replace(/[\\>]/g, '\\$&') : name}`;
 }
@@ -101,14 +103,7 @@ function notARecord(field?: string): never {
   throw new Error(field === undefined ? message : `${message}: ${field}`);
 }
 
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export const isNumber = (value: unknown) => typeof value === 'number';
-const isString = (value: unknown) => typeof value === 'string';
 const isTrue = (value: unknown) => value === true;
-export const isStrings = (value: unknown) => Array.isArray(value) && value.every(isString);
 const isCounts = (value: unknown) => isObject(value) && Object.values(value).every(isNumber);
 const isPosition = (value: unknown): value is Position =>
   isObject(value) && isNumber(value['line']) && isNumber(value['column']);
@@ -119,29 +114,6 @@ const isCoverage = (value: unknown): value is MutantCoverage =>
   isCounts(value['static']) &&
   isObject(value['perTest']) &&
   Object.values(value['perTest']).every(isCounts);
-
-/** `value` under `key` when it is there and passes `check`, which `field` names; nothing when it is not there. */
-export function optional<TKey extends string, T>(
-  key: TKey,
-  value: unknown,
-  check: (value: unknown) => value is T,
-  field: string = key,
-  fail: (field: string) => never = notARecord,
-): { [P in TKey]?: T } {
-  const result: { [P in TKey]?: T } = {};
-
-  if (value === undefined) {
-    return result;
-  }
-
-  if (!check(value)) {
-    fail(field);
-  }
-
-  result[key] = value;
-
-  return result;
-}
 
 function parseTest(value: unknown, path: string): RecordedTest {
   if (!isObject(value)) {
@@ -166,8 +138,8 @@ function parseTest(value: unknown, path: string): RecordedTest {
     id,
     status,
     timeSpentMs,
-    ...optional('failureMessage', failureMessage, isString, `${path}.failureMessage`),
-    ...optional('startPosition', startPosition, isPosition, `${path}.startPosition`),
+    ...optional('failureMessage', failureMessage, isString, notARecord, `${path}.failureMessage`),
+    ...optional('startPosition', startPosition, isPosition, notARecord, `${path}.startPosition`),
   };
 }
 
@@ -187,13 +159,13 @@ export function lzParseRecord(json: string): ProcessRecord {
 
   return {
     tests: tests.map((test, index) => parseTest(test, `tests[${index}]`)),
-    ...optional('main', main, isTrue),
-    ...optional('hitCount', hitCount, isNumber),
-    ...optional('mutantCoverage', mutantCoverage, isCoverage),
-    ...optional('peakMemoryMB', peakMemoryMB, isNumber),
-    ...optional('memoryLimitReached', memoryLimitReached, isMemoryLimit),
-    ...optional('diagnostics', diagnostics, isStrings),
-    ...optional('unfinished', unfinished, isTrue),
-    ...optional('heldOpen', heldOpen, isStrings),
+    ...optional('main', main, isTrue, notARecord),
+    ...optional('hitCount', hitCount, isNumber, notARecord),
+    ...optional('mutantCoverage', mutantCoverage, isCoverage, notARecord),
+    ...optional('peakMemoryMB', peakMemoryMB, isNumber, notARecord),
+    ...optional('memoryLimitReached', memoryLimitReached, isMemoryLimit, notARecord),
+    ...optional('diagnostics', diagnostics, isStrings, notARecord),
+    ...optional('unfinished', unfinished, isTrue, notARecord),
+    ...optional('heldOpen', heldOpen, isStrings, notARecord),
   };
 }
