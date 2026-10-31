@@ -6,7 +6,8 @@
   "targets": {
     "test": {
       "command": "node --conditions=@lz-node-test/source --test \"*.test.ts\"",
-      "options": { "cwd": "{projectRoot}" }
+      "options": { "cwd": "{projectRoot}" },
+      "inputs": ["default", "^production", "mutation", "{workspaceRoot}/packages/*/stryker*.config.mjs"]
     },
     "mutate": {},
     "mutate-src": {},
