@@ -15,6 +15,7 @@ import {
   LzStrykerNodeTestRunner,
   lzFileError,
   lzFilesFor,
+  lzMergeAsStatic,
   lzMergeCoverage,
   lzRunEnv,
   lzRunInPool,
@@ -29,31 +30,28 @@ const file = join('/repo', 'a.test.mjs');
 describe('lzMergeCoverage', () => {
   it('adds up the hits of every process and skips processes without coverage', () => {
     assert.deepEqual(
-      lzMergeCoverage(
-        [
-          { static: { 1: 1 }, perTest: { first: { 2: 1 } } },
-          undefined,
-          { static: { 1: 2, 3: 1 }, perTest: { first: { 2: 3 }, second: { 4: 1 } } },
-        ],
-        true,
-      ),
+      lzMergeCoverage([
+        { static: { 1: 1 }, perTest: { first: { 2: 1 } } },
+        undefined,
+        { static: { 1: 2, 3: 1 }, perTest: { first: { 2: 3 }, second: { 4: 1 } } },
+      ]),
       { static: { 1: 3, 3: 1 }, perTest: { first: { 2: 4 }, second: { 4: 1 } } },
     );
   });
 
   it('is empty without coverage', () => {
-    assert.deepEqual(lzMergeCoverage([], true), { static: {}, perTest: {} });
+    assert.deepEqual(lzMergeCoverage([]), { static: {}, perTest: {} });
   });
+});
 
-  it('counts the hits inside tests as static when asked to drop the tests', () => {
+describe('lzMergeAsStatic', () => {
+  it('counts the hits inside tests as static', () => {
     assert.deepEqual(
-      lzMergeCoverage(
-        [
-          { static: { 1: 1 }, perTest: { first: { 1: 1, 2: 1 } } },
-          { static: {}, perTest: { first: { 2: 3 }, second: { 4: 1 } } },
-        ],
-        false,
-      ),
+      lzMergeAsStatic([
+        { static: { 1: 1 }, perTest: { first: { 1: 1, 2: 1 } } },
+        undefined,
+        { static: {}, perTest: { first: { 2: 3 }, second: { 4: 1 } } },
+      ]),
       { static: { 1: 2, 2: 4, 4: 1 }, perTest: {} },
     );
   });

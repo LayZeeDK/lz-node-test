@@ -38,6 +38,7 @@ import {
   recordName,
   testId,
   within,
+  type LzTimeWindow,
   type ProcessRecord,
   type RecordedTest,
 } from './record.ts';
@@ -100,8 +101,8 @@ const closeGraceMs = 1_500;
 
 removePeaksOnExit();
 
-/** Without `perTest`, the hits inside tests count as static, as Stryker's coverage analysis `all` expects. */
-export function lzMergeCoverage(coverages: (MutantCoverage | undefined)[], perTest: boolean): MutantCoverage {
+/** Adds up the hits of `coverages`, static and by test. */
+export function lzMergeCoverage(coverages: readonly (MutantCoverage | undefined)[]): MutantCoverage {
   const total: MutantCoverage = { static: {}, perTest: {} };
   const add = (into: Record<string, number>, from: Record<string, number>) => {
     for (const [mutantId, hits] of Object.entries(from)) {
@@ -117,11 +118,18 @@ export function lzMergeCoverage(coverages: (MutantCoverage | undefined)[], perTe
     add(total.static, coverage.static);
 
     for (const [testId, hits] of Object.entries(coverage.perTest)) {
-      add(perTest ? (total.perTest[testId] ??= {}) : total.static, hits);
+      add((total.perTest[testId] ??= {}), hits);
     }
   }
 
   return total;
+}
+
+/** Adds up the hits of `coverages` as static, those inside tests too, as Stryker's coverage analysis `all` expects. */
+export function lzMergeAsStatic(coverages: readonly (MutantCoverage | undefined)[]): MutantCoverage {
+  const { static: hits, perTest } = lzMergeCoverage(coverages);
+
+  return lzMergeCoverage([hits, ...Object.values(perTest)].map((ofTest) => ({ static: ofTest, perTest: {} })));
 }
 
 /**
@@ -142,28 +150,47 @@ export function lzOverlapCoverage(
   }
 
   if (!lifetime || !testSpans) {
-    return lzMergeCoverage([coverage], false);
+    return lzMergeAsStatic([coverage]);
   }
 
-  const spans = Object.entries(testSpans);
-  const timeline = spans.flatMap(([, ofTest]) => ofTest).toSorted((a, b) => a.start - b.start);
+  const timeline = Object.values(testSpans)
+    .flat()
+    .toSorted((a, b) => a.start - b.start);
   const attributed = Object.entries(coverage.perTest).map(([test, hits]): MutantCoverage => {
-    const start = testSpans[test]?.findLast((span) => span.start <= lifetime.start)?.start ?? lifetime.start;
-    const overlapped = spans
-      .filter(([, ofTest]) => ofTest.some((span) => span.start <= lifetime.end && start < span.end))
-      .map(([id]) => id);
-    const coveredUntil = timeline.reduce(
-      (until, span) => (span.start <= until && until < span.end ? span.end : until),
-      start,
-    );
+    const life = { start: anchoredStart(testSpans[test], lifetime), end: lifetime.end };
 
     return {
-      static: coveredUntil > lifetime.end ? {} : hits,
-      perTest: Object.fromEntries(overlapped.map((id) => [id, hits])),
+      static: coversWholly(timeline, life) ? {} : hits,
+      perTest: Object.fromEntries(testsOverlapping(testSpans, life).map((id) => [id, hits])),
     };
   });
 
-  return lzMergeCoverage([{ static: coverage.static, perTest: {} }, ...attributed], true);
+  return lzMergeCoverage([{ static: coverage.static, perTest: {} }, ...attributed]);
+}
+
+/** The start of the latest span of `spansOfTest` that began by the start of `lifetime`, or else that start. */
+function anchoredStart(spansOfTest: readonly LzTimeWindow[] | undefined, lifetime: LzTimeWindow): number {
+  return spansOfTest?.findLast((span) => span.start <= lifetime.start)?.start ?? lifetime.start;
+}
+
+/** The tests with a span that overlaps `window`. */
+function testsOverlapping(
+  testSpans: Readonly<Record<string, readonly LzTimeWindow[]>>,
+  window: LzTimeWindow,
+): readonly string[] {
+  return Object.entries(testSpans)
+    .filter(([, spans]) => spans.some((span) => span.start <= window.end && window.start < span.end))
+    .map(([id]) => id);
+}
+
+/** Whether `timeline`, the spans of every test sorted by start, leaves no part of `window` outside them. */
+function coversWholly(timeline: readonly LzTimeWindow[], window: LzTimeWindow): boolean {
+  const coveredUntil = timeline.reduce(
+    (until, span) => (span.start <= until && until < span.end ? span.end : until),
+    window.start,
+  );
+
+  return coveredUntil > window.end;
 }
 
 /**
@@ -648,7 +675,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       status: DryRunStatus.Complete,
       tests,
       ...(run.coverageAnalysis !== 'off' && {
-        mutantCoverage: lzMergeCoverage(coverages, run.coverageAnalysis !== 'all'),
+        mutantCoverage: (run.coverageAnalysis === 'all' ? lzMergeAsStatic : lzMergeCoverage)(coverages),
       }),
     };
   }
