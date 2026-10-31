@@ -87,8 +87,9 @@ describe('checkMemory', () => {
 });
 
 describe('watch', () => {
-  it("looks at the process's memory every 50 ms", (t) => {
+  it("looks at the process's memory every 50 ms and leaves it alone under the limit", (t) => {
     t.mock.timers.enable({ apis: ['setInterval'] });
+    const kill = t.mock.method(process, 'kill', () => true);
     const looks: number[] = [];
     let rss = 0;
     watch(data, () => {
@@ -103,15 +104,18 @@ describe('watch', () => {
     t.mock.timers.tick(50);
 
     assert.deepEqual(looks, [0, 1]);
+    assert.equal(kill.mock.callCount(), 0);
   });
 
   it("measures the process's resident memory by default", (t) => {
     t.mock.timers.enable({ apis: ['setInterval'] });
+    const kill = t.mock.method(process, 'kill', () => true);
     const rss = t.mock.method(process.memoryUsage, 'rss', () => 1);
     watch(data);
 
     t.mock.timers.tick(50);
 
     assert.equal(rss.mock.callCount(), 1);
+    assert.equal(kill.mock.callCount(), 0);
   });
 });
