@@ -21,17 +21,8 @@ import {
 } from '@stryker-mutator/api/test-runner';
 import { Bench } from 'tinybench';
 
-import {
-  callMember,
-  construct,
-  cover,
-  dryRun,
-  fixture,
-  logger,
-  member,
-  mutantRunOptions,
-  strykerOptions,
-} from './index.fixtures.ts';
+import { callMember, construct, member } from './reflect.fixtures.ts';
+import { cover, dryRun, fixture, logger, mutantRunOptions, strykerOptions } from './runner.fixtures.ts';
 import pkg from '../package.json' with { type: 'json' };
 
 /**

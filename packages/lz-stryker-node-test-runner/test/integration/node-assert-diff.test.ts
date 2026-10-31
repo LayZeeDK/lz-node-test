@@ -41,6 +41,6 @@ it("still has Node.js's assertion diff grow with the square of the lines it comp
       "global slot of its watchdog symbol, and records the dry-run peakMemoryMB it is limited by. The runner's side " +
       'is memory-limits.ts, ownDir and the peaks- directories that removeLeftDirs removes in dirs.ts, and in ' +
       "runner.ts the lzStrykerNodeTest.maxMemoryMB option, its schema entry and fileOutcome's memoryLimitReached branch. The " +
-      "tests' grows fixture in index.fixtures.ts goes with them.",
+      "tests' grows fixture in runner.fixtures.ts goes with them.",
   );
 });

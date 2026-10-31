@@ -17,7 +17,7 @@ import {
   type TestEvent,
   watchdog,
 } from '../../src/hook-core.ts';
-import { fixture, grows, hookUrl, reporterArg, shareCompileCache } from '../index.fixtures.ts';
+import { fixture, grows, hookUrl, reporterArg, shareCompileCache } from '../runner.fixtures.ts';
 import { envNames, lzParseRecord, type ProcessRecord } from '../../src/record.ts';
 import reporter from '../../src/reporter.ts';
 

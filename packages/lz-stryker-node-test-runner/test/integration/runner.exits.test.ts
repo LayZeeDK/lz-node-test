@@ -23,7 +23,7 @@ import {
   settle,
   shareCompileCache,
   summary,
-} from '../index.fixtures.ts';
+} from '../runner.fixtures.ts';
 import { isRunning } from '../../src/dirs.ts';
 import { lzFileError } from '../../src/runner.ts';
 

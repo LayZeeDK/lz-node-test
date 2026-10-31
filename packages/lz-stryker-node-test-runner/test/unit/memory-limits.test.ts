@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestFor } from '@layzee/lz-node-test';
-import { logger } from '../index.fixtures.ts';
+import { logger } from '../runner.fixtures.ts';
 import { memoryLimits } from '../../src/memory-limits.ts';
 
 function setup(t: TestContext, maxMemoryMB?: number) {

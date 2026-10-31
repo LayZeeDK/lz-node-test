@@ -17,7 +17,7 @@ import {
   settle,
   shareCompileCache,
   summary,
-} from '../index.fixtures.ts';
+} from '../runner.fixtures.ts';
 
 shareCompileCache();
 

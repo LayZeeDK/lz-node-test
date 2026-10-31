@@ -20,7 +20,7 @@ import {
   shareCompileCache,
   summary,
   withoutDuration,
-} from '../index.fixtures.ts';
+} from '../runner.fixtures.ts';
 
 shareCompileCache();
 

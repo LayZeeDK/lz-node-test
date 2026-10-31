@@ -8,7 +8,8 @@ import { TestStatus } from '@stryker-mutator/api/test-runner';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import { activeMutantEnv, envNames } from '../../src/record.ts';
-import { activeMutant, callMember, construct, hookUrl, logger, member, strykerOptions } from '../index.fixtures.ts';
+import { callMember, construct, member } from '../reflect.fixtures.ts';
+import { activeMutant, hookUrl, logger, strykerOptions } from '../runner.fixtures.ts';
 import {
   LzStrykerNodeTestRunner,
   lzFileError,

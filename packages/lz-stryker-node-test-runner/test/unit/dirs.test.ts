@@ -6,7 +6,7 @@ import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
 import { isOwn, isRunning, lzDirPrefix, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
-import { logger, noProcess } from '../index.fixtures.ts';
+import { logger, noProcess } from '../runner.fixtures.ts';
 import { peakMemoryDir } from '../../src/memory-limits.ts';
 
 function tempDirWith(t: TestContext, prefix: string, names: readonly string[] = []) {

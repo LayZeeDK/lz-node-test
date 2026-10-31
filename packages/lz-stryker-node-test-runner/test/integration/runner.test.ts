@@ -25,7 +25,7 @@ import {
   shareCompileCache,
   summary,
   strykerOptions,
-} from '../index.fixtures.ts';
+} from '../runner.fixtures.ts';
 import { LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../../src/index.ts';
 
 const compileCache = shareCompileCache();

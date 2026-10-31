@@ -34,7 +34,7 @@ import {
   testContext,
   type Fn,
 } from '../hook-core.fixtures.ts';
-import { member } from '../index.fixtures.ts';
+import { member } from '../reflect.fixtures.ts';
 
 type TestDetails = NonNullable<TestEvent['data']['details']>;
 

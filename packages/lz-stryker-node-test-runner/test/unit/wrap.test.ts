@@ -18,7 +18,7 @@ import {
   testContext,
   type Fn,
 } from '../hook-core.fixtures.ts';
-import { callMember, member } from '../index.fixtures.ts';
+import { callMember, member } from '../reflect.fixtures.ts';
 
 interface Subtests {
   readonly test: (name: string, body: Fn) => unknown;
