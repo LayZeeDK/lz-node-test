@@ -784,6 +784,18 @@ describe('hook', () => {
     assert.deepEqual(untimed(record), { tests: [] });
   });
 
+  it('exits a process the tests started as it would without the hook once its run directory is gone', async (t) => {
+    const outDir = join(tempDir(t), 'removed');
+
+    const { code } = await runWithHook(['-e', 'void 0'], {
+      [envNames.out]: outDir,
+      [envNames.file]: join(outDir, 'some.test.mjs'),
+    });
+
+    assert.equal(code, 0);
+    assert.equal(existsSync(outDir), false);
+  });
+
   it('runs a process under the permission model without write access as it would without the hook, with no record', async (t) => {
     const outDir = tempDir(t);
     // A script that sets process.exitCode would hide a throw from the exit listener: the process still exits 0.
