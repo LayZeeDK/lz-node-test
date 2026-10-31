@@ -24,6 +24,8 @@
       "dependsOn": ["^build"],
       "inputs": [
         "default",
+        "!{projectRoot}/src/oss/**/*",
+        "!{projectRoot}/test/unit/oss-*.test.ts",
         "^production",
         "nodeVersion",
         "{workspaceRoot}/package.json",
