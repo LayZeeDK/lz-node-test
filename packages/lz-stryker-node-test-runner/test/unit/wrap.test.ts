@@ -49,8 +49,6 @@ describe('wrapNodeTest', () => {
       module.test('works', (t: Subtests) => {
         t.test('child', see);
         t.test('child', see);
-
-        return Promise.resolve();
       });
     });
     module.describe('s', () => {
@@ -659,8 +657,6 @@ describe('wrapNodeTest', () => {
           (error) => error === notAnError,
         );
         see();
-
-        return Promise.resolve();
       });
 
       await bodyOf(registrations, 'parent')(testContext(registrations));
