@@ -188,53 +188,10 @@ interface WrapOptions {
 }
 
 /**
- * Supports synchronous suite bodies, and test bodies that return a value or a promise or that take node:test's `done`
- * callback. Bailing acts on the results node:test has reported, and node:test reports the first tests of a file only
- * once its reporters start, so a few quick tests can still run after the first failure.
+ * Tracks which test is current, in the instrumenter's context and the environment, and the spans during which each
+ * test is current. `makeCurrent` returns the function that ends it.
  */
-export function wrapNodeTest(options: WrapOptions): NodeTestModule {
-  const {
-    ns,
-    testFile,
-    tests,
-    filter,
-    bail,
-    testOnly,
-    activeMutant,
-    env,
-    positions,
-    callSites,
-    nodeTest,
-    registering,
-    rootAfter,
-    testSpans,
-    now,
-  } = options;
-  const idOf = uniqueIds();
-  /**
-   * node:test makes the suite or test whose body runs, followed through asynchronous calls, the parent of the suites
-   * and tests registered with its module's functions.
-   */
-  const running = new AsyncLocalStorage<string>();
-  const parentId = () => running.getStore() ?? testFile;
-  const bailed = () => bail && tests.some((test) => test.status === 'failed');
-  /**
-   * `withOnly` under --test-only, else `without`: without it `only` marks nothing, as under `node --test`, while
-   * Node.js 24, which the runner starts on the test file alone, runs only the `only` tests and subtests of a
-   * `t.runOnly(true)` test, and skips one whose `only` is false.
-   */
-  const ignoringOnly = <T>(withOnly: T, without: T): T => (testOnly ? withOnly : without);
-  const withoutOnly = (options: object | null | undefined): object =>
-    ignoringOnly(options ?? {}, Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only')));
-  /** Makes `t.runOnly` do nothing on a context node:test passes to a test body or hook, as `ignoringOnly` says. */
-  const turnOffRunOnly = ignoringOnly(
-    (_context: unknown) => undefined,
-    (context: unknown) => {
-      if (isObject(context) && typeof context['runOnly'] === 'function') {
-        Object.assign(context, { runOnly: () => undefined });
-      }
-    },
-  );
+function lzCurrentTests({ ns, env, testSpans, now }: Pick<WrapOptions, 'ns' | 'env' | 'testSpans' | 'now'>) {
   // The last is current, also when a subtest that its parent does not await outlives the parent's body.
   const active = new Set<string>();
   /** The test whose span is open, and the test of the span opened last. */
@@ -288,6 +245,57 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
       setCurrent();
     };
   };
+
+  return { makeCurrent, isActive: (id: string) => active.has(id) };
+}
+
+/**
+ * Supports synchronous suite bodies, and test bodies that return a value or a promise or that take node:test's `done`
+ * callback. Bailing acts on the results node:test has reported, and node:test reports the first tests of a file only
+ * once its reporters start, so a few quick tests can still run after the first failure.
+ */
+export function wrapNodeTest(options: WrapOptions): NodeTestModule {
+  const {
+    ns,
+    testFile,
+    tests,
+    filter,
+    bail,
+    testOnly,
+    activeMutant,
+    env,
+    positions,
+    callSites,
+    nodeTest,
+    registering,
+    rootAfter,
+  } = options;
+  const idOf = uniqueIds();
+  /**
+   * node:test makes the suite or test whose body runs, followed through asynchronous calls, the parent of the suites
+   * and tests registered with its module's functions.
+   */
+  const running = new AsyncLocalStorage<string>();
+  const parentId = () => running.getStore() ?? testFile;
+  const bailed = () => bail && tests.some((test) => test.status === 'failed');
+  /**
+   * `withOnly` under --test-only, else `without`: without it `only` marks nothing, as under `node --test`, while
+   * Node.js 24, which the runner starts on the test file alone, runs only the `only` tests and subtests of a
+   * `t.runOnly(true)` test, and skips one whose `only` is false.
+   */
+  const ignoringOnly = <T>(withOnly: T, without: T): T => (testOnly ? withOnly : without);
+  const withoutOnly = (options: object | null | undefined): object =>
+    ignoringOnly(options ?? {}, Object.fromEntries(Object.entries(options ?? {}).filter(([key]) => key !== 'only')));
+  /** Makes `t.runOnly` do nothing on a context node:test passes to a test body or hook, as `ignoringOnly` says. */
+  const turnOffRunOnly = ignoringOnly(
+    (_context: unknown) => undefined,
+    (context: unknown) => {
+      if (isObject(context) && typeof context['runOnly'] === 'function') {
+        Object.assign(context, { runOnly: () => undefined });
+      }
+    },
+  );
+  const { makeCurrent, isActive } = lzCurrentTests(options);
   /**
    * Whether the filter selects the test, or a subtest of it, which the test must run to register. Stryker names a
    * whole test file in the filter when --testFiles limits the run.
@@ -334,7 +342,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
     const attribute = (context: unknown): LzBegun => {
       const id = find(context);
 
-      if (id === undefined || active.has(id)) {
+      if (id === undefined || isActive(id)) {
         return { kind: 'asIs' };
       }
 
