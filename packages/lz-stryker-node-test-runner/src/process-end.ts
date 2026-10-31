@@ -7,7 +7,7 @@ export function groupOptions(platform: NodeJS.Platform): { detached: boolean; wi
 }
 
 /** How long the processes of a test file's group get after SIGTERM before SIGKILL, at most. */
-const termGraceMs = 200;
+export const termGraceMs = 200;
 
 /** How often the wait after SIGTERM asks whether the group is gone. */
 const pollMs = 10;
