@@ -1,6 +1,7 @@
 import { lzParseReport } from './stryker-report.ts';
 
-const statuses = ['Killed', 'Survived', 'Timeout', 'NoCoverage', 'RuntimeError', 'CompileError'];
+// Pending has no column: it does not appear in a finished report.
+const statuses = ['Killed', 'Survived', 'Timeout', 'NoCoverage', 'RuntimeError', 'CompileError', 'Ignored'];
 
 /**
  * A Markdown section for a GitHub job summary: the mutation score of Stryker's JSON report and its mutants per status.

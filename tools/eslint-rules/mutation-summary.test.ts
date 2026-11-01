@@ -17,8 +17,8 @@ function reportOf(...statuses: readonly string[]): object {
 }
 
 const header = [
-  '| Mutation score | Killed | Survived | Timeout | NoCoverage | RuntimeError | CompileError |',
-  '| ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+  '| Mutation score | Killed | Survived | Timeout | NoCoverage | RuntimeError | CompileError | Ignored |',
+  '| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
 ];
 
 function summaryOf(title: string, row: string): string {
@@ -26,7 +26,7 @@ function summaryOf(title: string, row: string): string {
 }
 
 describe('lzMutationSummary', () => {
-  it('counts the mutants of every file per status, in the order Killed, Survived, Timeout, NoCoverage, RuntimeError, CompileError', () => {
+  it('counts the mutants of every file per status, in the order Killed, Survived, Timeout, NoCoverage, RuntimeError, CompileError, Ignored', () => {
     const report = {
       files: {
         'src/a.ts': {
@@ -35,33 +35,33 @@ describe('lzMutationSummary', () => {
         'src/b.ts': {
           mutants: ['Killed', 'Killed', 'Timeout', 'NoCoverage', 'NoCoverage', 'NoCoverage'].map(mutant),
         },
-        'src/c.ts': { mutants: ['CompileError', 'CompileError', 'RuntimeError', 'Ignored'].map(mutant) },
+        'src/c.ts': { mutants: ['CompileError', 'CompileError', 'RuntimeError', 'Ignored', 'Ignored'].map(mutant) },
       },
     };
 
     assert.equal(
       lzMutationSummary('p:mutate-src', report),
-      summaryOf('p:mutate-src', '| 50.00 | 3 | 1 | 2 | 4 | 2 | 3 |'),
+      summaryOf('p:mutate-src', '| 50.00 | 3 | 1 | 2 | 4 | 2 | 3 | 2 |'),
     );
   });
 
   lzTestEach([
-    ['every mutant is killed', ['Killed', 'Killed'], '| 100.00 | 2 | 0 | 0 | 0 | 0 | 0 |'],
-    ['a Timeout mutant counts as detected', ['Timeout'], '| 100.00 | 0 | 0 | 1 | 0 | 0 | 0 |'],
-    ['a Survived mutant counts as undetected', ['Killed', 'Survived'], '| 50.00 | 1 | 1 | 0 | 0 | 0 | 0 |'],
+    ['every mutant is killed', ['Killed', 'Killed'], '| 100.00 | 2 | 0 | 0 | 0 | 0 | 0 | 0 |'],
+    ['a Timeout mutant counts as detected', ['Timeout'], '| 100.00 | 0 | 0 | 1 | 0 | 0 | 0 | 0 |'],
+    ['a Survived mutant counts as undetected', ['Killed', 'Survived'], '| 50.00 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |'],
     [
       'a NoCoverage mutant counts as undetected',
       ['NoCoverage', 'Timeout', 'Killed'],
-      '| 66.67 | 1 | 0 | 1 | 1 | 0 | 0 |',
+      '| 66.67 | 1 | 0 | 1 | 1 | 0 | 0 | 0 |',
     ],
     [
-      'RuntimeError and CompileError mutants stay out of the score',
-      ['Killed', 'RuntimeError', 'CompileError'],
-      '| 100.00 | 1 | 0 | 0 | 0 | 1 | 1 |',
+      'RuntimeError, CompileError and Ignored mutants stay out of the score',
+      ['Killed', 'RuntimeError', 'CompileError', 'Ignored'],
+      '| 100.00 | 1 | 0 | 0 | 0 | 1 | 1 | 1 |',
     ],
-    ['only one mutant survives', ['Survived'], '| 0.00 | 0 | 1 | 0 | 0 | 0 | 0 |'],
-    ['no mutant has a score', ['RuntimeError', 'Ignored'], '| n/a | 0 | 0 | 0 | 0 | 1 | 0 |'],
-    ['the report has no mutants', [], '| n/a | 0 | 0 | 0 | 0 | 0 | 0 |'],
+    ['only one mutant survives', ['Survived'], '| 0.00 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |'],
+    ['no mutant has a score', ['RuntimeError', 'Ignored'], '| n/a | 0 | 0 | 0 | 0 | 1 | 0 | 1 |'],
+    ['the report has no mutants', [], '| n/a | 0 | 0 | 0 | 0 | 0 | 0 | 0 |'],
   ])('writes the score Stryker reports when %s', (_, statuses, row) => {
     assert.equal(lzMutationSummary('t', reportOf(...statuses)), summaryOf('t', row));
   });
@@ -112,7 +112,7 @@ describe('mutation-summary.cli.ts', () => {
 
     assert.deepEqual(runSummary([reportFile, 'p:mutate-test-code']), {
       code: 0,
-      stdout: summaryOf('p:mutate-test-code', '| 50.00 | 1 | 1 | 0 | 0 | 0 | 0 |'),
+      stdout: summaryOf('p:mutate-test-code', '| 50.00 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |'),
       stderr: '',
     });
   });
