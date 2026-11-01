@@ -14,20 +14,20 @@ const configs: readonly (readonly [file: string, mutate: readonly string[]])[] =
     ['packages/lz-node-test/test/**/*.test.ts', '!packages/lz-node-test/test/integration/register.test.ts'],
   ],
   [
-    'packages/lz-stryker-node-test-mutators/stryker.config.mjs',
+    'packages/stryker-node-test-mutators/stryker.config.mjs',
     [
-      'packages/lz-stryker-node-test-mutators/src/**/*.ts',
-      'packages/lz-stryker-node-test-mutators/test/synthetic/node-apis.ts',
+      'packages/stryker-node-test-mutators/src/**/*.ts',
+      'packages/stryker-node-test-mutators/test/synthetic/node-apis.ts',
     ],
   ],
   [
-    'packages/lz-stryker-node-test-mutators/stryker.test-code.config.mjs',
-    ['packages/lz-stryker-node-test-mutators/test/**/*.test.ts'],
+    'packages/stryker-node-test-mutators/stryker.test-code.config.mjs',
+    ['packages/stryker-node-test-mutators/test/**/*.test.ts'],
   ],
-  ['packages/lz-stryker-node-test-runner/stryker.config.mjs', ['packages/lz-stryker-node-test-runner/src/**/*.ts']],
+  ['packages/stryker-node-test-runner/stryker.config.mjs', ['packages/stryker-node-test-runner/src/**/*.ts']],
   [
-    'packages/lz-stryker-node-test-runner/stryker.test-code.config.mjs',
-    ['packages/lz-stryker-node-test-runner/test/**/*.test.ts'],
+    'packages/stryker-node-test-runner/stryker.test-code.config.mjs',
+    ['packages/stryker-node-test-runner/test/**/*.test.ts'],
   ],
   ['tools/eslint-rules/stryker.config.mjs', ['tools/eslint-rules/*.ts', '!tools/eslint-rules/*.test.ts']],
   ['tools/eslint-rules/stryker.test-code.config.mjs', ['tools/eslint-rules/*.test.ts']],
@@ -39,10 +39,10 @@ const ignorePatterns = ['/.claude', '/.nx', '/plans', '/e2e', '/reports'];
 const reportNames: readonly (readonly [file: string, name: string])[] = [
   ['packages/lz-node-test/stryker.config.mjs', 'lz-node-test.src'],
   ['packages/lz-node-test/stryker.test-code.config.mjs', 'lz-node-test.test-code'],
-  ['packages/lz-stryker-node-test-mutators/stryker.config.mjs', 'lz-stryker-node-test-mutators.src'],
-  ['packages/lz-stryker-node-test-mutators/stryker.test-code.config.mjs', 'lz-stryker-node-test-mutators.test-code'],
-  ['packages/lz-stryker-node-test-runner/stryker.config.mjs', 'lz-stryker-node-test-runner.src'],
-  ['packages/lz-stryker-node-test-runner/stryker.test-code.config.mjs', 'lz-stryker-node-test-runner.test-code'],
+  ['packages/stryker-node-test-mutators/stryker.config.mjs', 'stryker-node-test-mutators.src'],
+  ['packages/stryker-node-test-mutators/stryker.test-code.config.mjs', 'stryker-node-test-mutators.test-code'],
+  ['packages/stryker-node-test-runner/stryker.config.mjs', 'stryker-node-test-runner.src'],
+  ['packages/stryker-node-test-runner/stryker.test-code.config.mjs', 'stryker-node-test-runner.test-code'],
   ['tools/eslint-rules/stryker.config.mjs', 'eslint-rules.src'],
   ['tools/eslint-rules/stryker.test-code.config.mjs', 'eslint-rules.test-code'],
 ];

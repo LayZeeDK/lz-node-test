@@ -77,7 +77,7 @@ describe('install', () => {
 
     await assert.rejects(
       install('add', [operator('Alpha')], () => Promise.resolve([first.instrumenter, second.instrumenter])),
-      { message: /^lz-stryker-node-test-mutators: the instrumenter in \/stryker\/copy made no mutants of Alpha / },
+      { message: /^stryker-node-test-mutators: the instrumenter in \/stryker\/copy made no mutants of Alpha / },
     );
     assert.deepEqual(
       [first.names(), second.names()],
@@ -112,7 +112,7 @@ describe('install', () => {
 
     await assert.rejects(run('add', [operator('Alpha'), operator('Beta'), operator('Gamma')]), {
       message:
-        'lz-stryker-node-test-mutators: the instrumenter in /stryker/instrumenter made no mutants of Alpha, Gamma from their ' +
+        'stryker-node-test-mutators: the instrumenter in /stryker/instrumenter made no mutants of Alpha, Gamma from their ' +
         'samples, so it does not read the mutator list this module added to. A bundled instrumenter does that.',
     });
   });
@@ -135,7 +135,7 @@ describe('install', () => {
     const { run, names, instrumented } = setup({ builtIns: ['StringLiteral', 'CallExpression'] });
 
     await assert.rejects(run(mode, [...operators]), {
-      message: `lz-stryker-node-test-mutators: another mutator already has the name ${name}.`,
+      message: `stryker-node-test-mutators: another mutator already has the name ${name}.`,
     });
     assert.deepEqual([names(), instrumented], [['StringLiteral', 'CallExpression'], []]);
   });
@@ -147,7 +147,7 @@ describe('install', () => {
 
       await assert.rejects(run('add', [operator('Alpha'), operator(name)]), {
         message:
-          "lz-stryker-node-test-mutators: a mutator name has letters only, as Stryker's directives match no other " +
+          "stryker-node-test-mutators: a mutator name has letters only, as Stryker's directives match no other " +
           `character: ${JSON.stringify(name)}`,
       });
       assert.deepEqual(names(), ['StringLiteral']);
@@ -159,7 +159,7 @@ describe('install', () => {
 
     await assert.rejects(run('add', [operator('Node1'), operator('Alpha'), operator('Node-2')]), {
       message:
-        "lz-stryker-node-test-mutators: a mutator name has letters only, as Stryker's directives match no other " +
+        "stryker-node-test-mutators: a mutator name has letters only, as Stryker's directives match no other " +
         'character: "Node1", "Node-2"',
     });
   });

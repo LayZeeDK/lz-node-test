@@ -33,7 +33,7 @@ const operator: Operator = {
 
 describe('own', () => {
   it('is the same symbol in every copy of the package', () => {
-    assert.equal(own, Symbol.for('lz-stryker-node-test-mutators'));
+    assert.equal(own, Symbol.for('stryker-node-test-mutators'));
   });
 });
 

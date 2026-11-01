@@ -12,7 +12,7 @@
       "path": "../packages/lz-node-test"
     },
     {
-      "path": "../packages/lz-stryker-node-test-mutators"
+      "path": "../packages/stryker-node-test-mutators"
     }
   ]
 }

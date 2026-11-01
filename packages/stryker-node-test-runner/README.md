@@ -1,4 +1,4 @@
-# @layzee/lz-stryker-node-test-runner
+# @layzee/stryker-node-test-runner
 
 A [StrykerJS](https://stryker-mutator.io/) test runner for `node:test`. It runs each test file in its own `node`
 process with `node:test`, so the tests run as they do under `node --test`. It is ESM only, needs Node.js 22.18 or
@@ -32,7 +32,7 @@ files, add `lzStrykerNodeTest.testFiles`, as [Configure Stryker](#configure-stry
 ## Install
 
 ```sh
-npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/lz-stryker-node-test-runner
+npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/stryker-node-test-runner
 ```
 
 `@stryker-mutator/core` and `@stryker-mutator/api` are peer dependencies. The runner accepts Stryker 10.1.1 or a later
@@ -46,7 +46,7 @@ Load the plugin and select the runner in your Stryker configuration file, for ex
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   mutate: ['src/**/*.js'],
-  appendPlugins: ['@layzee/lz-stryker-node-test-runner'],
+  appendPlugins: ['@layzee/stryker-node-test-runner'],
   testRunner: 'lz-stryker-node-test',
   lzStrykerNodeTest: { testFiles: ['test/**/*.test.js'] },
   reporters: ['clear-text', 'progress'],

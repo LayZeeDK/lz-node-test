@@ -99,10 +99,10 @@ describe('install', () => {
     const { deps } = installedHarness({ [envNames.out]: out });
 
     assert.equal(deps.global[installed], true);
-    assert.equal(installed, Symbol.for('lz-stryker-node-test-runner.hook'));
-    assert.equal(reporting, Symbol.for('lz-stryker-node-test-runner.reporting'));
-    assert.equal(wrappedNodeTest, Symbol.for('lz-stryker-node-test-runner.node-test'));
-    assert.equal(watchdog, Symbol.for('lz-stryker-node-test-runner.watchdog'));
+    assert.equal(installed, Symbol.for('stryker-node-test-runner.hook'));
+    assert.equal(reporting, Symbol.for('stryker-node-test-runner.reporting'));
+    assert.equal(wrappedNodeTest, Symbol.for('stryker-node-test-runner.node-test'));
+    assert.equal(watchdog, Symbol.for('stryker-node-test-runner.watchdog'));
   });
 
   it('keeps an existing Stryker namespace', () => {

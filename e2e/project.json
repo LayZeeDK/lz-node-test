@@ -3,7 +3,7 @@
   "$schema": "../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "tags": ["type:tool"],
-  "implicitDependencies": ["lz-node-test", "lz-stryker-node-test-runner", "lz-stryker-node-test-mutators"],
+  "implicitDependencies": ["lz-node-test", "stryker-node-test-runner", "stryker-node-test-mutators"],
   "targets": {
     "test": {
       "command": "node --test \"e2e/test/unit/*.test.ts\"",

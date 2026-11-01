@@ -63,7 +63,7 @@ describe('plugin declaration', () => {
     const initConfig: Partial<StrykerOptions> = pkg.initStrykerConfig;
 
     assert.ok(pkg.keywords.includes('@stryker-mutator/test-runner-plugin'));
-    assert.match(pkg.homepage, /^https:\/\/github\.com\/.+\/packages\/lz-stryker-node-test-runner#readme$/);
+    assert.match(pkg.homepage, /^https:\/\/github\.com\/.+\/packages\/stryker-node-test-runner#readme$/);
     assert.deepEqual(
       [initConfig],
       strykerPlugins.map((plugin) => ({ testRunner: plugin.name, appendPlugins: [pkg.name] })),

@@ -23,7 +23,7 @@ describe('inPeerRange', () => {
     'refuses the range %s, which is no caret range of a release',
     (range) => {
       assert.throws(() => inPeerRange('10.1.1', range), {
-        message: `lz-stryker-node-test-mutators: ${range} is no caret range of a release.`,
+        message: `stryker-node-test-mutators: ${range} is no caret range of a release.`,
       });
     },
   );
@@ -64,7 +64,7 @@ describe('lzWarnOutsidePeerRange', () => {
     `${major}.${minor + 1}.0-beta.0`,
   ])('warns that mutants may be missing with the instrumenter version %s, outside the peer range', (version) => {
     assert.deepEqual(warningsFor(version), [
-      `lz-stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${floor} or a later ${major}.x, not ${version}. ` +
+      `stryker-node-test-mutators accepts @stryker-mutator/instrumenter ${floor} or a later ${major}.x, not ${version}. ` +
         'Its install check passed, but it sees only this process, so mutants of its mutators may be missing.',
     ]);
   });

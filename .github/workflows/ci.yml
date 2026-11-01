@@ -75,25 +75,25 @@ jobs:
             config: test-code
             mutated: '!packages/lz-node-test/test/**/*.test.ts'
             timeout: 30
-          - project: lz-stryker-node-test-mutators
-            root: packages/lz-stryker-node-test-mutators
+          - project: stryker-node-test-mutators
+            root: packages/stryker-node-test-mutators
             config: src
-            mutated: "!packages/lz-stryker-node-test-mutators/src/**\n!packages/lz-stryker-node-test-mutators/test/synthetic/node-apis.ts"
+            mutated: "!packages/stryker-node-test-mutators/src/**\n!packages/stryker-node-test-mutators/test/synthetic/node-apis.ts"
             timeout: 45
-          - project: lz-stryker-node-test-mutators
-            root: packages/lz-stryker-node-test-mutators
+          - project: stryker-node-test-mutators
+            root: packages/stryker-node-test-mutators
             config: test-code
-            mutated: '!packages/lz-stryker-node-test-mutators/test/**/*.test.ts'
+            mutated: '!packages/stryker-node-test-mutators/test/**/*.test.ts'
             timeout: 30
-          - project: lz-stryker-node-test-runner
-            root: packages/lz-stryker-node-test-runner
+          - project: stryker-node-test-runner
+            root: packages/stryker-node-test-runner
             config: src
-            mutated: '!packages/lz-stryker-node-test-runner/src/**'
+            mutated: '!packages/stryker-node-test-runner/src/**'
             timeout: 180
-          - project: lz-stryker-node-test-runner
-            root: packages/lz-stryker-node-test-runner
+          - project: stryker-node-test-runner
+            root: packages/stryker-node-test-runner
             config: test-code
-            mutated: '!packages/lz-stryker-node-test-runner/test/**/*.test.ts'
+            mutated: '!packages/stryker-node-test-runner/test/**/*.test.ts'
             timeout: 30
     env:
       INCREMENTAL_FILE: reports/stryker-incremental/${{ matrix.project }}.${{ matrix.config }}.json
@@ -113,8 +113,8 @@ jobs:
           echo "prefix=stryker-inc-${{ matrix.project }}.${{ matrix.config }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
           'tsconfig.base.json', 'packages/lz-node-test/package.json', 'packages/lz-node-test/src/**',
-          'packages/lz-stryker-node-test-mutators/package.json', 'packages/lz-stryker-node-test-runner/package.json',
-          'packages/lz-stryker-node-test-mutators/src/**', 'packages/lz-stryker-node-test-runner/src/**',
+          'packages/stryker-node-test-mutators/package.json', 'packages/stryker-node-test-runner/package.json',
+          'packages/stryker-node-test-mutators/src/**', 'packages/stryker-node-test-runner/src/**',
           format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
           '!**/out-tsc/**', matrix.mutated) }}-" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

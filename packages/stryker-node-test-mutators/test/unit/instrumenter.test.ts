@@ -125,7 +125,7 @@ describe('resolveFromCore', () => {
   }
 
   const refusal = (source: string, key: string) =>
-    `lz-stryker-node-test-mutators: ${source} has no ${key} of the shape this module reads.`;
+    `stryker-node-test-mutators: ${source} has no ${key} of the shape this module reads.`;
   const mutateFile = join('mutators', 'mutate.js');
   const babelFile = join('core', 'lib', 'index.js');
   const indexFile = join('dist', 'src', 'index.js');

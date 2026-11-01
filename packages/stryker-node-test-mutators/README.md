@@ -1,4 +1,4 @@
-# @layzee/lz-stryker-node-test-mutators
+# @layzee/stryker-node-test-mutators
 
 Extra [StrykerJS](https://stryker-mutator.io/) mutators for code that uses Node.js APIs and `node:assert`, plus a set
 for mutating test files. It is ESM only, needs Node.js 22.18 or later, and is tested on Node.js 22 and 24. It works
@@ -7,7 +7,7 @@ with any Stryker test runner.
 ## Install
 
 ```sh
-npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/lz-stryker-node-test-mutators
+npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/stryker-node-test-mutators
 ```
 
 `@stryker-mutator/core`, `@stryker-mutator/api` and `@babel/core` are peer dependencies. The package adds its mutators
@@ -29,7 +29,7 @@ has no Stryker logger, so Stryker's `logLevel` and log file do not include them.
 Import the package at the top of your Stryker configuration file. The import adds the mutators to Stryker's own:
 
 ```js
-import '@layzee/lz-stryker-node-test-mutators';
+import '@layzee/stryker-node-test-mutators';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
@@ -65,7 +65,7 @@ An example mutant of each, in the form of Stryker's
 
 `LzNodeExitCode` suits code that a test runs in a child process and whose exit code the test reads, such as a CLI.
 Code that sets `process.exitCode` in the test's own process sets the exit code of the test run instead. With
-`@layzee/lz-stryker-node-test-runner`, the mutant that turns 0 into 1 then makes the test file exit with code 1 while
+`@layzee/stryker-node-test-runner`, the mutant that turns 0 into 1 then makes the test file exit with code 1 while
 no test fails. Stryker reports that mutant as a `RuntimeError`, not as `Survived`. A mutant of an assignment that an
 uncaught exception follows is an equivalent mutant, because Node.js then exits with code 1 whatever
 `process.exitCode` holds.
@@ -76,7 +76,7 @@ To check that your tests' assertions can fail, mutate the test files in a config
 `test-code` entry instead. It replaces Stryker's mutators with these:
 
 ```js
-import '@layzee/lz-stryker-node-test-mutators/test-code';
+import '@layzee/stryker-node-test-mutators/test-code';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {

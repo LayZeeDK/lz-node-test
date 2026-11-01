@@ -3,7 +3,7 @@
 //
 //   npm run bench
 //   npm run bench -- --runs 9 --mutate-runs 0
-//   npm run bench -- --runner path/to/baseline/index.ts --runner packages/lz-stryker-node-test-runner/src/index.ts
+//   npm run bench -- --runner path/to/baseline/index.ts --runner packages/stryker-node-test-runner/src/index.ts
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
@@ -66,7 +66,7 @@ interface Stat {
 }
 
 const workspaceRoot = join(import.meta.dirname, '..', '..', '..');
-const projectRoot = 'packages/lz-stryker-node-test-runner';
+const projectRoot = 'packages/stryker-node-test-runner';
 const fileCount = 6;
 const testsPerFile = 5;
 const spawningFiles = 2;

@@ -222,7 +222,7 @@ export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: L
   return side === 'lz'
     ? {
         mutate,
-        plugins: ['@stryker-mutator/*', '@layzee/lz-stryker-node-test-runner'],
+        plugins: ['@stryker-mutator/*', '@layzee/stryker-node-test-runner'],
         testRunner: 'lz-stryker-node-test',
         lzStrykerNodeTest: { testFiles },
       }
@@ -231,7 +231,7 @@ export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: L
 
 export function lzStrykerConfig(side: LzSide, project: LzOssProject): string {
   return (
-    "import '@layzee/lz-stryker-node-test-mutators';\n\n" +
+    "import '@layzee/stryker-node-test-mutators';\n\n" +
     `export default ${JSON.stringify(lzStrykerOptions(side, project), null, 2)};\n`
   );
 }

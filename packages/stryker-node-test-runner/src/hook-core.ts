@@ -103,13 +103,13 @@ export interface HookDependencies extends LzRecordDependencies {
  */
 const callSiteFrames = 64;
 
-export const installed = Symbol.for('lz-stryker-node-test-runner.hook');
+export const installed = Symbol.for('stryker-node-test-runner.hook');
 
-export const reporting = Symbol.for('lz-stryker-node-test-runner.reporting');
+export const reporting = Symbol.for('stryker-node-test-runner.reporting');
 
-export const wrappedNodeTest = Symbol.for('lz-stryker-node-test-runner.node-test');
+export const wrappedNodeTest = Symbol.for('stryker-node-test-runner.node-test');
 
-export const watchdog = Symbol.for('lz-stryker-node-test-runner.watchdog');
+export const watchdog = Symbol.for('stryker-node-test-runner.watchdog');
 
 export function writesAllowed(
   permission: { has(scope: string, reference?: string): boolean } | undefined,
