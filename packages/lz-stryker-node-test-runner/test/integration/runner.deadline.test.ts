@@ -61,7 +61,11 @@ describe('LzStrykerNodeTestRunner deadline', () => {
     const elapsed = performance.now() - started;
 
     assert.strictEqual(result.status, MutantRunStatus.Timeout, JSON.stringify(result));
-    assert.match(result.reason ?? '', /^Passed the runner's deadline of \d+ ms/);
+    assert.equal(
+      result.reason?.replace(/deadline of \d+ ms/, 'deadline of N ms'),
+      "Passed the runner's deadline of N ms, which counts each test file's start-up once " +
+        `(Stryker's timeout: ${Math.round(timeout)} ms)`,
+    );
     assert.ok(elapsed < timeout, `${elapsed} ms of Stryker's ${timeout} ms`);
     assert.equal(isRunning(Number(readFileSync(join(dir, 'child.pid'), 'utf8'))), false);
   });

@@ -53,6 +53,17 @@ describe('lzStartUps', () => {
     assert.equal(runner().deadline(['a.test.ts', 'b.test.ts'], filter, 10_000), 10_000 - 1.5 * (4 * 400 + 200));
   });
 
+  it('takes a recorded start-up of 0 ms as a record, without warning', (t) => {
+    const { warnings, runner } = setup(t);
+    const dryRun = runner();
+    dryRun.startDryRun();
+    dryRun.record('a.test.ts', { startUpMs: 0, tests: 3 });
+    dryRun.record('b.test.ts', { startUpMs: 201, tests: 2 });
+
+    assert.equal(runner().deadline(['a.test.ts', 'b.test.ts'], undefined, 10_000), 10_000 - 1.5 * 200);
+    assert.deepEqual(warnings, []);
+  });
+
   lzTestFor<readonly [string, string | undefined]>([
     ['no record', undefined],
     ['a record that is not JSON', '{"startUpMs":401,'],
