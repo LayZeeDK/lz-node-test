@@ -113,6 +113,7 @@ jobs:
           echo "prefix=stryker-inc-${{ matrix.project }}.${{ matrix.config }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
           'tsconfig.base.json', 'packages/lz-node-test/package.json', 'packages/lz-node-test/src/**',
+          'packages/lz-stryker-node-test-mutators/package.json', 'packages/lz-stryker-node-test-runner/package.json',
           'packages/lz-stryker-node-test-mutators/src/**', 'packages/lz-stryker-node-test-runner/src/**',
           format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
           '!**/out-tsc/**', matrix.mutated) }}-" >> "$GITHUB_OUTPUT"
