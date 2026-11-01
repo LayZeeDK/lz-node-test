@@ -10,6 +10,7 @@ import {
   lzOssPreparedPrefix,
   lzOssRunPrefix,
   lzOssUsage,
+  lzParseCommand,
   lzParseMergeOptions,
   lzParseOptions,
   lzStrykerArgs,
@@ -195,6 +196,31 @@ describe('lzStrykerArgs', () => {
 
   it('passes the patterns to stryker run as one comma-separated --mutate', () => {
     assert.deepEqual(lzStrykerArgs(['index.js:3:1-3:9', 'lib/a.js']), ['--mutate', 'index.js:3:1-3:9,lib/a.js']);
+  });
+});
+
+describe('lzParseCommand', () => {
+  it('asks for the usage on --help or -h, whatever else is given', () => {
+    assert.deepEqual(
+      [lzParseCommand(['--help']), lzParseCommand(['-h', '--merge', 'a']), lzParseCommand([...required, '--help'])],
+      [{ kind: 'help' }, { kind: 'help' }, { kind: 'help' }],
+    );
+  });
+
+  it('merges when --merge is given, in either form', () => {
+    assert.deepEqual(
+      [lzParseCommand(['--merge', 'a', '--out', 'o']), lzParseCommand(['--merge=a', '--out', 'o'])],
+      [
+        { kind: 'merge', options: { merge: ['a'], out: 'o' } },
+        { kind: 'merge', options: { merge: ['a'], out: 'o' } },
+      ],
+    );
+  });
+
+  it('runs the driver otherwise', () => {
+    const command = lzParseCommand(required);
+
+    assert.equal(command.kind === 'run' ? command.options.project.name : command.kind, 'env-schema');
   });
 });
 

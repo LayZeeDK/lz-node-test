@@ -26,10 +26,10 @@ import {
 import {
   lzOssPreparedPrefix,
   lzOssRunPrefix,
-  lzParseOptions,
   lzSides,
   lzStrykerArgs,
   lzStrykerConfig,
+  type LzOssOptions,
   type LzSide,
 } from './options.ts';
 import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessPeaks } from './processes.ts';
@@ -91,64 +91,75 @@ const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
 /** How long processes that a run left get to end by themselves before they count as left behind. */
 const settleMs = 2_000;
 
-const options = lzParseOptions(process.argv.slice(2));
-const out = resolve(options.out);
-
-mkdirSync(out, { recursive: true });
-lzRemoveDeadRunDirs(tmpdir(), lzOssRunPrefix);
-const root = realpathSync.native(
-  mkdtempSync(join(tmpdir(), `${options.prepareOnly ? lzOssPreparedPrefix : lzOssRunPrefix}${process.pid}-`)),
-);
-// Beside the copy, not in it, so that no folder of the project can collide with them.
-const dir = join(root, 'project');
-const runTmp = join(root, 'tmp');
-
-if (!options.prepareOnly) {
-  lzRemoveOnExit(root);
+/** The folders of one driver run: `dir` holds the project's copy, `runTmp` is Stryker's TMP. */
+interface LzRunFolders {
+  readonly options: LzOssOptions;
+  readonly out: string;
+  readonly dir: string;
+  readonly runTmp: string;
 }
 
-const copied = new Set(['.git', 'node_modules']);
+export async function lzRunDriver(options: LzOssOptions): Promise<void> {
+  const out = resolve(options.out);
 
-// Verbatim, as a relative link rewritten to an absolute one would let a write in the copy reach the source.
-cpSync(options.source, dir, {
-  recursive: true,
-  verbatimSymlinks: true,
-  filter: (path) => !copied.has(relative(options.source, path)),
-});
-mkdirSync(runTmp);
-const tarballs = options.tarballs === undefined ? await lzPack(join(root, 'tarballs')) : given(options.tarballs);
+  mkdirSync(out, { recursive: true });
+  lzRemoveDeadRunDirs(tmpdir(), lzOssRunPrefix);
+  const root = realpathSync.native(
+    mkdtempSync(join(tmpdir(), `${options.prepareOnly ? lzOssPreparedPrefix : lzOssRunPrefix}${process.pid}-`)),
+  );
+  // Beside the copy, not in it, so that no folder of the project can collide with them.
+  const folders: LzRunFolders = { options, out, dir: join(root, 'project'), runTmp: join(root, 'tmp') };
+  const { dir, runTmp } = folders;
 
-await lzInstall(dir, tarballs);
-lzSides.forEach((side) => {
-  writeFileSync(join(dir, configFile(side)), lzStrykerConfig(side, options.project));
-});
+  if (!options.prepareOnly) {
+    lzRemoveOnExit(root);
+  }
 
-const header: LzOssHeader = {
-  project: options.project.name,
-  source: options.source,
-  sourceCommit: await commitOf(options.source),
-  workspaceCommit: await commitOf(workspaceDir),
-  node: process.version,
-  platform: `${process.platform}-${process.arch}`,
-  concurrency: options.concurrency,
-  timeLimitMinutes: options.timeLimitMinutes,
-  mutate: options.mutate,
-  tarballs: tarballs.map((tarball) => basename(tarball)),
-  startedAt: new Date().toISOString(),
-};
+  const copied = new Set(['.git', 'node_modules']);
 
-if (options.prepareOnly) {
-  writeResult({ ...header, preparedIn: dir });
-  process.stdout.write(`Prepared ${dir}, with ${runTmp} for TMP; both stay for manual runs.\n`);
-} else {
-  const lz = options.sides.includes('lz') ? await runSide('lz') : undefined;
-  const command = options.sides.includes('command') ? await runSide('command') : undefined;
+  // Verbatim, as a relative link rewritten to an absolute one would let a write in the copy reach the source.
+  cpSync(options.source, dir, {
+    recursive: true,
+    verbatimSymlinks: true,
+    filter: (path) => !copied.has(relative(options.source, path)),
+  });
+  mkdirSync(runTmp);
+  const tarballs = options.tarballs === undefined ? await lzPack(join(root, 'tarballs')) : given(options.tarballs);
+
+  await lzInstall(dir, tarballs);
+  lzSides.forEach((side) => {
+    writeFileSync(join(dir, configFile(side)), lzStrykerConfig(side, options.project));
+  });
+
+  const header: LzOssHeader = {
+    project: options.project.name,
+    source: options.source,
+    sourceCommit: await commitOf(options.source),
+    workspaceCommit: await commitOf(workspaceDir),
+    node: process.version,
+    platform: `${process.platform}-${process.arch}`,
+    concurrency: options.concurrency,
+    timeLimitMinutes: options.timeLimitMinutes,
+    mutate: options.mutate,
+    tarballs: tarballs.map((tarball) => basename(tarball)),
+    startedAt: new Date().toISOString(),
+  };
+
+  if (options.prepareOnly) {
+    writeResult(out, { ...header, preparedIn: dir });
+    process.stdout.write(`Prepared ${dir}, with ${runTmp} for TMP; both stay for manual runs.\n`);
+
+    return;
+  }
+
+  const lz = options.sides.includes('lz') ? await runSide('lz', folders) : undefined;
+  const command = options.sides.includes('command') ? await runSide('command', folders) : undefined;
   const bySide = <T>(of: (sideRun: LzSideRun) => T): LzBySide<T> => ({
     ...(lz === undefined ? {} : { lz: of(lz) }),
     ...(command === undefined ? {} : { command: of(command) }),
   });
 
-  writeResult({
+  writeResult(out, {
     ...header,
     sides: bySide(({ result }) => result),
     ...lzComparison(bySide(({ run }) => (run?.reported === true ? run.report : null))),
@@ -159,7 +170,7 @@ if (options.prepareOnly) {
  * Each step is settled, so a throw in one still stops the sampler, ends leftovers, lets result.json be written and
  * lets the next side run.
  */
-async function runSide(side: LzSide): Promise<LzSideRun> {
+async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders): Promise<LzSideRun> {
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
@@ -301,7 +312,7 @@ async function commitOf(cwd: string): Promise<string> {
   return stdout.trim();
 }
 
-function writeResult(result: LzOssResult): void {
+function writeResult(out: string, result: LzOssResult): void {
   const file = join(out, 'result.json');
 
   writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);

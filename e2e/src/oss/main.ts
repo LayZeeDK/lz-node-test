@@ -1,14 +1,20 @@
 import { lzMerge } from './merge.ts';
-import { lzOssUsage, lzParseMergeOptions, lzWantsHelp } from './options.ts';
+import { lzOssUsage, lzParseCommand } from './options.ts';
+import { lzRunDriver } from './run.ts';
 
-const args = process.argv.slice(2);
+const command = lzParseCommand(process.argv.slice(2));
 
-if (lzWantsHelp(args)) {
-  process.stdout.write(`${lzOssUsage}\n`);
-} else if (args.some((arg) => arg === '--merge' || arg.startsWith('--merge='))) {
-  const { merge, out } = lzParseMergeOptions(args);
-
-  process.stdout.write(`Wrote ${lzMerge(merge, out)}\n`);
-} else {
-  await import('./run.ts');
+switch (command.kind) {
+  case 'help': {
+    process.stdout.write(`${lzOssUsage}\n`);
+    break;
+  }
+  case 'merge': {
+    process.stdout.write(`Wrote ${lzMerge(command.options.merge, command.options.out)}\n`);
+    break;
+  }
+  case 'run': {
+    await lzRunDriver(command.options);
+    break;
+  }
 }

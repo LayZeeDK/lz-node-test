@@ -132,8 +132,23 @@ export function lzStrykerArgs(mutate: readonly string[]): string[] {
   return mutate.length === 0 ? [] : ['--mutate', mutate.join(',')];
 }
 
-export function lzWantsHelp(args: readonly string[]): boolean {
-  return args.includes('--help') || args.includes('-h');
+export type LzOssCommand =
+  | { readonly kind: 'help' }
+  | { readonly kind: 'merge'; readonly options: LzMergeOptions }
+  | { readonly kind: 'run'; readonly options: LzOssOptions };
+
+/** Help wins over everything; `--merge` picks the merge, whose strict parse refuses the options of a run. */
+export function lzParseCommand(args: readonly string[]): LzOssCommand {
+  const { tokens } = parseArgs({ args: [...args], strict: false, tokens: true });
+  const names = new Set(tokens.flatMap((token) => (token.kind === 'option' ? [token.name] : [])));
+
+  if (names.has('help') || names.has('h')) {
+    return { kind: 'help' };
+  }
+
+  return names.has('merge')
+    ? { kind: 'merge', options: lzParseMergeOptions(args) }
+    : { kind: 'run', options: lzParseOptions(args) };
 }
 
 export function lzParseOptions(args: readonly string[]): LzOssOptions {
