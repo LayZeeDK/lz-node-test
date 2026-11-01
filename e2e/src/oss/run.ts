@@ -37,7 +37,7 @@ import type { LzOssHeader, LzOssResult, LzSideResult, LzStrykerResult } from './
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
 import { lzBySide, lzComparison, lzMessageOf, lzReportScore, type LzSideReport } from './verdicts.ts';
 
-type LzSettled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: string };
+type LzSettled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false };
 
 interface LzSideRun {
   readonly side: LzSide;
@@ -128,6 +128,8 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
  * lets the next side run.
  */
 async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders): Promise<LzSideRun> {
+  const errors: string[] = [];
+  const settled = settledInto(errors);
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
@@ -153,12 +155,12 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders
       ending: await settled(`Ending ${leftover.pid}`, () => end(leftover.pid)),
     })),
   );
-  const logged = await settled('Log', () => {
+  await settled('Log', () => {
     if (run.ok) {
       writeFileSync(join(out, `${side}.log`), run.value.output);
     }
   });
-  const reportCopied = await settled('Report copy', () => {
+  await settled('Report copy', () => {
     if (run.ok && run.value.reported) {
       copyFileSync(join(dir, lzReportFile), join(out, `${side}.mutation.json`));
     }
@@ -168,24 +170,13 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders
   const strykerTmpEntries = await settled('.stryker-tmp listing', () =>
     existsSync(strykerTmp) ? readdirSync(strykerTmp) : [],
   );
-  const steps = [
-    osTmpBefore,
-    run,
-    stopped,
-    found,
-    ...ended.map(({ ending }) => ending),
-    logged,
-    reportCopied,
-    osTmpAfter,
-    strykerTmpEntries,
-  ];
 
   return {
     side,
     report: run.ok ? run.value : { reported: false },
     result: {
       stryker: run.ok ? strykerResult(run.value) : null,
-      errors: steps.flatMap((step) => (step.ok ? [] : [step.error])),
+      errors,
       wallMs,
       processes: {
         ...lzPeaks(samples),
@@ -211,12 +202,17 @@ function strykerResult(run: LzStrykerRun): LzStrykerResult {
   };
 }
 
-async function settled<T>(step: string, run: () => T | Promise<T>): Promise<LzSettled<T>> {
-  try {
-    return { ok: true, value: await run() };
-  } catch (error) {
-    return { ok: false, error: `${step}: ${lzMessageOf(error)}` };
-  }
+/** Settles each step, recording a step that throws in `errors`, so no failed step goes unreported. */
+function settledInto(errors: string[]) {
+  return async <T>(step: string, run: () => T | Promise<T>): Promise<LzSettled<T>> => {
+    try {
+      return { ok: true, value: await run() };
+    } catch (error) {
+      errors.push(`${step}: ${lzMessageOf(error)}`);
+
+      return { ok: false };
+    }
+  };
 }
 
 /** False when the process ended by itself before the driver could end it. */
