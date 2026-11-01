@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 // Stryker leaves a RuntimeError mutant out of the mutation score, so a break threshold of 100 cannot see one. This
 // check fails a run on each RuntimeError mutant that the list does not record with a reason.
 
-interface Mutant {
+export interface LzMutant {
   readonly mutatorName: string;
   readonly status: string;
   readonly statusReason: string | undefined;
@@ -26,7 +26,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function parseMutant(value: unknown): Mutant {
+function parseMutant(value: unknown): LzMutant {
   const location = isRecord(value) ? value['location'] : undefined;
   const start = isRecord(location) ? location['start'] : undefined;
 
@@ -51,7 +51,8 @@ function parseMutant(value: unknown): Mutant {
   };
 }
 
-function parseReport(report: unknown): readonly (readonly [file: string, mutants: readonly Mutant[]])[] {
+/** The mutants of Stryker's JSON report per file; throws when the report does not match its schema. */
+export function lzParseReport(report: unknown): readonly (readonly [file: string, mutants: readonly LzMutant[]])[] {
   const files = isRecord(report) ? report['files'] : undefined;
 
   if (!isRecord(files)) {
@@ -93,7 +94,7 @@ export function lzUnrecordedRuntimeErrors(report: unknown, recorded: unknown): r
 
   const list = recorded.map(parseRecorded);
 
-  return parseReport(report).flatMap(([file, mutants]) =>
+  return lzParseReport(report).flatMap(([file, mutants]) =>
     mutants
       .filter(
         (mutant) =>

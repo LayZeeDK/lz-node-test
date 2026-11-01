@@ -139,7 +139,7 @@ jobs:
             echo "Stryker wrote no mutation report for $TITLE." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          node tools/eslint-rules/mutation-summary.ts "$REPORT" "$TITLE" >> "$GITHUB_STEP_SUMMARY"
+          node tools/eslint-rules/mutation-summary.cli.ts "$REPORT" "$TITLE" >> "$GITHUB_STEP_SUMMARY"
       # Also after a failure or a timeout: Stryker saves the results it has when it is interrupted.
       - if: always() && steps.key.outcome == 'success'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

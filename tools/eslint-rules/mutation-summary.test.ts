@@ -82,7 +82,7 @@ describe('lzMutationSummary', () => {
   });
 });
 
-const script = join(import.meta.dirname, 'mutation-summary.ts');
+const script = join(import.meta.dirname, 'mutation-summary.cli.ts');
 
 function runSummary(args: readonly string[]): {
   readonly code: number | null;
@@ -106,7 +106,7 @@ async function writeReport(t: TestContext, report: unknown): Promise<string> {
   return path;
 }
 
-describe('mutation-summary.ts as a command', () => {
+describe('mutation-summary.cli.ts', () => {
   it('prints the summary of the report file under the title', async (t) => {
     const reportFile = await writeReport(t, reportOf('Killed', 'Survived'));
 
@@ -127,7 +127,7 @@ describe('mutation-summary.ts as a command', () => {
       {
         code,
         stdout,
-        usage: stderr.includes('Usage: node tools/eslint-rules/mutation-summary.ts <report.json> <title>'),
+        usage: stderr.includes('Usage: node tools/eslint-rules/mutation-summary.cli.ts <report.json> <title>'),
       },
       { code: 1, stdout: '', usage: true },
     );
