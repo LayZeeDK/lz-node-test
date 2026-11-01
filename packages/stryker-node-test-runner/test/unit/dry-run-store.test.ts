@@ -69,20 +69,25 @@ describe('lzOwnDryRun', () => {
     process.env[envNames.dryRunOwner] = owner;
   }
 
-  it('returns the owner a parent process passed on, and keeps it', (t) => {
-    inherit(t, '4242');
+  it('returns the owner its parent process passed on, and keeps it', (t) => {
+    inherit(t, String(process.ppid));
 
-    assert.equal(lzOwnDryRun(), 4242);
-    assert.equal(process.env[envNames.dryRunOwner], '4242');
+    assert.equal(lzOwnDryRun(), process.ppid);
+    assert.equal(process.env[envNames.dryRunOwner], String(process.ppid));
   });
 
-  lzTestFor<readonly [string]>([[''], ['not a pid'], ['0'], ['-4242'], ['42.5'], ['1e999']])(
-    'owns the dry run itself when the owner passed on reads %j',
-    ([owner], t) => {
-      inherit(t, owner);
+  lzTestFor<readonly [string]>([
+    [''],
+    ['not a pid'],
+    ['0'],
+    ['-4242'],
+    ['42.5'],
+    ['1e999'],
+    [String(process.ppid + 1)],
+  ])('owns the dry run itself when the owner passed on reads %j', ([owner], t) => {
+    inherit(t, owner);
 
-      assert.equal(lzOwnDryRun(), process.pid);
-      assert.equal(process.env[envNames.dryRunOwner], String(process.pid));
-    },
-  );
+    assert.equal(lzOwnDryRun(), process.pid);
+    assert.equal(process.env[envNames.dryRunOwner], String(process.pid));
+  });
 });

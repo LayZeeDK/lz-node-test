@@ -16,16 +16,16 @@ export function lzDryRunDir(ownerPid: number): string {
 }
 
 /**
- * The pid of the process that owns the dry-run store: the first process to load this module that inherited no owner, or a value that is no pid.
- * Stryker imports every plugin in its own process before it forks a worker, and each worker inherits its environment,
- * so in a Stryker run the owner is Stryker's own process; a test that builds runners owns them itself. The owner
- * removes the directory when it exits. A killed owner leaves it to a later runner's `removeLeftDirs`.
+ * The pid of the process that owns the dry-run store: the first process to load this module that did not inherit its
+ * parent's pid as the owner. Stryker imports every plugin in its own process before it forks a worker, and each worker
+ * inherits its environment, so in a Stryker run the owner is Stryker's own process; a test that builds runners owns
+ * them itself. Any other inherited value, such as one exported in a shell or passed on by a grandparent, is not taken,
+ * so two runs never share a store. The owner removes the directory when it exits. A killed owner leaves it to a later
+ * runner's `removeLeftDirs`.
  */
 export function lzOwnDryRun(): number {
-  const inherited = Number(process.env[envNames.dryRunOwner]);
-
-  if (Number.isSafeInteger(inherited) && inherited > 0) {
-    return inherited;
+  if (process.env[envNames.dryRunOwner] === String(process.ppid)) {
+    return process.ppid;
   }
 
   process.env[envNames.dryRunOwner] = String(process.pid);
