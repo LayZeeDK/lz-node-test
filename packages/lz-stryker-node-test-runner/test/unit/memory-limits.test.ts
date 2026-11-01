@@ -6,7 +6,8 @@ import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestFor } from '@layzee/lz-node-test';
 import { logger } from '../runner.fixtures.ts';
-import { memoryLimits } from '../../src/memory-limits.ts';
+import { memoryLimits, ownPeaks } from '../../src/memory-limits.ts';
+import { envNames } from '../../src/record.ts';
 
 function setup(t: TestContext, maxMemoryMB?: number) {
   const parent = mkdtempSync(join(tmpdir(), 'memory-limits-'));
@@ -84,5 +85,22 @@ describe('memoryLimits', () => {
       'The dry run left no readable memory peak for "a.test.ts", ' +
         'so each process of its mutant runs may hold 1024 MB. Set lzStrykerNodeTest.maxMemoryMB to choose the limit.',
     ]);
+  });
+});
+
+describe('ownPeaks', () => {
+  it('returns the owner a parent process passed on, and keeps it', (t) => {
+    const before = process.env[envNames.peaksOwner];
+    t.after(() => {
+      if (before === undefined) {
+        Reflect.deleteProperty(process.env, envNames.peaksOwner);
+      } else {
+        process.env[envNames.peaksOwner] = before;
+      }
+    });
+    process.env[envNames.peaksOwner] = '4242';
+
+    assert.equal(ownPeaks(), 4242);
+    assert.equal(process.env[envNames.peaksOwner], '4242');
   });
 });
