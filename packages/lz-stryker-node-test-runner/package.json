@@ -2,13 +2,23 @@
   "name": "@layzee/lz-stryker-node-test-runner",
   "version": "0.0.0",
   "private": true,
+  "description": "A StrykerJS test runner for node:test that runs each test file in its own node process",
   "license": "MIT",
   "keywords": [
     "stryker",
+    "stryker-plugin",
     "node:test",
     "@stryker-mutator/test-runner-plugin"
   ],
   "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/lz-stryker-node-test-runner#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LayZeeDK/lz-node-test.git",
+    "directory": "packages/lz-stryker-node-test-runner"
+  },
+  "bugs": {
+    "url": "https://github.com/LayZeeDK/lz-node-test/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

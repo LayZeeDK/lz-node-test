@@ -2,7 +2,23 @@
   "name": "@layzee/lz-stryker-node-test-mutators",
   "version": "0.0.0",
   "private": true,
+  "description": "StrykerJS mutators for code that uses Node.js APIs and node:assert, and for mutating test files",
   "license": "MIT",
+  "keywords": [
+    "stryker",
+    "mutation-testing",
+    "node:test",
+    "node:assert"
+  ],
+  "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/lz-stryker-node-test-mutators#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LayZeeDK/lz-node-test.git",
+    "directory": "packages/lz-stryker-node-test-mutators"
+  },
+  "bugs": {
+    "url": "https://github.com/LayZeeDK/lz-node-test/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
