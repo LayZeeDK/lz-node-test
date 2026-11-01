@@ -32,64 +32,12 @@ import {
   type LzOssOptions,
   type LzSide,
 } from './options.ts';
-import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessPeaks } from './processes.ts';
+import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks } from './processes.ts';
+import type { LzOssHeader, LzOssResult, LzSideResult, LzStrykerResult } from './result.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
-import {
-  lzBySide,
-  lzComparison,
-  lzMessageOf,
-  lzReportScore,
-  type LzBySide,
-  type LzComparison,
-  type LzScore,
-  type LzSideReport,
-} from './verdicts.ts';
-
-interface LzOssHeader {
-  readonly project: string;
-  readonly source: string;
-  readonly sourceCommit: string;
-  readonly workspaceCommit: string;
-  readonly node: string;
-  readonly platform: string;
-  readonly concurrency: number;
-  readonly timeLimitMinutes: number;
-  /** The `--mutate` patterns; empty when the run mutated the project's whole set. */
-  readonly mutate: readonly string[];
-  readonly tarballs: readonly string[];
-  readonly startedAt: string;
-}
-
-interface LzLeftover {
-  readonly pid: number;
-  readonly name: string;
-  readonly endedByDriver: boolean;
-}
-
-interface LzStrykerResult extends LzScore {
-  readonly exitCode: number;
-  readonly timedOut: boolean;
-  readonly reported: boolean;
-  readonly mutants: number;
-  readonly leftoverInRunTmp: readonly string[];
-}
-
-interface LzSideResult {
-  /** Null when the Stryker run itself threw; `errors` says why. */
-  readonly stryker: LzStrykerResult | null;
-  /** Each step that threw, so a failed step leaves the result of the others. */
-  readonly errors: readonly string[];
-  readonly wallMs: number;
-  readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
-  readonly newInOsTmp: readonly string[];
-  readonly leftoverStrykerTmp: readonly string[];
-}
+import { lzBySide, lzComparison, lzMessageOf, lzReportScore, type LzSideReport } from './verdicts.ts';
 
 type LzSettled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: string };
-
-/** The shape of result.json. */
-type LzOssResult = LzOssHeader &
-  ({ readonly preparedIn: string } | ({ readonly sides: LzBySide<LzSideResult> } & LzComparison));
 
 interface LzSideRun {
   readonly side: LzSide;

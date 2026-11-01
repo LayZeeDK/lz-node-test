@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
+import type { LzMergeResult } from './result.ts';
 import { lzBySide, lzComparison, lzMutantKey, lzReportScore } from './verdicts.ts';
 
 /** One side's report from one run. */
@@ -22,8 +23,9 @@ interface LzRun {
 export function lzMerge(files: readonly string[], out: string): string {
   const runs = files.map(readRun);
   const projects = [...new Set(runs.map(({ project }) => project))];
+  const [project] = projects;
 
-  if (projects.length !== 1) {
+  if (project === undefined || projects.length !== 1) {
     throw new Error(`--merge takes runs of one project; found ${projects.join(' and ')}.`);
   }
 
@@ -32,8 +34,8 @@ export function lzMerge(files: readonly string[], out: string): string {
     .filter((side) => reports.some((report) => report.side === side))
     .map((side) => ({ side, report: reportOf(reports, side) }));
   const file = join(out, 'result.json');
-  const result = {
-    project: projects[0],
+  const result: LzMergeResult = {
+    project,
     mergedFrom: files,
     scores: lzBySide(merged, ({ report }) => lzReportScore(report)),
     ...lzComparison(lzBySide(merged, ({ report }) => ({ reported: true, report }))),

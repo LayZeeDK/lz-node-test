@@ -45,7 +45,11 @@ export function lzScore(mutants: readonly LzMutantDetail[]): LzScore {
   };
 }
 
-export function lzReportScore(report: LzReport): LzScore & { readonly mutants: number } {
+export interface LzMutantsScore extends LzScore {
+  readonly mutants: number;
+}
+
+export function lzReportScore(report: LzReport): LzMutantsScore {
   const mutants = [...report.values()].flat();
 
   return { ...lzScore(mutants), mutants: mutants.length };
