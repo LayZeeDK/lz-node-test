@@ -57,9 +57,14 @@ export function fixture(...lines: string[]): string {
 
 export const passing = fixture("it('passes', () => {});");
 
+/**
+ * Blocks its thread and grows past a 200 MB limit, then holds, so the memory the watchdog sees does not depend on how
+ * late its thread starts under load.
+ */
 export const grows =
   'const held = []; const end = Date.now() + 5_000; while (Date.now() < end) { ' +
-  'if (held.length < 25) held.push(new Int32Array(4e6).fill(1)); const pause = Date.now() + 10; while (Date.now() < pause); }';
+  'if (process.memoryUsage.rss() < 264 * 2 ** 20) held.push(new Int32Array(4e6).fill(1)); ' +
+  'const pause = Date.now() + 10; while (Date.now() < pause); }';
 export const failing = fixture("it('fails', () => { throw new Error('expected failure'); });");
 
 export function project(t: TestContext, files: Record<string, string>): string {

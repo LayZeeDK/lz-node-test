@@ -304,10 +304,7 @@ describe('LzStrykerNodeTestRunner', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
 
-    const { stderr } = await settle(
-      runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }),
-      2_000,
-    );
+    const { stderr } = await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
 
     // 8192 bytes of three-byte characters: 2730 whole ones after the cut one.
     assert.equal(stderr, String.fromCodePoint(0x20ac).repeat(2730));
@@ -317,10 +314,7 @@ describe('LzStrykerNodeTestRunner', () => {
     const dir = project(t, { 'a.test.mjs': fixture("process.stdout.write('x'.repeat(1_000_000));") });
     const runner = await initRunner(['a.test.mjs']);
 
-    const { exitCode } = await settle(
-      runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }),
-      2_000,
-    );
+    const { exitCode } = await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
 
     assert.equal(exitCode, 0);
   });
