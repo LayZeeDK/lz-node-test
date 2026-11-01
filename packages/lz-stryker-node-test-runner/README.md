@@ -46,14 +46,15 @@ Load the plugin and select the runner in your Stryker configuration file, for ex
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   mutate: ['src/**/*.js'],
-  plugins: ['@stryker-mutator/*', '@layzee/lz-stryker-node-test-runner'],
+  appendPlugins: ['@layzee/lz-stryker-node-test-runner'],
   testRunner: 'lz-stryker-node-test',
   lzStrykerNodeTest: { testFiles: ['test/**/*.test.js'] },
   reporters: ['clear-text', 'progress'],
 };
 ```
 
-Keep `'@stryker-mutator/*'` in `plugins`, so that Stryker still loads its own plugins, such as the TypeScript checker.
+`appendPlugins` adds the runner to the plugins that Stryker loads by default, so Stryker still loads its own plugins,
+such as the TypeScript checker. The initializer writes the same option.
 
 By default, the runner runs the test files that Nx's convention names: every `.spec` or `.test` file that ends in
 `.js`, `.jsx`, `.ts` or `.tsx`, such as `app.spec.ts` or `app.test.js`, outside `node_modules`. The default also
@@ -61,9 +62,45 @@ matches files named only `spec` or `test`, such as `test.js` or a Karma `src/tes
 `dist/app.spec.js`. Set `testFiles` when such files sit in the working directory, or the runner runs them as test
 files. Set it as well for other names, such as `.test.mjs` files.
 
-Node.js strips the types of `.ts` test files itself, so no build step is needed, but it cannot run `.tsx` or `.jsx`
-files: add a loader for them to `nodeArgs`. Add `@stryker-mutator/typescript-checker` and `checkers: ['typescript']`
-to report mutants that do not compile as compile errors instead of running them.
+Stryker has a `testFiles` option of its own, `--testFiles` on the command line, apart from
+`lzStrykerNodeTest.testFiles`. The runner looks for the files that either option matches. When Stryker's `testFiles`
+is set, the dry run runs only those files, and Stryker runs only their tests for each mutant.
+
+When no file matches, the runner stops before the dry run with the error `No test files match`, followed by the
+patterns. With Stryker's `allowEmpty: true`, the runner logs that message as a warning instead and runs no tests.
+
+Add `@stryker-mutator/typescript-checker` and `checkers: ['typescript']` to report mutants that do not compile as
+compile errors instead of running them.
+
+### TypeScript, JSX and loaders
+
+Node.js strips the types of `.ts` test files itself, so the runner needs no build step for code that type stripping
+can run. Type stripping has these limits, checked on Node.js 22.23.1 and 24.18.1:
+
+- It reads no `tsconfig.json`. An import through a `paths` alias, such as `@app/util`, fails with
+  `ERR_MODULE_NOT_FOUND`, because Node.js looks for a package of that name.
+- It removes types and nothing else. An `enum`, a `namespace` that holds code, or a parameter property such as
+  `constructor(private name: string)` fails with `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`.
+- It imports the file that the import names. `import './util.js'` does not find `util.ts` and fails with
+  `ERR_MODULE_NOT_FOUND`. Write `import './util.ts'` instead.
+- It does not run `.tsx` or `.jsx` files. They fail with `ERR_UNKNOWN_FILE_EXTENSION`.
+
+Each of these errors fails the dry run. For such code, add a loader to `nodeArgs`, for example
+[tsx](https://tsx.is/):
+
+```js
+lzStrykerNodeTest: { nodeArgs: ['--import', 'tsx'] },
+```
+
+The runner starts a new `node` process for each test file of each mutant run, and the loader compiles the file and its
+imports again in each of them. To compile once instead, let Stryker build the code and run the built test files:
+
+```js
+buildCommand: 'tsc -b',
+lzStrykerNodeTest: { testFiles: ['dist/**/*.spec.js'] },
+```
+
+Stryker runs `buildCommand` in its sandbox after it places the mutants in the code.
 
 ## Options
 
@@ -76,9 +113,12 @@ All options sit under `lzStrykerNodeTest`.
 | `maxMemoryMB` | `number`   | from the dry run                      | The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. The default is the most memory that a process of the test file held in the dry run, times 1.5, plus 1024.                                                                             |
 
 `nodeArgs` reach the process of each test file. Stryker's own `testRunnerNodeArgs` reach Stryker's worker process,
-which runs the runner but not the tests. To debug a test file, set `testFiles` to that file, run Stryker with
-`--concurrency 1`, and pass `--inspect-brk` in `nodeArgs`. Each process of that file then waits for a debugger, one at
-a time.
+which runs the runner but not the tests. To debug a test file, set `lzStrykerNodeTest.testFiles` to that file, run
+Stryker with `--concurrency 1`, and pass `--inspect-brk` in `nodeArgs`. Each process of that file then waits for a
+debugger, one at a time.
+
+To see each `node` command that the runner starts, and the folder it starts it in, run Stryker with
+`--logLevel debug`.
 
 On Node.js 24, `--test-global-setup` in `nodeArgs` runs its setup and teardown once in each test file's process, not
 once per run as under `node --test`.
@@ -131,6 +171,12 @@ once per run as under `node --test`.
   mutants as `Ignored` and leaves them out of the mutation score. With `ignoreStatic`, a static mutant that tests also
   reach is not skipped: it runs those tests.
 - **Bail.** Unless you set `disableBail`, a mutant run stops at the first failing test.
+- **Incremental mode.** The runner reports each test with its file and its position in that file. That is the "Full"
+  level of test reporting in Stryker's incremental mode: after a change to a test file, Stryker runs again only the
+  mutants that the changed tests cover. For a test file that the configuration also mutates, the runner reports the
+  file but no position, because Stryker rewrites such a file in its sandbox and the positions no longer match your
+  file. That is the partial level "Tests per file without location": after any change to such a file, Stryker runs
+  again the mutants that any of its tests cover.
 - **Node.js version.** On a Node.js older than 22.18, the runner stops with an error before the dry run.
 
 ## What each status means
@@ -159,6 +205,58 @@ A mutant that makes a module throw while a test file loads it, before any test r
 Stryker's jest and mocha runners. Stryker leaves a `RuntimeError` out of the mutation score. Stryker's `command`
 runner and its tap runner count the same mutant as `Killed`, so on such code this runner's score can be lower than
 theirs while no test result differs.
+
+## What a run costs
+
+The numbers below come from one Windows 11 ARM64 machine with 12 cores, on Node.js 24.18.1. They show where the time
+goes, not how long your run takes.
+
+Most of a mutant run's time is the start of a `node` process for each test file that the mutant runs. In a benchmark of
+the runner with small test files:
+
+- A mutant run of one test file took 163 ms. A bare `node` process that runs one test took 112 ms, so about 50 ms was
+  the runner's own work for the file. The benchmark loaded the runner from its TypeScript source, so the 50 ms also
+  holds the type stripping of the runner's hook, which the published JavaScript does not need.
+- Each further test file in a mutant run added about 175 ms. Three files took 514 ms.
+
+With `coverageAnalysis: 'perTest'`, Stryker's default, a mutant runs only the test files whose tests reach it.
+
+Two open-source projects, each run 5 times a side at concurrency 5, against Stryker's `command` runner with
+`node --test`:
+
+| Project               | Mutants | This runner, median | `command` runner, median |
+| --------------------- | ------- | ------------------- | ------------------------ |
+| restartable 3.0.4     | 167     | 53.5 s              | 166.0 s                  |
+| fastify-cookie 11.1.3 | 246     | 59.8 s              | 46.8 s                   |
+
+On restartable, the `command` runner runs the whole test suite for every mutant, and 36 to 37 mutants a run hang until
+Stryker's timeout ends them. This runner runs only the tests that reach each mutant. Both restartable times include the
+port collisions that the next section describes.
+
+On fastify-cookie, 7 mutants make a test hang on both runners. This runner adds its file's start-up time to each test,
+as [What the runner does](#what-the-runner-does) describes, and Stryker sizes a mutant's timeout from the times of the
+tests that reach it. For one of the 7 mutants, 39 tests reach it, and this runner waited 30.2 s where the `command`
+runner waited 5.7 s.
+
+## Make your tests safe for parallel runs
+
+Stryker runs several mutant runs at once, one per worker, all in one copy of your project, its sandbox. Tests that
+pass under `node --test` can then fail each other. Stryker counts such a failure as a kill, though no test detected the
+mutant. These setups gave wrong statuses in open-source projects:
+
+- **A fixed port.** restartable's tests listen on port 4242. At concurrency 5, a mutant run failed with
+  `EADDRINUSE` whenever another worker held the port. This runner and the `command` runner then disagreed on whether
+  24 to 27 mutants were detected, each time through `EADDRINUSE`. At concurrency 1 they agreed on every detected
+  mutant. Listen on port 0, so that the system picks a free port, and read the port from the server. If you cannot,
+  run Stryker with `--concurrency 1`.
+- **A file in the package.** pino-pretty's tests write files inside the package, and one test lists a folder that
+  others write to. At concurrency 5, 8 mutants were killed only because two workers' tests failed each other. Write
+  such files to a folder that each test creates, for example with `fs.mkdtemp()` in `os.tmpdir()`.
+- **A path outside the sandbox.** A sonic-boom test expects `new SonicBoom({ dest: '/path/to/nowwhere' })` to throw.
+  Mutants that let the code create missing folders made it create `C:\path\to\nowwhere` at the root of the drive.
+  From then on, the test failed without a mutant, so up to 27 later kills in that run may have come from that failure
+  and not from the mutants. Stryker's sandbox does not stop a test from writing to an absolute path. For a path that
+  must not exist, use one inside a temporary folder that the test creates, such as `join(dir, 'missing', 'file')`.
 
 ## Close what your tests open
 
