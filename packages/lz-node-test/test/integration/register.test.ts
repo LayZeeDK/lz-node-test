@@ -23,6 +23,7 @@ describe('the options of lzTestEach and lzTestFor', () => {
     ]);
   });
 
+  // Stryker disable LzAssertCall: t.assert.reports allows only the names its cases list, so its callback may hold no Stryker code
   it('applies a timeout given as a number or in the options, and passes node:test options through', async (t) => {
     await t.assert.reports(() => {
       lzTestEach([1])('number %s', () => new Promise((resolve) => setTimeout(resolve, 300)), 10);
@@ -36,6 +37,7 @@ describe('the options of lzTestEach and lzTestFor', () => {
       { name: 'plan 1', outcome: 'pass' },
     ]);
   });
+  // Stryker restore LzAssertCall
 
   it('lets a defined option override a modifier, and reads no options from a function', async (t) => {
     await t.assert.reports(() => {

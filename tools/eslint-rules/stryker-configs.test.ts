@@ -9,10 +9,7 @@ const workspaceRoot = join(import.meta.dirname, '..', '..');
 
 const configs: readonly (readonly [file: string, mutate: readonly string[]])[] = [
   ['packages/lz-node-test/stryker.config.mjs', ['packages/lz-node-test/src/**/*.ts']],
-  [
-    'packages/lz-node-test/stryker.test-code.config.mjs',
-    ['packages/lz-node-test/test/**/*.test.ts', '!packages/lz-node-test/test/integration/register.test.ts'],
-  ],
+  ['packages/lz-node-test/stryker.test-code.config.mjs', ['packages/lz-node-test/test/**/*.test.ts']],
   [
     'packages/stryker-node-test-mutators/stryker.config.mjs',
     [

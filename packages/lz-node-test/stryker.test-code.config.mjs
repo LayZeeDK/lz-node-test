@@ -3,12 +3,7 @@ import base from './stryker.config.mjs';
 
 export default await testCode({
   ...base,
-  mutate: [
-    'packages/lz-node-test/test/**/*.test.ts',
-    // Its t.assert.reports cases allow only the globals they name in the source of their own callbacks, and
-    // instrumentation adds Stryker's.
-    '!packages/lz-node-test/test/integration/register.test.ts',
-  ],
+  mutate: ['packages/lz-node-test/test/**/*.test.ts'],
   incrementalFile: 'reports/stryker-incremental/lz-node-test.test-code.json',
   ...reportFiles('lz-node-test.test-code'),
 });
