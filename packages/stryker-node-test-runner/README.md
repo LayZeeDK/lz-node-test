@@ -295,9 +295,11 @@ that a full run would change. Run `stryker run --incremental --force` after any 
 
 These cases cost time but give the same results:
 
-- A test whose title the code under test builds, as with `lzTestEach` titles in the `@layzee/lz-node-test` package's
-  own configuration. When a mutant changes the title of the test that kills it, Stryker cannot match that test on the
-  next run, so the mutant runs again every time. On the configuration above, 14 such mutants took 23 s of the 32 s.
+- A test whose title the code under test builds. When a mutant changes the title of the test that kills it, Stryker
+  cannot match that test on the next run, so the mutant runs again every time. Table titles such as
+  `lzTestEach(rows)('says %d is adult: %s', ...)` are stable when the rows hold literal values. A row that calls the
+  code under test, such as `[30, isAdult(30)]`, puts that code's result in the title. On the configuration above,
+  which mutates `@layzee/lz-node-test`'s own title formatter, 14 such mutants took 23 s of the 32 s.
 - A test file that the configuration also mutates. After any change to it, the mutants that its tests cover run again,
   as [What the runner does](#what-the-runner-does) describes.
 
