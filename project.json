@@ -1,0 +1,16 @@
+{
+  "name": "workspace",
+  "$schema": "node_modules/nx/schemas/project-schema.json",
+  "targets": {
+    "lint": {
+      "command": "eslint *.mjs",
+      "options": { "cwd": "{projectRoot}" },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/*.mjs",
+        "{workspaceRoot}/tools/eslint-rules/**/*",
+        { "externalDependencies": ["eslint"] }
+      ]
+    }
+  }
+}
