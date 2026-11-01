@@ -184,6 +184,10 @@ describe('lzParseOptions', () => {
     assert.match(lzOssUsage, /one column on each side/);
   });
 
+  it('says in the usage that a merged result.json cannot be merged again', () => {
+    assert.match(lzOssUsage, /merges do not compose/);
+  });
+
   it('refuses an option it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
   });

@@ -50,6 +50,12 @@ export function lzMerge(files: readonly string[], out: string): string {
 function readRun(file: string): LzRun {
   const result: unknown = JSON.parse(readFileSync(file, 'utf8'));
 
+  if (lzIsRecord(result) && 'mergedFrom' in result) {
+    throw new Error(
+      `${file} is the result of a merge; merges do not compose, so merge the runs it lists in mergedFrom.`,
+    );
+  }
+
   if (!lzIsRecord(result) || typeof result['project'] !== 'string' || !lzIsRecord(result['sides'])) {
     throw new Error(`${file} is not the result.json of a driver run.`);
   }

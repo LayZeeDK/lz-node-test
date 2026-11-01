@@ -109,7 +109,8 @@ export const lzOssUsage =
   '            mutant at a mutation.json position, widen the range by one column on each side:\n' +
   '            file.js:12:4-12:20 for a mutant at 12:5-12:19.\n' +
   "  --merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside\n" +
-  '            it. Batches of one side merge into one; a mutant in two batches is refused.';
+  '            it. Batches of one side merge into one; a mutant in two batches is refused. A merged result.json\n' +
+  '            is refused: merges do not compose, so merge the runs it lists in mergedFrom.';
 const positiveInteger = /^[1-9]\d*$/;
 
 export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {

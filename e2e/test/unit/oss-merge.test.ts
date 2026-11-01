@@ -164,6 +164,17 @@ describe('lzMerge', () => {
     assert.throws(() => lzMerge([file], out), { message: `${file} holds no side's results.` });
   });
 
+  it('refuses a merged result.json, as merges do not compose', (t) => {
+    const { run, out } = setup(t);
+
+    lzMerge([run('a', 'p', { lz: [] })], out);
+    const merged = join(out, 'result.json');
+
+    assert.throws(() => lzMerge([merged], join(out, 'again')), {
+      message: `${merged} is the result of a merge; merges do not compose, so merge the runs it lists in mergedFrom.`,
+    });
+  });
+
   it('refuses a run whose side wrote no report', (t) => {
     const { run, out } = setup(t);
     const file = run('a', 'p', { lz: [] });
