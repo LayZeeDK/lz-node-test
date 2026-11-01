@@ -113,7 +113,7 @@ export const lzOssUsage =
   '            is refused: merges do not compose, so merge the runs it lists in mergedFrom. A side that wrote no\n' +
   "            report is refused; a run removes its sides' earlier reports and logs from --out first. Runs that\n" +
   "            differ in any of result.json's project, workspaceCommit, node and tarballs are refused, naming the\n" +
-  '            field.';
+  '            field. A result.json given twice is refused, however its path is spelt.';
 const positiveInteger = /^[1-9]\d*$/;
 
 export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {

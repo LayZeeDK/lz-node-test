@@ -196,6 +196,10 @@ describe('lzParseOptions', () => {
     assert.match(lzOssUsage, /project, workspaceCommit, node and\s+tarballs/);
   });
 
+  it('says in the usage that a result.json given twice is refused', () => {
+    assert.match(lzOssUsage, /A result\.json given\s+twice is refused/);
+  });
+
   it('refuses an option it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
   });

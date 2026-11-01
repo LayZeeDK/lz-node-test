@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import { lzMerge } from '../../src/oss/merge.ts';
@@ -151,6 +151,16 @@ describe('lzMerge', () => {
 
     assert.throws(() => lzMerge(runs, out), {
       message: '--merge takes runs of one tarballs; found [a-1.0.0.tgz, b-1.0.0.tgz] and [a-1.0.1.tgz].',
+    });
+  });
+
+  it('refuses a result.json given twice, however its path is spelt', (t) => {
+    const { run, out } = setup(t);
+    const file = run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] });
+    const respelt = [dirname(file), '.', 'result.json'].join(sep);
+
+    assert.throws(() => lzMerge([file, respelt], out), {
+      message: `--merge got ${file} more than once; give each result.json once.`,
     });
   });
 

@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
@@ -28,6 +28,13 @@ interface LzRun {
 
 /** Merges the driver's result.json files into one comparison, written to `out`'s result.json, whose path it returns. */
 export function lzMerge(files: readonly string[], out: string): string {
+  const resolved = files.map((file) => resolve(file));
+  const repeated = resolved.find((file, index) => resolved.indexOf(file) !== index);
+
+  if (repeated !== undefined) {
+    throw new Error(`--merge got ${repeated} more than once; give each result.json once.`);
+  }
+
   const runs = files.map(readRun);
   const projects = [...new Set(runs.map(({ project }) => project))];
   const [project] = projects;
