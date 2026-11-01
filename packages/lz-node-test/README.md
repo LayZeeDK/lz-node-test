@@ -38,6 +38,32 @@ describe('add', () => {
 });
 ```
 
+## Keep test names stable for mutation testing
+
+Table tests work with
+[`@layzee/stryker-node-test-runner`](https://github.com/LayZeeDK/lz-node-test/tree/main/packages/stryker-node-test-runner#use-incremental-mode),
+including Stryker's incremental mode. Stryker matches a test from one run to the next by its file, its position and its
+name, so build names from values that the code under test does not compute.
+
+- Rows of literal values give the same names in every run:
+
+  ```ts
+  lzTestEach([
+    [30, true],
+    [10, false],
+  ])('says %d is adult: %s', (age, adult) => {
+    assert.equal(isAdult(age), adult);
+  });
+  ```
+
+- A row that calls the code under test, such as `[30, isAdult(30)]`, puts that code's result in the name. A mutant of
+  `isAdult` then renames the test that kills it. The next incremental run cannot match that test, so it runs the mutant
+  again, on every run. The results stay correct; only the time grows. Call the code under test in the test function
+  instead.
+
+Vitest's `test.each` and `test.for` behave the same way under Stryker's Vitest runner, which also names tests by their
+titles.
+
 ## Reference
 
 ### `lzTestEach(cases)(name, fn?, timeout?)`

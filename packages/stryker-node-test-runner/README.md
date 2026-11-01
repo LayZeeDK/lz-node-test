@@ -272,9 +272,9 @@ On this repository's `lz-node-test` configuration (349 mutants, concurrency 6, m
 
 | Change since the stored run | Full run | Incremental run | Results reused |
 | --------------------------- | -------- | --------------- | -------------- |
-| None                        | 174 s    | 32 s            | 335 of 349     |
-| One source file edited      | 174 s    | 33 s            | 334 of 349     |
-| One test edited             | 174 s    | 45 s            | 247 of 349     |
+| None                        | 143 s    | 7.5 s           | 349 of 349     |
+| One source file edited      | 143 s    | 7.4 s           | 348 of 349     |
+| One test edited             | 143 s    | 22 s            | 261 of 349     |
 
 The dry run always runs, and so does the TypeScript checker's first compile when you use it. The rest of the time goes
 to mutants that run again.
@@ -298,8 +298,11 @@ These cases cost time but give the same results:
 - A test whose title the code under test builds. When a mutant changes the title of the test that kills it, Stryker
   cannot match that test on the next run, so the mutant runs again every time. Table titles such as
   `lzTestEach(rows)('says %d is adult: %s', ...)` are stable when the rows hold literal values. A row that calls the
-  code under test, such as `[30, isAdult(30)]`, puts that code's result in the title. On the configuration above,
-  which mutates `@layzee/lz-node-test`'s own title formatter, 14 such mutants took 23 s of the 32 s.
+  code under test, such as `[30, isAdult(30)]`, puts that code's result in the title. Such code runs while the test
+  file registers its tests, so its mutants are static and run every test. The test still runs and still kills the
+  mutant, but under a name the stored results lack. Stryker's Vitest runner names tests by their titles too and does
+  the same. Before this repository's `lz-node-test` tests stopped titling their cases with the formatter they test, 14
+  such mutants made an incremental run on an unchanged tree take 32 s instead of 7.5 s.
 - A test file that the configuration also mutates. After any change to it, the mutants that its tests cover run again,
   as [What the runner does](#what-the-runner-does) describes.
 
