@@ -6,7 +6,22 @@ import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestEach } from '@layzee/lz-node-test';
-import { lzCheckRuntimeErrors, lzUnrecordedRuntimeErrors } from './runtime-errors.ts';
+
+/**
+ * Each test imports the check itself: a mutant that runs the command branch on import then fails the tests, where a
+ * static import would end the file outside any test.
+ */
+async function unrecordedRuntimeErrors(report: unknown, recorded: unknown): Promise<readonly string[]> {
+  const { lzUnrecordedRuntimeErrors } = await import('./runtime-errors.ts');
+
+  return lzUnrecordedRuntimeErrors(report, recorded);
+}
+
+async function checkRuntimeErrors(reportFile: string, recordedFile: string): Promise<readonly string[]> {
+  const { lzCheckRuntimeErrors } = await import('./runtime-errors.ts');
+
+  return lzCheckRuntimeErrors(reportFile, recordedFile);
+}
 
 const file = 'packages/a/src/watch.ts';
 const reason = 'node exited with code 1 outside any test.';
@@ -34,24 +49,24 @@ const malformedList =
   'runtime-errors.json: each entry needs a file, a mutator, a line, a column and a reason, as the report gives them.';
 
 describe('lzUnrecordedRuntimeErrors', () => {
-  it('returns nothing for a report without RuntimeError mutants', () => {
+  it('returns nothing for a report without RuntimeError mutants', async () => {
     const report = reportOf([mutant('Killed'), mutant('Survived'), mutant('Timeout'), mutant('CompileError')]);
 
-    assert.deepEqual(lzUnrecordedRuntimeErrors(report, []), []);
+    assert.deepEqual(await unrecordedRuntimeErrors(report, []), []);
   });
 
-  it('names a RuntimeError mutant that the list does not record by file, location, mutator and reason', () => {
-    assert.deepEqual(lzUnrecordedRuntimeErrors(reportOf([mutant('RuntimeError')]), []), [unrecordedLine]);
+  it('names a RuntimeError mutant that the list does not record by file, location, mutator and reason', async () => {
+    assert.deepEqual(await unrecordedRuntimeErrors(reportOf([mutant('RuntimeError')]), []), [unrecordedLine]);
   });
 
-  it('leaves out the reason when the report gives none', () => {
+  it('leaves out the reason when the report gives none', async () => {
     const report = reportOf([{ ...mutant('RuntimeError'), statusReason: undefined }]);
 
-    assert.deepEqual(lzUnrecordedRuntimeErrors(report, []), [`${file}:24:28 ArithmeticOperator`]);
+    assert.deepEqual(await unrecordedRuntimeErrors(report, []), [`${file}:24:28 ArithmeticOperator`]);
   });
 
-  it('accepts a RuntimeError mutant that the list records', () => {
-    assert.deepEqual(lzUnrecordedRuntimeErrors(reportOf([mutant('RuntimeError')]), [recorded]), []);
+  it('accepts a RuntimeError mutant that the list records', async () => {
+    assert.deepEqual(await unrecordedRuntimeErrors(reportOf([mutant('RuntimeError')]), [recorded]), []);
   });
 
   lzTestEach([
@@ -59,11 +74,11 @@ describe('lzUnrecordedRuntimeErrors', () => {
     ['mutator', { ...recorded, mutator: 'EqualityOperator' }],
     ['line', { ...recorded, line: 25 }],
     ['column', { ...recorded, column: 7 }],
-  ])('still names a RuntimeError mutant when the recorded entry has another %s', (_, entry) => {
-    assert.deepEqual(lzUnrecordedRuntimeErrors(reportOf([mutant('RuntimeError')]), [entry]), [unrecordedLine]);
+  ])('still names a RuntimeError mutant when the recorded entry has another %s', async (_, entry) => {
+    assert.deepEqual(await unrecordedRuntimeErrors(reportOf([mutant('RuntimeError')]), [entry]), [unrecordedLine]);
   });
 
-  it('names the RuntimeError mutants of every file, in report order', () => {
+  it('names the RuntimeError mutants of every file, in report order', async () => {
     const report = {
       files: {
         [file]: {
@@ -73,7 +88,7 @@ describe('lzUnrecordedRuntimeErrors', () => {
       },
     };
 
-    assert.deepEqual(lzUnrecordedRuntimeErrors(report, []), [
+    assert.deepEqual(await unrecordedRuntimeErrors(report, []), [
       unrecordedLine,
       `${file}:26:7 EqualityOperator: ${reason}`,
       `packages/a/src/b.ts:3:1 BlockStatement: ${reason}`,
@@ -82,6 +97,7 @@ describe('lzUnrecordedRuntimeErrors', () => {
 
   lzTestEach([
     ['no object', 'report'],
+    ['null', null],
     ['no files object', {}],
     ['an array for files', { files: [] }],
     ['a file without a mutants array', { files: { [file]: {} } }],
@@ -93,8 +109,8 @@ describe('lzUnrecordedRuntimeErrors', () => {
     ['a location without a start', reportOf([{ ...mutant('RuntimeError'), location: {} }])],
     ['a start without a line', reportOf([{ ...mutant('RuntimeError'), location: { start: { column: 1 } } }])],
     ['a start without a column', reportOf([{ ...mutant('RuntimeError'), location: { start: { line: 1 } } }])],
-  ])('rejects a report with %s', (_, report) => {
-    assert.throws(() => lzUnrecordedRuntimeErrors(report, []), { message: malformedReport });
+  ])('rejects a report with %s', async (_, report) => {
+    await assert.rejects(unrecordedRuntimeErrors(report, []), { message: malformedReport });
   });
 
   lzTestEach([
@@ -106,8 +122,8 @@ describe('lzUnrecordedRuntimeErrors', () => {
     ['an entry without a column', [{ ...recorded, column: undefined }]],
     ['an entry without a reason', [{ ...recorded, reason: undefined }]],
     ['an entry with an empty reason', [{ ...recorded, reason: '' }]],
-  ])('rejects a list with %s', (_, list) => {
-    assert.throws(() => lzUnrecordedRuntimeErrors(reportOf([]), list), { message: malformedList });
+  ])('rejects a list with %s', async (_, list) => {
+    await assert.rejects(unrecordedRuntimeErrors(reportOf([]), list), { message: malformedList });
   });
 });
 
@@ -130,8 +146,8 @@ describe('lzCheckRuntimeErrors', () => {
     const dir = await tempDir(t);
     const reportFile = await writeJson(dir, 'report.json', reportOf([mutant('RuntimeError')]));
 
-    assert.deepEqual(await lzCheckRuntimeErrors(reportFile, await writeJson(dir, 'none.json', [])), [unrecordedLine]);
-    assert.deepEqual(await lzCheckRuntimeErrors(reportFile, await writeJson(dir, 'list.json', [recorded])), []);
+    assert.deepEqual(await checkRuntimeErrors(reportFile, await writeJson(dir, 'none.json', [])), [unrecordedLine]);
+    assert.deepEqual(await checkRuntimeErrors(reportFile, await writeJson(dir, 'list.json', [recorded])), []);
   });
 });
 
@@ -150,26 +166,25 @@ describe('runtime-errors.ts as a command', () => {
     assert.deepEqual(runCheck([reportFile]), { code: 0, stderr: '' });
   });
 
-  it('exits 1 and names each unrecorded RuntimeError mutant', async (t) => {
-    const reportFile = await writeJson(await tempDir(t), 'report.json', reportOf([mutant('RuntimeError')]));
+  it('exits 1 and names each unrecorded RuntimeError mutant on its own line', async (t) => {
+    const report = reportOf([mutant('RuntimeError'), mutant('RuntimeError', 'EqualityOperator', 26, 7)]);
+    const reportFile = await writeJson(await tempDir(t), 'report.json', report);
 
     assert.deepEqual(runCheck([reportFile]), {
       code: 1,
       stderr:
         'Stryker left RuntimeError mutants out of the mutation score. Kill each one with a test, or record why it ' +
-        `cannot be killed in tools/eslint-rules/runtime-errors.json:\n  ${unrecordedLine}\n`,
+        `cannot be killed in tools/eslint-rules/runtime-errors.json:\n  ${unrecordedLine}\n` +
+        `  ${file}:26:7 EqualityOperator: ${reason}\n`,
     });
   });
 
-  it('exits 1 with its usage when no report is given', () => {
+  it('exits 1 with its usage as the error message when no report is given', () => {
     const { code, stderr } = runCheck([]);
 
     assert.deepEqual(
-      { code, usage: stderr.includes('Usage: node tools/eslint-rules/runtime-errors.ts <report.json>') },
-      {
-        code: 1,
-        usage: true,
-      },
+      { code, usage: /^Error: Usage: node tools\/eslint-rules\/runtime-errors\.ts <report\.json>$/m.test(stderr) },
+      { code: 1, usage: true },
     );
   });
 });
