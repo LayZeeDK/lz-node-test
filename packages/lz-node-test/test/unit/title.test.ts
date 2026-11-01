@@ -1,28 +1,42 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { inspect } from 'node:util';
 
-import { lzTestEach } from '../../src/test-each.ts';
 import { formatName, formatTitle } from '../../src/title.ts';
+
+type Case = [template: string, items: readonly unknown[], expected: string];
 
 const circular: { self?: unknown } = {};
 circular.self = circular;
 const digits = (length: number) => Array.from({ length }, (_, i) => i % 10).join('');
 
+/**
+ * Titles come from node:util rather than from lzTestEach, which formats them with formatTitle: a mutant of formatTitle
+ * would rename the test that kills it, and Stryker's incremental mode then reruns that mutant on every run.
+ */
+function title(verb: string, [template, items, expected]: Case): string {
+  return `${verb} ${JSON.stringify(template)} with ${inspect(items)} as ${JSON.stringify(expected)}`;
+}
+
 describe('formatName', () => {
-  lzTestEach([
+  const names: [kind: string, name: unknown, expected: string][] = [
     ['a string', 'case %s', 'case %s'],
     ['a named function', function named() {}, 'named'],
     ['an anonymous function', [() => {}][0], '<anonymous>'],
     ['a number', 1, '1'],
     ['undefined', undefined, 'undefined'],
     ['a symbol', Symbol('s'), 'Symbol(s)'],
-  ])('names a test after %s', (_, name, expected) => {
-    assert.equal(formatName(name), expected);
-  });
+  ];
+
+  for (const [kind, name, expected] of names) {
+    it(`names a test after ${kind}`, () => {
+      assert.equal(formatName(name), expected);
+    });
+  }
 });
 
 describe('formatTitle', () => {
-  lzTestEach([
+  const formats: Case[] = [
     ['%s', ['abc'], 'abc'],
     ['%s', [1.5], '1.5'],
     ['%s', [-0], '-0'],
@@ -67,11 +81,16 @@ describe('formatTitle', () => {
     ['%d %d', [1], '1 NaN'],
     ['%s', [1, 2, 3], '1'],
     ['%x %s 100%', ['a'], '%x a 100%'],
-  ])('formats %j with %o as %j', (template, items, expected) => {
-    const index = 2;
+  ];
 
-    assert.equal(formatTitle(template, items, index), expected);
-  });
+  for (const formatCase of formats) {
+    it(title('formats', formatCase), () => {
+      const [template, items, expected] = formatCase;
+      const index = 2;
+
+      assert.equal(formatTitle(template, items, index), expected);
+    });
+  }
 
   it('throws what JSON.stringify throws for %j, unless the value is circular', () => {
     assert.throws(() => formatTitle('%j', [10n], 0), { name: 'TypeError', message: /BigInt/ });
@@ -91,7 +110,7 @@ describe('formatTitle', () => {
     );
   });
 
-  lzTestEach([
+  const cuts: Case[] = [
     ['%o', [digits(40)], `'${digits(38)}…'`],
     ['%o', [`'${digits(49)}`], `"'${digits(37)}…"`],
     ['%o', [digits(37)], `'${digits(37)}'`],
@@ -106,11 +125,17 @@ describe('formatTitle', () => {
     ['$a', [{ a: `a${'😀'.repeat(25)}` }], `a${'😀'.repeat(19)}…`],
     ['$a', [{ a: `${digits(38)}😀${digits(3)}` }], `${digits(38)}…`],
     ['$a', [{ a: `${digits(40)}😀` }], `${digits(39)}…`],
-  ])('cuts %j of %o short at 40 characters as %j', (template, items, expected) => {
-    assert.equal(formatTitle(template, items, 0), expected);
-  });
+  ];
 
-  lzTestEach([
+  for (const cutCase of cuts) {
+    it(title('cuts short at 40 characters', cutCase), () => {
+      const [template, items, expected] = cutCase;
+
+      assert.equal(formatTitle(template, items, 0), expected);
+    });
+  }
+
+  const interpolations: Case[] = [
     ['$a and $b', [{ a: 1, b: 'x' }], '1 and x'],
     ['$a.b, $a.c', [{ a: { b: 2 } }], '2, undefined'],
     ['$a[10][1]', [{ a: [...Array.from({ length: 10 }), ['x', 'y']] }], 'y'],
@@ -128,7 +153,13 @@ describe('formatTitle', () => {
     ['$a', [[1, 2]], '$a'],
     ['$a', [null], '$a'],
     ['$ a', [{ a: 1 }], '$ a'],
-  ])('interpolates %j with %o as %j', (template, items, expected) => {
-    assert.equal(formatTitle(template, items, 0), expected);
-  });
+  ];
+
+  for (const interpolationCase of interpolations) {
+    it(title('interpolates', interpolationCase), () => {
+      const [template, items, expected] = interpolationCase;
+
+      assert.equal(formatTitle(template, items, 0), expected);
+    });
+  }
 });
