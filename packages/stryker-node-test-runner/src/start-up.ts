@@ -2,7 +2,7 @@ import type { Logger } from '@stryker-mutator/api/logging';
 
 import type { LzDryRunStore } from './dry-run-store.ts';
 import { isObject } from './guards.ts';
-import { lzOutsideMs, within, type RecordedTest } from './record.ts';
+import { lzNamesFile, lzOutsideMs, within, type RecordedTest } from './record.ts';
 
 /** What a mutant run's deadline needs to know of a test file from the dry run. */
 export interface LzStartUp {
@@ -53,7 +53,7 @@ export function lzStartUps(store: LzDryRunStore, timeoutFactor: number, log: Log
           const startUp = read(file);
           // Stryker runs every test of a file for a static mutant, or without coverage, and then sums the time of
           // every test of the dry run.
-          const wholeFile = testFilter === undefined || testFilter.includes(file);
+          const wholeFile = testFilter === undefined || lzNamesFile(testFilter, file);
 
           return {
             covering: wholeFile ? (startUp?.tests ?? 0) : testFilter.filter((id) => within(id, file)).length,

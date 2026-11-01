@@ -39,6 +39,7 @@ import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
   envNames,
   lzIsRecordName,
+  lzNamesFile,
   lzOutsideMs,
   lzParseRecord,
   testId,
@@ -424,7 +425,7 @@ export function lzRunEnv({
   // Stryker names whole test files in the filter only for a mutant that runs every test, as a static mutant under
   // --testFiles does, yet asks for runtime activation; such a mutant must be active from the start.
   if (run.activeMutant !== undefined) {
-    const runtime = run.mutantActivation === 'runtime' && !run.testFilter?.includes(file);
+    const runtime = run.mutantActivation === 'runtime' && !lzNamesFile(run.testFilter, file);
     env[runtime ? envNames.activeMutant : INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE] = run.activeMutant;
   }
 

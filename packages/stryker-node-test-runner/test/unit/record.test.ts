@@ -6,6 +6,7 @@ import { lzTestEach } from '@layzee/lz-node-test';
 import { lzTestFor } from '@layzee/lz-node-test';
 import {
   lzIsRecordName,
+  lzNamesFile,
   lzNodeRecordFiles,
   lzParseRecord,
   lzParseRecordName,
@@ -41,6 +42,17 @@ describe('testId', () => {
       assert.equal(testId(file, name), `${file} > ${name}`);
     },
   );
+});
+
+describe('lzNamesFile', () => {
+  lzTestFor<readonly [string, readonly string[] | undefined, boolean]>([
+    ['lists the file itself', [file, join('/repo', 'b.test.mjs')], true],
+    ['lists only a test of the file', [`${file} > works`], false],
+    ['lists other files', [join('/repo', 'b.test.mjs')], false],
+    ['is undefined', undefined, false],
+  ])('tells whether a filter that %s names the file', ([, testFilter, named]) => {
+    assert.equal(lzNamesFile(testFilter, file), named);
+  });
 });
 
 describe('uniqueIds', () => {

@@ -36,6 +36,14 @@ export function within(id: string, scope: string): boolean {
   return id === scope || id.startsWith(`${scope} > `);
 }
 
+/**
+ * Whether `testFilter` names the test file itself. Stryker does that only for a mutant that runs every test of the
+ * file, as a static mutant under --testFiles does.
+ */
+export function lzNamesFile(testFilter: readonly string[] | undefined, file: string): boolean {
+  return testFilter?.includes(file) === true;
+}
+
 export interface RecordedTest {
   readonly id: string;
   /** Skipped tests include todo tests, which run but whose outcome node:test ignores. */
