@@ -573,12 +573,24 @@ export class LzStrykerNodeTestRunner implements TestRunner {
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
-    const result = await this.#run(files, run, this.#dryRunConcurrency, async (file) => {
-      const fileRun = await this.runFile(file, run, memoryLimitMB);
-      this.#memoryLimits.record(file, fileRun.records);
-
-      return fileRun;
-    });
+    const result = await this.#run(
+      files,
+      run,
+      this.#dryRunConcurrency,
+      (file) => this.runFile(file, run, memoryLimitMB),
+      // The same fileMs as every test's time, so the start-up a mutant run's deadline takes off is never more than the
+      // time Stryker's timeout counted for it.
+      (file, fileRun, fileMs) => {
+        this.#memoryLimits.record(file, fileRun.records);
+        this.#startUps.record(
+          file,
+          lzStartUpOf(
+            fileRun.records.flatMap((record) => record.tests),
+            fileMs,
+          ),
+        );
+      },
+    );
 
     if (
       result.status === DryRunStatus.Complete &&
@@ -638,6 +650,8 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     run: LzRunOptions,
     limit: number,
     runOne: (file: string) => Promise<LzFileRun>,
+    /** Told of each file's run and its time, `fileMs`, the time that `lzToTestResults` spreads over the file's tests. */
+    afterRun?: (file: string, fileRun: LzFileRun, fileMs: number) => void,
   ): Promise<DryRunResult> {
     const tests: TestResult[] = [];
     const coverages: (MutantCoverage | undefined)[] = [];
@@ -649,13 +663,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         const started = performance.now();
         const fileRun = await runOne(file);
         const fileMs = performance.now() - started;
-
-        // The same fileMs as every test's time, so the start-up a mutant run's deadline takes off is never more than
-        // the time Stryker's timeout counted for it.
-        if (run.dryRun) {
-          const tests = fileRun.records.flatMap((record) => record.tests);
-          this.#startUps.record(file, lzStartUpOf(tests, fileMs));
-        }
+        afterRun?.(file, fileRun, fileMs);
 
         return fileOutcome(file, fileRun, fileMs, run);
       },
