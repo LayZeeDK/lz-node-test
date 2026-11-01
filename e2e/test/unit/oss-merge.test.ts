@@ -236,6 +236,17 @@ describe('lzMerge', () => {
     });
   });
 
+  it('refuses a side whose report file is missing, naming the side and the file', (t) => {
+    const { run, out } = setup(t);
+    const file = run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] });
+
+    rmSync(join(dirname(file), 'lz.mutation.json'));
+
+    assert.throws(() => lzMerge([file], out), {
+      message: `The lz side of ${file} has no lz.mutation.json beside it.`,
+    });
+  });
+
   it('refuses a side whose Stryker run threw', (t) => {
     const { run, out } = setup(t);
     const file = run('a', 'p', { command: [] });

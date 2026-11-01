@@ -62,6 +62,7 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
   const out = resolve(options.out);
 
   mkdirSync(out, { recursive: true });
+  lzClearResult(out);
   lzRemoveDeadRunDirs(tmpdir(), lzOssRunPrefix);
   const root = realpathSync.native(
     mkdtempSync(join(tmpdir(), `${options.prepareOnly ? lzOssPreparedPrefix : lzOssRunPrefix}${process.pid}-`)),
@@ -122,6 +123,11 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     sides: lzBySide(runs, ({ result }) => result),
     ...lzComparison(lzBySide(runs, ({ report }) => report)),
   });
+}
+
+/** A run that dies before it writes result.json must leave none, not the previous run's beside this run's side files. */
+export function lzClearResult(out: string): void {
+  rmSync(join(out, 'result.json'), { force: true });
 }
 
 /** An earlier run's report or log left in `out` must not pass for this run's. */

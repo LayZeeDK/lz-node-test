@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { lzClearSideFiles } from '../../src/oss/run.ts';
+import { lzClearResult, lzClearSideFiles } from '../../src/oss/run.ts';
 
 function setup(t: TestContext, names: readonly string[]): string {
   const out = mkdtempSync(join(tmpdir(), 'lz-oss-run-'));
@@ -18,6 +18,24 @@ function setup(t: TestContext, names: readonly string[]): string {
 
   return out;
 }
+
+describe('lzClearResult', () => {
+  it("removes an earlier run's result.json and keeps the side files", (t) => {
+    const out = setup(t, ['result.json', 'lz.mutation.json']);
+
+    lzClearResult(out);
+
+    assert.deepEqual(readdirSync(out), ['lz.mutation.json']);
+  });
+
+  it('accepts a folder with no result.json', (t) => {
+    const out = setup(t, []);
+
+    lzClearResult(out);
+
+    assert.deepEqual(readdirSync(out), []);
+  });
+});
 
 describe('lzClearSideFiles', () => {
   it("removes an earlier run's report and log of the side, and keeps the other side's", (t) => {

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
@@ -111,7 +111,13 @@ function readRun(file: string): LzRun {
         throw new Error(`The ${side} side of ${file} wrote no report, so its ${reportFile} is not this run's.`);
       }
 
-      return { file, side, report: lzParseReport(readFileSync(join(dirname(file), reportFile), 'utf8')) };
+      const reportPath = join(dirname(file), reportFile);
+
+      if (!existsSync(reportPath)) {
+        throw new Error(`The ${side} side of ${file} has no ${reportFile} beside it.`);
+      }
+
+      return { file, side, report: lzParseReport(readFileSync(reportPath, 'utf8')) };
     }),
   };
 }
