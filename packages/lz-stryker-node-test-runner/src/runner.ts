@@ -16,6 +16,7 @@ import { commonTokens, declareClassPlugin, PluginKind, tokens } from '@stryker-m
 import {
   determineHitLimitReached,
   DryRunStatus,
+  MutantRunStatus,
   TestStatus,
   toMutantRunResult,
   type DryRunOptions,
@@ -37,6 +38,7 @@ import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
   envNames,
   lzIsRecordName,
+  lzOutsideMs,
   lzParseRecord,
   testId,
   within,
@@ -44,6 +46,7 @@ import {
   type RecordedTest,
 } from './record.ts';
 import schema from './schema/node-test-runner-options.json' with { type: 'json' };
+import { lzStartUpOf, lzStartUps, type LzStartUps } from './start-up.ts';
 
 /** Options under `lzStrykerNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
 export interface LzStrykerNodeTestOptions {
@@ -113,7 +116,8 @@ const peaksOwner = ownPeaks();
  * Each test's time includes the time the file's run, `fileMs`, spent outside its outermost tests, whose time includes
  * their subtests': running any test of the file runs the file's whole process. Stryker's mutant timeout scales with
  * the summed time of the tests it runs, so it then scales with the processes it starts, which Stryker's other workers
- * slow down as well.
+ * slow down as well. It counts a file's start-up once per covering test; `mutantRun` ends a run once each file's
+ * start-up has been counted once, and Stryker's timer stays as the backstop.
  *
  * A test keeps its start position only when `positioned`: Stryker diffs each test's span in the test file's source, so a
  * position in a reprinted, instrumented copy would cut out the wrong span.
@@ -125,8 +129,7 @@ export function lzToTestResults(
   positioned = true,
 ): TestResult[] {
   const prefix = testId(testFile, '');
-  const outermost = recorded.filter((test) => !recorded.some((other) => other !== test && within(test.id, other.id)));
-  const outside = fileMs - outermost.reduce((sum, test) => sum + test.timeSpentMs, 0);
+  const outside = lzOutsideMs(recorded, fileMs);
 
   return recorded.map((test) => {
     const base = {
@@ -456,7 +459,10 @@ export function lzShortenHeldOpen(runner: LzStrykerNodeTestRunner, ms: number): 
 }
 
 /** The Stryker options the runner reads, of all that Stryker passes it. */
-type RunnerStrykerOptions = Pick<StrykerOptions, 'allowEmpty' | 'checkers' | 'concurrency' | 'testFiles'> & {
+type RunnerStrykerOptions = Pick<
+  StrykerOptions,
+  'allowEmpty' | 'checkers' | 'concurrency' | 'testFiles' | 'timeoutFactor'
+> & {
   readonly lzStrykerNodeTest?: unknown;
 };
 
@@ -476,6 +482,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   readonly #nodeArgs: string[];
   readonly #dryRunConcurrency: number;
   readonly #memoryLimits: MemoryLimits;
+  readonly #startUps: LzStartUps;
   readonly #allowEmpty: boolean;
   readonly #log: Logger;
 
@@ -491,6 +498,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       availableParallelism(),
     );
     this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, peakMemoryDir(peaksOwner), log);
+    this.#startUps = lzStartUps(peakMemoryDir(peaksOwner), options.timeoutFactor, log);
     this.#allowEmpty = options.allowEmpty;
     this.#log = log;
   }
@@ -557,6 +565,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       instrumented: new Set(options.files?.map((file) => resolve(file))),
     } satisfies LzRunOptions;
     const memoryLimitMB = this.#memoryLimits.startDryRun();
+    this.#startUps.startDryRun();
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
@@ -593,9 +602,23 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       hitLimit: options.hitLimit,
       testFilter: options.testFilter,
     } satisfies LzRunOptions;
-    const result = await this.#run(lzFilesFor(this.#testFiles, options.testFilter), run, 1, (file) =>
-      this.runFile(file, run, this.#memoryLimits.forMutantRun(file)),
+    const files = lzFilesFor(this.#testFiles, options.testFilter);
+    // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
+    const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
+    const deadline = AbortSignal.timeout(deadlineMs);
+    const result = await this.#run(files, run, 1, (file) =>
+      this.runFile(file, run, this.#memoryLimits.forMutantRun(file), deadline),
     );
+
+    if (deadline.aborted) {
+      return {
+        status: MutantRunStatus.Timeout,
+        reason:
+          `Passed the runner's deadline of ${deadlineMs} ms, which counts each test file's start-up once ` +
+          `(Stryker's timeout: ${Math.round(options.timeout)} ms)`,
+      };
+    }
+
     const mutantResult = toMutantRunResult(result);
 
     // toMutantRunResult sums the test times, which count each file's time outside its tests once per test. A mutant
@@ -621,8 +644,16 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       async (file) => {
         const started = performance.now();
         const fileRun = await runOne(file);
+        const fileMs = performance.now() - started;
 
-        return fileOutcome(file, fileRun, performance.now() - started, run);
+        // The same fileMs as every test's time, so the start-up a mutant run's deadline takes off is never more than
+        // the time Stryker's timeout counted for it.
+        if (run.dryRun) {
+          const tests = fileRun.records.flatMap((record) => record.tests);
+          this.#startUps.record(file, lzStartUpOf(tests, fileMs));
+        }
+
+        return fileOutcome(file, fileRun, fileMs, run);
       },
       ends,
     );
@@ -646,7 +677,8 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     };
   }
 
-  async runFile(file: string, run: LzRunOptions, memoryLimitMB?: number): Promise<LzFileRun> {
+  /** Ends the file's process, and what processEnd ends with it, once `deadline` aborts, also when it already has. */
+  async runFile(file: string, run: LzRunOptions, memoryLimitMB?: number, deadline?: AbortSignal): Promise<LzFileRun> {
     const runDir = mkdtempSync(join(tmpdir(), lzDirPrefix('run', process.pid)));
     const outDir = join(runDir, 'out');
     const tmpDir = join(runDir, 'tmp');
@@ -678,6 +710,15 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         stdio: ['ignore', 'ignore', 'pipe'],
         ...groupOptions(process.platform),
       });
+      const end = () => {
+        child.kill('SIGKILL');
+      };
+
+      if (deadline?.aborted) {
+        end();
+      }
+
+      deadline?.addEventListener('abort', end, { once: true });
       const { exitCode, stderr } = await processEnd(child, process.platform);
       let unreadable: string | undefined;
       const records = readdirSync(outDir)

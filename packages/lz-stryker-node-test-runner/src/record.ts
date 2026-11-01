@@ -45,6 +45,13 @@ export interface RecordedTest {
   readonly startPosition?: Position;
 }
 
+/** The time a file's run, `fileMs`, spent outside its outermost tests, whose time includes their subtests'. */
+export function lzOutsideMs(tests: readonly RecordedTest[], fileMs: number): number {
+  const outermost = tests.filter((test) => !tests.some((other) => other !== test && within(test.id, other.id)));
+
+  return fileMs - outermost.reduce((sum, test) => sum + test.timeSpentMs, 0);
+}
+
 /**
  * A span of time in milliseconds on the machine's monotonic clock, as `process.hrtime` reads it: it does not step, and
  * every process and thread of the machine reads the same clock, which the wall clock and `performance.timeOrigin` do

@@ -151,9 +151,12 @@ describe('LzStrykerNodeTestRunner limits', () => {
         results.map((result) => (result.status === MutantRunStatus.Killed ? Number(result.failureMessage) : NaN)),
         expected,
       );
-      assert.equal(warnings.length, warningCount);
+      // The dry run left no start-up times either, which the runner warns about apart.
+      const memoryWarnings = warnings.filter((warning) => warning.includes('memory peak'));
+
+      assert.equal(memoryWarnings.length, warningCount);
       assert.ok(
-        warnings.every((warning) => warning.includes(`"${dir}`)),
+        memoryWarnings.every((warning) => warning.includes(`"${dir}`)),
         String(warnings),
       );
     },

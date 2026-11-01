@@ -10,8 +10,9 @@ import { envNames, type ProcessRecord } from './record.ts';
 
 /**
  * Where the runners of one Stryker run keep the most memory a process of each test file held in the dry run, one file
- * per test file. Stryker runs the dry run in one worker and the mutants in all of them, each a process it forks and
- * may replace, so the directory is named after the process that owns the peaks (see `ownPeaks`).
+ * per test file, and each test file's start-up (`lzStartUps`). Stryker runs the dry run in one worker and the mutants
+ * in all of them, each a process it forks and may replace, so the directory is named after the process that owns the
+ * peaks (see `ownPeaks`).
  */
 export function peakMemoryDir(ownerPid: number): string {
   return join(tmpdir(), `${lzDirPrefix('peaks', ownerPid)}dry-run`);

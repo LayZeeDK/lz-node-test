@@ -153,8 +153,15 @@ once per run as under `node --test`.
   test files one after another.
 - **Test times include the start of the process.** Each test's time includes the time its file's process spent
   outside the file's tests, such as starting `node` and loading modules, because running one test of a file runs the
-  file's whole process. Stryker sizes a mutant's timeout from the times of the tests it runs, so the timeout grows
-  with that start-up time too.
+  file's whole process. Stryker sizes a mutant's timeout from the times of the tests it runs, so its timeout counts a
+  file's start-up once for each test of that file that the mutant runs.
+- **The runner's own deadline.** A mutant run starts each test file once, so the runner ends the run sooner than
+  Stryker's timeout: once Stryker's timeout, less `timeoutFactor` times each file's start-up for each of its tests
+  after the first, has passed. What is left still holds the tests' own time and each file's start-up once, with
+  Stryker's `timeoutFactor` and `timeoutMS`. A run that ends this way is a `Timeout` that names the deadline, and
+  Stryker keeps the worker running. A mutant that runs one test of each file gets Stryker's timeout unchanged.
+  The runner measures each file's start-up in the dry run. A file without a measured start-up, such as one that
+  Stryker's `--testFiles` left out of the dry run, keeps Stryker's timeout, and the runner warns about it once.
 - **Output.** The runner discards each test file's stdout. It keeps the last 8 KiB of stderr and shows it when a file
   fails outside its tests.
 - **Coverage analysis.** The runner supports Stryker's `coverageAnalysis` values `off`, `all` and `perTest`. With
@@ -183,8 +190,10 @@ once per run as under `node --test`.
 
 The runner reports each test file's run to Stryker by the first row of this table that applies. When Stryker's own
 timer ends a mutant run first, the mutant is a `Timeout` with no reason, and Stryker restarts the worker process that
-ran it. A `Timeout` from this table names its reason, and the worker keeps running. In a mutant run, a test file that
-stays alive after its tests usually meets Stryker's timer before the runner's 30-second wait ends.
+ran it. When the runner's own deadline ends it first, the mutant is a `Timeout` whose reason names the deadline, and
+the worker keeps running. A `Timeout` from this table names its reason too, and the worker keeps running. In a mutant
+run, a test file that stays alive after its tests usually meets one of those deadlines before the runner's 30-second
+wait ends.
 
 | What happened in the test file's run                                                                               | Dry run                       | Mutant run     |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------- | -------------- |

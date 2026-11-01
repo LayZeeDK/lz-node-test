@@ -34,7 +34,7 @@ const dryRunInOwnProcess = [
   "const log = Object.fromEntries(['trace', 'debug', 'info', 'warn', 'error', 'fatal'].map((level) => [level, () => {}]));",
   'Object.assign(log, { isTraceEnabled: () => false, isDebugEnabled: () => false, isInfoEnabled: () => false });',
   'const runner = new LzStrykerNodeTestRunner(',
-  "  { allowEmpty: false, testFiles: [], checkers: [], lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } },",
+  "  { allowEmpty: false, testFiles: [], checkers: [], timeoutFactor: 1.5, lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } },",
   '  log,',
   ');',
   'await runner.init();',
@@ -45,12 +45,13 @@ const dryRunInOwnProcess = [
 
 /**
  * Stands in for Stryker's main process that forks a worker for the dry run: the worker inherits its environment, and
- * the main process reports the peaks directories there are once the worker has ended.
+ * the main process reports the peaks directories there are, and what they hold, once the worker has ended.
  */
 const strykerMainWithWorker = [
   "import { spawnSync } from 'node:child_process';",
   "import { readdirSync } from 'node:fs';",
   "import { tmpdir } from 'node:os';",
+  "import { join } from 'node:path';",
   `await import(${src('index.ts')});`,
   'const worker = spawnSync(',
   '  process.execPath,',
@@ -59,7 +60,10 @@ const strykerMainWithWorker = [
   ');',
   'const peaks = readdirSync(tmpdir())',
   "  .filter((name) => name.startsWith('lz-stryker-node-test-peaks-'))",
-  "  .map((name) => name.replace(`-${process.pid}-`, '-<main>-'));",
+  '  .flatMap((name) => [',
+  "    name.replace(`-${process.pid}-`, '-<main>-'),",
+  "    ...readdirSync(join(tmpdir(), name)).map((record) => record.replace(/^[0-9a-f]{64}/, '<file>')).sort(),",
+  '  ]);',
   "process.stdout.write([worker.stdout, ...peaks].join(' '));",
 ].join('\n');
 
@@ -102,7 +106,7 @@ describe('the runner module in a process whose parent never loads it', () => {
 });
 
 describe("the runner module in Stryker's main process", () => {
-  it("keeps a forked worker's dry-run peaks under its own pid and removes them when it ends", (t) => {
+  it("keeps a forked worker's dry-run peaks and start-up times under its own pid and removes them when it ends", (t) => {
     const { tmp, project } = projectIn(t);
 
     const child = spawnSync(
@@ -110,7 +114,11 @@ describe("the runner module in Stryker's main process", () => {
       ['--conditions=@lz-node-test/source', '--input-type=module', '--eval', strykerMainWithWorker],
       { cwd: project, env: ownEnv(tmp), encoding: 'utf8', windowsHide: true },
     );
-    assert.equal(child.stdout, 'complete lz-stryker-node-test-peaks-<main>-dry-run', child.stderr);
+    assert.equal(
+      child.stdout,
+      'complete lz-stryker-node-test-peaks-<main>-dry-run <file> <file>.start-up',
+      child.stderr,
+    );
     assert.deepEqual(peaksIn(tmp), []);
   });
 

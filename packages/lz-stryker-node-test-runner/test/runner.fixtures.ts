@@ -128,7 +128,7 @@ export function strykerOptions({
   checkers = [],
   ...options
 }: RunnerOptions = {}): ConstructorParameters<typeof LzStrykerNodeTestRunner>[0] {
-  return { allowEmpty: false, ...options, testFiles: [...testFiles], checkers: [...checkers] };
+  return { allowEmpty: false, timeoutFactor: 1.5, ...options, testFiles: [...testFiles], checkers: [...checkers] };
 }
 
 export async function initRunner(
