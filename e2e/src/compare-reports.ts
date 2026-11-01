@@ -1,32 +1,41 @@
-import type { LzMutantDetail, LzMutantStatus, LzReport } from './report.ts';
+import { lzOneLine, type LzMutantStatus, type LzReport } from './report.ts';
+
+interface Entry {
+  readonly label: string;
+  readonly status: LzMutantStatus;
+}
 
 /**
  * Each mutant whose status differs, or that one report lacks. Mutants are keyed as Stryker's incremental mode keys
  * them: file, location, mutator and replacement, which tells apart the mutants one operator makes at one place.
  */
 export function lzCompareReports(first: LzReport, second: LzReport): string[] {
-  const firstStatuses = statusesByKey(first);
-  const secondStatuses = statusesByKey(second);
+  const firstEntries = entriesByKey(first);
+  const secondEntries = entriesByKey(second);
   const differences: string[] = [];
 
-  for (const key of new Set([...firstStatuses.keys(), ...secondStatuses.keys()])) {
-    const firstStatus = firstStatuses.get(key) ?? 'absent';
-    const secondStatus = secondStatuses.get(key) ?? 'absent';
+  const labels = new Map([...firstEntries, ...secondEntries].map(([key, { label }]) => [key, label]));
+
+  for (const [key, label] of labels) {
+    const firstStatus = firstEntries.get(key)?.status ?? 'absent';
+    const secondStatus = secondEntries.get(key)?.status ?? 'absent';
 
     if (firstStatus !== secondStatus) {
-      differences.push(`${key}: ${firstStatus} -> ${secondStatus}`);
+      differences.push(`${label}: ${firstStatus} -> ${secondStatus}`);
     }
   }
 
   return differences;
 }
 
-function statusesByKey(report: LzReport): Map<string, LzMutantStatus> {
+function entriesByKey(report: LzReport): Map<string, Entry> {
   return new Map(
-    [...report].flatMap(([file, mutants]) => mutants.map((mutant) => [mutantKey(file, mutant), mutant.status])),
-  );
-}
+    [...report].flatMap(([file, mutants]) =>
+      mutants.map(({ line, column, endLine, endColumn, mutator, replacement, status }) => {
+        const at = `${file}@${line}:${column}-${endLine}:${endColumn} ${mutator}: `;
 
-function mutantKey(file: string, { line, column, endLine, endColumn, mutator, replacement }: LzMutantDetail): string {
-  return `${file}@${line}:${column}-${endLine}:${endColumn} ${mutator}: ${replacement.replaceAll(/\s+/g, ' ')}`;
+        return [`${at}${replacement}`, { label: `${at}${lzOneLine(replacement)}`, status }];
+      }),
+    ),
+  );
 }

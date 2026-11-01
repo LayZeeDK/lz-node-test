@@ -3,13 +3,16 @@ import { readFileSync } from 'node:fs';
 import { lzCompareReports } from './compare-reports.ts';
 import { lzParseReport } from './report.ts';
 
-const [first, second] = process.argv.slice(2).map((file) => lzParseReport(readFileSync(file, 'utf8')));
+const [firstFile, secondFile, ...extra] = process.argv.slice(2);
 
-if (first === undefined || second === undefined) {
+if (firstFile === undefined || secondFile === undefined || extra.length > 0) {
   throw new Error('Usage: node e2e/src/compare-reports-cli.ts <first mutation.json> <second mutation.json>');
 }
 
-const differences = lzCompareReports(first, second);
+const differences = lzCompareReports(
+  lzParseReport(readFileSync(firstFile, 'utf8')),
+  lzParseReport(readFileSync(secondFile, 'utf8')),
+);
 
 for (const difference of differences) {
   console.log(difference);

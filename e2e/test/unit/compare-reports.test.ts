@@ -86,6 +86,13 @@ describe('lzCompareReports', () => {
     assert.deepEqual(lzCompareReports(first, second), ['src/grow.ts@2:10-2:15 StringLiteral: "x": Survived -> Killed']);
   });
 
+  it('tells apart mutants whose replacements differ in whitespace only, as Stryker keys them', () => {
+    const first = report({ 'src/grow.ts': [mutant('Survived', 2, 'a  b'), mutant('Killed', 2, 'a b')] });
+    const second = report({ 'src/grow.ts': [mutant('Killed', 2, 'a  b'), mutant('Killed', 2, 'a b')] });
+
+    assert.deepEqual(lzCompareReports(first, second), ['src/grow.ts@2:10-2:15 StringLiteral: a b: Survived -> Killed']);
+  });
+
   it('prints a replacement that spans lines on one line', () => {
     const first = report({ 'src/grow.ts': [mutant('Survived', 2, 'items\n  .map(grow)')] });
     const second = report({ 'src/grow.ts': [mutant('Killed', 2, 'items\n  .map(grow)')] });
@@ -109,6 +116,19 @@ describe('compare-reports-cli.ts', () => {
       stdout: 'src/grow.ts@2:10-2:15 StringLiteral: "Stryker was here!": Survived -> Killed\n',
     });
   });
+
+  for (const files of [[], ['first.json'], ['first.json', 'second.json', 'third.json']]) {
+    it(`prints the usage and exits with 1 for ${files.length} arguments`, () => {
+      const { status, stderr } = spawnSync(
+        process.execPath,
+        [join(import.meta.dirname, '../../src/compare-reports-cli.ts'), ...files],
+        { encoding: 'utf8', windowsHide: true },
+      );
+
+      assert.equal(status, 1);
+      assert.match(stderr, /^Error: Usage: node e2e\/src\/compare-reports-cli\.ts/m);
+    });
+  }
 
   it('prints nothing and exits with 0 when the report files agree', (t) => {
     const json = reportJson({ 'src/grow.ts': [mutant('Killed')] });

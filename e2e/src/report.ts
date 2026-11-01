@@ -57,9 +57,12 @@ export function lzParseReport(json: string): LzReport {
 }
 
 export function lzMutantLine({ line, column, mutator, replacement, status }: LzMutantDetail): string {
-  return [`${line}:${column}`, mutator, replacement.replaceAll(/\s+/g, ' '), status]
-    .filter((part) => part !== '')
-    .join(' ');
+  return [`${line}:${column}`, mutator, lzOneLine(replacement), status].filter((part) => part !== '').join(' ');
+}
+
+/** A replacement as one line, for output that a reader scans line by line. */
+export function lzOneLine(text: string): string {
+  return text.replaceAll(/\s+/g, ' ');
 }
 
 export function lzIsRecord(value: unknown): value is Record<string, unknown> {
