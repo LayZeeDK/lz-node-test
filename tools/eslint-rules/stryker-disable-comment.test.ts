@@ -80,6 +80,22 @@ describe('stryker-disable-comment', () => {
       ],
     ],
     [
+      'a restore that splits a mutator name in two',
+      '// Stryker disable ArithmeticOperator: equivalent\nf();\n// Stryker restore Arithmetic, Operator',
+      [
+        { messageId: 'unrestored', line: 1 },
+        { messageId: 'form', line: 3 },
+      ],
+    ],
+    [
+      'a next-line restore after a file-wide disable',
+      '// Stryker disable Regex: equivalent\nf();\n// Stryker restore next-line Regex',
+      [
+        { messageId: 'unrestored', line: 1 },
+        { messageId: 'form', line: 3 },
+      ],
+    ],
+    [
       'a restore before its disable',
       '// Stryker restore Regex\nf();\n// Stryker disable Regex: equivalent',
       [
