@@ -117,6 +117,7 @@ async function runWithHook(args: string[], env: Record<string, string>): Promise
   const child = spawn(process.execPath, ['--import', hookUrl, reporterArg, ...args], {
     env: hookedEnv(env),
     stdio: 'ignore',
+    windowsHide: true,
   });
 
   await once(child, 'close');
@@ -818,6 +819,7 @@ describe('hook, in a process that a signal ends', () => {
     const child = spawn(process.execPath, ['--import', hookUrl, '-e', `${script} process.send('ready');`], {
       env: hookedEnv({ [envNames.out]: outDir }),
       stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      windowsHide: true,
     });
     t.after(() => child.kill('SIGKILL'));
     const exited = once(child, 'exit');
