@@ -16,10 +16,17 @@ npm init stryker@latest
 npx stryker run
 ```
 
+With pnpm:
+
+```sh
+pnpm create stryker@latest
+pnpm exec stryker run
+```
+
 Answer the initializer's questions as follows:
 
 1. For the preset, pick `None/other`.
-2. For the test runner, pick `@layzee/lz`. The initializer names each runner after its package: it removes
+2. For the test runner, pick `@layzee/node`. The initializer names each runner after its package: it removes
    `@stryker-mutator/` and the first `stryker-` from the package name, then keeps the text before the first hyphen.
    The configuration that it writes still names the runner `lz-stryker-node-test` and loads this package through
    `appendPlugins`.
@@ -28,6 +35,13 @@ Answer the initializer's questions as follows:
 The other questions ask for the reporters, the package manager, and the configuration file type. Answer them as you
 like. Then read the configuration file that the initializer wrote. When the default pattern does not match your test
 files, add `lzStrykerNodeTest.testFiles`, as [Configure Stryker](#configure-stryker) describes.
+
+With pnpm, the initializer also lists this package in `plugins`. Keep both `plugins` and `appendPlugins`.
+
+If the initializer warns `Could not fetch additional initialization config`, it writes `testRunner: "@layzee/node"`
+and no `appendPlugins`, and Stryker then fails with `Cannot find TestRunner plugin`. Set
+`testRunner: 'lz-stryker-node-test'` and `appendPlugins: ['@layzee/stryker-node-test-runner']` by hand, as
+[Configure Stryker](#configure-stryker) shows.
 
 ## Install
 
