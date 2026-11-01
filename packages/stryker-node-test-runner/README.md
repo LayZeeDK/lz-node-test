@@ -197,7 +197,8 @@ once per run as under `node --test`.
   mutants that the changed tests cover. For a test file that the configuration also mutates, the runner reports the
   file but no position, because Stryker rewrites such a file in its sandbox and the positions no longer match your
   file. That is the partial level "Tests per file without location": after any change to such a file, Stryker runs
-  again the mutants that any of its tests cover.
+  again the mutants that any of its tests cover. [Use incremental mode](#use-incremental-mode) lists what Stryker does
+  not see.
 - **Node.js version.** On a Node.js older than 22.18, the runner stops with an error before the dry run.
 
 ## What each status means
@@ -250,16 +251,59 @@ Two open-source projects, each run 5 times a side at concurrency 5, against Stry
 | Project               | Mutants | This runner, median | `command` runner, median |
 | --------------------- | ------- | ------------------- | ------------------------ |
 | restartable 3.0.4     | 167     | 53.5 s              | 166.0 s                  |
-| fastify-cookie 11.1.3 | 246     | 59.8 s              | 46.8 s                   |
+| fastify-cookie 11.1.3 | 246     | 35.7 s              | 48.5 s                   |
 
 On restartable, the `command` runner runs the whole test suite for every mutant, and 36 to 37 mutants a run hang until
 Stryker's timeout ends them. This runner runs only the tests that reach each mutant. Both restartable times include the
-port collisions that the next section describes.
+port collisions that the next section describes. The restartable times come from a runner version before the deadline
+that the next paragraph describes.
 
-On fastify-cookie, 7 mutants make a test hang on both runners. This runner adds its file's start-up time to each test,
-as [What the runner does](#what-the-runner-does) describes, and Stryker sizes a mutant's timeout from the times of the
-tests that reach it. For one of the 7 mutants, 39 tests reach it, and this runner waited 30.2 s where the `command`
-runner waited 5.7 s.
+On fastify-cookie, 7 mutants make a test hang on both runners. This runner ends such a mutant run at its own deadline,
+which counts each test file's start-up time once, so it does not wait for Stryker's timer. Both runners gave every
+mutant the same status.
+
+## Use incremental mode
+
+With `--incremental`, Stryker stores each mutant's result and, on the next run, reuses the results of mutants whose
+code and tests did not change. Give each Stryker configuration its own `incrementalFile`, because two configurations
+that share the file overwrite each other's results.
+
+On this repository's `lz-node-test` configuration (349 mutants, concurrency 6, median of 5 runs a side):
+
+| Change since the stored run | Full run | Incremental run | Results reused |
+| --------------------------- | -------- | --------------- | -------------- |
+| None                        | 174 s    | 32 s            | 335 of 349     |
+| One source file edited      | 174 s    | 33 s            | 334 of 349     |
+| One test edited             | 174 s    | 45 s            | 247 of 349     |
+
+The dry run always runs, and so does the TypeScript checker's first compile when you use it. The rest of the time goes
+to mutants that run again.
+
+Stryker compares only the files it mutates and the test files. In these cases an incremental run can reuse a result
+that a full run would change. Run `stryker run --incremental --force` after any of them:
+
+- A change to a file that is neither mutated nor a test file: a helper module that tests import, source that the
+  configuration does not mutate, the Stryker configuration, the version of this runner or of Stryker, Node.js, or an
+  environment variable.
+- A change to code in a test file outside every test, such as a constant above the first test that a test reads.
+  Stryker gives each test the lines from its own start to the next test's start, so such lines belong to no test.
+- A change to a test so that it kills a static mutant. Stryker records no tests for a static mutant, so it never sees
+  the change ([stryker-js#6119](https://github.com/stryker-mutator/stryker-js/issues/6119)).
+- A test file whose first line is a block comment, such as a license header. Stryker shifts that file's test
+  positions by one line, so an edit on a test's first line counts as an edit to the test before it. Starting the file
+  with `//` line comments avoids the shift.
+
+These cases cost time but give the same results:
+
+- A test whose title the code under test builds, as with `lzTestEach` titles in the `@layzee/lz-node-test` package's
+  own configuration. When a mutant changes the title of the test that kills it, Stryker cannot match that test on the
+  next run, so the mutant runs again every time. On the configuration above, 14 such mutants took 23 s of the 32 s.
+- A test file that the configuration also mutates. After any change to it, the mutants that its tests cover run again,
+  as [What the runner does](#what-the-runner-does) describes.
+
+In CI, cache the incremental file. Key the cache on the Stryker configuration, the lockfile and the Node.js version, so
+that a change to those runs in full. Pass `--force` on the default branch, so that each push there stores fresh
+results.
 
 ## Make your tests safe for parallel runs
 
