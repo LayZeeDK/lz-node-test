@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
-import type { LzMergeResult } from './result.ts';
+import { lzParseOssResult, type LzMergeResult } from './result.ts';
 import { lzBySide, lzComparison, lzMutantKey, lzReportScore } from './verdicts.ts';
 
 /** One side's report from one run. */
@@ -69,31 +69,10 @@ export function lzMerge(files: readonly string[], out: string): string {
 }
 
 function readRun(file: string): LzRun {
-  const result: unknown = JSON.parse(readFileSync(file, 'utf8'));
-
-  if (lzIsRecord(result) && 'mergedFrom' in result) {
-    throw new Error(
-      `${file} is the result of a merge; merges do not compose, so merge the runs it lists in mergedFrom.`,
-    );
-  }
-
-  if (!lzIsRecord(result)) {
-    throw new Error(`${file} is not the result.json of a driver run.`);
-  }
-
-  const { project, workspaceCommit, node, sides } = result;
-  const tarballs = stringsOf(result['tarballs']);
-
-  if (
-    typeof project !== 'string' ||
-    typeof workspaceCommit !== 'string' ||
-    typeof node !== 'string' ||
-    tarballs === undefined ||
-    !lzIsRecord(sides)
-  ) {
-    throw new Error(`${file} is not the result.json of a driver run.`);
-  }
-
+  const { project, workspaceCommit, node, tarballs, sides } = lzParseOssResult(
+    file,
+    JSON.parse(readFileSync(file, 'utf8')),
+  );
   const ran = lzSides.filter((side) => side in sides);
 
   if (ran.length === 0) {
@@ -120,16 +99,6 @@ function readRun(file: string): LzRun {
       return { file, side, report: lzParseReport(readFileSync(reportPath, 'utf8')) };
     }),
   };
-}
-
-function stringsOf(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-
-  const strings = value.filter((item: unknown) => typeof item === 'string');
-
-  return strings.length === value.length ? strings : undefined;
 }
 
 /** One report of all the side's batches. */

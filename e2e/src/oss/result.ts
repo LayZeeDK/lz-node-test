@@ -1,3 +1,4 @@
+import { lzIsRecord } from '../report.ts';
 import type { LzProcessPeaks } from './processes.ts';
 import type { LzBySide, LzComparison, LzMutantsScore } from './verdicts.ts';
 
@@ -43,6 +44,44 @@ export interface LzSideResult {
 /** The result.json of a run, with each side's `<side>.mutation.json` beside it. */
 export type LzOssResult = LzOssHeader &
   ({ readonly preparedIn: string } | ({ readonly sides: LzBySide<LzSideResult> } & LzComparison));
+
+/** What a merge needs of a run's result.json: the header fields it matches, and each side's entry as written. */
+export interface LzParsedOssResult {
+  readonly project: string;
+  readonly workspaceCommit: string;
+  readonly node: string;
+  readonly tarballs: readonly string[];
+  readonly sides: Readonly<Record<string, unknown>>;
+}
+
+/** Reads the parsed JSON of a driver run's result.json, refusing a merge's result and anything that is not a run's. */
+export function lzParseOssResult(file: string, value: unknown): LzParsedOssResult {
+  if (lzIsRecord(value) && 'mergedFrom' in value) {
+    throw new Error(
+      `${file} is the result of a merge; merges do not compose, so merge the runs it lists in mergedFrom.`,
+    );
+  }
+
+  if (lzIsRecord(value)) {
+    const { project, workspaceCommit, node, tarballs, sides } = value;
+
+    if (
+      typeof project === 'string' &&
+      typeof workspaceCommit === 'string' &&
+      typeof node === 'string' &&
+      isStrings(tarballs) &&
+      lzIsRecord(sides)
+    ) {
+      return { project, workspaceCommit, node, tarballs, sides };
+    }
+  }
+
+  throw new Error(`${file} is not the result.json of a driver run.`);
+}
+
+function isStrings(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item: unknown) => typeof item === 'string');
+}
 
 /** The result.json of a merge, which writes no `<side>.mutation.json`. */
 export type LzMergeResult = {
