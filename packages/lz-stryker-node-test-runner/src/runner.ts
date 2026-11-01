@@ -718,7 +718,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         end();
       }
 
-      deadline?.addEventListener('abort', end, { once: true });
+      deadline?.addEventListener('abort', end);
       const { exitCode, stderr } = await processEnd(child, process.platform);
       let unreadable: string | undefined;
       const records = readdirSync(outDir)
