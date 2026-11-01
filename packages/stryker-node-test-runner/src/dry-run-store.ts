@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -16,16 +16,16 @@ export function lzDryRunDir(ownerPid: number): string {
 }
 
 /**
- * The pid of the process that owns the dry-run store: the first process to load this module that inherited no owner.
+ * The pid of the process that owns the dry-run store: the first process to load this module that inherited no owner, or a value that is no pid.
  * Stryker imports every plugin in its own process before it forks a worker, and each worker inherits its environment,
  * so in a Stryker run the owner is Stryker's own process; a test that builds runners owns them itself. The owner
  * removes the directory when it exits. A killed owner leaves it to a later runner's `removeLeftDirs`.
  */
 export function lzOwnDryRun(): number {
-  const inherited = process.env[envNames.dryRunOwner];
+  const inherited = Number(process.env[envNames.dryRunOwner]);
 
-  if (inherited !== undefined) {
-    return Number(inherited);
+  if (Number.isSafeInteger(inherited) && inherited > 0) {
+    return inherited;
   }
 
   process.env[envNames.dryRunOwner] = String(process.pid);
@@ -44,7 +44,7 @@ export function lzOwnDryRun(): number {
 export type LzDryRunKind = 'peak' | 'start-up';
 
 export interface LzDryRunStore {
-  /** Creates the directory for this user alone. */
+  /** Creates the directory for this user alone, or empties the one that exists. */
   start(): void;
   write(file: string, kind: LzDryRunKind, content: string): void;
   /** What `write` kept, or undefined when there is none or it cannot be read. */
@@ -58,6 +58,11 @@ export function lzDryRunStore(dir: string): LzDryRunStore {
   return {
     start() {
       ownDir(dir);
+
+      // Nothing a reused owner directory holds is from this dry run, and a mutant run would read it as if it were.
+      for (const name of readdirSync(dir)) {
+        rmSync(join(dir, name), { recursive: true });
+      }
     },
 
     write(file, kind, content) {

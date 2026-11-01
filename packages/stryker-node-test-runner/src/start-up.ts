@@ -108,5 +108,6 @@ export function lzDeadlineMs(timeout: number, timeoutFactor: number, files: read
     0,
   );
 
-  return timeout - timeoutFactor * extraStartUpMs;
+  // Records that this dry run did not write could take off more than the timeout, and AbortSignal.timeout throws below 0.
+  return Math.max(1, timeout - timeoutFactor * extraStartUpMs);
 }

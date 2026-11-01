@@ -185,6 +185,10 @@ describe('lzDeadlineMs', () => {
     assert.deepEqual(shortRuns, []);
   });
 
+  it('never gives a deadline below 1 ms, as when records left by another run take off more than the timeout', () => {
+    assert.equal(lzDeadlineMs(100, 1.5, [{ covering: 50, startUpMs: 401 }]), 1);
+  });
+
   it("keeps Stryker's timeout for a file without tests, which Stryker's timeout has no time for", () => {
     assert.equal(lzDeadlineMs(10_000, 1.5, [{ covering: 0, startUpMs: 401 }]), 10_000);
   });
