@@ -1,10 +1,6 @@
-import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import type { Logger } from '@stryker-mutator/api/logging';
 
-import { ownDir } from './dirs.ts';
+import type { LzDryRunStore } from './dry-run-store.ts';
 import { isObject } from './guards.ts';
 import { lzOutsideMs, within, type RecordedTest } from './record.ts';
 
@@ -19,21 +15,19 @@ export function lzStartUpOf(tests: readonly RecordedTest[], fileMs: number): LzS
 }
 
 /**
- * Each test file's start-up from the dry run, kept beside its memory peak in the directory that Stryker's own process
- * owns and removes as it exits (see `ownPeaks`), so that every worker's mutant runs read what one worker's dry run
- * measured. A worker's runner cannot remove them: Stryker replaces runners while other workers still read them.
+ * Each test file's start-up from the dry run, kept in the dry-run store that Stryker's own process owns and removes as it
+ * exits (see `lzOwnDryRun`), so that every worker's mutant runs read what one worker's dry run measured. A worker's
+ * runner cannot remove them: Stryker replaces runners while other workers still read them.
  */
 export interface LzStartUps {
-  startDryRun(): void;
   record(file: string, startUp: LzStartUp): void;
   deadline(files: readonly string[], testFilter: readonly string[] | undefined, timeout: number): number;
 }
 
-export function lzStartUps(dir: string, timeoutFactor: number, log: Logger): LzStartUps {
-  const path = (file: string) => join(dir, `${createHash('sha256').update(file).digest('hex')}.start-up`);
+export function lzStartUps(store: LzDryRunStore, timeoutFactor: number, log: Logger): LzStartUps {
   const unmeasured = new Set<string>();
   const read = (file: string) => {
-    const startUp = storedStartUp(path(file));
+    const startUp = storedStartUp(store.read(file, 'start-up'));
 
     if (startUp === undefined && !unmeasured.has(file)) {
       unmeasured.add(file);
@@ -47,12 +41,8 @@ export function lzStartUps(dir: string, timeoutFactor: number, log: Logger): LzS
   };
 
   return {
-    startDryRun() {
-      ownDir(dir);
-    },
-
     record(file, startUp) {
-      writeFileSync(path(file), JSON.stringify(startUp));
+      store.write(file, 'start-up', JSON.stringify(startUp));
     },
 
     deadline(files, testFilter, timeout) {
@@ -78,9 +68,13 @@ export function lzStartUps(dir: string, timeoutFactor: number, log: Logger): LzS
 const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
-function storedStartUp(path: string): LzStartUp | undefined {
+function storedStartUp(content: string | undefined): LzStartUp | undefined {
+  if (content === undefined) {
+    return undefined;
+  }
+
   try {
-    const stored: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    const stored: unknown = JSON.parse(content);
 
     if (isObject(stored)) {
       const { startUpMs, tests } = stored;
@@ -90,7 +84,7 @@ function storedStartUp(path: string): LzStartUp | undefined {
       }
     }
   } catch {
-    // Missing or not JSON: the same as a record that does not parse.
+    // Not JSON.
   }
 
   return undefined;

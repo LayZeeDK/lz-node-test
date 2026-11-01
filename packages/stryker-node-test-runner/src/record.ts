@@ -105,7 +105,7 @@ export const envNames = Object.freeze({
   bail: 'LZ_STRYKER_NODE_TEST_BAIL',
   activeMutant: 'LZ_STRYKER_NODE_TEST_ACTIVE_MUTANT',
   heldOpen: 'LZ_STRYKER_NODE_TEST_HELD_OPEN_MS',
-  peaksOwner: 'LZ_STRYKER_NODE_TEST_PEAKS_OWNER',
+  dryRunOwner: 'LZ_STRYKER_NODE_TEST_DRY_RUN_OWNER',
 });
 
 /**

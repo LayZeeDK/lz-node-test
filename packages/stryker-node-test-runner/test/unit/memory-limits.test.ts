@@ -1,36 +1,38 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestFor } from '@layzee/lz-node-test';
 import { logger } from '../runner.fixtures.ts';
-import { memoryLimits, ownPeaks } from '../../src/memory-limits.ts';
-import { envNames } from '../../src/record.ts';
+import { lzDryRunStore } from '../../src/dry-run-store.ts';
+import { memoryLimits } from '../../src/memory-limits.ts';
 
 function setup(t: TestContext, maxMemoryMB?: number) {
   const parent = mkdtempSync(join(tmpdir(), 'memory-limits-'));
   t.after(() => {
     rmSync(parent, { recursive: true, force: true });
   });
-  const dir = join(parent, 'peaks');
+  const dir = join(parent, 'dry-run');
   const warnings: string[] = [];
-  const limits = () => memoryLimits(maxMemoryMB, dir, logger({ warnings }));
+  const store = lzDryRunStore(dir);
+  const limits = () => memoryLimits(maxMemoryMB, store, logger({ warnings }));
 
-  return { dir, warnings, limits };
+  return { dir, store, warnings, limits };
 }
 
 describe('memoryLimits', () => {
   it('runs the dry run and every mutant run under lzStrykerNodeTest.maxMemoryMB, and keeps no peaks', (t) => {
-    const { dir, warnings, limits } = setup(t, 1500);
+    const { dir, store, warnings, limits } = setup(t, 1500);
     const dryRun = limits();
 
-    assert.equal(dryRun.startDryRun(), 1500);
+    store.start();
+    assert.equal(dryRun.forDryRun(), 1500);
     dryRun.record('a.test.ts', [{ tests: [], peakMemoryMB: 2000 }]);
 
     assert.deepEqual([dryRun.forMutantRun('a.test.ts'), limits().forMutantRun('b.test.ts')], [1500, 1500]);
-    assert.equal(existsSync(dir), false);
+    assert.deepEqual(readdirSync(dir), []);
     assert.deepEqual(warnings, []);
   });
 
@@ -43,11 +45,11 @@ describe('memoryLimits', () => {
   ])(
     'gives a file whose dry-run processes peaked at %j MB a limit of %d MB, also in another runner',
     ([peaks, limitMB], t) => {
-      const { dir, warnings, limits } = setup(t);
+      const { store, warnings, limits } = setup(t);
       const dryRun = limits();
 
-      assert.equal(dryRun.startDryRun(), undefined);
-      assert.ok(existsSync(dir));
+      store.start();
+      assert.equal(dryRun.forDryRun(), undefined);
       dryRun.record(
         'a.test.ts',
         peaks.map((peakMemoryMB) => ({ tests: [], ...(peakMemoryMB !== undefined && { peakMemoryMB }) })),
@@ -61,9 +63,9 @@ describe('memoryLimits', () => {
   lzTestFor<readonly [string]>([[''], ['not a number'], ['12x'], ['x12']])(
     'gives a file whose stored peak reads %j 1024 MB, warning about it as about a missing peak',
     ([stored], t) => {
-      const { dir, warnings, limits } = setup(t);
+      const { dir, store, warnings, limits } = setup(t);
       const dryRun = limits();
-      dryRun.startDryRun();
+      store.start();
       dryRun.record('a.test.ts', [{ tests: [], peakMemoryMB: 370 }]);
 
       for (const name of readdirSync(dir)) {
@@ -76,8 +78,8 @@ describe('memoryLimits', () => {
   );
 
   it('gives a file without a dry-run peak 1024 MB, warning about it once', (t) => {
-    const { warnings, limits } = setup(t);
-    limits().startDryRun();
+    const { store, warnings, limits } = setup(t);
+    store.start();
     const mutantRuns = limits();
 
     assert.deepEqual([mutantRuns.forMutantRun('a.test.ts'), mutantRuns.forMutantRun('a.test.ts')], [1024, 1024]);
@@ -85,22 +87,5 @@ describe('memoryLimits', () => {
       'The dry run left no readable memory peak for "a.test.ts", ' +
         'so each process of its mutant runs may hold 1024 MB. Set lzStrykerNodeTest.maxMemoryMB to choose the limit.',
     ]);
-  });
-});
-
-describe('ownPeaks', () => {
-  it('returns the owner a parent process passed on, and keeps it', (t) => {
-    const before = process.env[envNames.peaksOwner];
-    t.after(() => {
-      if (before === undefined) {
-        Reflect.deleteProperty(process.env, envNames.peaksOwner);
-      } else {
-        process.env[envNames.peaksOwner] = before;
-      }
-    });
-    process.env[envNames.peaksOwner] = '4242';
-
-    assert.equal(ownPeaks(), 4242);
-    assert.equal(process.env[envNames.peaksOwner], '4242');
   });
 });

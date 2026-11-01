@@ -7,7 +7,7 @@ import { describe, it, type TestContext } from 'node:test';
 import { lzTestEach } from '@layzee/lz-node-test';
 import { isOwn, isRunning, lzDirPrefix, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
 import { logger, noProcess } from '../runner.fixtures.ts';
-import { peakMemoryDir } from '../../src/memory-limits.ts';
+import { lzDryRunDir } from '../../src/dry-run-store.ts';
 
 function tempDirWith(t: TestContext, prefix: string, names: readonly string[] = []) {
   const dir = mkdtempSync(join(tmpdir(), prefix));
@@ -187,7 +187,7 @@ describe('lzDirPrefix', () => {
   const rows: [Parameters<typeof lzDirPrefix>[0], string][] = [
     ['run', 'lz-stryker-node-test-111-'],
     ['cache', 'lz-stryker-node-test-cache-111-'],
-    ['peaks', 'lz-stryker-node-test-peaks-111-'],
+    ['dryRun', 'lz-stryker-node-test-dry-run-111-'],
   ];
 
   lzTestEach(rows)('names the %s directories of a process %s', (kind, prefix) => {
@@ -196,14 +196,14 @@ describe('lzDirPrefix', () => {
 });
 
 describe('removeLeftDirs', () => {
-  it('removes the run, cache and dry-run peak directories whose processes ended, and leaves everything else', (t) => {
+  it('removes the run, cache and dry-run directories whose processes ended, and leaves everything else', (t) => {
     const names = [
       'lz-stryker-node-test-111-a',
       'lz-stryker-node-test-cache-111-b',
-      basename(peakMemoryDir(111)),
+      basename(lzDryRunDir(111)),
       'lz-stryker-node-test-222-c',
       'lz-stryker-node-test-cache-222-d',
-      basename(peakMemoryDir(222)),
+      basename(lzDryRunDir(222)),
       'lz-stryker-node-test-e',
       'other-111-f',
       'other-lz-stryker-node-test-111-g',

@@ -7,6 +7,7 @@ import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestFor } from '@layzee/lz-node-test';
 import { logger } from '../runner.fixtures.ts';
+import { lzDryRunStore } from '../../src/dry-run-store.ts';
 import { lzOutsideMs, type RecordedTest } from '../../src/record.ts';
 import { lzToTestResults } from '../../src/runner.ts';
 import { lzDeadlineMs, lzStartUpOf, lzStartUps } from '../../src/start-up.ts';
@@ -18,10 +19,12 @@ function setup(t: TestContext) {
   t.after(() => {
     rmSync(parent, { recursive: true, force: true });
   });
-  const dir = join(parent, 'peaks');
+  const dir = join(parent, 'dry-run');
+  const store = lzDryRunStore(dir);
+  store.start();
   const warnings: string[] = [];
   // Each call is another runner, as in another Stryker worker.
-  const runner = () => lzStartUps(dir, 1.5, logger({ warnings }));
+  const runner = () => lzStartUps(store, 1.5, logger({ warnings }));
 
   return { dir, warnings, runner };
 }
@@ -30,7 +33,6 @@ describe('lzStartUps', () => {
   it("takes off the start-ups of the covering tests after each file's first, as another runner recorded them in the dry run", (t) => {
     const { warnings, runner } = setup(t);
     const dryRun = runner();
-    dryRun.startDryRun();
     dryRun.record('a.test.ts', { startUpMs: 401, tests: 5 });
     dryRun.record('b.test.ts', { startUpMs: 201, tests: 2 });
 
@@ -46,7 +48,6 @@ describe('lzStartUps', () => {
   ])("counts every test of a file's dry run as covering under %s", ([, filter], t) => {
     const { runner } = setup(t);
     const dryRun = runner();
-    dryRun.startDryRun();
     dryRun.record('a.test.ts', { startUpMs: 401, tests: 5 });
     dryRun.record('b.test.ts', { startUpMs: 201, tests: 2 });
 
@@ -56,7 +57,6 @@ describe('lzStartUps', () => {
   it('takes a recorded start-up of 0 ms as a record, without warning', (t) => {
     const { warnings, runner } = setup(t);
     const dryRun = runner();
-    dryRun.startDryRun();
     dryRun.record('a.test.ts', { startUpMs: 0, tests: 3 });
     dryRun.record('b.test.ts', { startUpMs: 201, tests: 2 });
 
@@ -73,7 +73,6 @@ describe('lzStartUps', () => {
   ])("keeps Stryker's timeout for a file with %s, warning about it once", ([, stored], t) => {
     const { dir, warnings, runner } = setup(t);
     const dryRun = runner();
-    dryRun.startDryRun();
     dryRun.record('b.test.ts', { startUpMs: 201, tests: 2 });
 
     if (stored !== undefined) {

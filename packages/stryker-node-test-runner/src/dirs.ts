@@ -9,7 +9,7 @@ const removeWaitMs = 2_000;
 
 /**
  * Creates `dir` for this user alone, or checks that the one that exists is this user's: in a temporary directory that
- * other users share, someone else could have made it first, with links in it, to read or plant the peaks.
+ * other users share, someone else could have made it first, with links in it, to read or plant what the dry run kept.
  */
 export function ownDir(dir: string, owned: (path: string) => boolean = isOwn): void {
   mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -78,7 +78,7 @@ export function isOwn(
 }
 
 const lzDirBase = 'lz-stryker-node-test-';
-const lzDirKinds = { run: '', cache: 'cache-', peaks: 'peaks-' };
+const lzDirKinds = { run: '', cache: 'cache-', dryRun: 'dry-run-' };
 const lzDirPattern = new RegExp(`^${lzDirBase}(?:${Object.values(lzDirKinds).join('|')})(\\d+)-`);
 
 /** The start of the name of a directory that the runners of process `pid` make, which `removeLeftDirs` recognizes. */
@@ -89,8 +89,8 @@ export function lzDirPrefix(kind: keyof typeof lzDirKinds, pid: number): string 
 /**
  * Removes the directories in `dir` that runners of this user's processes that no longer run left behind; a shared
  * temporary directory holds other users' directories too. Stryker kills a worker whose run takes too long, and a
- * killed worker cannot remove its run directory or its compile cache. Stryker's own process removes the dry-run peaks
- * as it exits, so only a killed one leaves them. A directory that cannot be removed yet is left for a later runner.
+ * killed worker cannot remove its run directory or its compile cache. Stryker's own process removes the dry-run store
+ * as it exits, so only a killed one leaves it. A directory that cannot be removed yet is left for a later runner.
  */
 export function removeLeftDirs(
   dir: string,

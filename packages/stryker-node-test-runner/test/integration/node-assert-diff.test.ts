@@ -39,7 +39,7 @@ it("still has Node.js's assertion diff grow with the square of the lines it comp
       'this test on releases with the fix. The watchdog is watchdog.ts, which hook.ts starts; ' +
       "hook-core.ts's install starts it through canWatchMemory, watchMemory and envNames.memoryLimit, keeps it in the " +
       "global slot of its watchdog symbol, and records the dry-run peakMemoryMB it is limited by. The runner's side " +
-      'is memory-limits.ts, ownDir and the peaks- directories that removeLeftDirs removes in dirs.ts, and in ' +
+      "is memory-limits.ts and the 'peak' kind of dry-run-store.ts, and in " +
       "runner.ts the lzStrykerNodeTest.maxMemoryMB option, its schema entry and fileOutcome's memoryLimitReached branch. The " +
       "tests' grows fixture in runner.fixtures.ts goes with them.",
   );

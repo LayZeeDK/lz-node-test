@@ -32,7 +32,8 @@ import {
 import { lzMergeAsStatic, lzMergeCoverage, lzOverlapCoverage } from './coverage.ts';
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isNumber, isObject, isStrings, optional } from './guards.ts';
-import { memoryLimits, ownPeaks, peakMemoryDir, type MemoryLimits } from './memory-limits.ts';
+import { lzDryRunDir, lzDryRunStore, lzOwnDryRun, type LzDryRunStore } from './dry-run-store.ts';
+import { memoryLimits, type MemoryLimits } from './memory-limits.ts';
 import { lzConsumerNodeOptions, withoutReporters } from './node-options.ts';
 import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
@@ -107,7 +108,7 @@ const ext = extname(import.meta.filename);
 const hookUrl = pathToFileURL(resolve(import.meta.dirname, `hook${ext}`)).href;
 const reporterUrl = pathToFileURL(resolve(import.meta.dirname, `reporter${ext}`)).href;
 
-const peaksOwner = ownPeaks();
+const dryRunOwner = lzOwnDryRun();
 
 /**
  * A test's name leaves out the test file, which its id starts with, as Stryker's runners name tests after their suites
@@ -481,6 +482,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
   readonly #patterns: string[];
   readonly #nodeArgs: string[];
   readonly #dryRunConcurrency: number;
+  readonly #dryRunStore: LzDryRunStore;
   readonly #memoryLimits: MemoryLimits;
   readonly #startUps: LzStartUps;
   readonly #allowEmpty: boolean;
@@ -497,8 +499,9 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       options.checkers.length > 0,
       availableParallelism(),
     );
-    this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, peakMemoryDir(peaksOwner), log);
-    this.#startUps = lzStartUps(peakMemoryDir(peaksOwner), options.timeoutFactor, log);
+    this.#dryRunStore = lzDryRunStore(lzDryRunDir(dryRunOwner));
+    this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, this.#dryRunStore, log);
+    this.#startUps = lzStartUps(this.#dryRunStore, options.timeoutFactor, log);
     this.#allowEmpty = options.allowEmpty;
     this.#log = log;
   }
@@ -564,8 +567,8 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       coverageAnalysis: options.coverageAnalysis,
       instrumented: new Set(options.files?.map((file) => resolve(file))),
     } satisfies LzRunOptions;
-    const memoryLimitMB = this.#memoryLimits.startDryRun();
-    this.#startUps.startDryRun();
+    const memoryLimitMB = this.#memoryLimits.forDryRun();
+    this.#dryRunStore.start();
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
