@@ -7,7 +7,24 @@
     "test": {
       "command": "node --conditions=@lz-node-test/source --test \"*.test.ts\"",
       "options": { "cwd": "{projectRoot}" },
-      "inputs": ["default", "^production", "mutation", "{workspaceRoot}/packages/*/stryker*.config.mjs"]
+      "inputs": [
+        "default",
+        "^production",
+        "mutation",
+        "{workspaceRoot}/packages/*/stryker*.config.mjs",
+        "{workspaceRoot}/eslint.config.mjs",
+        "{workspaceRoot}/packages/*/eslint.config.mjs",
+        {
+          "externalDependencies": [
+            "eslint",
+            "@nx/eslint-plugin",
+            "typescript-eslint",
+            "eslint-plugin-n",
+            "eslint-node-test",
+            "@eslint-community/eslint-plugin-eslint-comments"
+          ]
+        }
+      ]
     },
     "mutate": {},
     "mutate-src": {},
