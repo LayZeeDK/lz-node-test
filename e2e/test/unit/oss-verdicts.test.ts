@@ -13,6 +13,7 @@ function mutant(line: number, status: LzMutantStatus, replacement = 'x', endColu
     mutator: 'StringLiteral',
     replacement,
     status,
+    static: false,
     statusReason: '',
     killedBy: [],
     coveredBy: [],

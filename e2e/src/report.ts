@@ -30,6 +30,8 @@ export interface LzMutantDetail {
   readonly mutator: string;
   readonly replacement: string;
   readonly status: LzMutantStatus;
+  /** Whether only code outside any test, such as module-level code, reaches the mutant. */
+  readonly static: boolean;
   readonly statusReason: string;
   readonly killedBy: readonly string[];
   readonly coveredBy: readonly string[];
@@ -79,7 +81,16 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
     notAReport(path);
   }
 
-  const { mutatorName, replacement = '', location, status, statusReason = '', killedBy = [], coveredBy = [] } = mutant;
+  const {
+    mutatorName,
+    replacement = '',
+    location,
+    status,
+    static: isStatic = false,
+    statusReason = '',
+    killedBy = [],
+    coveredBy = [],
+  } = mutant;
   const start = lzIsRecord(location) ? location['start'] : undefined;
   const end = lzIsRecord(location) ? location['end'] : undefined;
 
@@ -103,6 +114,10 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
     notAReport(`${path}.status`);
   }
 
+  if (typeof isStatic !== 'boolean') {
+    notAReport(`${path}.static`);
+  }
+
   if (typeof statusReason !== 'string') {
     notAReport(`${path}.statusReason`);
   }
@@ -123,6 +138,7 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
     mutator: mutatorName,
     replacement,
     status,
+    static: isStatic,
     statusReason,
     killedBy,
     coveredBy,

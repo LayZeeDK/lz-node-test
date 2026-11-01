@@ -42,11 +42,24 @@ describe('lzParseReport', () => {
         mutator: 'BlockStatement',
         replacement: '{}',
         status: 'CompileError',
+        static: false,
         statusReason: '',
         killedBy: [],
         coveredBy: [],
       },
     ]);
+  });
+
+  it('reads whether a mutant is static', () => {
+    const report = lzParseReport(reportOf([{ ...timeout, static: true }, compileError]));
+
+    assert.deepEqual(
+      report.get('src/grow.ts')?.map(({ mutator, static: isStatic }) => [mutator, isStatic]),
+      [
+        ['BlockStatement', false],
+        ['BooleanLiteral', true],
+      ],
+    );
   });
 
   it('sorts mutants by line, column, mutator and replacement', () => {
@@ -73,6 +86,12 @@ describe('lzParseReport', () => {
   it('names the first field that does not fit', () => {
     assert.throws(() => lzParseReport(reportOf([compileError, { ...timeout, status: 'Slow' }])), {
       message: 'not a mutation report: files["src/grow.ts"].mutants[1].status',
+    });
+  });
+
+  it('names a static field that is not a boolean', () => {
+    assert.throws(() => lzParseReport(reportOf([{ ...timeout, static: 'yes' }])), {
+      message: 'not a mutation report: files["src/grow.ts"].mutants[0].static',
     });
   });
 

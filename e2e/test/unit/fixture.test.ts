@@ -40,6 +40,7 @@ function mutant(line: number, replacement: string): LzMutantDetail {
     mutator: 'StringLiteral',
     replacement,
     status: 'Killed',
+    static: false,
     statusReason: '',
     killedBy: [],
     coveredBy: [],
