@@ -10,12 +10,16 @@ export interface LzOssProject {
 
 export type LzSide = 'lz' | 'command';
 
+export const lzSides: readonly LzSide[] = ['lz', 'command'];
+
 export interface LzOssOptions {
   readonly project: LzOssProject;
   /** The OSS clone, which the driver copies and never writes to. */
   readonly source: string;
   readonly out: string;
   readonly concurrency: number;
+  /** The sides to run, in order; both unless `--side` names one. */
+  readonly sides: readonly LzSide[];
   /** A folder of `.tgz` files to install instead of packing the workspace. */
   readonly tarballs: string | undefined;
   /** Install and write the configurations, keep the copy, and run no Stryker. */
@@ -87,10 +91,34 @@ const projects: readonly LzOssProject[] = [
   },
 ];
 
+export interface LzMergeOptions {
+  /** The result.json files of earlier runs, each with its sides' `<side>.mutation.json` beside it. */
+  readonly merge: readonly string[];
+  readonly out: string;
+}
+
 export const lzOssUsage =
   'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
-  '[--tarballs <folder>] [--prepare-only] [--time-limit-minutes <n>, default 15] [--help]';
+  '[--side <lz|command>] [--tarballs <folder>] [--prepare-only] [--time-limit-minutes <n>, default 15] [--help]\n' +
+  '       node e2e/src/oss/main.ts --merge <result.json>... --out <folder>\n' +
+  '  --side   runs that side only and compares nothing; without it both sides run and are compared.\n' +
+  "  --merge  compares the sides of earlier runs from their result.json, each read with its sides' reports beside it.";
 const positiveInteger = /^[1-9]\d*$/;
+
+export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {
+  const { values } = parseArgs({
+    args: [...args],
+    options: { merge: { type: 'string', multiple: true, default: [] }, out: { type: 'string' } },
+    strict: true,
+    allowPositionals: false,
+  });
+
+  if (values.out === undefined) {
+    throw new Error(`${lzOssUsage}\n--out is required.`);
+  }
+
+  return { merge: values.merge, out: values.out };
+}
 
 export function lzWantsHelp(args: readonly string[]): boolean {
   return args.includes('--help') || args.includes('-h');
@@ -104,6 +132,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
       source: { type: 'string' },
       out: { type: 'string' },
       concurrency: { type: 'string' },
+      side: { type: 'string' },
       tarballs: { type: 'string' },
       'prepare-only': { type: 'boolean', default: false },
       'time-limit-minutes': { type: 'string', default: '15' },
@@ -130,11 +159,18 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     throw new Error(`${lzOssUsage}\n--time-limit-minutes is a positive integer.`);
   }
 
+  const side = lzSides.find((known) => known === values.side);
+
+  if (values.side !== undefined && side === undefined) {
+    throw new Error(`${lzOssUsage}\n--side is lz or command.`);
+  }
+
   return {
     project,
     source,
     out,
     concurrency: Number(concurrency),
+    sides: side === undefined ? lzSides : [side],
     tarballs,
     prepareOnly: values['prepare-only'],
     timeLimitMinutes: Number(timeLimitMinutes),

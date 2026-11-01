@@ -23,10 +23,17 @@ import {
   lzStryker,
   type LzStrykerRun,
 } from '../fixture.ts';
-import { lzOssPreparedPrefix, lzOssRunPrefix, lzParseOptions, lzStrykerConfig, type LzSide } from './options.ts';
+import {
+  lzOssPreparedPrefix,
+  lzOssRunPrefix,
+  lzParseOptions,
+  lzSides,
+  lzStrykerConfig,
+  type LzSide,
+} from './options.ts';
 import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessPeaks } from './processes.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
-import { lzCompare, lzScore, type LzScore, type LzVerdict } from './verdicts.ts';
+import { lzComparison, lzScore, type LzBySide, type LzComparison, type LzScore } from './verdicts.ts';
 
 interface LzOssHeader {
   readonly project: string;
@@ -66,26 +73,17 @@ interface LzSideResult {
   readonly leftoverStrykerTmp: readonly string[];
 }
 
-/** Without a report on both sides there is nothing to compare, which an empty disagreement list would hide. */
-type LzComparison =
-  | { readonly compared: false; readonly reason: string }
-  | { readonly compared: true; readonly disagreements: readonly LzVerdict[]; readonly verdicts: readonly LzVerdict[] };
-
 type LzSettled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: string };
 
 /** The shape of result.json. */
 type LzOssResult = LzOssHeader &
-  (
-    | { readonly preparedIn: string }
-    | ({ readonly sides: { readonly lz: LzSideResult; readonly command: LzSideResult } } & LzComparison)
-  );
+  ({ readonly preparedIn: string } | ({ readonly sides: LzBySide<LzSideResult> } & LzComparison));
 
 interface LzSideRun {
   readonly run: LzStrykerRun | null;
   readonly result: LzSideResult;
 }
 
-const sides: readonly LzSide[] = ['lz', 'command'];
 const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
 /** How long processes that a run left get to end by themselves before they count as left behind. */
 const settleMs = 2_000;
@@ -118,7 +116,7 @@ mkdirSync(runTmp);
 const tarballs = options.tarballs === undefined ? await lzPack(join(root, 'tarballs')) : given(options.tarballs);
 
 await lzInstall(dir, tarballs);
-sides.forEach((side) => {
+lzSides.forEach((side) => {
   writeFileSync(join(dir, configFile(side)), lzStrykerConfig(side, options.project));
 });
 
@@ -139,10 +137,18 @@ if (options.prepareOnly) {
   writeResult({ ...header, preparedIn: dir });
   process.stdout.write(`Prepared ${dir}, with ${runTmp} for TMP; both stay for manual runs.\n`);
 } else {
-  const lz = await runSide('lz');
-  const command = await runSide('command');
+  const lz = options.sides.includes('lz') ? await runSide('lz') : undefined;
+  const command = options.sides.includes('command') ? await runSide('command') : undefined;
+  const bySide = <T>(of: (sideRun: LzSideRun) => T): LzBySide<T> => ({
+    ...(lz === undefined ? {} : { lz: of(lz) }),
+    ...(command === undefined ? {} : { command: of(command) }),
+  });
 
-  writeResult({ ...header, sides: { lz: lz.result, command: command.result }, ...comparison(lz.run, command.run) });
+  writeResult({
+    ...header,
+    sides: bySide(({ result }) => result),
+    ...lzComparison(bySide(({ run }) => (run?.reported === true ? run.report : null))),
+  });
 }
 
 /**
@@ -255,20 +261,6 @@ function end(pid: number): boolean {
     }
 
     throw error;
-  }
-}
-
-function comparison(lz: LzStrykerRun | null, command: LzStrykerRun | null): LzComparison {
-  if (lz?.reported !== true || command?.reported !== true) {
-    return { compared: false, reason: 'A side wrote no report.' };
-  }
-
-  try {
-    const verdicts = lzCompare(lz.report, command.report);
-
-    return { compared: true, disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command), verdicts };
-  } catch (error) {
-    return { compared: false, reason: messageOf(error) };
   }
 }
 

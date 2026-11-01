@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzCompare, lzScore } from '../../src/oss/verdicts.ts';
+import { lzCompare, lzComparison, lzScore } from '../../src/oss/verdicts.ts';
 import type { LzMutantDetail, LzMutantStatus } from '../../src/report.ts';
 
 function mutant(line: number, status: LzMutantStatus, replacement = 'x', endColumn = 9): LzMutantDetail {
@@ -65,5 +65,32 @@ describe('lzCompare', () => {
       lzCompare(lz, command).map(({ lz: status }) => status),
       ['Killed', 'Survived'],
     );
+  });
+});
+
+describe('lzComparison', () => {
+  it('compares nothing when one side did not run, and says so', () => {
+    assert.deepEqual(lzComparison({ lz: new Map([['index.js', [mutant(1, 'Killed')]]]) }), {
+      compared: false,
+      reason: 'Only the lz side ran; merge its result.json with a command run with --merge.',
+    });
+  });
+
+  it('compares nothing when a side that ran wrote no report', () => {
+    assert.deepEqual(lzComparison({ lz: null, command: new Map() }), {
+      compared: false,
+      reason: 'A side wrote no report.',
+    });
+  });
+
+  it('lists the disagreements when both sides have a report', () => {
+    const lz = new Map([['index.js', [mutant(1, 'Killed'), mutant(2, 'Survived')]]]);
+    const command = new Map([['index.js', [mutant(1, 'Killed'), mutant(2, 'Killed')]]]);
+
+    assert.deepEqual(lzComparison({ lz, command }), {
+      compared: true,
+      disagreements: [{ mutant: 'index.js:2:3-2:9 StringLiteral x', lz: 'Survived', command: 'Killed' }],
+      verdicts: lzCompare(lz, command),
+    });
   });
 });

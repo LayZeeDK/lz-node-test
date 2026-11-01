@@ -9,6 +9,8 @@ import { lzRemoveDeadRunDirs } from '../../src/fixture.ts';
 import {
   lzOssPreparedPrefix,
   lzOssRunPrefix,
+  lzOssUsage,
+  lzParseMergeOptions,
   lzParseOptions,
   lzStrykerConfig,
   lzStrykerOptions,
@@ -46,6 +48,7 @@ describe('lzParseOptions', () => {
         source: 'D:/clone',
         out: 'D:/out',
         concurrency: 5,
+        sides: ['lz', 'command'],
         tarballs: undefined,
         prepareOnly: false,
         timeLimitMinutes: 15,
@@ -57,6 +60,19 @@ describe('lzParseOptions', () => {
     const options = lzParseOptions([...required, '--tarballs', 'D:/tgz', '--prepare-only']);
 
     assert.deepEqual([options.tarballs, options.prepareOnly], ['D:/tgz', true]);
+  });
+
+  it('runs both sides without --side, and the named one with it', () => {
+    assert.deepEqual(
+      [lzParseOptions(required).sides, lzParseOptions([...required, '--side', 'command']).sides],
+      [['lz', 'command'], ['command']],
+    );
+  });
+
+  it('refuses a side it does not know', () => {
+    assert.throws(() => lzParseOptions([...required, '--side', 'both']), {
+      message: /--side is lz or command\.$/,
+    });
   });
 
   it('reads the time limit of each side in minutes', () => {
@@ -139,8 +155,32 @@ describe('lzParseOptions', () => {
     assert.match(stdout, /^Usage: node e2e\/src\/oss\/main\.ts --project <name> .*--help/);
   });
 
+  it('names --side and --merge in the usage', () => {
+    assert.match(lzOssUsage, /\[--side <lz\|command>\]/);
+    assert.match(lzOssUsage, /--merge <result\.json>\.\.\. --out <folder>/);
+  });
+
   it('refuses an option it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
+  });
+});
+
+describe('lzParseMergeOptions', () => {
+  it('reads each --merge and --out', () => {
+    assert.deepEqual(lzParseMergeOptions(['--merge', 'a/result.json', '--merge', 'b/result.json', '--out', 'D:/out']), {
+      merge: ['a/result.json', 'b/result.json'],
+      out: 'D:/out',
+    });
+  });
+
+  it('refuses a missing --out', () => {
+    assert.throws(() => lzParseMergeOptions(['--merge', 'a/result.json']), { message: /--out is required\.$/ });
+  });
+
+  it('refuses the options of a run, as a merge runs no Stryker', () => {
+    assert.throws(() => lzParseMergeOptions(['--merge', 'a', '--out', 'o', '--side', 'lz']), {
+      code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION',
+    });
   });
 });
 
