@@ -208,9 +208,11 @@ describe('LzStrykerNodeTestRunner dry run coverage', () => {
     coverageAnalysis: CoverageAnalysis,
     mutantCoverage: MutantCoverage,
     status: RecordedTest['status'] = 'passed',
+    others: readonly RecordedTest[] = [],
   ) => {
     const warnings: string[] = [];
-    const record: ProcessRecord = { main: true, tests: [{ id: test, status, timeSpentMs: 1 }], mutantCoverage };
+    const tests = [{ id: test, status, timeSpentMs: 1 }, ...others];
+    const record: ProcessRecord = { main: true, tests, mutantCoverage };
 
     await new RecordingRunner(record, logger({ warnings })).dryRun({ ...dryRun, coverageAnalysis, testFiles: [file] });
 
@@ -229,6 +231,12 @@ describe('LzStrykerNodeTestRunner dry run coverage', () => {
       assert.match(warning, /sandbox/);
     },
   );
+
+  it('warns when the tests reach no instrumented code and only some of them are skipped', async () => {
+    const passes: RecordedTest = { id: `${file} > also passes`, status: 'passed', timeSpentMs: 1 };
+
+    assert.equal((await dryRunWarnings('perTest', { static: {}, perTest: {} }, 'skipped', [passes])).length, 1);
+  });
 
   lzTestEach<[string, CoverageAnalysis, MutantCoverage, RecordedTest['status']]>([
     ['a static hit', 'perTest', { static: { 1: 1 }, perTest: {} }, 'passed'],
