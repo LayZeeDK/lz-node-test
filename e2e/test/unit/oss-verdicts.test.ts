@@ -85,6 +85,10 @@ describe('lzComparison', () => {
     });
   });
 
+  it('says no side ran when there is no report to name', () => {
+    assert.deepEqual(lzComparison({}), { compared: false, reason: 'No side ran.' });
+  });
+
   it('compares nothing when a side that ran wrote no report', () => {
     assert.deepEqual(lzComparison({ lz: { reported: false }, command: { reported: true, report: new Map() } }), {
       compared: false,

@@ -96,19 +96,23 @@ function statusesOf(report: LzReport): Map<string, LzMutantStatus> {
 
 /** Without a report on both sides there is nothing to compare, which an empty disagreement list would hide. */
 export function lzComparison(bySide: LzBySide<LzSideReport>): LzComparison {
-  const { lz, command } = bySide;
+  const ran = lzSides.filter((side) => bySide[side] !== undefined);
+  const missing = lzSides.filter((side) => bySide[side] === undefined);
 
-  if (lz === undefined || command === undefined) {
-    const ran = lzSides.filter((side) => bySide[side] !== undefined);
-    const missing = lzSides.filter((side) => bySide[side] === undefined);
+  if (ran.length === 0) {
+    return { compared: false, reason: 'No side ran.' };
+  }
 
+  if (missing.length > 0) {
     return {
       compared: false,
       reason: `Only the ${ran.join(' and ')} side ran; merge its result.json with a ${missing.join(' and ')} run with --merge.`,
     };
   }
 
-  if (!lz.reported || !command.reported) {
+  const { lz, command } = bySide;
+
+  if (lz === undefined || command === undefined || !lz.reported || !command.reported) {
     return { compared: false, reason: 'A side wrote no report.' };
   }
 
