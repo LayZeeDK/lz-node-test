@@ -69,6 +69,8 @@ export type LzRunOptions =
       readonly dryRun: true;
       readonly disableBail: boolean;
       readonly coverageAnalysis: CoverageAnalysis;
+      /** The files Stryker instrumented, which it reprints without a source map: DryRunOptions.files. */
+      readonly instrumented?: ReadonlySet<string>;
       readonly activeMutant?: undefined;
       readonly mutantActivation?: undefined;
       readonly hitLimit?: undefined;
@@ -78,6 +80,7 @@ export type LzRunOptions =
       readonly dryRun: false;
       readonly disableBail: boolean;
       readonly coverageAnalysis?: undefined;
+      readonly instrumented?: undefined;
       readonly activeMutant?: string;
       readonly mutantActivation?: MutantActivation;
       // undefined as Stryker's MutantRunOptions give them: no hit limit, every test.
@@ -111,8 +114,16 @@ const peaksOwner = ownPeaks();
  * their subtests': running any test of the file runs the file's whole process. Stryker's mutant timeout scales with
  * the summed time of the tests it runs, so it then scales with the processes it starts, which Stryker's other workers
  * slow down as well.
+ *
+ * A test keeps its start position only when `positioned`: Stryker diffs each test's span in the test file's source, so a
+ * position in a reprinted, instrumented copy would cut out the wrong span.
  */
-export function lzToTestResults(testFile: string, recorded: RecordedTest[], fileMs: number): TestResult[] {
+export function lzToTestResults(
+  testFile: string,
+  recorded: RecordedTest[],
+  fileMs: number,
+  positioned = true,
+): TestResult[] {
   const prefix = testId(testFile, '');
   const outermost = recorded.filter((test) => !recorded.some((other) => other !== test && within(test.id, other.id)));
   const outside = fileMs - outermost.reduce((sum, test) => sum + test.timeSpentMs, 0);
@@ -123,7 +134,7 @@ export function lzToTestResults(testFile: string, recorded: RecordedTest[], file
       name: test.id.slice(prefix.length),
       fileName: testFile,
       timeSpentMs: Math.round(test.timeSpentMs + outside),
-      ...(test.startPosition && { startPosition: test.startPosition }),
+      ...(positioned && test.startPosition && { startPosition: test.startPosition }),
     };
 
     if (test.status === 'failed') {
@@ -267,6 +278,7 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
     file,
     records.flatMap((record) => record.tests),
     fileMs,
+    !run.instrumented?.has(file),
   );
   const failed = results.some((result) => result.status === TestStatus.Failed);
 
@@ -542,6 +554,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       dryRun: true,
       disableBail: options.disableBail,
       coverageAnalysis: options.coverageAnalysis,
+      instrumented: new Set(options.files?.map((file) => resolve(file))),
     } satisfies LzRunOptions;
     const memoryLimitMB = this.#memoryLimits.startDryRun();
 

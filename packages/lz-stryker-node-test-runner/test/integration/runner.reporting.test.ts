@@ -49,6 +49,23 @@ describe('LzStrykerNodeTestRunner results', () => {
     );
   });
 
+  it('reports no position for the tests of a test file that Stryker instrumented', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture("it('instrumented', () => {});"),
+      'b.test.mjs': fixture("it('as written', () => {});"),
+    });
+    const runner = await initRunner(['a.test.mjs', 'b.test.mjs']);
+    const a = join(dir, 'a.test.mjs');
+    const b = join(dir, 'b.test.mjs');
+
+    const { tests } = complete(await settle(runner.dryRun({ ...dryRun, files: [a] })));
+
+    assert.deepEqual(Object.fromEntries(tests.map(({ id, startPosition }) => [id, startPosition])), {
+      [`${a} > instrumented`]: undefined,
+      [`${b} > as written`]: { line: firstFixtureLine, column: 0 },
+    });
+  });
+
   it('reports where the test file declares each skipped test, however it is skipped', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
