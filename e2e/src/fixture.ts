@@ -119,14 +119,19 @@ function reportOf(run: LzStrykerRun): LzReport {
   return run.report;
 }
 
-/** Runs `stryker run` in `dir` with `tmp`, which must exist, as its temporary directory, and `args` appended. */
+export interface LzStrykerRunOptions {
+  /** Stryker's temporary directory, which must exist; `dir`'s `tmp` by default. */
+  readonly tmp?: string;
+  readonly timeoutMs?: number;
+  /** Appended to the `stryker run` command. */
+  readonly args?: readonly string[];
+}
+
 export async function lzStryker(
   dir: string,
   configFile: string,
   concurrency: number,
-  tmp = join(dir, 'tmp'),
-  timeoutMs = lzStrykerTimeoutMs,
-  args: readonly string[] = [],
+  { tmp = join(dir, 'tmp'), timeoutMs = lzStrykerTimeoutMs, args = [] }: LzStrykerRunOptions = {},
 ): Promise<LzStrykerRun> {
   const report = join(dir, lzReportFile);
   const before = new Set(readdirSync(tmp));

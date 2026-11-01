@@ -176,14 +176,11 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders
   const excluded = new Set([sampler.pid]);
   const started = performance.now();
   const run = await settled('Stryker run', () =>
-    lzStryker(
-      dir,
-      configFile(side),
-      options.concurrency,
-      runTmp,
-      options.timeLimitMinutes * 60_000,
-      lzStrykerArgs(options.mutate),
-    ),
+    lzStryker(dir, configFile(side), options.concurrency, {
+      tmp: runTmp,
+      timeoutMs: options.timeLimitMinutes * 60_000,
+      args: lzStrykerArgs(options.mutate),
+    }),
   );
   const wallMs = Math.round(performance.now() - started);
   const stopped = await settled('Sampler', () => sampler.stop());
