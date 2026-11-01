@@ -54,3 +54,6 @@ Thumbs.db
 .claude/settings.local.json
 
 .nx/polygraph
+
+# Local planning records and scratch output
+/.scratch/
