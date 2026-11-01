@@ -1,6 +1,4 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 // Stryker leaves a RuntimeError mutant out of the mutation score, so a break threshold of 100 cannot see one. This
 // check fails a run on each RuntimeError mutant that the list does not record with a reason.
@@ -122,22 +120,4 @@ export async function lzCheckRuntimeErrors(reportFile: string, recordedFile: str
   );
 
   return lzUnrecordedRuntimeErrors(report, recorded);
-}
-
-const [entry, reportFile] = process.argv.slice(1);
-
-if (entry !== undefined && pathToFileURL(entry).href === import.meta.url) {
-  if (reportFile === undefined) {
-    throw new Error('Usage: node tools/eslint-rules/runtime-errors.ts <report.json>');
-  }
-
-  const unrecorded = await lzCheckRuntimeErrors(reportFile, join(import.meta.dirname, 'runtime-errors.json'));
-
-  if (unrecorded.length > 0) {
-    process.stderr.write(
-      'Stryker left RuntimeError mutants out of the mutation score. Kill each one with a test, or record why it ' +
-        `cannot be killed in tools/eslint-rules/runtime-errors.json:\n${unrecorded.map((line) => `  ${line}\n`).join('')}`,
-    );
-    process.exitCode = 1;
-  }
 }

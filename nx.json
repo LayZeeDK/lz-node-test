@@ -19,6 +19,7 @@
       "{workspaceRoot}/packages/lz-stryker-node-test-runner/src/**/*",
       "{workspaceRoot}/packages/lz-stryker-node-test-mutators/src/**/*",
       "{workspaceRoot}/tools/eslint-rules/runtime-errors.ts",
+      "{workspaceRoot}/tools/eslint-rules/runtime-errors.cli.ts",
       "{workspaceRoot}/tools/eslint-rules/runtime-errors.json",
       { "externalDependencies": ["@stryker-mutator/core", "@stryker-mutator/typescript-checker", "typescript"] }
     ]
@@ -48,7 +49,7 @@
         "commands": [
           "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.config.mjs",
           {
-            "command": "node tools/eslint-rules/runtime-errors.ts reports/mutation/{projectName}.src.json",
+            "command": "node tools/eslint-rules/runtime-errors.cli.ts reports/mutation/{projectName}.src.json",
             "forwardAllArgs": false
           }
         ]
@@ -70,7 +71,7 @@
         "commands": [
           "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.test-code.config.mjs",
           {
-            "command": "node tools/eslint-rules/runtime-errors.ts reports/mutation/{projectName}.test-code.json",
+            "command": "node tools/eslint-rules/runtime-errors.cli.ts reports/mutation/{projectName}.test-code.json",
             "forwardAllArgs": false
           }
         ]
