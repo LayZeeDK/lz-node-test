@@ -6,23 +6,31 @@ import { join } from 'node:path';
 import type { Logger } from '@stryker-mutator/api/logging';
 
 import { lzDirPrefix, ownDir } from './dirs.ts';
-import type { ProcessRecord } from './record.ts';
+import { envNames, type ProcessRecord } from './record.ts';
 
 /**
  * Where the runners of one Stryker run keep the most memory a process of each test file held in the dry run, one file
  * per test file. Stryker runs the dry run in one worker and the mutants in all of them, each a process it forks and
- * may replace, so the directory is named after the process they share: Stryker's own.
+ * may replace, so the directory is named after the process that owns the peaks (see `ownPeaks`).
  */
-export function peakMemoryDir(strykerPid: number): string {
-  return join(tmpdir(), `${lzDirPrefix('peaks', strykerPid)}dry-run`);
+export function peakMemoryDir(ownerPid: number): string {
+  return join(tmpdir(), `${lzDirPrefix('peaks', ownerPid)}dry-run`);
 }
 
 /**
- * Removes the dry-run peaks when Stryker's own process exits. Stryker imports every plugin in its own process before it
- * forks a worker, so this process outlives every runner; in any other process no directory has its pid. A killed
- * Stryker leaves the directory to a later runner's `removeLeftDirs`.
+ * The pid of the process that owns the dry-run peaks: the first process to load this module that inherited no owner.
+ * Stryker imports every plugin in its own process before it forks a worker, and each worker inherits its environment,
+ * so in a Stryker run the owner is Stryker's own process; a test that builds runners owns them itself. The owner
+ * removes the directory when it exits. A killed owner leaves it to a later runner's `removeLeftDirs`.
  */
-export function removePeaksOnExit(): void {
+export function ownPeaks(): number {
+  const inherited = process.env[envNames.peaksOwner];
+
+  if (inherited !== undefined) {
+    return Number(inherited);
+  }
+
+  process.env[envNames.peaksOwner] = String(process.pid);
   process.once('exit', () => {
     try {
       rmSync(peakMemoryDir(process.pid), { recursive: true });
@@ -30,6 +38,8 @@ export function removePeaksOnExit(): void {
       // Left for a later runner's removeLeftDirs.
     }
   });
+
+  return process.pid;
 }
 
 /**

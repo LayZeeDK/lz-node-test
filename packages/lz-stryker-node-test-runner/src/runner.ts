@@ -31,7 +31,7 @@ import {
 import { lzMergeAsStatic, lzMergeCoverage, lzOverlapCoverage } from './coverage.ts';
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isNumber, isObject, isStrings, optional } from './guards.ts';
-import { memoryLimits, peakMemoryDir, removePeaksOnExit, type MemoryLimits } from './memory-limits.ts';
+import { memoryLimits, ownPeaks, peakMemoryDir, type MemoryLimits } from './memory-limits.ts';
 import { lzConsumerNodeOptions, withoutReporters } from './node-options.ts';
 import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
@@ -101,7 +101,7 @@ const ext = extname(import.meta.filename);
 const hookUrl = pathToFileURL(resolve(import.meta.dirname, `hook${ext}`)).href;
 const reporterUrl = pathToFileURL(resolve(import.meta.dirname, `reporter${ext}`)).href;
 
-removePeaksOnExit();
+const peaksOwner = ownPeaks();
 
 /**
  * A test's name leaves out the test file, which its id starts with, as Stryker's runners name tests after their suites
@@ -478,7 +478,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       options.checkers.length > 0,
       availableParallelism(),
     );
-    this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, peakMemoryDir(process.ppid), log);
+    this.#memoryLimits = memoryLimits(lzStrykerNodeTest.maxMemoryMB, peakMemoryDir(peaksOwner), log);
     this.#allowEmpty = options.allowEmpty;
     this.#log = log;
   }
