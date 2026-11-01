@@ -45,6 +45,16 @@ export function lzScore(mutants: readonly LzMutantDetail[]): LzScore {
   };
 }
 
+export function lzReportScore(report: LzReport): LzScore & { readonly mutants: number } {
+  const mutants = [...report.values()].flat();
+
+  return { ...lzScore(mutants), mutants: mutants.length };
+}
+
+export function lzMessageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function lzCompare(lz: LzReport, command: LzReport): LzVerdict[] {
   const lzStatuses = statusesOf(lz);
   const commandStatuses = statusesOf(command);
@@ -103,6 +113,6 @@ export function lzComparison(bySide: LzBySide<LzSideReport>): LzComparison {
 
     return { compared: true, disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command), verdicts };
   } catch (error) {
-    return { compared: false, reason: error instanceof Error ? error.message : String(error) };
+    return { compared: false, reason: lzMessageOf(error) };
   }
 }

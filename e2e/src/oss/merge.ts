@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
-import { lzBySide, lzComparison, lzMutantKey, lzScore, type LzScore } from './verdicts.ts';
+import { lzBySide, lzComparison, lzMutantKey, lzReportScore } from './verdicts.ts';
 
 /** One side's report from one run. */
 interface LzBatch {
@@ -35,7 +35,7 @@ export function lzMerge(files: readonly string[], out: string): string {
   const result = {
     project: projects[0],
     mergedFrom: files,
-    scores: lzBySide(merged, ({ report }) => scoreOf(report)),
+    scores: lzBySide(merged, ({ report }) => lzReportScore(report)),
     ...lzComparison(lzBySide(merged, ({ report }) => ({ reported: true, report }))),
   };
 
@@ -92,10 +92,4 @@ function reportOf(reports: readonly LzBatch[], side: LzSide): LzReport {
   const paths = new Set(ofSide.flatMap(({ report }) => [...report.keys()]));
 
   return new Map([...paths].map((path) => [path, ofSide.flatMap(({ report }) => report.get(path) ?? [])]));
-}
-
-function scoreOf(report: LzReport): LzScore & { readonly mutants: number } {
-  const mutants = [...report.values()].flat();
-
-  return { ...lzScore(mutants), mutants: mutants.length };
 }

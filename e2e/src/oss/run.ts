@@ -37,7 +37,8 @@ import { lzSnapshot, lzStartSampler } from './sampler.ts';
 import {
   lzBySide,
   lzComparison,
-  lzScore,
+  lzMessageOf,
+  lzReportScore,
   type LzBySide,
   type LzComparison,
   type LzScore,
@@ -253,14 +254,11 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders
 }
 
 function strykerResult(run: LzStrykerRun): LzStrykerResult {
-  const mutants = run.reported ? [...run.report.values()].flat() : [];
-
   return {
     exitCode: run.exitCode,
     timedOut: run.timedOut,
     reported: run.reported,
-    ...lzScore(mutants),
-    mutants: mutants.length,
+    ...lzReportScore(run.reported ? run.report : new Map()),
     leftoverInRunTmp: run.leftover,
   };
 }
@@ -269,12 +267,8 @@ async function settled<T>(step: string, run: () => T | Promise<T>): Promise<LzSe
   try {
     return { ok: true, value: await run() };
   } catch (error) {
-    return { ok: false, error: `${step}: ${messageOf(error)}` };
+    return { ok: false, error: `${step}: ${lzMessageOf(error)}` };
   }
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /** False when the process ended by itself before the driver could end it. */
