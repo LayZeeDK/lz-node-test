@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { getEventListeners } from 'node:events';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
+import timers from 'node:timers/promises';
 
 import { MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
@@ -13,6 +15,7 @@ import {
   initRunner,
   logger,
   mutantRunOptions,
+  passing,
   project,
   settle,
   shareCompileCache,
@@ -35,6 +38,29 @@ const slowStart = fixture(
   "it('passes', () => {});",
   "it('passes too', () => {});",
 );
+
+/**
+ * One test that writes its process's pid and leaves a detached process for 3 s that holds stderr open and works in the
+ * run's temporary directory. The file's process exits by itself soon after its test, but the runner is not done with
+ * the file: on POSIX it waits up to 1500 ms more for stderr to close, and on Windows removing the run directory waits
+ * up to 2000 ms for the process to end.
+ */
+const lateClose = fixture(
+  "const { spawn } = await import('node:child_process');",
+  "const { writeFileSync } = await import('node:fs');",
+  "const { tmpdir } = await import('node:os');",
+  "it('passes', () => {",
+  "  spawn(process.execPath, ['-e', 'setTimeout(() => {}, 3000)'], { cwd: tmpdir(), detached: true, stdio: ['ignore', 'ignore', 'inherit'], windowsHide: true }).unref();",
+  "  writeFileSync('file.pid', String(process.pid));",
+  '});',
+);
+
+/** Resolves once the process whose pid `path` holds has exited. */
+async function processExit(path: string): Promise<void> {
+  while (!existsSync(path) || isRunning(Number(readFileSync(path, 'utf8')))) {
+    await timers.setTimeout(20);
+  }
+}
 
 function hang(t: TestContext): void {
   process.env['LZ_FIXTURE_HANG'] = '1';
@@ -70,17 +96,65 @@ describe('LzStrykerNodeTestRunner deadline', () => {
     assert.equal(isRunning(Number(readFileSync(join(dir, 'child.pid'), 'utf8'))), false);
   });
 
+  it('reports the result of a mutant run whose deadline passed without ending any file process', async (t) => {
+    const dir = project(t, { 'a.test.mjs': passing });
+    const runner = await initRunner(['a.test.mjs']);
+    const runFile = runner.runFile.bind(runner);
+    // Runs the file without the deadline, which is 1 ms and passes while the file runs.
+    runner.runFile = (file, run, memoryLimitMB) => runFile(file, run, memoryLimitMB);
+    const options = mutantRunOptions({ timeout: 1, testFilter: [`${join(dir, 'a.test.mjs')} > passes`] });
+
+    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(options))), {
+      status: MutantRunStatus.Survived,
+      nrOfTests: 1,
+    });
+  });
+
+  it('ends no file process that has exited when the deadline passes while the runner settles it', async (t) => {
+    const dir = project(t, { 'a.test.mjs': lateClose });
+    const runner = await initRunner(['a.test.mjs']);
+    const deadline = new AbortController();
+    const running = runner.runFile(
+      join(dir, 'a.test.mjs'),
+      { dryRun: false, disableBail: false },
+      undefined,
+      deadline.signal,
+    );
+
+    await processExit(join(dir, 'file.pid'));
+    // The runner learns of the exit a moment later, and settles the file for 1500 ms or more.
+    await timers.setTimeout(300);
+    deadline.abort();
+    const fileRun = await settle(running);
+
+    assert.equal(fileRun.killedByDeadline, undefined);
+    assert.equal(fileRun.exitCode, 0);
+  });
+
+  it("leaves no listener on a deadline for a file whose process ended, so one run's deadline does not collect them", async (t) => {
+    const dir = project(t, { 'a.test.mjs': passing });
+    const runner = await initRunner(['a.test.mjs']);
+    const deadline = new AbortController();
+
+    await settle(
+      runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }, undefined, deadline.signal),
+    );
+
+    assert.deepEqual(getEventListeners(deadline.signal, 'abort'), []);
+  });
+
   it('ends a file process at once when the deadline passed before the file started', async (t) => {
     const dir = project(t, { 'a.test.mjs': slowStart });
     const runner = await initRunner(['a.test.mjs']);
     hang(t);
 
-    const { records } = await settle(
+    const { records, killedByDeadline } = await settle(
       runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }, undefined, AbortSignal.abort()),
       5_000,
     );
 
     assert.deepEqual(records, []);
+    assert.equal(killedByDeadline, true);
   });
 
   it('runs the next mutant in the same runner after its deadline passed', async (t) => {

@@ -102,6 +102,8 @@ interface LzFileRun {
   /** The consumer's NODE_OPTIONS that the test file ran with, as `lzConsumerNodeOptions` gives them. */
   readonly nodeOptions: readonly string[];
   readonly unreadable?: string;
+  /** Set when the deadline of a mutant run ended the file's process while it ran. */
+  readonly killedByDeadline?: true;
 }
 
 // .ts from the source, .js from the build.
@@ -622,11 +624,19 @@ export class LzStrykerNodeTestRunner implements TestRunner {
     // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
     const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
     const deadline = AbortSignal.timeout(deadlineMs);
-    const result = await this.#run(files, run, 1, (file) =>
-      this.runFile(file, run, this.#memoryLimits.forMutantRun(file), deadline),
-    );
+    const killed: string[] = [];
+    const result = await this.#run(files, run, 1, async (file) => {
+      const fileRun = await this.runFile(file, run, this.#memoryLimits.forMutantRun(file), deadline);
 
-    if (deadline.aborted) {
+      if (fileRun.killedByDeadline) {
+        killed.push(file);
+      }
+
+      return fileRun;
+    });
+
+    // A deadline that passes after the last file's process ended, as the runner settles, changes no result.
+    if (killed.length > 0) {
       return {
         status: MutantRunStatus.Timeout,
         reason:
@@ -722,8 +732,13 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         stdio: ['ignore', 'ignore', 'pipe'],
         ...groupOptions(process.platform),
       });
+      let killedByDeadline: true | undefined;
       const end = () => {
-        child.kill('SIGKILL');
+        // A process that already exited is settling, which the deadline cannot make longer.
+        if (child.exitCode === null && child.signalCode === null) {
+          killedByDeadline = true;
+          child.kill('SIGKILL');
+        }
       };
 
       if (deadline?.aborted) {
@@ -731,7 +746,9 @@ export class LzStrykerNodeTestRunner implements TestRunner {
       }
 
       deadline?.addEventListener('abort', end);
-      const { exitCode, stderr } = await processEnd(child, process.platform);
+      const { exitCode, stderr } = await processEnd(child, process.platform).finally(() => {
+        deadline?.removeEventListener('abort', end);
+      });
       let unreadable: string | undefined;
       const records = readdirSync(outDir)
         .filter(lzIsRecordName)
@@ -754,6 +771,7 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         fileArgs,
         nodeOptions,
         ...(unreadable && { unreadable }),
+        ...(killedByDeadline && { killedByDeadline }),
       };
     } finally {
       await removeDir(runDir, this.#log);
