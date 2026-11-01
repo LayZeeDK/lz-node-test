@@ -14,7 +14,7 @@ const digits = (length: number) => Array.from({ length }, (_, i) => i % 10).join
  * Titles come from node:util rather than from lzTestEach, which formats them with formatTitle: a mutant of formatTitle
  * would rename the test that kills it, and Stryker's incremental mode then reruns that mutant on every run.
  */
-function title(verb: string, [template, items, expected]: Case): string {
+function title(verb: string, ...[template, items, expected]: Case): string {
   return `${verb} ${JSON.stringify(template)} with ${inspect(items)} as ${JSON.stringify(expected)}`;
 }
 
@@ -83,9 +83,8 @@ describe('formatTitle', () => {
     ['%x %s 100%', ['a'], '%x a 100%'],
   ];
 
-  for (const formatCase of formats) {
-    it(title('formats', formatCase), () => {
-      const [template, items, expected] = formatCase;
+  for (const [template, items, expected] of formats) {
+    it(title('formats', template, items, expected), () => {
       const index = 2;
 
       assert.equal(formatTitle(template, items, index), expected);
@@ -127,10 +126,8 @@ describe('formatTitle', () => {
     ['$a', [{ a: `${digits(40)}😀` }], `${digits(39)}…`],
   ];
 
-  for (const cutCase of cuts) {
-    it(title('cuts short at 40 characters', cutCase), () => {
-      const [template, items, expected] = cutCase;
-
+  for (const [template, items, expected] of cuts) {
+    it(title('cuts short at 40 characters', template, items, expected), () => {
       assert.equal(formatTitle(template, items, 0), expected);
     });
   }
@@ -155,10 +152,8 @@ describe('formatTitle', () => {
     ['$ a', [{ a: 1 }], '$ a'],
   ];
 
-  for (const interpolationCase of interpolations) {
-    it(title('interpolates', interpolationCase), () => {
-      const [template, items, expected] = interpolationCase;
-
+  for (const [template, items, expected] of interpolations) {
+    it(title('interpolates', template, items, expected), () => {
       assert.equal(formatTitle(template, items, 0), expected);
     });
   }
