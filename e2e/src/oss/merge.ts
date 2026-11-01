@@ -3,9 +3,10 @@ import { dirname, join } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
-import { lzComparison, lzMutantKey, lzScore, type LzScore } from './verdicts.ts';
+import { lzBySide, lzComparison, lzMutantKey, lzScore, type LzScore } from './verdicts.ts';
 
-interface LzSideReport {
+/** One side's report from one run. */
+interface LzBatch {
   /** The result.json it came from. */
   readonly file: string;
   readonly side: LzSide;
@@ -14,7 +15,7 @@ interface LzSideReport {
 
 interface LzRun {
   readonly project: string;
-  readonly reports: readonly LzSideReport[];
+  readonly reports: readonly LzBatch[];
 }
 
 /** Merges the driver's result.json files into one comparison, written to `out`'s result.json, whose path it returns. */
@@ -27,15 +28,15 @@ export function lzMerge(files: readonly string[], out: string): string {
   }
 
   const reports = runs.flatMap((run) => run.reports);
-  const lz = reportOf(reports, 'lz');
-  const command = reportOf(reports, 'command');
-  const bySide = { ...(lz === undefined ? {} : { lz }), ...(command === undefined ? {} : { command }) };
+  const merged = lzSides
+    .filter((side) => reports.some((report) => report.side === side))
+    .map((side) => ({ side, report: reportOf(reports, side) }));
   const file = join(out, 'result.json');
   const result = {
     project: projects[0],
     mergedFrom: files,
-    scores: Object.fromEntries(Object.entries(bySide).map(([side, report]) => [side, scoreOf(report)])),
-    ...lzComparison(bySide),
+    scores: lzBySide(merged, ({ report }) => scoreOf(report)),
+    ...lzComparison(lzBySide(merged, ({ report }) => ({ reported: true, report }))),
   };
 
   mkdirSync(out, { recursive: true });
@@ -68,14 +69,9 @@ function readRun(file: string): LzRun {
   };
 }
 
-/** One report of all the side's batches, or undefined when no run holds the side. */
-function reportOf(reports: readonly LzSideReport[], side: LzSide): LzReport | undefined {
+/** One report of all the side's batches. */
+function reportOf(reports: readonly LzBatch[], side: LzSide): LzReport {
   const ofSide = reports.filter((report) => report.side === side);
-
-  if (ofSide.length === 0) {
-    return undefined;
-  }
-
   const holders = new Map<string, string>();
 
   ofSide.forEach(({ file, report }) => {

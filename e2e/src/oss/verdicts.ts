@@ -1,4 +1,5 @@
 import type { LzMutantDetail, LzMutantStatus, LzReport } from '../report.ts';
+import { lzSides, type LzSide } from './options.ts';
 
 export interface LzScore {
   readonly counts: Readonly<Record<string, number>>;
@@ -18,9 +19,17 @@ export type LzComparison =
   | { readonly compared: true; readonly disagreements: readonly LzVerdict[]; readonly verdicts: readonly LzVerdict[] };
 
 /** A side left out did not run. */
-export interface LzBySide<T> {
-  readonly lz?: T;
-  readonly command?: T;
+export type LzBySide<T> = { readonly [TSide in LzSide]?: T };
+
+/** What a side that ran left to compare; no report when Stryker threw or wrote none. */
+export type LzSideReport = { readonly reported: true; readonly report: LzReport } | { readonly reported: false };
+
+/** Keys each item's value by its side, in the items' order. */
+export function lzBySide<TItem extends { readonly side: LzSide }, T>(
+  items: readonly TItem[],
+  of: (item: TItem) => T,
+): LzBySide<T> {
+  return items.reduce<LzBySide<T>>((bySide, item) => ({ ...bySide, [item.side]: of(item) }), {});
 }
 
 export function lzScore(mutants: readonly LzMutantDetail[]): LzScore {
@@ -71,26 +80,26 @@ function statusesOf(report: LzReport): Map<string, LzMutantStatus> {
   return statuses;
 }
 
-/**
- * A side that is null ran and wrote no report. Without a report on both sides there is nothing to compare, which an
- * empty disagreement list would hide.
- */
-export function lzComparison({ lz, command }: LzBySide<LzReport | null>): LzComparison {
+/** Without a report on both sides there is nothing to compare, which an empty disagreement list would hide. */
+export function lzComparison(bySide: LzBySide<LzSideReport>): LzComparison {
+  const { lz, command } = bySide;
+
   if (lz === undefined || command === undefined) {
-    const [ran, other] = lz === undefined ? ['command', 'lz'] : ['lz', 'command'];
+    const ran = lzSides.filter((side) => bySide[side] !== undefined);
+    const missing = lzSides.filter((side) => bySide[side] === undefined);
 
     return {
       compared: false,
-      reason: `Only the ${ran} side ran; merge its result.json with a ${other} run with --merge.`,
+      reason: `Only the ${ran.join(' and ')} side ran; merge its result.json with a ${missing.join(' and ')} run with --merge.`,
     };
   }
 
-  if (lz === null || command === null) {
+  if (!lz.reported || !command.reported) {
     return { compared: false, reason: 'A side wrote no report.' };
   }
 
   try {
-    const verdicts = lzCompare(lz, command);
+    const verdicts = lzCompare(lz.report, command.report);
 
     return { compared: true, disagreements: verdicts.filter((verdict) => verdict.lz !== verdict.command), verdicts };
   } catch (error) {

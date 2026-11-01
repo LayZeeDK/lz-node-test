@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzCompare, lzComparison, lzScore } from '../../src/oss/verdicts.ts';
+import { lzBySide, lzCompare, lzComparison, lzScore } from '../../src/oss/verdicts.ts';
 import type { LzMutantDetail, LzMutantStatus } from '../../src/report.ts';
 
 function mutant(line: number, status: LzMutantStatus, replacement = 'x', endColumn = 9): LzMutantDetail {
@@ -68,16 +68,25 @@ describe('lzCompare', () => {
   });
 });
 
+describe('lzBySide', () => {
+  it('keys each value by its side and leaves out the sides with no item', () => {
+    assert.deepEqual(
+      lzBySide([{ side: 'command', exitCode: 1 }], ({ exitCode }) => exitCode),
+      { command: 1 },
+    );
+  });
+});
+
 describe('lzComparison', () => {
   it('compares nothing when one side did not run, and says so', () => {
-    assert.deepEqual(lzComparison({ lz: new Map([['index.js', [mutant(1, 'Killed')]]]) }), {
+    assert.deepEqual(lzComparison({ command: { reported: true, report: new Map() } }), {
       compared: false,
-      reason: 'Only the lz side ran; merge its result.json with a command run with --merge.',
+      reason: 'Only the command side ran; merge its result.json with a lz run with --merge.',
     });
   });
 
   it('compares nothing when a side that ran wrote no report', () => {
-    assert.deepEqual(lzComparison({ lz: null, command: new Map() }), {
+    assert.deepEqual(lzComparison({ lz: { reported: false }, command: { reported: true, report: new Map() } }), {
       compared: false,
       reason: 'A side wrote no report.',
     });
@@ -87,10 +96,13 @@ describe('lzComparison', () => {
     const lz = new Map([['index.js', [mutant(1, 'Killed'), mutant(2, 'Survived')]]]);
     const command = new Map([['index.js', [mutant(1, 'Killed'), mutant(2, 'Killed')]]]);
 
-    assert.deepEqual(lzComparison({ lz, command }), {
-      compared: true,
-      disagreements: [{ mutant: 'index.js:2:3-2:9 StringLiteral x', lz: 'Survived', command: 'Killed' }],
-      verdicts: lzCompare(lz, command),
-    });
+    assert.deepEqual(
+      lzComparison({ lz: { reported: true, report: lz }, command: { reported: true, report: command } }),
+      {
+        compared: true,
+        disagreements: [{ mutant: 'index.js:2:3-2:9 StringLiteral x', lz: 'Survived', command: 'Killed' }],
+        verdicts: lzCompare(lz, command),
+      },
+    );
   });
 });

@@ -34,7 +34,15 @@ import {
 } from './options.ts';
 import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks, type LzProcessPeaks } from './processes.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
-import { lzComparison, lzScore, type LzBySide, type LzComparison, type LzScore } from './verdicts.ts';
+import {
+  lzBySide,
+  lzComparison,
+  lzScore,
+  type LzBySide,
+  type LzComparison,
+  type LzScore,
+  type LzSideReport,
+} from './verdicts.ts';
 
 interface LzOssHeader {
   readonly project: string;
@@ -83,7 +91,8 @@ type LzOssResult = LzOssHeader &
   ({ readonly preparedIn: string } | ({ readonly sides: LzBySide<LzSideResult> } & LzComparison));
 
 interface LzSideRun {
-  readonly run: LzStrykerRun | null;
+  readonly side: LzSide;
+  readonly report: LzSideReport;
   readonly result: LzSideResult;
 }
 
@@ -152,17 +161,16 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     return;
   }
 
-  const lz = options.sides.includes('lz') ? await runSide('lz', folders) : undefined;
-  const command = options.sides.includes('command') ? await runSide('command', folders) : undefined;
-  const bySide = <T>(of: (sideRun: LzSideRun) => T): LzBySide<T> => ({
-    ...(lz === undefined ? {} : { lz: of(lz) }),
-    ...(command === undefined ? {} : { command: of(command) }),
-  });
+  // One side after the other, so that the two never share the machine.
+  const runs = await options.sides.reduce<Promise<readonly LzSideRun[]>>(
+    async (earlier, side) => [...(await earlier), await runSide(side, folders)],
+    Promise.resolve([]),
+  );
 
   writeResult(out, {
     ...header,
-    sides: bySide(({ result }) => result),
-    ...lzComparison(bySide(({ run }) => (run?.reported === true ? run.report : null))),
+    sides: lzBySide(runs, ({ result }) => result),
+    ...lzComparison(lzBySide(runs, ({ report }) => report)),
   });
 }
 
@@ -224,7 +232,8 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders
   ];
 
   return {
-    run: run.ok ? run.value : null,
+    side,
+    report: run.ok ? run.value : { reported: false },
     result: {
       stryker: run.ok ? strykerResult(run.value) : null,
       errors: steps.flatMap((step) => (step.ok ? [] : [step.error])),
