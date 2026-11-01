@@ -1,4 +1,4 @@
-import { lzParseReport } from './runtime-errors.ts';
+import { lzParseReport } from './stryker-report.ts';
 
 const statuses = ['Killed', 'Survived', 'Timeout', 'NoCoverage', 'RuntimeError', 'CompileError'];
 
