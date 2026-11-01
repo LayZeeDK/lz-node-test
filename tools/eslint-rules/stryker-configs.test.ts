@@ -33,7 +33,19 @@ const configs: readonly (readonly [file: string, mutate: readonly string[]])[] =
   ['tools/eslint-rules/stryker.test-code.config.mjs', ['tools/eslint-rules/*.test.ts']],
 ];
 
-const ignorePatterns = ['/.claude', '/.nx', '/plans', '/e2e'];
+const ignorePatterns = ['/.claude', '/.nx', '/plans', '/e2e', '/reports'];
+
+// Each config's reports, named as the mutate-src and mutate-test-code targets read them.
+const reportNames: readonly (readonly [file: string, name: string])[] = [
+  ['packages/lz-node-test/stryker.config.mjs', 'lz-node-test.src'],
+  ['packages/lz-node-test/stryker.test-code.config.mjs', 'lz-node-test.test-code'],
+  ['packages/lz-stryker-node-test-mutators/stryker.config.mjs', 'lz-stryker-node-test-mutators.src'],
+  ['packages/lz-stryker-node-test-mutators/stryker.test-code.config.mjs', 'lz-stryker-node-test-mutators.test-code'],
+  ['packages/lz-stryker-node-test-runner/stryker.config.mjs', 'lz-stryker-node-test-runner.src'],
+  ['packages/lz-stryker-node-test-runner/stryker.test-code.config.mjs', 'lz-stryker-node-test-runner.test-code'],
+  ['tools/eslint-rules/stryker.config.mjs', 'eslint-rules.src'],
+  ['tools/eslint-rules/stryker.test-code.config.mjs', 'eslint-rules.test-code'],
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -60,6 +72,15 @@ describe('Stryker configs', () => {
     assert.deepEqual(
       { mutate: config['mutate'], ignorePatterns: config['ignorePatterns'] },
       { mutate, ignorePatterns },
+    );
+  });
+
+  lzTestEach(reportNames)('%s writes its HTML and JSON reports as reports/mutation/%s', async (file, name) => {
+    const config = await loadConfig(file);
+
+    assert.deepEqual(
+      { html: config['htmlReporter'], json: config['jsonReporter'] },
+      { html: { fileName: `reports/mutation/${name}.html` }, json: { fileName: `reports/mutation/${name}.json` } },
     );
   });
 });

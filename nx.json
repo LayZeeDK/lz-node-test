@@ -18,6 +18,8 @@
       "{workspaceRoot}/tsconfig.base.json",
       "{workspaceRoot}/packages/lz-stryker-node-test-runner/src/**/*",
       "{workspaceRoot}/packages/lz-stryker-node-test-mutators/src/**/*",
+      "{workspaceRoot}/tools/eslint-rules/runtime-errors.ts",
+      "{workspaceRoot}/tools/eslint-rules/runtime-errors.json",
       { "externalDependencies": ["@stryker-mutator/core", "@stryker-mutator/typescript-checker", "typescript"] }
     ]
   },
@@ -36,9 +38,20 @@
       "parallelism": false,
       "dependsOn": ["build"],
       "inputs": ["default", "^production", "mutation"],
+      "outputs": [
+        "{workspaceRoot}/reports/mutation/{projectName}.src.html",
+        "{workspaceRoot}/reports/mutation/{projectName}.src.json"
+      ],
       "options": {
         "cwd": "{workspaceRoot}",
-        "command": "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.config.mjs"
+        "parallel": false,
+        "commands": [
+          "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.config.mjs",
+          {
+            "command": "node tools/eslint-rules/runtime-errors.ts reports/mutation/{projectName}.src.json",
+            "forwardAllArgs": false
+          }
+        ]
       }
     },
     "mutate-test-code": {
@@ -47,9 +60,20 @@
       "parallelism": false,
       "dependsOn": ["build"],
       "inputs": ["default", "^production", "mutation"],
+      "outputs": [
+        "{workspaceRoot}/reports/mutation/{projectName}.test-code.html",
+        "{workspaceRoot}/reports/mutation/{projectName}.test-code.json"
+      ],
       "options": {
         "cwd": "{workspaceRoot}",
-        "command": "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.test-code.config.mjs"
+        "parallel": false,
+        "commands": [
+          "node --conditions=@lz-node-test/source node_modules/@stryker-mutator/core/bin/stryker.js run {projectRoot}/stryker.test-code.config.mjs",
+          {
+            "command": "node tools/eslint-rules/runtime-errors.ts reports/mutation/{projectName}.test-code.json",
+            "forwardAllArgs": false
+          }
+        ]
       }
     },
     "mutate": {

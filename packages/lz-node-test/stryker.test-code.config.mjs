@@ -1,4 +1,4 @@
-import { testCode } from '../../stryker.base.mjs';
+import { reportFiles, testCode } from '../../stryker.base.mjs';
 import base from './stryker.config.mjs';
 
 export default await testCode({
@@ -10,4 +10,5 @@ export default await testCode({
     '!packages/lz-node-test/test/integration/register.test.ts',
   ],
   incrementalFile: 'reports/stryker-incremental/lz-node-test.test-code.json',
+  ...reportFiles('lz-node-test.test-code'),
 });

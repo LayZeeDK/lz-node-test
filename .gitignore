@@ -14,6 +14,9 @@ node_modules
 # Stryker incremental results, one file per config
 /reports/stryker-incremental/
 
+# Stryker HTML and JSON reports, two files per config
+/reports/mutation/
+
 # IDEs and editors
 /.idea
 .project

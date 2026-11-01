@@ -1,4 +1,4 @@
-import base, { source } from '../../stryker.base.mjs';
+import base, { reportFiles, source } from '../../stryker.base.mjs';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
@@ -6,5 +6,6 @@ export default {
   mutate: ['packages/lz-stryker-node-test-runner/src/**/*.ts'],
   tsconfigFile: 'packages/lz-stryker-node-test-runner/tsconfig.stryker.json',
   incrementalFile: 'reports/stryker-incremental/lz-stryker-node-test-runner.src.json',
+  ...reportFiles('lz-stryker-node-test-runner.src'),
   lzStrykerNodeTest: { testFiles: ['packages/lz-stryker-node-test-runner/test/**/*.test.ts'], nodeArgs: [source] },
 };

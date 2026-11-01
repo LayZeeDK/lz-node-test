@@ -132,3 +132,9 @@ jobs:
         with:
           path: ${{ env.INCREMENTAL_FILE }}
           key: ${{ steps.key.outputs.prefix }}${{ github.sha }}
+      # Most needed when the run fails: the report shows each surviving mutant and each RuntimeError.
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-report-${{ matrix.project }}.${{ matrix.config }}
+          path: reports/mutation/${{ matrix.project }}.${{ matrix.config }}.html

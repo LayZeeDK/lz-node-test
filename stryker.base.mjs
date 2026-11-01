@@ -28,7 +28,21 @@ export default {
   // The checker's schema calls grouped checks less accurate, and with a break of 100 a missed compile error fails the
   // run.
   typescriptChecker: { prioritizePerformanceOverAccuracy: false },
-  reporters: ['clear-text', 'progress'],
+  // The progress reporter prints nothing without a terminal, as in CI.
+  reporters: ['clear-text', process.env.CI ? 'progress-append-only' : 'progress', 'html', 'json'],
   thresholds: { high: 100, low: 100, break: 100 },
-  ignorePatterns: ['/.claude', '/.nx', '/plans', '/e2e'],
+  ignorePatterns: ['/.claude', '/.nx', '/plans', '/e2e', '/reports'],
 };
+
+/**
+ * A config's HTML and JSON report files, so that the two configs of a project do not write the same file. The
+ * mutate-src and mutate-test-code targets read the JSON report by this name.
+ *
+ * @param {string} name `<project>.src` or `<project>.test-code`
+ */
+export function reportFiles(name) {
+  return {
+    htmlReporter: { fileName: `reports/mutation/${name}.html` },
+    jsonReporter: { fileName: `reports/mutation/${name}.json` },
+  };
+}
