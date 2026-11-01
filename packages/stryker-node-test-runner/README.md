@@ -246,7 +246,8 @@ the runner with small test files:
 With `coverageAnalysis: 'perTest'`, Stryker's default, a mutant runs only the test files whose tests reach it.
 
 Two open-source projects, each run 5 times a side at concurrency 5, against Stryker's `command` runner with
-`node --test`:
+`node --test`. The restartable times come from a runner version before the deadline that the fastify-cookie paragraph
+below describes.
 
 | Project               | Mutants | This runner, median | `command` runner, median |
 | --------------------- | ------- | ------------------- | ------------------------ |
@@ -255,20 +256,21 @@ Two open-source projects, each run 5 times a side at concurrency 5, against Stry
 
 On restartable, the `command` runner runs the whole test suite for every mutant, and 36 to 37 mutants a run hang until
 Stryker's timeout ends them. This runner runs only the tests that reach each mutant. Both restartable times include the
-port collisions that the next section describes. The restartable times come from a runner version before the deadline
-that the next paragraph describes.
+port collisions that the next section describes.
 
 On fastify-cookie, 7 mutants make a test hang on both runners. This runner ends such a mutant run at its own deadline,
-which counts each test file's start-up time once, so it does not wait for Stryker's timer. Both runners gave every
-mutant the same status.
+which counts each test file's start-up time once, so it does not wait for Stryker's timer. In 4 of the 5 runs, both
+runners gave every mutant the same status. In the other, 2 mutants that this runner killed timed out on the `command`
+runner, in that runner's slowest run.
 
 ## Use incremental mode
 
 With `--incremental`, Stryker stores each mutant's result and, on the next run, reuses the results of mutants whose
-code and tests did not change. Give each Stryker configuration its own `incrementalFile`, because two configurations
-that share the file overwrite each other's results.
+code and tests did not change. Give each Stryker configuration its own `incrementalFile`: each run reads and rewrites
+the whole file, so a configuration that shares it would read another configuration's results as its own.
 
-On this repository's `lz-node-test` configuration (349 mutants, concurrency 6, median of 5 runs a side):
+On a configuration that mutates the `@layzee/lz-node-test` package's source (349 mutants, concurrency 6, median of 5
+runs a side, Windows 11 ARM64, Node.js 24.18.1, Stryker 10.1.1):
 
 | Change since the stored run | Full run | Incremental run | Results reused |
 | --------------------------- | -------- | --------------- | -------------- |
@@ -287,8 +289,8 @@ that a full run would change. Run `stryker run --incremental --force` after any 
   environment variable.
 - A change to code in a test file outside every test, such as a constant above the first test that a test reads.
   Stryker gives each test the lines from its own start to the next test's start, so such lines belong to no test.
-- A change to a test so that it kills a static mutant. Stryker records no tests for a static mutant, so it never sees
-  the change ([stryker-js#6119](https://github.com/stryker-mutator/stryker-js/issues/6119)).
+- A change to a test so that it kills a static mutant. Stryker records no covering tests for a static mutant, so it
+  never sees the change ([stryker-js#6119](https://github.com/stryker-mutator/stryker-js/issues/6119)).
 - A test file whose first line is a block comment, such as a license header. Stryker shifts that file's test
   positions by one line, so an edit on a test's first line counts as an edit to the test before it. Starting the file
   with `//` line comments avoids the shift.
@@ -301,8 +303,8 @@ These cases cost time but give the same results:
   code under test, such as `[30, isAdult(30)]`, puts that code's result in the title. Such code runs while the test
   file registers its tests, so its mutants are static and run every test. The test still runs and still kills the
   mutant, but under a name the stored results lack. Stryker's Vitest runner names tests by their titles too and does
-  the same. Before this repository's `lz-node-test` tests stopped titling their cases with the formatter they test, 14
-  such mutants made an incremental run on an unchanged tree take 32 s instead of 7.5 s.
+  the same. In the configuration above, before its tests stopped titling their cases with the title formatter they
+  test, 14 such mutants made an incremental run on an unchanged tree take 32 s instead of 7.5 s.
 - A test file that the configuration also mutates. After any change to it, the mutants that its tests cover run again,
   as [What the runner does](#what-the-runner-does) describes.
 
