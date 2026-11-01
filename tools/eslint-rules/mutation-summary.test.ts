@@ -127,7 +127,9 @@ describe('mutation-summary.cli.ts', () => {
       {
         code,
         stdout,
-        usage: stderr.includes('Usage: node tools/eslint-rules/mutation-summary.cli.ts <report.json> <title>'),
+        usage: /^Error: Usage: node tools\/eslint-rules\/mutation-summary\.cli\.ts <report\.json> <title>$/m.test(
+          stderr,
+        ),
       },
       { code: 1, stdout: '', usage: true },
     );
