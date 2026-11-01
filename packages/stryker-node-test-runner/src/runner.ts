@@ -733,9 +733,13 @@ export class LzStrykerNodeTestRunner implements TestRunner {
         ...groupOptions(process.platform),
       });
       let killedByDeadline: true | undefined;
+      let exited = false;
+      child.once('exit', () => {
+        exited = true;
+      });
       const end = () => {
         // A process that already exited is settling, which the deadline cannot make longer.
-        if (child.exitCode === null && child.signalCode === null) {
+        if (!exited) {
           killedByDeadline = true;
           child.kill('SIGKILL');
         }
