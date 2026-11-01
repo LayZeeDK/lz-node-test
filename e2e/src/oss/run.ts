@@ -50,8 +50,8 @@ const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
 /** How long processes that a run left get to end by themselves before they count as left behind. */
 const settleMs = 2_000;
 
-/** The folders of one driver run: `dir` holds the project's copy, `runTmp` is Stryker's TMP. */
-interface LzRunFolders {
+/** What one side's run needs: the options, `out`, `dir` for the project's copy and `runTmp` for Stryker's TMP. */
+interface LzRunContext {
   readonly options: LzOssOptions;
   readonly out: string;
   readonly dir: string;
@@ -68,8 +68,8 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     mkdtempSync(join(tmpdir(), `${options.prepareOnly ? lzOssPreparedPrefix : lzOssRunPrefix}${process.pid}-`)),
   );
   // Beside the copy, not in it, so that no folder of the project can collide with them.
-  const folders: LzRunFolders = { options, out, dir: join(root, 'project'), runTmp: join(root, 'tmp') };
-  const { dir, runTmp } = folders;
+  const context: LzRunContext = { options, out, dir: join(root, 'project'), runTmp: join(root, 'tmp') };
+  const { dir, runTmp } = context;
 
   if (!options.prepareOnly) {
     lzRemoveOnExit(root);
@@ -114,7 +114,7 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
 
   // One side after the other, so that the two never share the machine.
   const runs = await options.sides.reduce<Promise<readonly LzSideRun[]>>(
-    async (earlier, side) => [...(await earlier), await runSide(side, folders)],
+    async (earlier, side) => [...(await earlier), await runSide(side, context)],
     Promise.resolve([]),
   );
 
@@ -141,7 +141,7 @@ export function lzClearSideFiles(out: string, side: LzSide): void {
  * Each step is settled, so a throw in one still stops the sampler, ends leftovers, lets result.json be written and
  * lets the next side run.
  */
-async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders): Promise<LzSideRun> {
+async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext): Promise<LzSideRun> {
   const errors: string[] = [];
   const settled = settledInto(errors);
 
