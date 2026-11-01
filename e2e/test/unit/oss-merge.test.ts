@@ -12,6 +12,9 @@ interface LzFakeMutant {
   readonly status: string;
 }
 
+/** The header fields a merge requires to match across its runs. */
+const header = { workspaceCommit: 'abc123', node: 'v24.18.1', tarballs: ['a-1.0.0.tgz', 'b-1.0.0.tgz'] };
+
 function setup(t: TestContext) {
   const dir = mkdtempSync(join(tmpdir(), 'lz-oss-merge-'));
 
@@ -22,7 +25,12 @@ function setup(t: TestContext) {
   return {
     out: join(dir, 'merged'),
     /** Writes a run folder as the driver leaves it: result.json and a report per side that ran. */
-    run: (name: string, project: string, mutantsBySide: Partial<Record<LzSide, readonly LzFakeMutant[]>>): string => {
+    run: (
+      name: string,
+      project: string,
+      mutantsBySide: Partial<Record<LzSide, readonly LzFakeMutant[]>>,
+      headerOverrides: Partial<typeof header> = {},
+    ): string => {
       const runDir = join(dir, name);
 
       mkdirSync(runDir);
@@ -46,6 +54,8 @@ function setup(t: TestContext) {
         join(runDir, 'result.json'),
         JSON.stringify({
           project,
+          ...header,
+          ...headerOverrides,
           sides: Object.fromEntries(Object.keys(mutantsBySide).map((side) => [side, { stryker: { reported: true } }])),
         }),
       );
@@ -117,6 +127,33 @@ describe('lzMerge', () => {
     });
   });
 
+  it('refuses runs of two workspace commits', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { workspaceCommit: 'def456' })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one workspaceCommit; found abc123 and def456.',
+    });
+  });
+
+  it('refuses runs of two Node.js versions', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { node: 'v22.23.1' })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one node; found v24.18.1 and v22.23.1.',
+    });
+  });
+
+  it('refuses runs of two sets of tarballs', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { tarballs: ['a-1.0.1.tgz'] })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one tarballs; found [a-1.0.0.tgz, b-1.0.0.tgz] and [a-1.0.1.tgz].',
+    });
+  });
+
   it('merges batches of one side into one before it compares', (t) => {
     const { run, out } = setup(t);
     const batches = [
@@ -182,7 +219,7 @@ describe('lzMerge', () => {
     const { run, out } = setup(t);
     const file = run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] });
 
-    writeFileSync(file, JSON.stringify({ project: 'p', sides: { lz: { stryker: { reported: false } } } }));
+    writeFileSync(file, JSON.stringify({ project: 'p', ...header, sides: { lz: { stryker: { reported: false } } } }));
 
     assert.throws(() => lzMerge([file], out), {
       message: `The lz side of ${file} wrote no report, so its lz.mutation.json is not this run's.`,
@@ -193,7 +230,7 @@ describe('lzMerge', () => {
     const { run, out } = setup(t);
     const file = run('a', 'p', { command: [] });
 
-    writeFileSync(file, JSON.stringify({ project: 'p', sides: { command: { stryker: null } } }));
+    writeFileSync(file, JSON.stringify({ project: 'p', ...header, sides: { command: { stryker: null } } }));
 
     assert.throws(() => lzMerge([file], out), {
       message: `The command side of ${file} wrote no report, so its command.mutation.json is not this run's.`,

@@ -14,8 +14,15 @@ interface LzBatch {
   readonly report: LzReport;
 }
 
+/** The header fields that must match across a merge's runs, beside the project. */
+type LzMatchedField = 'workspaceCommit' | 'node' | 'tarballs';
+
+const matchedFields: readonly LzMatchedField[] = ['workspaceCommit', 'node', 'tarballs'];
+
 interface LzRun {
   readonly project: string;
+  /** Each matched field as the refusal shows it. */
+  readonly matched: Readonly<Record<LzMatchedField, string>>;
   readonly reports: readonly LzBatch[];
 }
 
@@ -29,6 +36,13 @@ export function lzMerge(files: readonly string[], out: string): string {
     throw new Error(`--merge takes runs of one project; found ${projects.join(' and ')}.`);
   }
 
+  matchedFields.forEach((field) => {
+    const found = [...new Set(runs.map(({ matched }) => matched[field]))];
+
+    if (found.length !== 1) {
+      throw new Error(`--merge takes runs of one ${field}; found ${found.join(' and ')}.`);
+    }
+  });
   const reports = runs.flatMap((run) => run.reports);
   const merged = lzSides
     .filter((side) => reports.some((report) => report.side === side))
@@ -56,11 +70,23 @@ function readRun(file: string): LzRun {
     );
   }
 
-  if (!lzIsRecord(result) || typeof result['project'] !== 'string' || !lzIsRecord(result['sides'])) {
+  if (!lzIsRecord(result)) {
     throw new Error(`${file} is not the result.json of a driver run.`);
   }
 
-  const { sides } = result;
+  const { project, workspaceCommit, node, sides } = result;
+  const tarballs = stringsOf(result['tarballs']);
+
+  if (
+    typeof project !== 'string' ||
+    typeof workspaceCommit !== 'string' ||
+    typeof node !== 'string' ||
+    tarballs === undefined ||
+    !lzIsRecord(sides)
+  ) {
+    throw new Error(`${file} is not the result.json of a driver run.`);
+  }
+
   const ran = lzSides.filter((side) => side in sides);
 
   if (ran.length === 0) {
@@ -68,7 +94,8 @@ function readRun(file: string): LzRun {
   }
 
   return {
-    project: result['project'],
+    project,
+    matched: { workspaceCommit, node, tarballs: `[${tarballs.join(', ')}]` },
     reports: ran.map((side) => {
       const entry = sides[side];
       const reportFile = `${side}.mutation.json`;
@@ -80,6 +107,16 @@ function readRun(file: string): LzRun {
       return { file, side, report: lzParseReport(readFileSync(join(dirname(file), reportFile), 'utf8')) };
     }),
   };
+}
+
+function stringsOf(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const strings = value.filter((item: unknown) => typeof item === 'string');
+
+  return strings.length === value.length ? strings : undefined;
 }
 
 /** One report of all the side's batches. */

@@ -192,6 +192,10 @@ describe('lzParseOptions', () => {
     assert.match(lzOssUsage, /A side that wrote no\s+report is refused/);
   });
 
+  it('says in the usage which header fields the runs of a merge must share', () => {
+    assert.match(lzOssUsage, /project, workspaceCommit, node and\s+tarballs/);
+  });
+
   it('refuses an option it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
   });

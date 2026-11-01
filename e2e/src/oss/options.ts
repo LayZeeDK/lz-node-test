@@ -111,7 +111,9 @@ export const lzOssUsage =
   "  --merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside\n" +
   '            it. Batches of one side merge into one; a mutant in two batches is refused. A merged result.json\n' +
   '            is refused: merges do not compose, so merge the runs it lists in mergedFrom. A side that wrote no\n' +
-  "            report is refused; a run removes its sides' earlier reports and logs from --out first.";
+  "            report is refused; a run removes its sides' earlier reports and logs from --out first. Runs that\n" +
+  "            differ in any of result.json's project, workspaceCommit, node and tarballs are refused, naming the\n" +
+  '            field.';
 const positiveInteger = /^[1-9]\d*$/;
 
 export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {
