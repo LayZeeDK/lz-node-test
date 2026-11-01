@@ -110,7 +110,8 @@ export const lzOssUsage =
   '            file.js:12:4-12:20 for a mutant at 12:5-12:19.\n' +
   "  --merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside\n" +
   '            it. Batches of one side merge into one; a mutant in two batches is refused. A merged result.json\n' +
-  '            is refused: merges do not compose, so merge the runs it lists in mergedFrom.';
+  '            is refused: merges do not compose, so merge the runs it lists in mergedFrom. A side that wrote no\n' +
+  "            report is refused; a run removes its sides' earlier reports and logs from --out first.";
 const positiveInteger = /^[1-9]\d*$/;
 
 export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {

@@ -188,6 +188,10 @@ describe('lzParseOptions', () => {
     assert.match(lzOssUsage, /merges do not compose/);
   });
 
+  it('says in the usage that a merge refuses a side that wrote no report', () => {
+    assert.match(lzOssUsage, /A side that wrote no\s+report is refused/);
+  });
+
   it('refuses an option it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
   });

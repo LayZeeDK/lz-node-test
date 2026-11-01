@@ -44,7 +44,10 @@ function setup(t: TestContext) {
       });
       writeFileSync(
         join(runDir, 'result.json'),
-        JSON.stringify({ project, sides: Object.fromEntries(Object.keys(mutantsBySide).map((side) => [side, {}])) }),
+        JSON.stringify({
+          project,
+          sides: Object.fromEntries(Object.keys(mutantsBySide).map((side) => [side, { stryker: { reported: true } }])),
+        }),
       );
 
       return join(runDir, 'result.json');
@@ -175,12 +178,25 @@ describe('lzMerge', () => {
     });
   });
 
-  it('refuses a run whose side wrote no report', (t) => {
+  it('refuses a side that wrote no report, even with an older report beside its result.json', (t) => {
     const { run, out } = setup(t);
-    const file = run('a', 'p', { lz: [] });
+    const file = run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] });
 
-    rmSync(join(file, '..', 'lz.mutation.json'));
+    writeFileSync(file, JSON.stringify({ project: 'p', sides: { lz: { stryker: { reported: false } } } }));
 
-    assert.throws(() => lzMerge([file], out), { message: /lz\.mutation\.json/ });
+    assert.throws(() => lzMerge([file], out), {
+      message: `The lz side of ${file} wrote no report, so its lz.mutation.json is not this run's.`,
+    });
+  });
+
+  it('refuses a side whose Stryker run threw', (t) => {
+    const { run, out } = setup(t);
+    const file = run('a', 'p', { command: [] });
+
+    writeFileSync(file, JSON.stringify({ project: 'p', sides: { command: { stryker: null } } }));
+
+    assert.throws(() => lzMerge([file], out), {
+      message: `The command side of ${file} wrote no report, so its command.mutation.json is not this run's.`,
+    });
   });
 });

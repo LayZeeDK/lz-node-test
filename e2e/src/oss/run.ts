@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   realpathSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -123,6 +124,13 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
   });
 }
 
+/** An earlier run's report or log left in `out` must not pass for this run's. */
+export function lzClearSideFiles(out: string, side: LzSide): void {
+  [`${side}.mutation.json`, `${side}.log`].forEach((name) => {
+    rmSync(join(out, name), { force: true });
+  });
+}
+
 /**
  * Each step is settled, so a throw in one still stops the sampler, ends leftovers, lets result.json be written and
  * lets the next side run.
@@ -130,6 +138,10 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
 async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunFolders): Promise<LzSideRun> {
   const errors: string[] = [];
   const settled = settledInto(errors);
+
+  await settled("Removing an earlier run's report and log", () => {
+    lzClearSideFiles(out, side);
+  });
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);

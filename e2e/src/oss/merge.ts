@@ -69,11 +69,16 @@ function readRun(file: string): LzRun {
 
   return {
     project: result['project'],
-    reports: ran.map((side) => ({
-      file,
-      side,
-      report: lzParseReport(readFileSync(join(dirname(file), `${side}.mutation.json`), 'utf8')),
-    })),
+    reports: ran.map((side) => {
+      const entry = sides[side];
+      const reportFile = `${side}.mutation.json`;
+
+      if (!lzIsRecord(entry) || !lzIsRecord(entry['stryker']) || entry['stryker']['reported'] !== true) {
+        throw new Error(`The ${side} side of ${file} wrote no report, so its ${reportFile} is not this run's.`);
+      }
+
+      return { file, side, report: lzParseReport(readFileSync(join(dirname(file), reportFile), 'utf8')) };
+    }),
   };
 }
 
