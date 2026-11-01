@@ -48,12 +48,16 @@ export function lzCompare(lz: LzReport, command: LzReport): LzVerdict[] {
   }));
 }
 
+export function lzMutantKey(
+  file: string,
+  { line, column, endLine, endColumn, mutator, replacement }: LzMutantDetail,
+): string {
+  return `${file}:${line}:${column}-${endLine}:${endColumn} ${mutator} ${replacement.replaceAll(/\s+/g, ' ')}`;
+}
+
 function statusesOf(report: LzReport): Map<string, LzMutantStatus> {
   const entries = [...report].flatMap(([file, mutants]) =>
-    mutants.map(({ line, column, endLine, endColumn, mutator, replacement, status }): [string, LzMutantStatus] => [
-      `${file}:${line}:${column}-${endLine}:${endColumn} ${mutator} ${replacement.replaceAll(/\s+/g, ' ')}`,
-      status,
-    ]),
+    mutants.map((mutant): [string, LzMutantStatus] => [lzMutantKey(file, mutant), mutant.status]),
   );
   const statuses = new Map(entries);
 

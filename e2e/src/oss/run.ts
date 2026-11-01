@@ -28,6 +28,7 @@ import {
   lzOssRunPrefix,
   lzParseOptions,
   lzSides,
+  lzStrykerArgs,
   lzStrykerConfig,
   type LzSide,
 } from './options.ts';
@@ -44,6 +45,8 @@ interface LzOssHeader {
   readonly platform: string;
   readonly concurrency: number;
   readonly timeLimitMinutes: number;
+  /** The `--mutate` patterns; empty when the run mutated the project's whole set. */
+  readonly mutate: readonly string[];
   readonly tarballs: readonly string[];
   readonly startedAt: string;
 }
@@ -129,6 +132,7 @@ const header: LzOssHeader = {
   platform: `${process.platform}-${process.arch}`,
   concurrency: options.concurrency,
   timeLimitMinutes: options.timeLimitMinutes,
+  mutate: options.mutate,
   tarballs: tarballs.map((tarball) => basename(tarball)),
   startedAt: new Date().toISOString(),
 };
@@ -161,7 +165,14 @@ async function runSide(side: LzSide): Promise<LzSideRun> {
   const excluded = new Set([sampler.pid]);
   const started = performance.now();
   const run = await settled('Stryker run', () =>
-    lzStryker(dir, configFile(side), options.concurrency, runTmp, options.timeLimitMinutes * 60_000),
+    lzStryker(
+      dir,
+      configFile(side),
+      options.concurrency,
+      runTmp,
+      options.timeLimitMinutes * 60_000,
+      lzStrykerArgs(options.mutate),
+    ),
   );
   const wallMs = Math.round(performance.now() - started);
   const stopped = await settled('Sampler', () => sampler.stop());

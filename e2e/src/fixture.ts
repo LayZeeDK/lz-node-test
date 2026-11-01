@@ -119,13 +119,14 @@ function reportOf(run: LzStrykerRun): LzReport {
   return run.report;
 }
 
-/** Runs `stryker run` in `dir` with `tmp`, which must exist, as its temporary directory. */
+/** Runs `stryker run` in `dir` with `tmp`, which must exist, as its temporary directory, and `args` appended. */
 export async function lzStryker(
   dir: string,
   configFile: string,
   concurrency: number,
   tmp = join(dir, 'tmp'),
   timeoutMs = lzStrykerTimeoutMs,
+  args: readonly string[] = [],
 ): Promise<LzStrykerRun> {
   const report = join(dir, lzReportFile);
   const before = new Set(readdirSync(tmp));
@@ -134,7 +135,7 @@ export async function lzStryker(
   rmSync(report, { force: true });
   const { exitCode, stdout, stderr, timedOut } = await lzExec(
     process.execPath,
-    [strykerBin, 'run', configFile, '--concurrency', String(concurrency), '--reporters', 'clear-text,json'],
+    [strykerBin, 'run', configFile, '--concurrency', String(concurrency), '--reporters', 'clear-text,json', ...args],
     { cwd: dir, env: consumerEnv(tmp), timeoutMs },
   );
   const outcome: LzStrykerOutcome = {

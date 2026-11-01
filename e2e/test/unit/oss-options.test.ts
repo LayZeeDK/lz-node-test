@@ -12,6 +12,7 @@ import {
   lzOssUsage,
   lzParseMergeOptions,
   lzParseOptions,
+  lzStrykerArgs,
   lzStrykerConfig,
   lzStrykerOptions,
   type LzOssProject,
@@ -49,6 +50,7 @@ describe('lzParseOptions', () => {
         out: 'D:/out',
         concurrency: 5,
         sides: ['lz', 'command'],
+        mutate: [],
         tarballs: undefined,
         prepareOnly: false,
         timeLimitMinutes: 15,
@@ -72,6 +74,22 @@ describe('lzParseOptions', () => {
   it('refuses a side it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--side', 'both']), {
       message: /--side is lz or command\.$/,
+    });
+  });
+
+  it('reads each --mutate, and none without it', () => {
+    assert.deepEqual(
+      [
+        lzParseOptions(required).mutate,
+        lzParseOptions([...required, '--mutate', 'index.js:3:1-3:9', '--mutate', 'lib/a.js']).mutate,
+      ],
+      [[], ['index.js:3:1-3:9', 'lib/a.js']],
+    );
+  });
+
+  it('refuses a --mutate pattern with a comma, which Stryker would split', () => {
+    assert.throws(() => lzParseOptions([...required, '--mutate', 'lib/{a,b}.js']), {
+      message: /--mutate takes one pattern without a comma; repeat it for more\.$/,
     });
   });
 
@@ -160,8 +178,23 @@ describe('lzParseOptions', () => {
     assert.match(lzOssUsage, /--merge <result\.json>\.\.\. --out <folder>/);
   });
 
+  it('names --mutate in the usage, with the column to widen a range by on each side', () => {
+    assert.match(lzOssUsage, /\[--mutate <pattern>\]\.\.\./);
+    assert.match(lzOssUsage, /one column on each side/);
+  });
+
   it('refuses an option it does not know', () => {
     assert.throws(() => lzParseOptions([...required, '--sides', 'lz']), { code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION' });
+  });
+});
+
+describe('lzStrykerArgs', () => {
+  it('passes nothing without --mutate, as the configuration selects the files', () => {
+    assert.deepEqual(lzStrykerArgs([]), []);
+  });
+
+  it('passes the patterns to stryker run as one comma-separated --mutate', () => {
+    assert.deepEqual(lzStrykerArgs(['index.js:3:1-3:9', 'lib/a.js']), ['--mutate', 'index.js:3:1-3:9,lib/a.js']);
   });
 });
 

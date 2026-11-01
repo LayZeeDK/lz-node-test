@@ -3,9 +3,11 @@ import { dirname, join } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
-import { lzComparison, lzScore, type LzScore } from './verdicts.ts';
+import { lzComparison, lzMutantKey, lzScore, type LzScore } from './verdicts.ts';
 
 interface LzSideReport {
+  /** The result.json it came from. */
+  readonly file: string;
   readonly side: LzSide;
   readonly report: LzReport;
 }
@@ -59,20 +61,41 @@ function readRun(file: string): LzRun {
   return {
     project: result['project'],
     reports: ran.map((side) => ({
+      file,
       side,
       report: lzParseReport(readFileSync(join(dirname(file), `${side}.mutation.json`), 'utf8')),
     })),
   };
 }
 
+/** One report of all the side's batches, or undefined when no run holds the side. */
 function reportOf(reports: readonly LzSideReport[], side: LzSide): LzReport | undefined {
   const ofSide = reports.filter((report) => report.side === side);
 
-  if (ofSide.length > 1) {
-    throw new Error(`--merge takes one run of each side; ${ofSide.length} hold the ${side} side.`);
+  if (ofSide.length === 0) {
+    return undefined;
   }
 
-  return ofSide[0]?.report;
+  const holders = new Map<string, string>();
+
+  ofSide.forEach(({ file, report }) => {
+    report.forEach((mutants, path) => {
+      mutants.forEach((mutant) => {
+        const key = lzMutantKey(path, mutant);
+        const holder = holders.get(key);
+
+        // Two mutants at one key inside one report are for the comparison to refuse.
+        if (holder !== undefined && holder !== file) {
+          throw new Error(`The ${side} side of ${holder} and ${file} both hold ${key}; batches must not overlap.`);
+        }
+
+        holders.set(key, file);
+      });
+    });
+  });
+  const paths = new Set(ofSide.flatMap(({ report }) => [...report.keys()]));
+
+  return new Map([...paths].map((path) => [path, ofSide.flatMap(({ report }) => report.get(path) ?? [])]));
 }
 
 function scoreOf(report: LzReport): LzScore & { readonly mutants: number } {

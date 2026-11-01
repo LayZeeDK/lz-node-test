@@ -20,6 +20,8 @@ export interface LzOssOptions {
   readonly concurrency: number;
   /** The sides to run, in order; both unless `--side` names one. */
   readonly sides: readonly LzSide[];
+  /** Patterns or ranges that replace the project's `mutate` set; empty to mutate the whole set. */
+  readonly mutate: readonly string[];
   /** A folder of `.tgz` files to install instead of packing the workspace. */
   readonly tarballs: string | undefined;
   /** Install and write the configurations, keep the copy, and run no Stryker. */
@@ -99,10 +101,15 @@ export interface LzMergeOptions {
 
 export const lzOssUsage =
   'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
-  '[--side <lz|command>] [--tarballs <folder>] [--prepare-only] [--time-limit-minutes <n>, default 15] [--help]\n' +
+  '[--side <lz|command>] [--mutate <pattern>]... [--tarballs <folder>] [--prepare-only] ' +
+  '[--time-limit-minutes <n>, default 15] [--help]\n' +
   '       node e2e/src/oss/main.ts --merge <result.json>... --out <folder>\n' +
-  '  --side   runs that side only and compares nothing; without it both sides run and are compared.\n' +
-  "  --merge  compares the sides of earlier runs from their result.json, each read with its sides' reports beside it.";
+  '  --side    runs that side only and compares nothing; without it both sides run and are compared.\n' +
+  "  --mutate  replaces the project's mutate set for this run; passed to stryker run as --mutate. To select the\n" +
+  '            mutant at a mutation.json position, widen the range by one column on each side:\n' +
+  '            file.js:12:4-12:20 for a mutant at 12:5-12:19.\n' +
+  "  --merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside\n" +
+  '            it. Batches of one side merge into one; a mutant in two batches is refused.';
 const positiveInteger = /^[1-9]\d*$/;
 
 export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {
@@ -120,6 +127,11 @@ export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {
   return { merge: values.merge, out: values.out };
 }
 
+/** The arguments `stryker run` gets beside its config file, concurrency and reporters. */
+export function lzStrykerArgs(mutate: readonly string[]): string[] {
+  return mutate.length === 0 ? [] : ['--mutate', mutate.join(',')];
+}
+
 export function lzWantsHelp(args: readonly string[]): boolean {
   return args.includes('--help') || args.includes('-h');
 }
@@ -133,6 +145,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
       out: { type: 'string' },
       concurrency: { type: 'string' },
       side: { type: 'string' },
+      mutate: { type: 'string', multiple: true, default: [] },
       tarballs: { type: 'string' },
       'prepare-only': { type: 'boolean', default: false },
       'time-limit-minutes': { type: 'string', default: '15' },
@@ -165,12 +178,17 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     throw new Error(`${lzOssUsage}\n--side is lz or command.`);
   }
 
+  if (values.mutate.some((pattern) => pattern.includes(','))) {
+    throw new Error(`${lzOssUsage}\n--mutate takes one pattern without a comma; repeat it for more.`);
+  }
+
   return {
     project,
     source,
     out,
     concurrency: Number(concurrency),
     sides: side === undefined ? lzSides : [side],
+    mutate: values.mutate,
     tarballs,
     prepareOnly: values['prepare-only'],
     timeLimitMinutes: Number(timeLimitMinutes),

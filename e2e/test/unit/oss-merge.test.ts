@@ -114,11 +114,46 @@ describe('lzMerge', () => {
     });
   });
 
-  it('refuses two runs of one side', (t) => {
+  it('merges batches of one side into one before it compares', (t) => {
     const { run, out } = setup(t);
+    const batches = [
+      run('lz-1', 'p', { lz: [{ line: 1, status: 'Killed' }] }),
+      run('lz-2', 'p', { lz: [{ line: 2, status: 'Survived' }] }),
+      run('command', 'p', {
+        command: [
+          { line: 1, status: 'Killed' },
+          { line: 2, status: 'Killed' },
+        ],
+      }),
+    ];
 
-    assert.throws(() => lzMerge([run('a', 'p', { lz: [] }), run('b', 'p', { lz: [] })], out), {
-      message: /^--merge takes one run of each side; 2 hold the lz side\.$/,
+    lzMerge(batches, out);
+
+    const result: unknown = JSON.parse(readFileSync(join(out, 'result.json'), 'utf8'));
+
+    assert.deepEqual(result, {
+      project: 'p',
+      mergedFrom: batches,
+      scores: {
+        lz: { counts: { Killed: 1, Survived: 1 }, score: 50, mutants: 2 },
+        command: { counts: { Killed: 2 }, score: 100, mutants: 2 },
+      },
+      compared: true,
+      disagreements: [{ mutant: 'index.js:2:3-2:9 StringLiteral ""', lz: 'Survived', command: 'Killed' }],
+      verdicts: [
+        { mutant: 'index.js:1:3-1:9 StringLiteral ""', lz: 'Killed', command: 'Killed' },
+        { mutant: 'index.js:2:3-2:9 StringLiteral ""', lz: 'Survived', command: 'Killed' },
+      ],
+    });
+  });
+
+  it('refuses a mutant that two batches of one side hold, and names both', (t) => {
+    const { run, out } = setup(t);
+    const first = run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] });
+    const second = run('b', 'p', { lz: [{ line: 1, status: 'Survived' }] });
+
+    assert.throws(() => lzMerge([first, second], out), {
+      message: `The lz side of ${first} and ${second} both hold index.js:1:3-1:9 StringLiteral ""; batches must not overlap.`,
     });
   });
 
