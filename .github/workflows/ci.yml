@@ -127,6 +127,19 @@ jobs:
       - run: >-
           npx nx run ${{ matrix.project }}:mutate-${{ matrix.config }} --incremental
           ${{ github.event_name == 'push' && '--force' || '' }}
+      # Also when the run fails its threshold: the job summary shows the score and the mutants per status.
+      - name: Summarize the mutation score
+        if: always()
+        env:
+          REPORT: reports/mutation/${{ matrix.project }}.${{ matrix.config }}.json
+          TITLE: ${{ matrix.project }}:mutate-${{ matrix.config }}
+        run: |
+          if [ ! -f "$REPORT" ]; then
+            echo "::warning::Stryker wrote no $REPORT, so the job summary has no mutation score for $TITLE."
+            echo "Stryker wrote no mutation report for $TITLE." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node tools/eslint-rules/mutation-summary.ts "$REPORT" "$TITLE" >> "$GITHUB_STEP_SUMMARY"
       # Also after a failure or a timeout: Stryker saves the results it has when it is interrupted.
       - if: always() && steps.key.outcome == 'success'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
