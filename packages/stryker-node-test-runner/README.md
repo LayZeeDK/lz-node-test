@@ -184,7 +184,11 @@ once per run as under `node --test`.
   next test talks to, counts toward every test that ran while it lived, so its mutants run all of those tests. If it
   also lived while no test ran, such as between two tests, its mutants count as reached from outside any test as
   well: by default they then run every test of the run, and with Stryker's `ignoreStatic` they run the tests it
-  lived through.
+  lived through. In the test file's own process, a callback that runs after its test ended, such as one passed to
+  `process.nextTick` or `setTimeout`, counts toward the test that is running when it runs, often the next one. Its
+  mutants then run that test, not the one that scheduled the callback, and can survive although `node --test` fails.
+  Stryker's runners for Jest and Vitest also count each hit toward the test running at the time. With `coverageAnalysis: 'all'`, every
+  mutant that tests reach runs every test.
 - **Static mutants.** Stryker calls a mutant static when code outside every test reaches it, such as the code that
   sets a module-level constant. A static mutant runs every test file, each in a fresh process. The mutant is active
   from the start of each process, also when Stryker's `--testFiles` limits the run. To skip static mutants, set
