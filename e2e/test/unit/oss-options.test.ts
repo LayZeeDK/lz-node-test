@@ -55,8 +55,19 @@ describe('lzParseOptions', () => {
         tarballs: undefined,
         prepareOnly: false,
         timeLimitMinutes: 15,
+        mutantTimeoutMs: undefined,
       },
     );
+  });
+
+  it("reads Stryker's extra time a mutant may take", () => {
+    assert.equal(lzParseOptions([...required, '--mutant-timeout-ms', '60000']).mutantTimeoutMs, 60_000);
+  });
+
+  it('refuses an extra time of 0', () => {
+    assert.throws(() => lzParseOptions([...required, '--mutant-timeout-ms', '0']), {
+      message: /--mutant-timeout-ms is a positive integer\.$/,
+    });
   });
 
   it('reads the tarball folder and --prepare-only', () => {
@@ -219,11 +230,23 @@ describe('lzParseOptions', () => {
 
 describe('lzStrykerArgs', () => {
   it('passes nothing without --mutate, as the configuration selects the files', () => {
-    assert.deepEqual(lzStrykerArgs([]), []);
+    assert.deepEqual(lzStrykerArgs({ mutate: [], mutantTimeoutMs: undefined }), []);
   });
 
   it('passes the patterns to stryker run as one comma-separated --mutate', () => {
-    assert.deepEqual(lzStrykerArgs(['index.js:3:1-3:9', 'lib/a.js']), ['--mutate', 'index.js:3:1-3:9,lib/a.js']);
+    assert.deepEqual(lzStrykerArgs({ mutate: ['index.js:3:1-3:9', 'lib/a.js'], mutantTimeoutMs: undefined }), [
+      '--mutate',
+      'index.js:3:1-3:9,lib/a.js',
+    ]);
+  });
+
+  it("passes the extra time to stryker run as --timeoutMS, which Stryker adds to each mutant's limit", () => {
+    assert.deepEqual(lzStrykerArgs({ mutate: ['lib/a.js'], mutantTimeoutMs: 60_000 }), [
+      '--mutate',
+      'lib/a.js',
+      '--timeoutMS',
+      '60000',
+    ]);
   });
 });
 

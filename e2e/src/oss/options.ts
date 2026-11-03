@@ -28,6 +28,8 @@ export interface LzOssOptions {
   readonly prepareOnly: boolean;
   /** How long each side's `stryker run` may take before the driver ends it. */
   readonly timeLimitMinutes: number;
+  /** Stryker's `timeoutMS`, added to each mutant's limit; Stryker's default without `--mutant-timeout-ms`. */
+  readonly mutantTimeoutMs: number | undefined;
 }
 
 export type LzStrykerOptions =
@@ -105,7 +107,7 @@ export interface LzMergeOptions {
 export const lzOssUsage =
   'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
   '[--side <lz|command>] [--mutate <pattern>]... [--tarballs <folder>] [--prepare-only] ' +
-  '[--time-limit-minutes <n>, default 15] [--help]\n' +
+  '[--time-limit-minutes <n>, default 15] [--mutant-timeout-ms <n>] [--help]\n' +
   '       node e2e/src/oss/main.ts --merge <result.json>... --out <folder>\n' +
   '  --side    runs that side only and compares nothing; without it both sides run and are compared.\n' +
   "  --mutate  replaces the project's mutate set for this run; passed to stryker run as --mutate. To select the\n" +
@@ -135,8 +137,11 @@ export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {
 }
 
 /** The arguments `stryker run` gets beside its config file, concurrency and reporters. */
-export function lzStrykerArgs(mutate: readonly string[]): string[] {
-  return mutate.length === 0 ? [] : ['--mutate', mutate.join(',')];
+export function lzStrykerArgs({ mutate, mutantTimeoutMs }: Pick<LzOssOptions, 'mutate' | 'mutantTimeoutMs'>): string[] {
+  return [
+    ...(mutate.length === 0 ? [] : ['--mutate', mutate.join(',')]),
+    ...(mutantTimeoutMs === undefined ? [] : ['--timeoutMS', String(mutantTimeoutMs)]),
+  ];
 }
 
 export type LzOssCommand =
@@ -171,11 +176,19 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
       tarballs: { type: 'string' },
       'prepare-only': { type: 'boolean', default: false },
       'time-limit-minutes': { type: 'string', default: '15' },
+      'mutant-timeout-ms': { type: 'string' },
     },
     strict: true,
     allowPositionals: false,
   });
-  const { source, out, concurrency, tarballs, 'time-limit-minutes': timeLimitMinutes } = values;
+  const {
+    source,
+    out,
+    concurrency,
+    tarballs,
+    'time-limit-minutes': timeLimitMinutes,
+    'mutant-timeout-ms': mutantTimeoutMs,
+  } = values;
   const project = projects.find(({ name }) => name === values.project);
 
   if (project === undefined) {
@@ -192,6 +205,10 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
 
   if (!positiveInteger.test(timeLimitMinutes)) {
     throw new Error(`${lzOssUsage}\n--time-limit-minutes is a positive integer.`);
+  }
+
+  if (mutantTimeoutMs !== undefined && !positiveInteger.test(mutantTimeoutMs)) {
+    throw new Error(`${lzOssUsage}\n--mutant-timeout-ms is a positive integer.`);
   }
 
   const side = lzSides.find((known) => known === values.side);
@@ -214,6 +231,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     tarballs,
     prepareOnly: values['prepare-only'],
     timeLimitMinutes: Number(timeLimitMinutes),
+    mutantTimeoutMs: mutantTimeoutMs === undefined ? undefined : Number(mutantTimeoutMs),
   };
 }
 

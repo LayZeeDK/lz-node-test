@@ -11,6 +11,8 @@ export interface LzOssHeader {
   readonly platform: string;
   readonly concurrency: number;
   readonly timeLimitMinutes: number;
+  /** Stryker's `timeoutMS` from `--mutant-timeout-ms`; null for Stryker's default. */
+  readonly mutantTimeoutMs: number | null;
   /** The `--mutate` patterns; empty when the run mutated the project's whole set. */
   readonly mutate: readonly string[];
   readonly tarballs: readonly string[];

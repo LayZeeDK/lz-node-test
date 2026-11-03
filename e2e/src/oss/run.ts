@@ -100,6 +100,7 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     platform: `${process.platform}-${process.arch}`,
     concurrency: options.concurrency,
     timeLimitMinutes: options.timeLimitMinutes,
+    mutantTimeoutMs: options.mutantTimeoutMs ?? null,
     mutate: options.mutate,
     tarballs: tarballs.map((tarball) => basename(tarball)),
     startedAt: new Date().toISOString(),
@@ -156,7 +157,7 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext
     lzStryker(dir, configFile(side), options.concurrency, {
       tmp: runTmp,
       timeoutMs: options.timeLimitMinutes * 60_000,
-      args: lzStrykerArgs(options.mutate),
+      args: lzStrykerArgs(options),
       logFile: join(out, `${side}.log`),
     }),
   );
