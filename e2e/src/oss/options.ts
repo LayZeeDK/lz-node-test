@@ -87,9 +87,10 @@ const projects: readonly LzOssProject[] = [
       'test/crlf.test.js',
       'test/error-objects.test.js',
     ],
+    // build-safe-sonic-boom.test.js writes a file into lib/utils while index.test.js lists that folder.
     command:
-      'node --test "lib/**/*.test.js" "test/basic.test.js" "test/boolean-options.test.js" "test/cli.test.js" ' +
-      '"test/crlf.test.js" "test/error-objects.test.js"',
+      'node --test --test-concurrency=1 "lib/**/*.test.js" "test/basic.test.js" "test/boolean-options.test.js" ' +
+      '"test/cli.test.js" "test/crlf.test.js" "test/error-objects.test.js"',
   },
 ];
 
