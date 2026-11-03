@@ -195,7 +195,7 @@ export default [
     },
   },
   {
-    // Test rules stay off src: @layzee/lz-node-test's src imports node:test as a library.
+    // Test rules stay off src: @layzee/node-test-extensions's src imports node:test as a library.
     files: test,
     plugins: { 'node-test': nodeTest },
     rules: {

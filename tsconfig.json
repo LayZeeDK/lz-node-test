@@ -10,7 +10,7 @@
       "path": "./packages/stryker-node-test-mutators"
     },
     {
-      "path": "./packages/lz-node-test"
+      "path": "./packages/node-test-extensions"
     },
     {
       "path": "./tools/eslint-rules"

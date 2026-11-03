@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { parseSync, traverse, types } from '@babel/core';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { returnAwait } from '../../src/return-await.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 

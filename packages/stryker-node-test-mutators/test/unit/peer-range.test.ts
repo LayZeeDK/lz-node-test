@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { inPeerRange, lzWarnOutsidePeerRange, parseCaretFloor } from '../../src/peer-range.ts';
 import pkg from '../../package.json' with { type: 'json' };
 

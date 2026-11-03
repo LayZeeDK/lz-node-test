@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import type { MutantCoverage } from '@stryker-mutator/api/core';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import type { ProcessRecord } from '../../src/record.ts';
 import {
   lzEndingSignals,

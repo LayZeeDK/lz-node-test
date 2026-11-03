@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { activeMutantEnv, envNames } from '../../src/record.ts';
 import { bodyOf, callable, rawBodyOf, testFile, testContext } from '../hook-core.fixtures.ts';
 import { callMember, member } from '../reflect.fixtures.ts';

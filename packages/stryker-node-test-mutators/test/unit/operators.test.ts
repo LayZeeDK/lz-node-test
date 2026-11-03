@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { operatorsFor, productionOperators, testOperators } from '../../src/operators.ts';
 
 describe('the catalogues', () => {

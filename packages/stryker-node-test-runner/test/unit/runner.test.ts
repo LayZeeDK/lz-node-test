@@ -8,8 +8,8 @@ import type { CoverageAnalysis, MutantCoverage } from '@stryker-mutator/api/core
 import type { Logger } from '@stryker-mutator/api/logging';
 import { TestStatus } from '@stryker-mutator/api/test-runner';
 
-import { lzTestEach } from '@layzee/lz-node-test';
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import { activeMutantEnv, envNames, type ProcessRecord, type RecordedTest } from '../../src/record.ts';
 import { callMember, construct, member } from '../reflect.fixtures.ts';
 import { activeMutant, dryRun, hookUrl, logger, strykerOptions } from '../runner.fixtures.ts';

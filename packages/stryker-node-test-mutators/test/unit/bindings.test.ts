@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { assertMethod } from '../../src/bindings.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 import type { Operator } from '../../src/operator.ts';

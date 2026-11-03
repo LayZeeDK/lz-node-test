@@ -4,7 +4,7 @@ import { describe } from 'node:test';
 import type { NodePath } from '@babel/core';
 import type { Location } from '@stryker-mutator/api/core';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { instrumentWith, mutantsOf } from '../mutants-of.fixtures.ts';
 import type { Operator } from '../../src/operator.ts';
 import { productionOperators, testOperators } from '../../src/operators.ts';

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import { checkMemory, watch, workersAllowed } from '../../src/watchdog.ts';
 
 const data = { limitMB: 200, recordPath: '/out/4321.memory.json' };

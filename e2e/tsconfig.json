@@ -9,7 +9,7 @@
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "references": [
     {
-      "path": "../packages/lz-node-test"
+      "path": "../packages/node-test-extensions"
     },
     {
       "path": "../packages/stryker-node-test-mutators"

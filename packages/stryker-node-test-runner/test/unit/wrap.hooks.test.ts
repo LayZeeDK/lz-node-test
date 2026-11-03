@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { envNames } from '../../src/record.ts';
 import { bodyOf, callable, hooksOf, rawBodyOf, testFile, testContext, type Fn } from '../hook-core.fixtures.ts';
 import { wrapped, type Subtests } from '../wrap.fixtures.ts';

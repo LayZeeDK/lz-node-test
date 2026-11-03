@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { isOwn, isRunning, lzDirPrefix, ownDir, removeDir, removeLeftDirs } from '../../src/dirs.ts';
 import { logger, noProcess } from '../runner.fixtures.ts';
 import { lzDryRunDir } from '../../src/dry-run-store.ts';

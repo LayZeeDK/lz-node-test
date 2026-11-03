@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import { lzDryRunStore, lzOwnDryRun } from '../../src/dry-run-store.ts';
 import { envNames } from '../../src/record.ts';
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { lzConsumerNodeOptions, lzNodeOptionArgs, lzTestOnly } from '../../src/node-options.ts';
 
 describe('lzNodeOptionArgs', () => {

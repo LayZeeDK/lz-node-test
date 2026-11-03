@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { parseSync, traverse, types, type NodePath } from '@babel/core';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { own, isOwn, toNodeMutator, type Operator } from '../../src/operator.ts';
 
 const node = types.emptyStatement();

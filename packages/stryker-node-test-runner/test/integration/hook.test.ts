@@ -9,7 +9,7 @@ import { describe, it, type TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import {
   installed,
   reporting,

@@ -4,7 +4,7 @@ import { PassThrough } from 'node:stream';
 import { describe, it } from 'node:test';
 import timers from 'node:timers/promises';
 
-import { lzTestEach, lzTestFor } from '@layzee/lz-node-test';
+import { lzTestEach, lzTestFor } from '@layzee/node-test-extensions';
 import { endGroup, groupOptions, processEnd } from '../../src/process-end.ts';
 
 describe('groupOptions', () => {

@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import {
   lzIsRecordName,
   lzNamesFile,

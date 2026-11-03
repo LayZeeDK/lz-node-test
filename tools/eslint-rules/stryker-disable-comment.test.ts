@@ -2,7 +2,7 @@ import parser from '@typescript-eslint/parser';
 import { RuleTester } from 'eslint';
 import { describe } from 'node:test';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import rule from './stryker-disable-comment.ts';
 
 /** With no global describe or it, as under node:test, RuleTester runs each case inside the calling test. */

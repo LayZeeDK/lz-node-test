@@ -6,7 +6,7 @@ import { describe, it, mock } from 'node:test';
 import timers from 'node:timers';
 import timersPromises from 'node:timers/promises';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { closed, idle, later, onEnd, onFinish, onIdle, onSent, pause, poll, share, total, wait } from './node-apis.ts';
 
 const ms = 10;

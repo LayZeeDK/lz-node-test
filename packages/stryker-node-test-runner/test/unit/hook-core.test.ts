@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import type { Position } from '@stryker-mutator/api/core';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import { recordEvents, redirectNodeTest, writesAllowed, type TestEvent } from '../../src/hook-core.ts';
 import type { RecordedTest } from '../../src/record.ts';
 import {

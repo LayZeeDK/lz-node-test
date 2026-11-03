@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { types } from '@babel/core';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { install } from '../../src/install.ts';
 import type { Instrumenter, InstrumentedMutant, ListedMutator, SourceFile } from '../../src/instrumenter.ts';
 import { isOwn, type Operator } from '../../src/operator.ts';

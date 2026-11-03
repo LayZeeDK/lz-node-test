@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import { lzMergeAsStatic, lzMergeCoverage, lzOverlapCoverage } from '../../src/coverage.ts';
 
 describe('lzMergeCoverage', () => {

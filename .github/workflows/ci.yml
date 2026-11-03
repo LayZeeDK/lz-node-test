@@ -66,14 +66,14 @@ jobs:
             mutated: '!tools/eslint-rules/*.test.ts'
             timeout: 30
           - project: lz-node-test
-            root: packages/lz-node-test
+            root: packages/node-test-extensions
             config: src
-            mutated: '!packages/lz-node-test/src/**'
+            mutated: '!packages/node-test-extensions/src/**'
             timeout: 30
           - project: lz-node-test
-            root: packages/lz-node-test
+            root: packages/node-test-extensions
             config: test-code
-            mutated: '!packages/lz-node-test/test/**/*.test.ts'
+            mutated: '!packages/node-test-extensions/test/**/*.test.ts'
             timeout: 30
           - project: stryker-node-test-mutators
             root: packages/stryker-node-test-mutators
@@ -112,7 +112,7 @@ jobs:
         run: >-
           echo "prefix=stryker-inc-${{ matrix.project }}.${{ matrix.config }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
-          'tsconfig.base.json', 'packages/lz-node-test/package.json', 'packages/lz-node-test/src/**',
+          'tsconfig.base.json', 'packages/node-test-extensions/package.json', 'packages/node-test-extensions/src/**',
           'packages/stryker-node-test-mutators/package.json', 'packages/stryker-node-test-runner/package.json',
           'packages/stryker-node-test-mutators/src/**', 'packages/stryker-node-test-runner/src/**',
           format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',

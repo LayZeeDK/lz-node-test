@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 import { types } from '@babel/core';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { corePackageJsons, resolveFromCore, type ListedMutator } from '../../src/instrumenter.ts';
 import type { NodeMutatorLike } from '../../src/operator.ts';
 

@@ -1,4 +1,4 @@
-# @layzee/lz-node-test
+# @layzee/node-test-extensions
 
 Table tests for `node:test`: `lzTestEach` and `lzTestFor` work like Vitest's `test.each` and `test.for`. It is ESM
 only, needs Node.js 22.18 or later, and is tested on Node.js 22 and 24.
@@ -6,7 +6,7 @@ only, needs Node.js 22.18 or later, and is tested on Node.js 22 and 24.
 ## Install
 
 ```sh
-npm install --save-dev @layzee/lz-node-test
+npm install --save-dev @layzee/node-test-extensions
 ```
 
 ## Write a table test
@@ -17,7 +17,7 @@ Each case of the table becomes one `node:test` test. The name formats the case a
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
-import { lzTestEach, lzTestFor } from '@layzee/lz-node-test';
+import { lzTestEach, lzTestFor } from '@layzee/node-test-extensions';
 
 describe('add', () => {
   // An array case is spread into the callback's arguments.

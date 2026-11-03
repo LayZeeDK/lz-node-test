@@ -13,7 +13,7 @@
   "include": ["src/**/*.ts", "src/**/*.json"],
   "references": [
     {
-      "path": "../lz-node-test/tsconfig.lib.json"
+      "path": "../node-test-extensions/tsconfig.lib.json"
     }
   ]
 }

@@ -6,7 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { DryRunStatus, MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import {
   complete,
   dryRun,

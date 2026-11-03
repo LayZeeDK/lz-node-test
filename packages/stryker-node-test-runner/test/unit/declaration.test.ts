@@ -5,7 +5,7 @@ import type { StrykerOptions } from '@stryker-mutator/api/core';
 import { PluginKind } from '@stryker-mutator/api/plugin';
 import ajvModule from 'ajv';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import * as entry from '../../src/index.ts';
 import { LzNodeTestTestRunner, strykerPlugins, strykerValidationSchema } from '../../src/index.ts';
 import { lzMinNodeVersion } from '../../src/runner.ts';

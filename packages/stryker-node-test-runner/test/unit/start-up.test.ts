@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import { logger } from '../runner.fixtures.ts';
 import { lzDryRunStore } from '../../src/dry-run-store.ts';
 import { lzOutsideMs, type RecordedTest } from '../../src/record.ts';

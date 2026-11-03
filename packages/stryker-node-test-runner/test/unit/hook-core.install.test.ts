@@ -5,8 +5,8 @@ import { pathToFileURL } from 'node:url';
 
 import type { InstrumenterContext } from '@stryker-mutator/api/core';
 
-import { lzTestEach } from '@layzee/lz-node-test';
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
+import { lzTestFor } from '@layzee/node-test-extensions';
 import {
   install,
   installed,

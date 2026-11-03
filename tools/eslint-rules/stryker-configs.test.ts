@@ -3,13 +3,13 @@ import { join } from 'node:path';
 import { describe } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 
 const workspaceRoot = join(import.meta.dirname, '..', '..');
 
 const configs: readonly (readonly [file: string, mutate: readonly string[]])[] = [
-  ['packages/lz-node-test/stryker.config.mjs', ['packages/lz-node-test/src/**/*.ts']],
-  ['packages/lz-node-test/stryker.test-code.config.mjs', ['packages/lz-node-test/test/**/*.test.ts']],
+  ['packages/node-test-extensions/stryker.config.mjs', ['packages/node-test-extensions/src/**/*.ts']],
+  ['packages/node-test-extensions/stryker.test-code.config.mjs', ['packages/node-test-extensions/test/**/*.test.ts']],
   [
     'packages/stryker-node-test-mutators/stryker.config.mjs',
     [
@@ -34,8 +34,8 @@ const ignorePatterns = ['/.claude', '/.nx', '/plans', '/e2e', '/reports'];
 
 // Each config's reports, named as the mutate-src and mutate-test-code targets read them.
 const reportNames: readonly (readonly [file: string, name: string])[] = [
-  ['packages/lz-node-test/stryker.config.mjs', 'lz-node-test.src'],
-  ['packages/lz-node-test/stryker.test-code.config.mjs', 'lz-node-test.test-code'],
+  ['packages/node-test-extensions/stryker.config.mjs', 'lz-node-test.src'],
+  ['packages/node-test-extensions/stryker.test-code.config.mjs', 'lz-node-test.test-code'],
   ['packages/stryker-node-test-mutators/stryker.config.mjs', 'stryker-node-test-mutators.src'],
   ['packages/stryker-node-test-mutators/stryker.test-code.config.mjs', 'stryker-node-test-mutators.test-code'],
   ['packages/stryker-node-test-runner/stryker.config.mjs', 'stryker-node-test-runner.src'],

@@ -273,7 +273,7 @@ With `--incremental`, Stryker stores each mutant's result and, on the next run, 
 code and tests did not change. Give each Stryker configuration its own `incrementalFile`: each run reads and rewrites
 the whole file, so a configuration that shares it would read another configuration's results as its own.
 
-On a configuration that mutates the `@layzee/lz-node-test` package's source (349 mutants, concurrency 6, median of 5
+On a configuration that mutates the `@layzee/node-test-extensions` package's source (349 mutants, concurrency 6, median of 5
 runs a side, Windows 11 ARM64, Node.js 24.18.1, Stryker 10.1.1):
 
 | Change since the stored run | Full run | Incremental run | Results reused |

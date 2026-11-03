@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import { lzTestFor } from '@layzee/lz-node-test';
+import { lzTestFor } from '@layzee/node-test-extensions';
 
 const src = (file: string) => JSON.stringify(pathToFileURL(join(import.meta.dirname, '../../src', file)).href);
 

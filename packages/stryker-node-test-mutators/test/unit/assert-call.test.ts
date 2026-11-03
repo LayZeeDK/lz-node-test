@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
-import { lzTestEach } from '@layzee/lz-node-test';
+import { lzTestEach } from '@layzee/node-test-extensions';
 import { assertCall } from '../../src/assert-call.ts';
 import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
 
