@@ -1,5 +1,5 @@
+import type { LzOperator } from '@layzee/stryker-mutator-core';
 import { isNodeAssertCall } from './bindings.ts';
-import type { Operator } from './operator.ts';
 
 /**
  * StatementRemoval for `await f();`: Stryker's CallExpression mutator removes `f();` but not an awaited call, so a
@@ -7,7 +7,7 @@ import type { Operator } from './operator.ts';
  * this one is dropped when another mutant shares the statement, as in `await f('x');`. An awaited `node:assert` call is
  * left to LzAssertStatement.
  */
-export const awaitStatement: Operator = {
+export const awaitStatement: LzOperator = {
   name: 'LzAwaitStatement',
   sample: 'await flush();\n',
   *mutate(path, t) {

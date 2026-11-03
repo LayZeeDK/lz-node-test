@@ -17,6 +17,7 @@
       "{workspaceRoot}/stryker.base.mjs",
       "{workspaceRoot}/tsconfig.base.json",
       "{workspaceRoot}/packages/stryker-node-test-runner/src/**/*",
+      "{workspaceRoot}/packages/stryker-mutator-core/src/**/*",
       "{workspaceRoot}/packages/stryker-node-test-mutators/src/**/*",
       "{workspaceRoot}/tools/eslint-rules/stryker-report.ts",
       "{workspaceRoot}/tools/eslint-rules/runtime-errors.ts",

@@ -4,13 +4,14 @@ import { describe, it } from 'node:test';
 import { types } from '@babel/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { install } from '../../src/install.ts';
-import type { Instrumenter, InstrumentedMutant, ListedMutator, SourceFile } from '../../src/instrumenter.ts';
-import { isOwn, type Operator } from '../../src/operator.ts';
+import { lzInstall, type LzInstallMode } from '../../src/install.ts';
+import type { LzInstrumentedMutant, LzInstrumenter, LzListedMutator, LzSourceFile } from '../../src/instrumenter.ts';
+import { lzIsOwn, type LzOperator } from '../../src/operator.ts';
 
 const sampleLocation = { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } };
+const packageName = 'lz-sample-mutators';
 
-function operator(name: string): Operator {
+function operator(name: string): LzOperator {
   return { name, sample: `${name}();`, *mutate() {} };
 }
 
@@ -20,10 +21,10 @@ function setup({
   version = '10.1.1',
   dir = '/stryker/instrumenter',
 }: { builtIns?: string[]; silent?: string[]; version?: string; dir?: string } = {}) {
-  const allMutators: ListedMutator[] = builtIns.map((name) => ({ name, *mutate() {} }));
-  const instrumented: SourceFile[][] = [];
+  const allMutators: LzListedMutator[] = builtIns.map((name) => ({ name, *mutate() {} }));
+  const instrumented: LzSourceFile[][] = [];
   const warnings: string[] = [];
-  const instrumenter: Instrumenter = {
+  const instrumenter: LzInstrumenter = {
     dir,
     version,
     allMutators,
@@ -36,17 +37,20 @@ function setup({
 
       return Promise.resolve(
         allMutators
-          .filter((mutator) => isOwn(mutator) && !silent.includes(mutator.name))
+          .filter((mutator) => lzIsOwn(mutator) && !silent.includes(mutator.name))
           .map(
-            (mutator): InstrumentedMutant => ({ mutatorName: mutator.name, replacement: '', location: sampleLocation }),
+            (mutator): LzInstrumentedMutant => ({
+              mutatorName: mutator.name,
+              replacement: '',
+              location: sampleLocation,
+            }),
           ),
       );
     },
   };
-  const run = (mode: 'add' | 'replace', operators: Operator[]) =>
-    install(
-      mode,
-      operators,
+  const run = (mode: LzInstallMode, operators: LzOperator[], corePeerRange = '^10.1.1') =>
+    lzInstall(
+      { packageName, corePeerRange, mode, operators },
       () => Promise.resolve([instrumenter]),
       (message) => warnings.push(message),
     );
@@ -55,7 +59,7 @@ function setup({
   return { run, names, instrumented, warnings, instrumenter };
 }
 
-describe('install', () => {
+describe('lzInstall', () => {
   it("adds the operators after Stryker's mutators, and instruments each one's sample", async () => {
     const { run, names, instrumented, warnings } = setup();
 
@@ -76,8 +80,10 @@ describe('install', () => {
     const second = setup({ silent: ['Alpha'], dir: '/stryker/copy' });
 
     await assert.rejects(
-      install('add', [operator('Alpha')], () => Promise.resolve([first.instrumenter, second.instrumenter])),
-      { message: /^stryker-node-test-mutators: the instrumenter in \/stryker\/copy made no mutants of Alpha / },
+      lzInstall({ packageName, corePeerRange: '^10.1.1', mode: 'add', operators: [operator('Alpha')] }, () =>
+        Promise.resolve([first.instrumenter, second.instrumenter]),
+      ),
+      { message: /^lz-sample-mutators: the instrumenter in \/stryker\/copy made no mutants of Alpha / },
     );
     assert.deepEqual(
       [first.names(), second.names()],
@@ -107,17 +113,17 @@ describe('install', () => {
     assert.deepEqual(names(), ['Beta', 'Gamma']);
   });
 
-  it('throws, naming the instrumenter and the operators that made no mutant', async () => {
+  it('throws, naming the calling package, the instrumenter and the operators that made no mutant', async () => {
     const { run } = setup({ silent: ['Alpha', 'Gamma'] });
 
     await assert.rejects(run('add', [operator('Alpha'), operator('Beta'), operator('Gamma')]), {
       message:
-        'stryker-node-test-mutators: the instrumenter in /stryker/instrumenter made no mutants of Alpha, Gamma from their ' +
+        'lz-sample-mutators: the instrumenter in /stryker/instrumenter made no mutants of Alpha, Gamma from their ' +
         'samples, so it does not read the mutator list this module added to. A bundled instrumenter does that.',
     });
   });
 
-  const refusals: readonly (readonly [string, 'add' | 'replace', readonly Operator[], string])[] = [
+  const refusals: readonly (readonly [string, LzInstallMode, readonly LzOperator[], string])[] = [
     ["a name of Stryker's", 'add', [operator('StringLiteral')], 'StringLiteral'],
     ["a name of Stryker's, also when it replaces them", 'replace', [operator('StringLiteral')], 'StringLiteral'],
     ['a name twice', 'add', [operator('Alpha'), operator('Beta'), operator('Alpha')], 'Alpha'],
@@ -135,7 +141,7 @@ describe('install', () => {
     const { run, names, instrumented } = setup({ builtIns: ['StringLiteral', 'CallExpression'] });
 
     await assert.rejects(run(mode, [...operators]), {
-      message: `stryker-node-test-mutators: another mutator already has the name ${name}.`,
+      message: `lz-sample-mutators: another mutator already has the name ${name}.`,
     });
     assert.deepEqual([names(), instrumented], [['StringLiteral', 'CallExpression'], []]);
   });
@@ -147,7 +153,7 @@ describe('install', () => {
 
       await assert.rejects(run('add', [operator('Alpha'), operator(name)]), {
         message:
-          "stryker-node-test-mutators: a mutator name has letters only, as Stryker's directives match no other " +
+          "lz-sample-mutators: a mutator name has letters only, as Stryker's directives match no other " +
           `character: ${JSON.stringify(name)}`,
       });
       assert.deepEqual(names(), ['StringLiteral']);
@@ -159,17 +165,28 @@ describe('install', () => {
 
     await assert.rejects(run('add', [operator('Node1'), operator('Alpha'), operator('Node-2')]), {
       message:
-        "stryker-node-test-mutators: a mutator name has letters only, as Stryker's directives match no other " +
+        "lz-sample-mutators: a mutator name has letters only, as Stryker's directives match no other " +
         'character: "Node1", "Node-2"',
     });
   });
 
-  it('passes on one warning for an instrumenter version outside the peer range', async () => {
-    const { run, warnings } = setup({ version: '0.0.0' });
+  it('refuses a peer range that is no caret range of a release before it changes the list', async () => {
+    const { run, names, instrumented } = setup();
 
-    await run('add', [operator('Alpha')]);
+    await assert.rejects(run('add', [operator('Alpha')], '~10.1.1'), {
+      message: 'lz-sample-mutators: ~10.1.1 is no caret range of a release.',
+    });
+    assert.deepEqual([names(), instrumented], [['StringLiteral'], []]);
+  });
 
-    assert.equal(warnings.length, 1);
-    assert.match(warnings.join('\n'), /, not 0\.0\.0\. /);
+  it("passes on one warning, naming the calling package, for an instrumenter version outside the caller's peer range", async () => {
+    const { run, warnings } = setup({ version: '10.1.1' });
+
+    await run('add', [operator('Alpha')], '^10.2.0');
+
+    assert.deepEqual(warnings, [
+      'lz-sample-mutators accepts @stryker-mutator/instrumenter 10.2.0 or a later 10.x, not 10.1.1. Its install ' +
+        'check passed, but it sees only this process, so mutants of its mutators may be missing.',
+    ]);
   });
 });

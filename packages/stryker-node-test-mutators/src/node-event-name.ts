@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
-import { importOf, isProcess, lzBuiltin, propertyName } from './bindings.ts';
-import type { Operator } from './operator.ts';
+import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { isProcess, lzBuiltin } from './bindings.ts';
 
 const listenMethods: ReadonlySet<string | undefined> = new Set([
   'on',
@@ -26,7 +26,7 @@ const streamSwaps: ReadonlyMap<string, readonly string[]> = new Map([
  * Swaps a lifecycle event that a listener waits for with one that fires at another time, such as a child process's
  * `exit`, which can fire while its output is still open, and its `close`.
  */
-export const nodeEventName: Operator = {
+export const nodeEventName: LzOperator = {
   name: 'LzNodeEventName',
   sample: "child.on('exit', () => {});\n",
   *mutate(path, t) {
@@ -60,14 +60,14 @@ function receiverOf(path: NodePath): types.Node | undefined {
   }
 
   const { callee } = call;
-  const listens = callee.type === 'MemberExpression' && listenMethods.has(propertyName(callee));
+  const listens = callee.type === 'MemberExpression' && listenMethods.has(lzPropertyName(callee));
 
   return listens && path.key === 0 ? callee.object : undefined;
 }
 
 function isEventsFunction(path: NodePath, callee: types.Node): boolean {
   if (callee.type === 'Identifier') {
-    const from = importOf(path, callee.name);
+    const from = lzImportOf(path, callee.name);
 
     return from !== undefined && nodeEvents.has(from.source) && isOnceOrOn(from.imported);
   }
@@ -76,13 +76,13 @@ function isEventsFunction(path: NodePath, callee: types.Node): boolean {
     return false;
   }
 
-  const from = importOf(path, callee.object.name);
+  const from = lzImportOf(path, callee.object.name);
 
   return (
     from !== undefined &&
     nodeEvents.has(from.source) &&
     (from.imported === undefined || from.imported === 'EventEmitter') &&
-    isOnceOrOn(propertyName(callee))
+    isOnceOrOn(lzPropertyName(callee))
   );
 }
 

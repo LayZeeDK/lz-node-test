@@ -1,0 +1,60 @@
+{
+  "name": "@layzee/stryker-mutator-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Adds custom mutators to the StrykerJS instrumenter, for packages of StrykerJS mutators",
+  "license": "MIT",
+  "keywords": [
+    "stryker",
+    "mutation-testing",
+    "mutator"
+  ],
+  "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/stryker-mutator-core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LayZeeDK/lz-node-test.git",
+    "directory": "packages/stryker-mutator-core"
+  },
+  "bugs": {
+    "url": "https://github.com/LayZeeDK/lz-node-test/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@lz-node-test/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\""
+  },
+  "peerDependencies": {
+    "@babel/core": "~8.0.0",
+    "@stryker-mutator/api": "^10.1.1",
+    "@stryker-mutator/core": "^10.1.1"
+  },
+  "devDependencies": {
+    "@layzee/node-test-extensions": "*"
+  },
+  "nx": {
+    "tags": [
+      "type:lib"
+    ],
+    "targets": {
+      "mutate": {},
+      "mutate-src": {},
+      "mutate-test-code": {}
+    }
+  }
+}

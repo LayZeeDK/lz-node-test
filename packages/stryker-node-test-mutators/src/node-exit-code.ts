@@ -1,13 +1,13 @@
 import type { NodePath, types } from '@babel/core';
 
-import { isProcess, propertyName } from './bindings.ts';
-import type { Operator } from './operator.ts';
+import { lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { isProcess } from './bindings.ts';
 
 /**
  * Flips the exit status that `process.exitCode = N` sets: a failure becomes a success and a success a failure. Stryker
  * mutates no number, so a CLI's exit status otherwise goes untested.
  */
-export const nodeExitCode: Operator = {
+export const nodeExitCode: LzOperator = {
   name: 'LzNodeExitCode',
   sample: 'process.exitCode = 1;\n',
   *mutate(path, t) {
@@ -27,5 +27,5 @@ export const nodeExitCode: Operator = {
 };
 
 function isExitCode(path: NodePath, target: types.Node): boolean {
-  return target.type === 'MemberExpression' && propertyName(target) === 'exitCode' && isProcess(path, target.object);
+  return target.type === 'MemberExpression' && lzPropertyName(target) === 'exitCode' && isProcess(path, target.object);
 }

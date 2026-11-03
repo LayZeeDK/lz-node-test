@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { parseSync, traverse, types, type NodePath } from '@babel/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { own, isOwn, toNodeMutator, type Operator } from '../../src/operator.ts';
+import { lzIsOwn, lzToNodeMutator, own, type LzOperator } from '../../src/operator.ts';
 
 const node = types.emptyStatement();
 
@@ -23,7 +23,7 @@ function programPath(): NodePath {
   return path;
 }
 
-const operator: Operator = {
+const operator: LzOperator = {
   name: 'Alpha',
   sample: '',
   *mutate() {
@@ -32,19 +32,29 @@ const operator: Operator = {
 };
 
 describe('own', () => {
-  it('is the same symbol in every copy of the package', () => {
-    assert.equal(own, Symbol.for('stryker-node-test-mutators'));
+  it("is the core's symbol, the same in every package that installs through the core", () => {
+    assert.equal(own, Symbol.for('@layzee/stryker-mutator-core'));
   });
 });
 
-describe('toNodeMutator', () => {
+describe('lzToNodeMutator', () => {
   lzTestEach([
     [false, [node]],
     [true, []],
   ])('gives, where isExpressionContext is %s, %j', (isExpressionContext, nodes) => {
-    const mutator = toNodeMutator(operator, types);
+    const mutator = lzToNodeMutator(operator, types);
 
     assert.deepEqual([...mutator.mutate(programPath(), { isExpressionContext })], nodes);
-    assert.equal(isOwn(mutator), true);
+    assert.equal(lzIsOwn(mutator), true);
+  });
+});
+
+describe('lzIsOwn', () => {
+  lzTestEach([
+    ["a mutator with the core's mark", { name: 'Alpha', [Symbol.for('@layzee/stryker-mutator-core')]: true }, true],
+    ["a mutator with a package's own mark", { name: 'Alpha', [Symbol.for('stryker-node-test-mutators')]: true }, false],
+    ["one of Stryker's mutators", { name: 'StringLiteral' }, false],
+  ])('takes %s as %s', (_title, mutator, expected) => {
+    assert.equal(lzIsOwn(mutator), expected);
   });
 });

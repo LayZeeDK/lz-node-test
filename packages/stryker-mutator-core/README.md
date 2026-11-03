@@ -1,0 +1,40 @@
+# @layzee/stryker-mutator-core
+
+The install layer that packages of [StrykerJS](https://stryker-mutator.io/) mutators share, such as
+[`@layzee/stryker-node-test-mutators`](../stryker-node-test-mutators/README.md). It puts mutation operators into the
+instrumenter of the Stryker that runs it, and has the Babel helpers that such operators use. It is ESM only, needs
+Node.js 22.18 or later, and is tested on Node.js 22 and 24.
+
+## Install
+
+```sh
+npm install @layzee/stryker-mutator-core
+```
+
+`@stryker-mutator/core`, `@stryker-mutator/api` and `@babel/core` are peer dependencies. Stryker has no plugin kind for
+mutators, so a package of mutators calls `lzInstall` from a module that the Stryker configuration file imports:
+
+```js
+import { lzInstall } from '@layzee/stryker-mutator-core';
+
+import { operators } from './operators.js';
+
+await lzInstall({ packageName: 'my-mutators', corePeerRange: '^10.1.1', mode: 'add', operators });
+```
+
+- `packageName` starts each error and warning.
+- `corePeerRange` is the calling package's peer range of `@stryker-mutator/core`, a caret range of a release.
+- `mode` is `add`, which adds the operators to Stryker's mutators, or `replace`, which removes Stryker's mutators
+  first.
+- `operators` are `LzOperator` objects: a name of letters only, a sample module in which the operator makes a mutant,
+  and a `mutate` function that maps a Babel path to replacement nodes.
+
+`lzInstall` puts the operators into every copy of the instrumenter that the process may run, then instruments each
+operator's sample with each copy and throws if one makes no mutant. With an instrumenter version outside
+`corePeerRange` that passes that check, it logs a warning to `console.warn` that mutants may be missing. It changes the
+instrumenter's list of mutators through two files that `@stryker-mutator/instrumenter` does not export,
+`dist/src/mutators/mutate.js` and `dist/src/transformers/babel-transformer.js`. A Stryker release that moves or changes
+them stops the run with an error that names the file.
+
+Every mutator that `lzInstall` puts into the list carries the symbol `Symbol.for('@layzee/stryker-mutator-core')`, and
+`lzIsOwn` tells such a mutator from one of Stryker's.

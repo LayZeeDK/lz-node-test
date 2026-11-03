@@ -1,13 +1,13 @@
 import type { NodePath } from '@babel/core';
 
-import type { Operator } from './operator.ts';
+import type { LzOperator } from '@layzee/stryker-mutator-core';
 
 /**
  * `return await x` becomes `return x` in a `try` block, where the `catch` and `finally` then no longer wait for `x` to
  * settle, and in a `catch` block that a `finally` block follows, which then no longer waits. An async generator is left
  * out: its `return` awaits the value either way.
  */
-export const returnAwait: Operator = {
+export const returnAwait: LzOperator = {
   name: 'LzReturnAwait',
   sample:
     'export async function read(load: () => Promise<number>) {\n  try {\n    return await load();\n  } catch {\n    return 0;\n  }\n}\n',

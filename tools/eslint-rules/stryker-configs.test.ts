@@ -10,6 +10,8 @@ const workspaceRoot = join(import.meta.dirname, '..', '..');
 const configs: readonly (readonly [file: string, mutate: readonly string[]])[] = [
   ['packages/node-test-extensions/stryker.config.mjs', ['packages/node-test-extensions/src/**/*.ts']],
   ['packages/node-test-extensions/stryker.test-code.config.mjs', ['packages/node-test-extensions/test/**/*.test.ts']],
+  ['packages/stryker-mutator-core/stryker.config.mjs', ['packages/stryker-mutator-core/src/**/*.ts']],
+  ['packages/stryker-mutator-core/stryker.test-code.config.mjs', ['packages/stryker-mutator-core/test/**/*.test.ts']],
   [
     'packages/stryker-node-test-mutators/stryker.config.mjs',
     [
@@ -36,6 +38,8 @@ const ignorePatterns = ['/.claude', '/.nx', '/plans', '/e2e', '/reports'];
 const reportNames: readonly (readonly [file: string, name: string])[] = [
   ['packages/node-test-extensions/stryker.config.mjs', '@layzee/node-test-extensions.src'],
   ['packages/node-test-extensions/stryker.test-code.config.mjs', '@layzee/node-test-extensions.test-code'],
+  ['packages/stryker-mutator-core/stryker.config.mjs', '@layzee/stryker-mutator-core.src'],
+  ['packages/stryker-mutator-core/stryker.test-code.config.mjs', '@layzee/stryker-mutator-core.test-code'],
   ['packages/stryker-node-test-mutators/stryker.config.mjs', '@layzee/stryker-node-test-mutators.src'],
   ['packages/stryker-node-test-mutators/stryker.test-code.config.mjs', '@layzee/stryker-node-test-mutators.test-code'],
   ['packages/stryker-node-test-runner/stryker.config.mjs', '@layzee/stryker-node-test-runner.src'],

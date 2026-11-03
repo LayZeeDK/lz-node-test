@@ -1,5 +1,3 @@
-import { lzPackageName } from './package-name.ts';
-
 /** Every function is assignable to it, and `Reflect.apply` and `Reflect.construct` call it. */
 export type AnyFunction = (...args: never) => unknown;
 
@@ -32,7 +30,7 @@ export function member<T>(value: unknown, key: string, check: (member: unknown) 
   const found: unknown = isObject(value) ? Reflect.get(value, key) : undefined;
 
   if (!check(found)) {
-    throw new Error(`${lzPackageName}: ${source} has no ${key} of the shape this module reads.`);
+    throw new Error(`stryker-mutator-core: ${source} has no ${key} of the shape this module reads.`);
   }
 
   return found;

@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
-import { assertMethod, importOf, isTestContext, propertyName } from './bindings.ts';
-import type { Operator } from './operator.ts';
+import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { assertMethod, isTestContext } from './bindings.ts';
 
 const message = 'Stryker';
 const testFunctions: ReadonlySet<string | undefined> = new Set(['it', 'test']);
@@ -20,7 +20,7 @@ const matcherTypes: ReadonlySet<string> = new Set([
  * `expectFailure` names what the failure must match, throw an unrelated error, so a survivor is a validator that
  * accepts any error.
  */
-export const assertValidator: Operator = {
+export const assertValidator: LzOperator = {
   name: 'LzAssertValidator',
   sample: "import assert from 'node:assert/strict';\n\nassert.throws(() => {}, /x/);\n",
   *mutate(path, t) {
@@ -119,22 +119,26 @@ function keyOf(property: types.ObjectExpression['properties'][number]): string |
  * nothing, so a mutant there would survive whatever the matcher.
  */
 function isNodeTest(path: NodePath, callee: types.Node): boolean {
-  const test = callee.type === 'MemberExpression' && propertyName(callee) === 'only' ? callee.object : callee;
+  const test = callee.type === 'MemberExpression' && lzPropertyName(callee) === 'only' ? callee.object : callee;
 
   if (test.type === 'Identifier') {
-    return isTestImport(importOf(path, test.name));
+    return isTestImport(lzImportOf(path, test.name));
   }
 
-  if (test.type !== 'MemberExpression' || test.object.type !== 'Identifier' || !testFunctions.has(propertyName(test))) {
+  if (
+    test.type !== 'MemberExpression' ||
+    test.object.type !== 'Identifier' ||
+    !testFunctions.has(lzPropertyName(test))
+  ) {
     return false;
   }
 
-  const from = importOf(path, test.object.name);
+  const from = lzImportOf(path, test.object.name);
 
-  return from === undefined ? propertyName(test) === 'test' && isTestContext(path, test.object) : isTestImport(from);
+  return from === undefined ? lzPropertyName(test) === 'test' && isTestContext(path, test.object) : isTestImport(from);
 }
 
 /** node:test's default or namespace import, or its `it` or `test`, which also carry the other test functions. */
-function isTestImport(from: ReturnType<typeof importOf>): boolean {
+function isTestImport(from: ReturnType<typeof lzImportOf>): boolean {
   return from?.source === 'node:test' && (from.imported === undefined || testFunctions.has(from.imported));
 }

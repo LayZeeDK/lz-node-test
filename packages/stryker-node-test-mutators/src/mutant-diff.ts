@@ -1,15 +1,23 @@
 import { readFileSync } from 'node:fs';
 import { relative, sep } from 'node:path';
 
-import { resolveFromCore, type Instrumenter, type InstrumentedMutant } from './instrumenter.ts';
-import { toNodeMutator, type Operator } from './operator.ts';
+import {
+  lzResolveFromCore,
+  lzToNodeMutator,
+  type LzInstrumentedMutant,
+  type LzInstrumenter,
+  type LzOperator,
+} from '@layzee/stryker-mutator-core';
 
 interface MutantDiff {
   readonly added: readonly string[];
   readonly removed: readonly string[];
 }
 
-export function mutantDiff(before: readonly InstrumentedMutant[], after: readonly InstrumentedMutant[]): MutantDiff {
+export function mutantDiff(
+  before: readonly LzInstrumentedMutant[],
+  after: readonly LzInstrumentedMutant[],
+): MutantDiff {
   const beforeLines = before.map(line);
   const afterLines = after.map(line);
 
@@ -22,15 +30,15 @@ export function mutantDiff(before: readonly InstrumentedMutant[], after: readonl
  */
 export async function corpusDiff(
   names: readonly string[],
-  operatorsFor: (name: string) => readonly Operator[],
-  resolve: () => Promise<Instrumenter> = resolveFromCore,
+  operatorsFor: (name: string) => readonly LzOperator[],
+  resolve: () => Promise<LzInstrumenter> = lzResolveFromCore,
   read: (name: string) => string = (name) => readFileSync(name, 'utf8'),
 ): Promise<string> {
   const instrumenter = await resolve();
   const sections: string[] = [];
 
   for (const name of names) {
-    const mutators = operatorsFor(name).map((operator) => toNodeMutator(operator, instrumenter.types));
+    const mutators = operatorsFor(name).map((operator) => lzToNodeMutator(operator, instrumenter.types));
     const files = [{ name, content: read(name) }];
     const before = await instrumenter.instrument(files, instrumenter.allMutators);
     const after = await instrumenter.instrument(files, [...instrumenter.allMutators, ...mutators]);
@@ -47,7 +55,7 @@ export async function corpusDiff(
   return sections.join('\n');
 }
 
-function line({ mutatorName, location, replacement }: InstrumentedMutant): string {
+function line({ mutatorName, location, replacement }: LzInstrumentedMutant): string {
   const { line: row, column } = location.start;
 
   return `${row + 1}:${column + 1} ${mutatorName} ${replacement.replace(/\s+/g, ' ')}`;

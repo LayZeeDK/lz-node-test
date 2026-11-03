@@ -4,11 +4,16 @@ import { describe, it } from 'node:test';
 
 import { types } from '@babel/core';
 
-import type { Instrumenter, InstrumentedMutant, SourceFile } from '../../src/instrumenter.ts';
+import type {
+  LzInstrumentedMutant,
+  LzInstrumenter,
+  LzNodeMutatorLike,
+  LzOperator,
+  LzSourceFile,
+} from '@layzee/stryker-mutator-core';
 import { corpusDiff, mutantDiff } from '../../src/mutant-diff.ts';
-import type { NodeMutatorLike, Operator } from '../../src/operator.ts';
 
-function mutant(mutatorName: string, line: number, column: number, replacement = ';'): InstrumentedMutant {
+function mutant(mutatorName: string, line: number, column: number, replacement = ';'): LzInstrumentedMutant {
   return { mutatorName, replacement, location: { start: { line, column }, end: { line, column: column + 1 } } };
 }
 
@@ -35,20 +40,20 @@ describe('mutantDiff', () => {
 describe('corpusDiff', () => {
   async function setup(names: string[]) {
     const read: string[] = [];
-    const instrumented: [SourceFile[], string[]][] = [];
-    const instrumenter: Instrumenter = {
+    const instrumented: [LzSourceFile[], string[]][] = [];
+    const instrumenter: LzInstrumenter = {
       dir: '/stryker/instrumenter',
       version: '10.1.1',
       allMutators: [{ name: 'StringLiteral', *mutate() {} }],
       setMutators() {},
       types,
-      instrument(files, mutators: readonly NodeMutatorLike[] = []) {
+      instrument(files, mutators: readonly LzNodeMutatorLike[] = []) {
         instrumented.push([[...files], mutators.map(({ name }) => name)]);
 
         return Promise.resolve(mutators.map(({ name }) => mutant(name, 0, 0)));
       },
     };
-    const own: Operator = { name: 'Own', sample: '', *mutate() {} };
+    const own: LzOperator = { name: 'Own', sample: '', *mutate() {} };
     const text = await corpusDiff(
       names,
       (name) => (name.includes('owned') ? [own] : []),
@@ -82,7 +87,7 @@ describe('corpusDiff', () => {
   });
 
   it('lists a mutant that an operator removes', async () => {
-    const instrumenter: Instrumenter = {
+    const instrumenter: LzInstrumenter = {
       dir: '/stryker/instrumenter',
       version: '10.1.1',
       allMutators: [],

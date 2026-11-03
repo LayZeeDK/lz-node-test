@@ -13,6 +13,9 @@
       "path": "./packages/node-test-extensions"
     },
     {
+      "path": "./packages/stryker-mutator-core"
+    },
+    {
       "path": "./tools/eslint-rules"
     },
     {

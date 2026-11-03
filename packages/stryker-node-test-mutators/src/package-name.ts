@@ -1,5 +1,5 @@
-/** The name that starts this package's messages and marks its mutators. */
+/** The name that starts this package's messages. */
 export const lzPackageName = 'stryker-node-test-mutators';
 
-/** This package's package.json, through the self-reference its exports allow. */
-export const lzOwnPackageJson = `@layzee/${lzPackageName}/package.json`;
+/** The peer range of `@stryker-mutator/core` in this package's package.json, which a test keeps equal. */
+export const lzCorePeerRange = '^10.1.1';

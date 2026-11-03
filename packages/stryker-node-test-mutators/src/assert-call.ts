@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
-import { assertMethod, awaited } from './bindings.ts';
-import type { BabelTypes, Operator } from './operator.ts';
+import { lzAwaited, type LzBabelTypes, type LzOperator } from '@layzee/stryker-mutator-core';
+import { assertMethod } from './bindings.ts';
 
 const message = 'Stryker: assertion reached';
 const asyncMethods: ReadonlySet<string> = new Set(['rejects', 'doesNotReject']);
@@ -15,11 +15,11 @@ const asyncMethods: ReadonlySet<string> = new Set(['rejects', 'doesNotReject']);
  * the others, a custom assertion added with `assert.register` included. There the original call is kept only for its
  * type and never runs.
  */
-export const assertCall: Operator = {
+export const assertCall: LzOperator = {
   name: 'LzAssertCall',
   sample: 'export function check(t: any) {\n  t.assert.ok(true);\n}\n',
   *mutate(path, t) {
-    if (path.isExpressionStatement() && assertionMethod(path, awaited(path.node.expression)) !== undefined) {
+    if (path.isExpressionStatement() && assertionMethod(path, lzAwaited(path.node.expression)) !== undefined) {
       yield t.blockStatement([t.cloneNode(path.node), t.throwStatement(error(t))]);
     }
 
@@ -35,11 +35,11 @@ export const assertCall: Operator = {
   },
 };
 
-function error(t: BabelTypes): types.NewExpression {
+function error(t: LzBabelTypes): types.NewExpression {
   return t.newExpression(t.identifier('Error'), [t.stringLiteral(message)]);
 }
 
-function failure(t: BabelTypes, method: string): types.CallExpression {
+function failure(t: LzBabelTypes, method: string): types.CallExpression {
   if (asyncMethods.has(method)) {
     return t.callExpression(t.memberExpression(t.identifier('Promise'), t.identifier('reject')), [error(t)]);
   }

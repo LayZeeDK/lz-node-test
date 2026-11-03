@@ -48,9 +48,11 @@
     "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\"",
     "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\""
   },
+  "dependencies": {
+    "@layzee/stryker-mutator-core": "*"
+  },
   "peerDependencies": {
     "@babel/core": "~8.0.0",
-    "@stryker-mutator/api": "^10.1.1",
     "@stryker-mutator/core": "^10.1.1"
   },
   "devDependencies": {

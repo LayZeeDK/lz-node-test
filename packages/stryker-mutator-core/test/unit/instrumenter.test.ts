@@ -8,8 +8,8 @@ import { pathToFileURL } from 'node:url';
 import { types } from '@babel/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { corePackageJsons, resolveFromCore, type ListedMutator } from '../../src/instrumenter.ts';
-import type { NodeMutatorLike } from '../../src/operator.ts';
+import { corePackageJsons, lzResolveFromCore, type LzListedMutator } from '../../src/instrumenter.ts';
+import type { LzNodeMutatorLike } from '../../src/operator.ts';
 
 const sampleLocation = { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } };
 
@@ -84,11 +84,11 @@ describe('corePackageJsons', () => {
   });
 });
 
-describe('resolveFromCore', () => {
+describe('lzResolveFromCore', () => {
   it("instruments with Stryker's mutators, or with the mutators given", async () => {
-    const instrumenter = await resolveFromCore();
+    const instrumenter = await lzResolveFromCore();
     const files = [{ name: 'sample.ts', content: "f('x');" }];
-    const own: NodeMutatorLike = {
+    const own: LzNodeMutatorLike = {
       name: 'Own',
       *mutate(path) {
         if (path.isStringLiteral()) {
@@ -97,7 +97,7 @@ describe('resolveFromCore', () => {
       },
     };
 
-    const mutants = async (mutators?: NodeMutatorLike[]) =>
+    const mutants = async (mutators?: LzNodeMutatorLike[]) =>
       (await instrumenter.instrument(files, mutators)).map(({ mutatorName, replacement }) => [
         mutatorName,
         replacement,
@@ -125,7 +125,7 @@ describe('resolveFromCore', () => {
   }
 
   const refusal = (source: string, key: string) =>
-    `stryker-node-test-mutators: ${source} has no ${key} of the shape this module reads.`;
+    `stryker-mutator-core: ${source} has no ${key} of the shape this module reads.`;
   const mutateFile = join('mutators', 'mutate.js');
   const babelFile = join('core', 'lib', 'index.js');
   const indexFile = join('dist', 'src', 'index.js');
@@ -164,7 +164,7 @@ describe('resolveFromCore', () => {
     ['Babel types without a builder', babelFile, { types: { ...types, stringLiteral: undefined } }, 'types'],
   ])('refuses an instrumenter with %s', async (_title, file, module, key) => {
     const { load, replaced } = loadingWith(file, module);
-    const resolving = resolveFromCore(corePackageJsons()[0], load);
+    const resolving = lzResolveFromCore(corePackageJsons()[0], load);
 
     await assert.rejects(resolving, { message: refusal(replaced.join(), key) });
   });
@@ -173,19 +173,19 @@ describe('resolveFromCore', () => {
     const older = Object.fromEntries(Object.entries(types).filter(([key]) => key !== 'tsTypeAnnotation'));
     const { load } = loadingWith(babelFile, { types: older });
 
-    const instrumenter = await resolveFromCore(corePackageJsons()[0], load);
+    const instrumenter = await lzResolveFromCore(corePackageJsons()[0], load);
 
     assert.equal(instrumenter.types, older);
   });
 
   it("replaces the contents of the instrumenter's own mutator list", async () => {
-    const listed: ListedMutator[] = [
+    const listed: LzListedMutator[] = [
       { name: 'First', *mutate() {} },
       { name: 'Second', *mutate() {} },
     ];
-    const own: ListedMutator = { name: 'Own', *mutate() {} };
+    const own: LzListedMutator = { name: 'Own', *mutate() {} };
     const { load } = loadingWith(mutateFile, { allMutators: listed });
-    const instrumenter = await resolveFromCore(corePackageJsons()[0], load);
+    const instrumenter = await lzResolveFromCore(corePackageJsons()[0], load);
 
     instrumenter.setMutators([own]);
 
@@ -220,7 +220,7 @@ describe('resolveFromCore', () => {
       return Promise.resolve({ allMutators: [], transformBabel() {}, Instrumenter() {}, types });
     };
 
-    await resolveFromCore(join(root, 'package.json'), load);
+    await lzResolveFromCore(join(root, 'package.json'), load);
 
     const instrumenter = join(root, 'node_modules', '@stryker-mutator', 'instrumenter');
 
@@ -269,7 +269,7 @@ describe('resolveFromCore', () => {
     ],
   ])('refuses %s', async (_title, instrumenterClass, message) => {
     const { load, replaced } = loadingWith(indexFile, { Instrumenter: instrumenterClass });
-    const instrumenter = await resolveFromCore(corePackageJsons()[0], load);
+    const instrumenter = await lzResolveFromCore(corePackageJsons()[0], load);
 
     await assert.rejects(instrumenter.instrument([{ name: 'sample.ts', content: "f('x');" }]), {
       message: message(replaced.join()),
@@ -277,7 +277,7 @@ describe('resolveFromCore', () => {
   });
 
   it('instruments a file whose directive names a mutator it does not apply, which Stryker warns about', async () => {
-    const instrumenter = await resolveFromCore();
+    const instrumenter = await lzResolveFromCore();
     const content = "// Stryker disable next-line LzNodeTimerDelay: a directive for another catalogue\nf('x');";
 
     const mutants = await instrumenter.instrument([{ name: 'sample.ts', content }]);

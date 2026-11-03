@@ -8,39 +8,42 @@ import { pathToFileURL } from 'node:url';
 import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
 import { hasMember, isFunction, isNumber, isObject, isString, member } from './guards.ts';
-import { operatorBuilders, type BabelTypes } from './operator.ts';
+import { operatorBuilders, type LzBabelTypes } from './operator.ts';
 
 const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 const nothing = () => undefined;
 const silent = { debug: nothing, info: nothing, warn: nothing, isDebugEnabled: nothing };
 
-export interface SourceFile {
+export interface LzSourceFile {
   readonly name: string;
   readonly content: string;
 }
 
-export type InstrumentedMutant = Pick<Mutant, 'mutatorName' | 'replacement' | 'location'>;
+export type LzInstrumentedMutant = Pick<Mutant, 'mutatorName' | 'replacement' | 'location'>;
 
 /** A mutator of the instrumenter's list, Stryker's or this module's, as far as this module checks it. */
-export interface ListedMutator {
+export interface LzListedMutator {
   readonly name: string;
   readonly mutate: (...args: never) => unknown;
 }
 
-export interface Instrumenter {
+export interface LzInstrumenter {
   readonly dir: string;
   readonly version: string;
   /** The list that the instrumenter reads its mutators from each time it transforms a file. */
-  readonly allMutators: readonly ListedMutator[];
+  readonly allMutators: readonly LzListedMutator[];
   /** Replaces the contents of `allMutators`, in place, so the instrumenter reads the new list. */
-  setMutators(mutators: readonly ListedMutator[]): void;
+  setMutators(mutators: readonly LzListedMutator[]): void;
   /** The Babel types of the instrumenter's own @babel/core, to build the nodes it places. */
-  readonly types: BabelTypes;
-  instrument(files: readonly SourceFile[], mutators?: readonly ListedMutator[]): Promise<readonly InstrumentedMutant[]>;
+  readonly types: LzBabelTypes;
+  instrument(
+    files: readonly LzSourceFile[],
+    mutators?: readonly LzListedMutator[],
+  ): Promise<readonly LzInstrumentedMutant[]>;
 }
 
-export function resolveEachCore(): Promise<readonly Instrumenter[]> {
-  return Promise.all(corePackageJsons().map((corePackage) => resolveFromCore(corePackage)));
+export function resolveEachCore(): Promise<readonly LzInstrumenter[]> {
+  return Promise.all(corePackageJsons().map((corePackage) => lzResolveFromCore(corePackage)));
 }
 
 /**
@@ -96,10 +99,10 @@ function withDriveLetterOf(script: string, path: string): string {
  * `load` imports a file of the instrumenter or of its @babel/core. The instrumenter exports only its index, so these
  * modules have no importable types, and their members are checked before use.
  */
-export async function resolveFromCore(
+export async function lzResolveFromCore(
   corePackage: string = corePackageJsons()[0],
   load: (path: string) => Promise<unknown> = importFile,
-): Promise<Instrumenter> {
+): Promise<LzInstrumenter> {
   const fromCore = createRequire(corePackage);
   const packageJson = fromCore.resolve('@stryker-mutator/instrumenter/package.json');
   const dir = dirname(packageJson);
@@ -149,11 +152,11 @@ function importFile(path: string): Promise<unknown> {
   return import(pathToFileURL(path).href);
 }
 
-function isMutatorList(value: unknown): value is ListedMutator[] {
+function isMutatorList(value: unknown): value is LzListedMutator[] {
   return Array.isArray(value) && value.every(isListedMutator);
 }
 
-function isListedMutator(value: unknown): value is ListedMutator {
+function isListedMutator(value: unknown): value is LzListedMutator {
   return hasMember(value, 'name', isString) && hasMember(value, 'mutate', isFunction);
 }
 
@@ -161,15 +164,15 @@ function isListedMutator(value: unknown): value is ListedMutator {
  * Has a function for each member of the Babel types that the operators may call. The other members can differ, as when
  * the consumer's @babel/core is a newer patch than the instrumenter's.
  */
-function isBabelTypes(value: unknown): value is BabelTypes {
+function isBabelTypes(value: unknown): value is LzBabelTypes {
   return isObject(value) && operatorBuilders.every((key) => isFunction(Reflect.get(value, key)));
 }
 
-function isMutantList(value: unknown): value is InstrumentedMutant[] {
+function isMutantList(value: unknown): value is LzInstrumentedMutant[] {
   return Array.isArray(value) && value.every(isMutant);
 }
 
-function isMutant(value: unknown): value is InstrumentedMutant {
+function isMutant(value: unknown): value is LzInstrumentedMutant {
   return (
     hasMember(value, 'mutatorName', isString) &&
     hasMember(value, 'replacement', isString) &&

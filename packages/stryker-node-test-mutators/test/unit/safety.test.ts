@@ -5,8 +5,8 @@ import type { NodePath } from '@babel/core';
 import type { Location } from '@stryker-mutator/api/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
+import type { LzOperator } from '@layzee/stryker-mutator-core';
 import { instrumentWith, mutantsOf } from '../mutants-of.fixtures.ts';
-import type { Operator } from '../../src/operator.ts';
 import { productionOperators, testOperators } from '../../src/operators.ts';
 
 const operators = [...productionOperators, ...testOperators];
@@ -61,7 +61,7 @@ function textAt(source: string, { start, end }: Location): string {
     .join('\n');
 }
 
-async function newCallees(operator: Operator, source: string): Promise<string[][]> {
+async function newCallees(operator: LzOperator, source: string): Promise<string[][]> {
   const mutants = await instrumentWith(operator, source);
 
   return mutants.map(({ location, replacement }) => {
@@ -72,7 +72,7 @@ async function newCallees(operator: Operator, source: string): Promise<string[][
 }
 
 describe('safety', () => {
-  lzTestEach(operators.map((operator): readonly [string, Operator] => [operator.name, operator]))(
+  lzTestEach(operators.map((operator): readonly [string, LzOperator] => [operator.name, operator]))(
     '%s calls nothing new in its replacements but Error and Promise.reject',
     async (_name, operator) => {
       const found = await Promise.all(corpus.map((source) => newCallees(operator, source)));
@@ -86,7 +86,7 @@ describe('safety', () => {
     [
       'an operator that signals a process',
       'f();',
-      (t: Parameters<Operator['mutate']>[1]) =>
+      (t: Parameters<LzOperator['mutate']>[1]) =>
         t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('kill')), [
           t.memberExpression(t.identifier('process'), t.identifier('pid')),
           t.stringLiteral('SIGKILL'),
@@ -97,7 +97,7 @@ describe('safety', () => {
     [
       "the first design of LzAssertCall's arrow body, which fails through node:assert",
       "import assert from 'node:assert/strict';\n[1].forEach((n) => assert.ok(n));",
-      (t: Parameters<Operator['mutate']>[1]) =>
+      (t: Parameters<LzOperator['mutate']>[1]) =>
         t.callExpression(
           t.memberExpression(
             t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('getBuiltinModule')), [
@@ -111,7 +111,7 @@ describe('safety', () => {
       [['process.getBuiltinModule', 'fail']],
     ],
   ])('reports %s', async (_title, source, replacement, where, expected) => {
-    const unsafe: Operator = {
+    const unsafe: LzOperator = {
       name: 'Unsafe',
       sample: '',
       *mutate(path, t) {
@@ -126,7 +126,7 @@ describe('safety', () => {
 
   lzTestEach(
     operators.flatMap((operator) =>
-      targets.map((source): readonly [string, string, Operator] => [operator.name, source, operator]),
+      targets.map((source): readonly [string, string, LzOperator] => [operator.name, source, operator]),
     ),
   )('%s leaves %j alone', async (_name, source, operator) => {
     assert.deepEqual(await mutantsOf(operator, source), []);

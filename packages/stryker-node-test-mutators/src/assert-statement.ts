@@ -1,5 +1,5 @@
-import { awaited, isNodeAssertCall } from './bindings.ts';
-import type { Operator } from './operator.ts';
+import { lzAwaited, type LzOperator } from '@layzee/stryker-mutator-core';
+import { isNodeAssertCall } from './bindings.ts';
 
 /**
  * AssertionRemoval: removes a `node:assert` statement from production code. Stryker's CallExpression mutator removes a
@@ -9,7 +9,7 @@ import type { Operator } from './operator.ts';
  * which a `// Stryker disable` comment then says. That comment names CallExpression too: with this mutant ignored,
  * CallExpression's own removal of the statement comes back.
  */
-export const assertStatement: Operator = {
+export const assertStatement: LzOperator = {
   name: 'LzAssertStatement',
   sample: "import assert from 'node:assert/strict';\n\nassert.fail('unreachable');\n",
   *mutate(path, t) {
@@ -17,7 +17,7 @@ export const assertStatement: Operator = {
       return;
     }
 
-    const call = awaited(path.node.expression);
+    const call = lzAwaited(path.node.expression);
 
     if (call.type === 'CallExpression' && isNodeAssertCall(path, call)) {
       yield t.emptyStatement();

@@ -6,7 +6,8 @@
   "implicitDependencies": [
     "@layzee/node-test-extensions",
     "@layzee/stryker-node-test-runner",
-    "@layzee/stryker-node-test-mutators"
+    "@layzee/stryker-node-test-mutators",
+    "@layzee/stryker-mutator-core"
   ],
   "targets": {
     "test": {

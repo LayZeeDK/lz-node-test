@@ -1,6 +1,12 @@
 // A Stryker configuration file imports this module, so that an error in the install stops the run; Stryker only warns
 // when a module in `plugins` fails to load.
-import { install } from './install.ts';
+import { lzInstall } from '@layzee/stryker-mutator-core';
 import { productionOperators } from './operators.ts';
+import { lzCorePeerRange, lzPackageName } from './package-name.ts';
 
-await install('add', productionOperators);
+await lzInstall({
+  packageName: lzPackageName,
+  corePeerRange: lzCorePeerRange,
+  mode: 'add',
+  operators: productionOperators,
+});

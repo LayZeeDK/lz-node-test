@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
-import { importOf, lzBuiltin, propertyName } from './bindings.ts';
-import type { Operator } from './operator.ts';
+import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzBuiltin } from './bindings.ts';
 
 const timers: ReadonlySet<string | undefined> = new Set(['setTimeout', 'setInterval']);
 const nodeTimers = lzBuiltin('timers');
@@ -11,7 +11,7 @@ const nodeTimersPromises = lzBuiltin('timers/promises');
  * Moves a timer's delay by 1 ms each way. Node.js runs a delay below 1 after 1 ms, so the moves that leave a delay of
  * 0 or 1 at that are left out.
  */
-export const nodeTimerDelay: Operator = {
+export const nodeTimerDelay: LzOperator = {
   name: 'LzNodeTimerDelay',
   sample: 'setTimeout(() => {}, 10);\n',
   *mutate(path, t) {
@@ -39,7 +39,7 @@ function isDelay(path: NodePath): boolean {
 
 function delayIndex(path: NodePath, callee: types.Node): number | undefined {
   if (callee.type === 'Identifier') {
-    const from = importOf(path, callee.name);
+    const from = lzImportOf(path, callee.name);
 
     if (from === undefined) {
       return timers.has(callee.name) && !path.scope.hasBinding(callee.name) ? 1 : undefined;
@@ -52,8 +52,8 @@ function delayIndex(path: NodePath, callee: types.Node): number | undefined {
     return undefined;
   }
 
-  const from = importOf(path, callee.object.name);
-  const method = propertyName(callee);
+  const from = lzImportOf(path, callee.object.name);
+  const method = lzPropertyName(callee);
 
   if (from === undefined) {
     return undefined;
