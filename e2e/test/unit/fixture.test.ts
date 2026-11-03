@@ -10,6 +10,7 @@ import {
   lzMutant,
   lzMutants,
   lzRemoveDeadRunDirs,
+  lzStrykerCommand,
   lzStrykerTimeoutMs,
   type LzStrykerRun,
 } from '../../src/fixture.ts';
@@ -28,6 +29,25 @@ describe('lzConcurrency', () => {
 
   it('refuses zero', () => {
     assert.throws(() => lzConcurrency({ LZ_E2E_CONCURRENCY: '0' }), { message: /It is "0"\.$/ });
+  });
+});
+
+describe('lzStrykerCommand', () => {
+  it('reports in clear text and JSON, with the extra arguments last', () => {
+    assert.deepEqual(lzStrykerCommand('s.mjs', 3, ['--mutate', 'a.js'], false).slice(1), [
+      'run',
+      's.mjs',
+      '--concurrency',
+      '3',
+      '--reporters',
+      'clear-text,json',
+      '--mutate',
+      'a.js',
+    ]);
+  });
+
+  it("adds Stryker's progress line every 10 s when the run is followed through a log", () => {
+    assert.equal(lzStrykerCommand('s.mjs', 3, [], true)[6], 'clear-text,json,progress-append-only');
   });
 });
 

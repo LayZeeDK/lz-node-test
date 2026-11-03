@@ -157,6 +157,7 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext
       tmp: runTmp,
       timeoutMs: options.timeLimitMinutes * 60_000,
       args: lzStrykerArgs(options.mutate),
+      logFile: join(out, `${side}.log`),
     }),
   );
   const wallMs = Math.round(performance.now() - started);
@@ -173,11 +174,6 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext
       ending: await settled(`Ending ${leftover.pid}`, () => end(leftover.pid)),
     })),
   );
-  await settled('Log', () => {
-    if (run.ok) {
-      writeFileSync(join(out, `${side}.log`), run.value.output);
-    }
-  });
   await settled('Report copy', () => {
     if (run.ok && run.value.reported) {
       copyFileSync(join(dir, lzReportFile), join(out, `${side}.mutation.json`));
