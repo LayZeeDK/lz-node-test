@@ -1,4 +1,4 @@
-# @layzee/stryker-node-test-mutators
+# @layzee/stryker-node-mutators
 
 Extra [StrykerJS](https://stryker-mutator.io/) mutators for code that uses Node.js APIs and `node:assert`, plus a set
 for mutating test files. It is ESM only, needs Node.js 22.18 or later, and is tested on Node.js 22 and 24. It works
@@ -7,7 +7,7 @@ with any Stryker test runner.
 ## Install
 
 ```sh
-npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/stryker-node-test-mutators
+npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/stryker-node-mutators
 ```
 
 `@stryker-mutator/core` and `@babel/core` are peer dependencies, and `@stryker-mutator/api` is a peer dependency of
@@ -30,7 +30,7 @@ has no Stryker logger, so Stryker's `logLevel` and log file do not include them.
 Import the package at the top of your Stryker configuration file. The import adds the mutators to Stryker's own:
 
 ```js
-import '@layzee/stryker-node-test-mutators';
+import '@layzee/stryker-node-mutators';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
@@ -77,7 +77,7 @@ To check that your tests' assertions can fail, mutate the test files in a config
 `test-code` entry instead. It replaces Stryker's mutators with these:
 
 ```js
-import '@layzee/stryker-node-test-mutators/test-code';
+import '@layzee/stryker-node-mutators/test-code';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {

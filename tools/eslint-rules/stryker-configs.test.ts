@@ -13,16 +13,10 @@ const configs: readonly (readonly [file: string, mutate: readonly string[]])[] =
   ['packages/stryker-mutator-core/stryker.config.mjs', ['packages/stryker-mutator-core/src/**/*.ts']],
   ['packages/stryker-mutator-core/stryker.test-code.config.mjs', ['packages/stryker-mutator-core/test/**/*.test.ts']],
   [
-    'packages/stryker-node-test-mutators/stryker.config.mjs',
-    [
-      'packages/stryker-node-test-mutators/src/**/*.ts',
-      'packages/stryker-node-test-mutators/test/synthetic/node-apis.ts',
-    ],
+    'packages/stryker-node-mutators/stryker.config.mjs',
+    ['packages/stryker-node-mutators/src/**/*.ts', 'packages/stryker-node-mutators/test/synthetic/node-apis.ts'],
   ],
-  [
-    'packages/stryker-node-test-mutators/stryker.test-code.config.mjs',
-    ['packages/stryker-node-test-mutators/test/**/*.test.ts'],
-  ],
+  ['packages/stryker-node-mutators/stryker.test-code.config.mjs', ['packages/stryker-node-mutators/test/**/*.test.ts']],
   ['packages/stryker-node-test-runner/stryker.config.mjs', ['packages/stryker-node-test-runner/src/**/*.ts']],
   [
     'packages/stryker-node-test-runner/stryker.test-code.config.mjs',
@@ -40,8 +34,8 @@ const reportNames: readonly (readonly [file: string, name: string])[] = [
   ['packages/node-test-extensions/stryker.test-code.config.mjs', '@layzee/node-test-extensions.test-code'],
   ['packages/stryker-mutator-core/stryker.config.mjs', '@layzee/stryker-mutator-core.src'],
   ['packages/stryker-mutator-core/stryker.test-code.config.mjs', '@layzee/stryker-mutator-core.test-code'],
-  ['packages/stryker-node-test-mutators/stryker.config.mjs', '@layzee/stryker-node-test-mutators.src'],
-  ['packages/stryker-node-test-mutators/stryker.test-code.config.mjs', '@layzee/stryker-node-test-mutators.test-code'],
+  ['packages/stryker-node-mutators/stryker.config.mjs', '@layzee/stryker-node-mutators.src'],
+  ['packages/stryker-node-mutators/stryker.test-code.config.mjs', '@layzee/stryker-node-mutators.test-code'],
   ['packages/stryker-node-test-runner/stryker.config.mjs', '@layzee/stryker-node-test-runner.src'],
   ['packages/stryker-node-test-runner/stryker.test-code.config.mjs', '@layzee/stryker-node-test-runner.test-code'],
   ['tools/eslint-rules/stryker.config.mjs', '@lz-node-test/eslint-rules.src'],

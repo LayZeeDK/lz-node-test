@@ -7,7 +7,7 @@
       "path": "./packages/stryker-node-test-runner"
     },
     {
-      "path": "./packages/stryker-node-test-mutators"
+      "path": "./packages/stryker-node-mutators"
     },
     {
       "path": "./packages/node-test-extensions"

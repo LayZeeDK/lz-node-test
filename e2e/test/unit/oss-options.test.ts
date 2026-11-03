@@ -291,7 +291,7 @@ describe('lzStrykerConfig', () => {
   it('imports the operators and exports the options on either side', () => {
     const config = lzStrykerConfig('command', project);
 
-    assert.match(config, /^import '@layzee\/stryker-node-test-mutators';\n\nexport default \{\n/);
+    assert.match(config, /^import '@layzee\/stryker-node-mutators';\n\nexport default \{\n/);
     assert.match(config, /"testRunner": "command"/);
   });
 });

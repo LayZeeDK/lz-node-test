@@ -4,7 +4,7 @@ An Nx workspace with four ESM-only packages for Node.js 22.18 or later, tested o
 
 - [`@layzee/stryker-node-test-runner`](packages/stryker-node-test-runner/README.md): a StrykerJS test runner
   for `node:test` that runs each test file in its own `node` process.
-- [`@layzee/stryker-node-test-mutators`](packages/stryker-node-test-mutators/README.md): StrykerJS mutators for
+- [`@layzee/stryker-node-mutators`](packages/stryker-node-mutators/README.md): StrykerJS mutators for
   code that uses Node.js APIs and `node:assert`, and a set for mutating test files.
 - [`@layzee/stryker-mutator-core`](packages/stryker-mutator-core/README.md): the install layer that packages of
   StrykerJS mutators share.

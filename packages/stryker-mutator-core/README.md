@@ -1,7 +1,7 @@
 # @layzee/stryker-mutator-core
 
 The install layer that packages of [StrykerJS](https://stryker-mutator.io/) mutators share, such as
-[`@layzee/stryker-node-test-mutators`](../stryker-node-test-mutators/README.md). It puts mutation operators into the
+[`@layzee/stryker-node-mutators`](../stryker-node-mutators/README.md). It puts mutation operators into the
 instrumenter of the Stryker that runs it, and has the Babel helpers that such operators use. It is ESM only, needs
 Node.js 22.18 or later, and is tested on Node.js 22 and 24.
 

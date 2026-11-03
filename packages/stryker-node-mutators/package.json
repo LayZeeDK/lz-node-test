@@ -1,5 +1,5 @@
 {
-  "name": "@layzee/stryker-node-test-mutators",
+  "name": "@layzee/stryker-node-mutators",
   "version": "0.0.0",
   "private": true,
   "description": "StrykerJS mutators for code that uses Node.js APIs and node:assert, and for mutating test files",
@@ -10,11 +10,11 @@
     "node:test",
     "node:assert"
   ],
-  "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/stryker-node-test-mutators#readme",
+  "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/stryker-node-mutators#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/LayZeeDK/lz-node-test.git",
-    "directory": "packages/stryker-node-test-mutators"
+    "directory": "packages/stryker-node-mutators"
   },
   "bugs": {
     "url": "https://github.com/LayZeeDK/lz-node-test/issues"

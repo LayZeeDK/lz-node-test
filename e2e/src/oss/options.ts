@@ -232,7 +232,7 @@ export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: L
 
 export function lzStrykerConfig(side: LzSide, project: LzOssProject): string {
   return (
-    "import '@layzee/stryker-node-test-mutators';\n\n" +
+    "import '@layzee/stryker-node-mutators';\n\n" +
     `export default ${JSON.stringify(lzStrykerOptions(side, project), null, 2)};\n`
   );
 }

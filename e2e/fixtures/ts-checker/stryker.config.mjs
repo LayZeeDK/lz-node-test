@@ -1,4 +1,4 @@
-import '@layzee/stryker-node-test-mutators';
+import '@layzee/stryker-node-mutators';
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
