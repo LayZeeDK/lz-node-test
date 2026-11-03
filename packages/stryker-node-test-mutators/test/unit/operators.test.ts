@@ -12,13 +12,13 @@ describe('the catalogues', () => {
       [
         'LzNodeTimerDelay',
         'LzNodeEventName',
-        'LzAssertStatement',
-        'LzAwaitStatement',
-        'LzReturnAwait',
+        'LzNodeAssertStatement',
+        'LzNodeAwaitStatement',
+        'LzNodeReturnAwait',
         'LzNodeExitCode',
       ],
     ],
-    ['test', testOperators, ['LzAssertCall', 'LzAssertValidator']],
+    ['test', testOperators, ['LzNodeTestAssertCall', 'LzNodeTestAssertValidator']],
   ])('name the %s operators', (_title, operators, names) => {
     assert.deepEqual(
       operators.map(({ name }) => name),

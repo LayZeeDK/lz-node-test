@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { assertCall } from '../../src/assert-call.ts';
+import { nodeTestAssertCall } from '../../src/node-test-assert-call.ts';
 import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
 
 const throwStatement = 'throw new Error("Stryker: assertion reached");';
@@ -51,7 +51,7 @@ function typeErrors(source: string): string[] {
     .map(({ messageText }) => ts.flattenDiagnosticMessageText(messageText, '\n'));
 }
 
-describe('LzAssertCall', () => {
+describe('LzNodeTestAssertCall', () => {
   lzTestEach([
     ['a default import', `${strict}assert.equal(1, 1);`],
     ['a default import called itself', "import assert from 'node:assert';\nassert(true);"],
@@ -69,7 +69,7 @@ describe('LzAssertCall', () => {
       ?.trim();
     assert.ok(statement);
 
-    assert.deepEqual(await mutantsOf(assertCall, source), [`{ ${statement} ${throwStatement} }`]);
+    assert.deepEqual(await mutantsOf(nodeTestAssertCall, source), [`{ ${statement} ${throwStatement} }`]);
   });
 
   lzTestEach([
@@ -106,11 +106,11 @@ describe('LzAssertCall', () => {
       `${rejected} : assert.doesNotReject(p)`,
     ],
   ])('makes %s fail in its place, keeping the call only for its type', async (_title, source, expected) => {
-    assert.deepEqual(await mutantsOf(assertCall, source), [`(${expected})`]);
+    assert.deepEqual(await mutantsOf(nodeTestAssertCall, source), [`(${expected})`]);
   });
 
   it('keeps the inferred return type of a returned rejects whose caller chains it', async () => {
-    const [replacement] = await mutantsOf(assertCall, chained);
+    const [replacement] = await mutantsOf(nodeTestAssertCall, chained);
     assert.ok(replacement);
 
     assert.deepEqual(typeErrors(chained), []);
@@ -132,7 +132,7 @@ describe('LzAssertCall', () => {
     ["an arrow function's body", `${strict}[1].forEach(() => assert.fail('never'));`],
     ['a returned value', `${strict}function never() {\n  return assert.fail('never');\n}`],
   ])('leaves %s, which fails already', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertCall, source), []);
+    assert.deepEqual(await mutantsOf(nodeTestAssertCall, source), []);
   });
 
   lzTestEach([
@@ -178,6 +178,6 @@ describe('LzAssertCall', () => {
       `${test}it('works', (t) => {\n  [1].forEach(() => {\n    const t = { assert: { ok(value: unknown) {} } };\n    t.assert.ok(true);\n  });\n});`,
     ],
   ])('leaves %s alone', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertCall, source), []);
+    assert.deepEqual(await mutantsOf(nodeTestAssertCall, source), []);
   });
 });

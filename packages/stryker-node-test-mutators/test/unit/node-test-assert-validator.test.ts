@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { assertValidator } from '../../src/assert-validator.ts';
+import { nodeTestAssertValidator } from '../../src/node-test-assert-validator.ts';
 import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
 
 const throws = '() => { throw new Error("Stryker"); }';
 const rejects = 'Promise.reject(new Error("Stryker"))';
 
-describe('LzAssertValidator', () => {
+describe('LzNodeTestAssertValidator', () => {
   lzTestEach([
     ['assert.throws', `${strict}assert.throws(() => parse(''), /empty/);`, [throws]],
     ['assert.throws without a validator', `${strict}assert.throws(() => parse(''));`, [throws]],
@@ -20,7 +20,7 @@ describe('LzAssertValidator', () => {
     ['an assertion whose value is used', `${strict}const done = assert.rejects(p);`, [rejects]],
     ['a subject that is a call, and not its arguments', `${strict}assert.throws(wrap(f));`, [throws]],
   ])('replaces what %s checks, and only that', async (_title, source, expected) => {
-    assert.deepEqual(await mutantsOf(assertValidator, source), expected);
+    assert.deepEqual(await mutantsOf(nodeTestAssertValidator, source), expected);
   });
 
   lzTestEach([
@@ -32,7 +32,7 @@ describe('LzAssertValidator', () => {
     ['a throws of another library', "import { assert } from 'chai';\nassert.throws(f);"],
     ['an array element in first place', `${strict}[assert.throws, f];`],
   ])('leaves %s alone', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertValidator, source), []);
+    assert.deepEqual(await mutantsOf(nodeTestAssertValidator, source), []);
   });
 
   const nodeTest = "import { it } from 'node:test';\n";
@@ -54,7 +54,7 @@ describe('LzAssertValidator', () => {
     ['a class expression', expecting('class extends TypeError {}')],
     ['an object match of a label', expecting("{ label: 'bad ids fail', match: { code: 'ERR_BAD_ID' } }")],
   ])('replaces the test function of an expectFailure that matches through %s', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertValidator, source), [throws]);
+    assert.deepEqual(await mutantsOf(nodeTestAssertValidator, source), [throws]);
   });
 
   lzTestEach([
@@ -78,7 +78,7 @@ describe('LzAssertValidator', () => {
       "import * as nt from 'node:test';\nnt.it.only('fails', { expectFailure: /x/ }, f);",
     ],
   ])('replaces the test function of an expectFailure test made through %s', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertValidator, source), [throws]);
+    assert.deepEqual(await mutantsOf(nodeTestAssertValidator, source), [throws]);
   });
 
   lzTestEach([
@@ -132,6 +132,6 @@ describe('LzAssertValidator', () => {
       "it('parent', async (t) => {\n  await t['test']('fails', { expectFailure: /x/ }, f);\n});",
     ],
   ])('leaves a test with %s alone', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertValidator, source), []);
+    assert.deepEqual(await mutantsOf(nodeTestAssertValidator, source), []);
   });
 });

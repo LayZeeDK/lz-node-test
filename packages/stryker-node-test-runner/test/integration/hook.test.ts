@@ -844,7 +844,7 @@ describe('hook, in a process that a signal ends', () => {
         fixture("it('counts', () => { assert.equal(process.listenerCount('SIGTERM'), 0); });"),
       );
 
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.equal(code, 0);
     },
   );
@@ -855,9 +855,9 @@ describe('hook, in a process that a signal ends', () => {
     async ([signal], t) => {
       const { code, signalCode, records } = await signalled(t, 'setInterval(() => {}, 1_000);', signal);
 
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.deepEqual([code, signalCode], [null, signal]);
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.equal(records.length, 1);
     },
   );
@@ -871,9 +871,9 @@ describe('hook, in a process that a signal ends', () => {
 
       const { code, signalCode, records } = await signalled(t, script, 'SIGTERM');
 
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.deepEqual([code, signalCode], [7, null]);
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.equal(records.length, 1);
     },
   );
@@ -887,7 +887,7 @@ describe('hook, in a process that a signal ends', () => {
 
       const { code, signalCode } = await signalled(t, script, 'SIGTERM', join(tempDir(t), 'removed'));
 
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.deepEqual([code, signalCode], [null, 'SIGTERM']);
     },
   );

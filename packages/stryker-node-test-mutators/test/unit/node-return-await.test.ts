@@ -4,13 +4,13 @@ import { describe, it } from 'node:test';
 import { parseSync, traverse, types } from '@babel/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { returnAwait } from '../../src/return-await.ts';
+import { nodeReturnAwait } from '../../src/node-return-await.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 
 const guarded = (body: string) =>
   `export async function read() {\n  try {\n    ${body}\n  } catch {\n    return 0;\n  }\n}`;
 
-describe('LzReturnAwait', () => {
+describe('LzNodeReturnAwait', () => {
   lzTestEach([
     ['a function', guarded('return await load();')],
     [
@@ -23,14 +23,14 @@ describe('LzReturnAwait', () => {
       guarded('try {\n      check();\n    } catch {\n      return await load();\n    }'),
     ],
   ])('returns the promise unawaited from the try block of %s', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(returnAwait, source), ['load()']);
+    assert.deepEqual(await mutantsOf(nodeReturnAwait, source), ['load()']);
   });
 
   it('returns the promise unawaited from a catch block that a finally block follows', async () => {
     const source =
       'export async function read() {\n  try {\n    return 1;\n  } catch {\n    return await load();\n  } finally {\n    done();\n  }\n}';
 
-    assert.deepEqual(await mutantsOf(returnAwait, source), ['load()']);
+    assert.deepEqual(await mutantsOf(nodeReturnAwait, source), ['load()']);
   });
 
   lzTestEach([
@@ -54,7 +54,7 @@ describe('LzReturnAwait', () => {
     ['an await that is not returned', guarded('await load();\n    return 1;')],
     ['an await that is part of the returned value', guarded('return (await load()).value;')],
   ])('leaves %s alone', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(returnAwait, source), []);
+    assert.deepEqual(await mutantsOf(nodeReturnAwait, source), []);
   });
 
   it('leaves alone a return await at the top level of a script that allows a return outside a function', () => {
@@ -67,7 +67,7 @@ describe('LzReturnAwait', () => {
     const mutants: unknown[] = [];
     traverse(file, {
       AwaitExpression(path) {
-        mutants.push(...returnAwait.mutate(path, types));
+        mutants.push(...nodeReturnAwait.mutate(path, types));
       },
     });
 

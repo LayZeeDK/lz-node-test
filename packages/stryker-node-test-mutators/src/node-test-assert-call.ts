@@ -15,8 +15,8 @@ const asyncMethods: ReadonlySet<string> = new Set(['rejects', 'doesNotReject']);
  * the others, a custom assertion added with `assert.register` included. There the original call is kept only for its
  * type and never runs.
  */
-export const assertCall: LzOperator = {
-  name: 'LzAssertCall',
+export const nodeTestAssertCall: LzOperator = {
+  name: 'LzNodeTestAssertCall',
   sample: 'export function check(t: any) {\n  t.assert.ok(true);\n}\n',
   *mutate(path, t) {
     if (path.isExpressionStatement() && assertionMethod(path, lzAwaited(path.node.expression)) !== undefined) {

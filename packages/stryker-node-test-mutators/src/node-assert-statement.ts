@@ -9,8 +9,8 @@ import { isNodeAssertCall } from './bindings.ts';
  * which a `// Stryker disable` comment then says. That comment names CallExpression too: with this mutant ignored,
  * CallExpression's own removal of the statement comes back.
  */
-export const assertStatement: LzOperator = {
-  name: 'LzAssertStatement',
+export const nodeAssertStatement: LzOperator = {
+  name: 'LzNodeAssertStatement',
   sample: "import assert from 'node:assert/strict';\n\nassert.fail('unreachable');\n",
   *mutate(path, t) {
     if (!path.isExpressionStatement()) {

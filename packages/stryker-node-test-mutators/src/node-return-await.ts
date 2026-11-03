@@ -7,8 +7,8 @@ import type { LzOperator } from '@layzee/stryker-mutator-core';
  * settle, and in a `catch` block that a `finally` block follows, which then no longer waits. An async generator is left
  * out: its `return` awaits the value either way.
  */
-export const returnAwait: LzOperator = {
-  name: 'LzReturnAwait',
+export const nodeReturnAwait: LzOperator = {
+  name: 'LzNodeReturnAwait',
   sample:
     'export async function read(load: () => Promise<number>) {\n  try {\n    return await load();\n  } catch {\n    return 0;\n  }\n}\n',
   *mutate(path, t) {

@@ -13,7 +13,7 @@ function tester(): RuleTester {
 describe('stryker-disable-comment', () => {
   lzTestEach([
     ['a next-line disable with a reason', '// Stryker disable next-line ArrayDeclaration: equivalent\nf([]);'],
-    ['two mutators', '// Stryker disable next-line LzAssertStatement,CallExpression: never empty\nf();'],
+    ['two mutators', '// Stryker disable next-line LzNodeAssertStatement,CallExpression: never empty\nf();'],
     ['two mutators with a space', '// Stryker disable next-line Regex, StringLiteral: equivalent\nf();'],
     ['no space after the slashes', '//Stryker disable next-line ArrayDeclaration: equivalent\nf([]);'],
     ['a block comment', '/* Stryker disable next-line ArrayDeclaration: equivalent */\nf([]);'],

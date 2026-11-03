@@ -20,8 +20,8 @@ const matcherTypes: ReadonlySet<string> = new Set([
  * `expectFailure` names what the failure must match, throw an unrelated error, so a survivor is a validator that
  * accepts any error.
  */
-export const assertValidator: LzOperator = {
-  name: 'LzAssertValidator',
+export const nodeTestAssertValidator: LzOperator = {
+  name: 'LzNodeTestAssertValidator',
   sample: "import assert from 'node:assert/strict';\n\nassert.throws(() => {}, /x/);\n",
   *mutate(path, t) {
     const call = path.parent;

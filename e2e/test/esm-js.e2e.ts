@@ -29,7 +29,7 @@ it('reports the mutants of an export no test calls as not covered', () => {
 
 it('mutates only the assertions of a test file with the test-code entry and kills the failing one', () => {
   assert.deepEqual(lzMutants(testCode, 'test/age.test.js'), [
-    '14:5 LzAssertCall { assert.equal(isAdult(age), adult); throw new Error("Stryker: assertion reached"); } Killed',
+    '14:5 LzNodeTestAssertCall { assert.equal(isAdult(age), adult); throw new Error("Stryker: assertion reached"); } Killed',
   ]);
 });
 

@@ -28,9 +28,9 @@ describe('endGroup', () => {
       const waitedMs = performance.now() - started;
       await exited;
 
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.equal(child.signalCode, 'SIGTERM');
-      // Stryker disable next-line LzAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.ok(waitedMs < termGraceMs, `${waitedMs} ms`);
     },
   );

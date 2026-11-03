@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { assertStatement } from '../../src/assert-statement.ts';
+import { nodeAssertStatement } from '../../src/node-assert-statement.ts';
 import { mutantsOf, removalsNextToBuiltIns, strict } from '../mutants-of.fixtures.ts';
 
-describe('LzAssertStatement', () => {
+describe('LzNodeAssertStatement', () => {
   lzTestEach([
     ['a default import', `${strict}assert.equal(state, 'ready');`],
     ['a default import called itself', "import assert from 'node:assert';\nassert(ready);"],
@@ -14,7 +14,7 @@ describe('LzAssertStatement', () => {
     ['fail, which marks code that never runs', `${strict}assert.fail('unreachable');`],
     ['an awaited assertion', `${strict}await assert.rejects(promise);`],
   ])('removes the statement of %s', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertStatement, source), [';']);
+    assert.deepEqual(await mutantsOf(nodeAssertStatement, source), [';']);
   });
 
   lzTestEach([
@@ -35,7 +35,7 @@ describe('LzAssertStatement', () => {
     // fast-json-stringify/index.js:576
     ['an assertion in generated source', `${strict}new Function('assert', 'assert.ok(ready)');`],
   ])('leaves %s alone', async (_title, source) => {
-    assert.deepEqual(await mutantsOf(assertStatement, source), []);
+    assert.deepEqual(await mutantsOf(nodeAssertStatement, source), []);
   });
 
   lzTestEach([
@@ -46,6 +46,6 @@ describe('LzAssertStatement', () => {
       ['CallExpression'],
     ],
   ])("gives an assertion %s exactly one removal next to Stryker's mutators, its own", async (_title, source, alone) => {
-    assert.deepEqual(await removalsNextToBuiltIns(assertStatement, source), [alone, ['LzAssertStatement']]);
+    assert.deepEqual(await removalsNextToBuiltIns(nodeAssertStatement, source), [alone, ['LzNodeAssertStatement']]);
   });
 });

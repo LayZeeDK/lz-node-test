@@ -95,7 +95,7 @@ describe('safety', () => {
       [['process.kill']],
     ],
     [
-      "the first design of LzAssertCall's arrow body, which fails through node:assert",
+      "the first design of LzNodeTestAssertCall's arrow body, which fails through node:assert",
       "import assert from 'node:assert/strict';\n[1].forEach((n) => assert.ok(n));",
       (t: Parameters<LzOperator['mutate']>[1]) =>
         t.callExpression(
