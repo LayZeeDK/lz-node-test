@@ -42,10 +42,16 @@ describe('lzToNodeMutator', () => {
     [false, [node]],
     [true, []],
   ])('gives, where isExpressionContext is %s, %j', (isExpressionContext, nodes) => {
-    const mutator = lzToNodeMutator(operator, types);
+    const mutator = lzToNodeMutator(operator, types, 'lz-sample-mutators');
 
     assert.deepEqual([...mutator.mutate(programPath(), { isExpressionContext })], nodes);
     assert.equal(lzIsOwn(mutator), true);
+  });
+
+  it("names the package that installs it under the core's mark", () => {
+    const mutator = lzToNodeMutator(operator, types, 'lz-sample-mutators');
+
+    assert.equal(Reflect.get(mutator, own), 'lz-sample-mutators');
   });
 });
 

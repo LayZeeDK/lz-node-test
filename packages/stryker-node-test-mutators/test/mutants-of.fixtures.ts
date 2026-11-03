@@ -6,6 +6,7 @@ import {
   type LzListedMutator,
   type LzOperator,
 } from '@layzee/stryker-mutator-core';
+import { lzPackageName } from '../src/package-name.ts';
 
 export const strict = "import assert from 'node:assert/strict';\n";
 
@@ -14,7 +15,7 @@ export async function instrumentWith(operator: LzOperator, source: string): Prom
 
   return instrumenter.instrument(
     [{ name: 'sample.ts', content: source }],
-    [lzToNodeMutator(operator, instrumenter.types)],
+    [lzToNodeMutator(operator, instrumenter.types, lzPackageName)],
   );
 }
 
@@ -33,5 +34,8 @@ export async function removalsNextToBuiltIns(operator: LzOperator, source: strin
       .filter(({ replacement }) => replacement === ';')
       .map(({ mutatorName }) => mutatorName);
 
-  return [await removals(builtIns), await removals([...builtIns, lzToNodeMutator(operator, instrumenter.types)])];
+  return [
+    await removals(builtIns),
+    await removals([...builtIns, lzToNodeMutator(operator, instrumenter.types, lzPackageName)]),
+  ];
 }

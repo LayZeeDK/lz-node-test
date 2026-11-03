@@ -1,5 +1,5 @@
 import { resolveEachCore, type LzInstrumenter, type LzListedMutator } from './instrumenter.ts';
-import { lzIsOwn, lzToNodeMutator, type LzOperator } from './operator.ts';
+import { lzIsOwn, lzToNodeMutator, ownerOf, type LzOperator } from './operator.ts';
 import { lzWarnOutsidePeerRange, parseCaretFloor } from './peer-range.ts';
 
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
@@ -32,7 +32,7 @@ export async function lzInstall(
     checkNames(packageName, operators, allMutators);
   });
   instrumenters.forEach((instrumenter) => {
-    putInto(instrumenter, mode, operators);
+    putInto(packageName, instrumenter, mode, operators);
   });
   await Promise.all(instrumenters.map((instrumenter) => selfCheck(packageName, instrumenter, operators)));
   lzWarnOutsidePeerRange(
@@ -43,12 +43,21 @@ export async function lzInstall(
   );
 }
 
-function putInto(instrumenter: LzInstrumenter, mode: LzInstallMode, operators: readonly LzOperator[]): void {
+/** Replace mode keeps the mutators of the other packages that install through this one. */
+function putInto(
+  packageName: string,
+  instrumenter: LzInstrumenter,
+  mode: LzInstallMode,
+  operators: readonly LzOperator[],
+): void {
   const { allMutators } = instrumenter;
-  const mutators = operators.map((operator) => lzToNodeMutator(operator, instrumenter.types));
+  const mutators = operators.map((operator) => lzToNodeMutator(operator, instrumenter.types, packageName));
 
   if (mode === 'replace') {
-    instrumenter.setMutators(mutators);
+    instrumenter.setMutators([
+      ...allMutators.filter((mutator) => lzIsOwn(mutator) && ownerOf(mutator) !== packageName),
+      ...mutators,
+    ]);
   } else {
     instrumenter.setMutators([
       ...allMutators,
@@ -74,7 +83,8 @@ function checkNames(packageName: string, operators: readonly LzOperator[], prese
     const key = name.toLowerCase();
 
     return (
-      keys.indexOf(key) !== index || present.some((mutator) => mutator.name.toLowerCase() === key && !lzIsOwn(mutator))
+      keys.indexOf(key) !== index ||
+      present.some((mutator) => mutator.name.toLowerCase() === key && ownerOf(mutator) !== packageName)
     );
   });
 

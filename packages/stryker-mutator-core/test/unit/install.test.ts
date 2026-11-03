@@ -48,9 +48,9 @@ function setup({
       );
     },
   };
-  const run = (mode: LzInstallMode, operators: LzOperator[], corePeerRange = '^10.1.1') =>
+  const run = (mode: LzInstallMode, operators: LzOperator[], corePeerRange = '^10.1.1', by = packageName) =>
     lzInstall(
-      { packageName, corePeerRange, mode, operators },
+      { packageName: by, corePeerRange, mode, operators },
       () => Promise.resolve([instrumenter]),
       (message) => warnings.push(message),
     );
@@ -111,6 +111,27 @@ describe('lzInstall', () => {
     await run('replace', [operator('Beta'), operator('Gamma')]);
 
     assert.deepEqual(names(), ['Beta', 'Gamma']);
+  });
+
+  it("keeps the mutators another package installed when it replaces Stryker's", async () => {
+    const { run, names } = setup({ builtIns: ['StringLiteral', 'CallExpression'] });
+
+    await run('add', [operator('Delta')], '^10.1.1', 'lz-other-mutators');
+    await run('add', [operator('Alpha')]);
+    await run('replace', [operator('Beta')]);
+
+    assert.deepEqual(names(), ['Delta', 'Beta']);
+  });
+
+  it('refuses a name that another package installed', async () => {
+    const { run, names } = setup();
+
+    await run('add', [operator('Delta')], '^10.1.1', 'lz-other-mutators');
+
+    await assert.rejects(run('add', [operator('DELTA')]), {
+      message: 'lz-sample-mutators: another mutator already has the name DELTA.',
+    });
+    assert.deepEqual(names(), ['StringLiteral', 'Delta']);
   });
 
   it('throws, naming the calling package, the instrumenter and the operators that made no mutant', async () => {

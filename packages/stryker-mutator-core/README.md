@@ -24,8 +24,9 @@ await lzInstall({ packageName: 'my-mutators', corePeerRange: '^10.1.1', mode: 'a
 
 - `packageName` starts each error and warning.
 - `corePeerRange` is the calling package's peer range of `@stryker-mutator/core`, a caret range of a release.
-- `mode` is `add`, which adds the operators to Stryker's mutators, or `replace`, which removes Stryker's mutators
-  first.
+- `mode` is `add`, which adds the operators to the mutators in the list, or `replace`, which first removes Stryker's
+  mutators and the ones this package installed before. Both keep the mutators that other packages installed through
+  `lzInstall`, and refuse an operator whose name, ignoring case, one of them or one of Stryker's already has.
 - `operators` are `LzOperator` objects: a name of letters only, a sample module in which the operator makes a mutant,
   and a `mutate` function that maps a Babel path to replacement nodes.
 
@@ -36,5 +37,5 @@ instrumenter's list of mutators through two files that `@stryker-mutator/instrum
 `dist/src/mutators/mutate.js` and `dist/src/transformers/babel-transformer.js`. A Stryker release that moves or changes
 them stops the run with an error that names the file.
 
-Every mutator that `lzInstall` puts into the list carries the symbol `Symbol.for('@layzee/stryker-mutator-core')`, and
-`lzIsOwn` tells such a mutator from one of Stryker's.
+Every mutator that `lzInstall` puts into the list carries the symbol `Symbol.for('@layzee/stryker-mutator-core')`, with
+the name of the package that installed it, and `lzIsOwn` tells such a mutator from one of Stryker's.

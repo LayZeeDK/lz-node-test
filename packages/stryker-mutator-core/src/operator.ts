@@ -45,18 +45,21 @@ export interface LzNodeMutatorLike {
   readonly filter?: ((mutantsInScope: readonly unknown[]) => boolean) | undefined;
 }
 
-/** Marks the mutators of every package that installs through this one, in every copy of it. */
+/**
+ * Marks the mutators of every package that installs through this one, in every copy of it, with the name of the package
+ * that installed each.
+ */
 export const own = Symbol.for('@layzee/stryker-mutator-core');
 
 interface OwnMutator extends LzNodeMutatorLike {
-  readonly [own]: true;
+  readonly [own]: string;
 }
 
 /** Yields nothing where Stryker's instrumenter allows no statement, such as a Vue template's expression. */
-export function lzToNodeMutator(operator: LzOperator, t: LzBabelTypes): OwnMutator {
+export function lzToNodeMutator(operator: LzOperator, t: LzBabelTypes, packageName: string): OwnMutator {
   return {
     name: operator.name,
-    [own]: true,
+    [own]: packageName,
     filter: operator.filter,
     *mutate(path, { isExpressionContext }) {
       if (!isExpressionContext) {
@@ -68,4 +71,9 @@ export function lzToNodeMutator(operator: LzOperator, t: LzBabelTypes): OwnMutat
 
 export function lzIsOwn(mutator: object): boolean {
   return own in mutator;
+}
+
+/** The package that installed `mutator`, or `undefined` for one of Stryker's. */
+export function ownerOf(mutator: object): unknown {
+  return Reflect.get(mutator, own);
 }

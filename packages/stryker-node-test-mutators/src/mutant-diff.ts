@@ -8,6 +8,7 @@ import {
   type LzInstrumenter,
   type LzOperator,
 } from '@layzee/stryker-mutator-core';
+import { lzPackageName } from './package-name.ts';
 
 interface MutantDiff {
   readonly added: readonly string[];
@@ -38,7 +39,7 @@ export async function corpusDiff(
   const sections: string[] = [];
 
   for (const name of names) {
-    const mutators = operatorsFor(name).map((operator) => lzToNodeMutator(operator, instrumenter.types));
+    const mutators = operatorsFor(name).map((operator) => lzToNodeMutator(operator, instrumenter.types, lzPackageName));
     const files = [{ name, content: read(name) }];
     const before = await instrumenter.instrument(files, instrumenter.allMutators);
     const after = await instrumenter.instrument(files, [...instrumenter.allMutators, ...mutators]);
