@@ -343,7 +343,7 @@ describe('wrapNodeTest', () => {
         ['callback child', callbackContext],
       ],
     );
-    assert.equal(ns.currentTestId, undefined);
+    assert.equal(ns.currentTestId, '');
     assert.ok(!(envNames.current in env));
   });
 
@@ -369,7 +369,7 @@ describe('wrapNodeTest', () => {
 
     const childId = `${testFile} > parent > child`;
     assert.deepEqual(seen, [undefined, childId, childId]);
-    assert.equal(ns.currentTestId, undefined);
+    assert.equal(ns.currentTestId, '');
     assert.ok(!(envNames.current in env));
     // The clock ticks once per read, so a span moved while the child stayed current would shift the child's end.
     assert.deepEqual(testSpans(), {
@@ -600,7 +600,7 @@ describe('wrapNodeTest', () => {
       finish?.();
 
       assert.deepEqual(calls, [[undefined]]);
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
       assert.ok(!(envNames.current in env));
       assert.equal(context.skipped, false);
     });
@@ -645,7 +645,7 @@ describe('wrapNodeTest', () => {
 
       await context.end();
 
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
     });
 
     it('leaves the test once when it calls `done` and then throws, so its parent stays current', async () => {
@@ -797,12 +797,12 @@ describe('wrapNodeTest', () => {
 
     await bodyOf(registrations, 'passes')(testContext());
 
-    assert.equal(ns.currentTestId, undefined);
+    assert.equal(ns.currentTestId, '');
     assert.ok(!(envNames.current in env));
 
     await assert.rejects(bodyOf(registrations, 'fails')(testContext()), { message: 'no' });
 
-    assert.equal(ns.currentTestId, undefined);
+    assert.equal(ns.currentTestId, '');
     assert.ok(!(envNames.current in env));
   });
 

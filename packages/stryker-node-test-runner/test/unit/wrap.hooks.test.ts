@@ -47,7 +47,7 @@ describe('wrapNodeTest', () => {
       assert.deepEqual(received, [[context]]);
       assert.equal(ns.currentTestId, `${testFile} > suite > second`);
       assert.equal(await settled, 'promised');
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
       assert.equal(
         callback(testContext([], 'first'), (...args: unknown[]) => calls.push(args)),
         'called back',
@@ -57,10 +57,10 @@ describe('wrapNodeTest', () => {
       finish(failure);
 
       assert.deepEqual(calls, [[failure]]);
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
       const thrown = throwing(testContext([], 'first'));
 
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
       assert.ok(thrown instanceof Promise);
       await assert.rejects(thrown, failure);
       assert.deepEqual(seen, [
@@ -129,7 +129,7 @@ describe('wrapNodeTest', () => {
       release();
       await running;
 
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
 
       await rawBodyOf(registrations, 'returns')(returns);
 
@@ -137,7 +137,7 @@ describe('wrapNodeTest', () => {
 
       await returns.end();
 
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
       assert.deepEqual(seen, [`${testFile} > waits`]);
     });
 
@@ -162,7 +162,7 @@ describe('wrapNodeTest', () => {
       await hooksOf(registrations, 'after')[0]?.(testContext([], 'parent'));
 
       assert.deepEqual([beforeEach?.self, beforeEach?.rest[1]], [context, { timeout: 5 }]);
-      assert.equal(ns.currentTestId, undefined);
+      assert.equal(ns.currentTestId, '');
       assert.deepEqual(seen, [
         `${testFile} > parent`,
         `${testFile} > parent`,

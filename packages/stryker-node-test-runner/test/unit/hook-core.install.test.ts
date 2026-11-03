@@ -190,7 +190,7 @@ describe('install', () => {
     deps.global.__stryker__ = { currentTestId: 'stale' };
     install(deps);
 
-    assert.equal(deps.global.__stryker__.currentTestId, undefined);
+    assert.equal(deps.global.__stryker__.currentTestId, '');
   });
 
   it('wraps node:test in the process that runs the test file, and makes imports of node:test give it', async () => {

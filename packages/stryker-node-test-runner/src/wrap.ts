@@ -282,7 +282,8 @@ export function lzCurrentTests({
     const id = [...active].at(-1);
 
     if (id === undefined) {
-      delete ns.currentTestId;
+      // Stryker's coverage counts treat an empty id as no test; a deleted property would slow every mutant switch.
+      ns.currentTestId = '';
       Reflect.deleteProperty(env, envNames.current);
     } else {
       ns.currentTestId = id;

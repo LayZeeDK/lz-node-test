@@ -160,13 +160,8 @@ export function install(deps: HookDependencies): boolean {
     });
   }
 
-  const current = deps.env[envNames.current];
-
-  if (current) {
-    ns.currentTestId = current;
-  } else {
-    delete ns.currentTestId;
-  }
+  // An empty id is no test, as in wrap.ts, where the reason not to delete the property is.
+  ns.currentTestId = deps.env[envNames.current] ?? '';
 
   const bail = deps.env[envNames.bail] === 'true';
   const dryRun = deps.env[envNames.dryRun] === 'true';
