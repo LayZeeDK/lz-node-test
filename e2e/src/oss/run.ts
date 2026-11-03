@@ -33,6 +33,7 @@ import {
   type LzOssOptions,
   type LzSide,
 } from './options.ts';
+import { lzApplyPatches, lzFileWriters } from './prepare.ts';
 import { lzDescendants, lzLeftovers, lzNewEntries, lzPeaks } from './processes.ts';
 import type { LzOssHeader, LzOssResult, LzSideResult, LzStrykerResult } from './result.ts';
 import { lzSnapshot, lzStartSampler } from './sampler.ts';
@@ -82,6 +83,12 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     recursive: true,
     verbatimSymlinks: true,
     filter: (path) => !copied.has(relative(options.source, path)),
+  });
+  lzApplyPatches(dir, options.project.patches);
+  lzFileWriters(dir, options.project.testFiles).forEach((calls, file) => {
+    process.stdout.write(
+      `${file} writes files (${calls.join(', ')}); a fixed path there would collide across Stryker workers.\n`,
+    );
   });
   mkdirSync(runTmp);
   const tarballs = options.tarballs === undefined ? await lzPack(join(root, 'tarballs')) : given(options.tarballs);

@@ -13,6 +13,7 @@ import {
   lzParseCommand,
   lzParseMergeOptions,
   lzParseOptions,
+  lzNodeTestCommand,
   lzStrykerArgs,
   lzStrykerConfig,
   lzStrykerOptions,
@@ -136,11 +137,14 @@ describe('lzParseOptions', () => {
         'test/crlf.test.js',
         'test/error-objects.test.js',
       ],
-      command:
-        'node --test --test-concurrency=1 "lib/**/*.test.js" "test/basic.test.js" "test/boolean-options.test.js" ' +
-        '"test/cli.test.js" ' +
-        '"test/crlf.test.js" "test/error-objects.test.js"',
+      nodeTestFlags: ['--test-concurrency=1'],
+      patches: [],
     });
+    assert.equal(
+      lzNodeTestCommand(project),
+      'node --test --test-concurrency=1 "lib/**/*.test.js" "test/basic.test.js" "test/boolean-options.test.js" ' +
+        '"test/cli.test.js" "test/crlf.test.js" "test/error-objects.test.js"',
+    );
   });
 
   it("mutates restartable's two source files and runs its two test files", () => {
@@ -150,19 +154,26 @@ describe('lzParseOptions', () => {
       name: 'restartable',
       mutate: ['index.js', 'lib/server.js'],
       testFiles: ['test/*.test.js'],
-      command: 'node --test',
+      nodeTestFlags: [],
+      patches: [],
     });
   });
 
-  it("mutates fast-json-stringify's sources, and runs its test files one at a time", () => {
+  it("mutates fast-json-stringify's sources, and runs its test files one at a time with fixtures per worker", () => {
     const { project } = lzParseOptions(required.with(1, 'fast-json-stringify'));
 
-    assert.deepEqual(project, {
-      name: 'fast-json-stringify',
-      mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
-      testFiles: ['test/*.test.js'],
-      command: 'node --test --test-concurrency=1',
-    });
+    assert.deepEqual(
+      { ...project, patches: project.patches.map(({ file, from }) => ({ file, from })) },
+      {
+        name: 'fast-json-stringify',
+        mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
+        testFiles: ['test/*.test.js'],
+        nodeTestFlags: ['--test-concurrency=1'],
+        patches: [{ file: 'test/standalone-mode.test.js', from: "const tmpDir = 'test/fixtures'" }],
+      },
+    );
+    assert.match(project.patches[0]?.to ?? '', /STRYKER_MUTATOR_WORKER/);
+    assert.equal(lzNodeTestCommand(project), 'node --test --test-concurrency=1 "test/*.test.js"');
   });
 
   it("mutates sonic-boom's index.js and runs its test files one at a time with their own 240 s test timeout", () => {
@@ -172,8 +183,10 @@ describe('lzParseOptions', () => {
       name: 'sonic-boom',
       mutate: ['index.js'],
       testFiles: ['test/*.test.js'],
-      command: 'node --test --test-concurrency=1 --test-timeout=240000 "test/*.test.js"',
+      nodeTestFlags: ['--test-concurrency=1', '--test-timeout=240000'],
+      patches: [],
     });
+    assert.equal(lzNodeTestCommand(project), 'node --test --test-concurrency=1 --test-timeout=240000 "test/*.test.js"');
   });
 
   it('refuses a missing --out', () => {
@@ -298,8 +311,22 @@ const project: LzOssProject = {
   name: 'p',
   mutate: ['index.js'],
   testFiles: ['test/*.test.js'],
-  command: 'node --test',
+  nodeTestFlags: [],
+  patches: [],
 };
+
+describe('lzNodeTestCommand', () => {
+  it('names the test files after the flags, so node --test discovers nothing else', () => {
+    assert.equal(
+      lzNodeTestCommand({
+        ...project,
+        testFiles: ['a/*.test.js', 'b.test.mjs'],
+        nodeTestFlags: ['--test-concurrency=1'],
+      }),
+      'node --test --test-concurrency=1 "a/*.test.js" "b.test.mjs"',
+    );
+  });
+});
 
 describe('lzStrykerOptions', () => {
   it('selects the runner of this workspace with the test files on the lz side', () => {
@@ -315,7 +342,7 @@ describe('lzStrykerOptions', () => {
     assert.deepEqual(lzStrykerOptions('command', project), {
       mutate: ['index.js'],
       testRunner: 'command',
-      commandRunner: { command: 'node --test' },
+      commandRunner: { command: 'node --test "test/*.test.js"' },
       coverageAnalysis: 'off',
     });
   });

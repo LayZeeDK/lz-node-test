@@ -1,11 +1,20 @@
 import { parseArgs } from 'node:util';
 
+/** A replacement the driver makes in the project's copy before installing; refused unless `from` occurs exactly once. */
+export interface LzOssPatch {
+  readonly file: string;
+  readonly from: string;
+  readonly to: string;
+}
+
 export interface LzOssProject {
   readonly name: string;
   readonly mutate: readonly string[];
+  /** Both sides run these files: the lz side as its `testFiles`, the command side as `node --test`'s arguments. */
   readonly testFiles: readonly string[];
-  /** The project's own `node:test` command, without its coverage wrapper. */
-  readonly command: string;
+  /** The project's own `node --test` flags, without its coverage wrapper. */
+  readonly nodeTestFlags: readonly string[];
+  readonly patches: readonly LzOssPatch[];
 }
 
 export type LzSide = 'lz' | 'command';
@@ -52,33 +61,52 @@ export const lzOssRunPrefix = 'lz-oss-driver-';
 export const lzOssPreparedPrefix = 'lz-oss-prepared-';
 
 const projects: readonly LzOssProject[] = [
-  { name: 'env-schema', mutate: ['index.js'], testFiles: ['test/**/*.test.js'], command: 'node --test' },
+  { name: 'env-schema', mutate: ['index.js'], testFiles: ['test/**/*.test.js'], nodeTestFlags: [], patches: [] },
   {
     name: 'fastify-cookie',
     mutate: ['index.js', 'signer.js'],
     testFiles: ['test/**/*.test.js'],
-    command: 'node --test',
+    nodeTestFlags: [],
+    patches: [],
   },
   {
     name: 'fast-json-stringify',
     mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
     testFiles: ['test/*.test.js'],
     // A mutant whose memory grows without bound would grow in every file process at once.
-    command: 'node --test --test-concurrency=1',
+    nodeTestFlags: ['--test-concurrency=1'],
+    // Stryker's workers share one sandbox, and this test writes, requires and deletes fixed file names in it.
+    patches: [
+      {
+        file: 'test/standalone-mode.test.js',
+        from: "const tmpDir = 'test/fixtures'",
+        to:
+          "const tmpDir = path.join('test/fixtures', `worker-${process.env.STRYKER_MUTATOR_WORKER ?? 'none'}`); " +
+          'fs.mkdirSync(tmpDir, { recursive: true })',
+      },
+    ],
   },
   {
     name: 'fastify',
     mutate: ['fastify.js', 'lib/**/*.js', '!lib/error-serializer.js', '!lib/config-validator.js'],
     testFiles: ['test/**/*.test.js', 'test/**/*.test.mjs'],
-    command: 'node --test "test/**/*.test.js" "test/**/*.test.mjs"',
+    nodeTestFlags: [],
+    patches: [],
   },
-  { name: 'restartable', mutate: ['index.js', 'lib/server.js'], testFiles: ['test/*.test.js'], command: 'node --test' },
+  {
+    name: 'restartable',
+    mutate: ['index.js', 'lib/server.js'],
+    testFiles: ['test/*.test.js'],
+    nodeTestFlags: [],
+    patches: [],
+  },
   {
     name: 'sonic-boom',
     mutate: ['index.js'],
     testFiles: ['test/*.test.js'],
     // write.test.js runs out of heap below 2 GB; one file process at a time bounds the suite's memory.
-    command: 'node --test --test-concurrency=1 --test-timeout=240000 "test/*.test.js"',
+    nodeTestFlags: ['--test-concurrency=1', '--test-timeout=240000'],
+    patches: [],
   },
   {
     name: 'pino-pretty',
@@ -92,9 +120,8 @@ const projects: readonly LzOssProject[] = [
       'test/error-objects.test.js',
     ],
     // build-safe-sonic-boom.test.js writes a file into lib/utils while index.test.js lists that folder.
-    command:
-      'node --test --test-concurrency=1 "lib/**/*.test.js" "test/basic.test.js" "test/boolean-options.test.js" ' +
-      '"test/cli.test.js" "test/crlf.test.js" "test/error-objects.test.js"',
+    nodeTestFlags: ['--test-concurrency=1'],
+    patches: [],
   },
 ];
 
@@ -236,10 +263,21 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
 }
 
 /**
+ * The command side's `node --test` with the test files named, not discovered: discovery would also run a file a
+ * test writes under `test/`, such as another worker's fixture.
+ */
+export function lzNodeTestCommand({ testFiles, nodeTestFlags }: LzOssProject): string {
+  return ['node --test', ...nodeTestFlags, ...testFiles.map((pattern) => `"${pattern}"`)].join(' ');
+}
+
+/**
  * Both sides import the operators, so they mutate the same code into the same mutants. The command side runs the
  * project's own command, with coverage analysis off as that runner reports no coverage.
  */
-export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: LzOssProject): LzStrykerOptions {
+export function lzStrykerOptions(side: LzSide, project: LzOssProject): LzStrykerOptions {
+  const { mutate, testFiles } = project;
+  const command = lzNodeTestCommand(project);
+
   return side === 'lz'
     ? {
         mutate,
