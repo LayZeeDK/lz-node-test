@@ -61,7 +61,8 @@ const projects: readonly LzOssProject[] = [
     name: 'fast-json-stringify',
     mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
     testFiles: ['test/*.test.js'],
-    command: 'node --test',
+    // A mutant whose memory grows without bound would grow in every file process at once.
+    command: 'node --test --test-concurrency=1',
   },
   {
     name: 'fastify',
@@ -74,7 +75,8 @@ const projects: readonly LzOssProject[] = [
     name: 'sonic-boom',
     mutate: ['index.js'],
     testFiles: ['test/*.test.js'],
-    command: 'node --test --test-timeout=240000 "test/*.test.js"',
+    // write.test.js runs out of heap below 2 GB; one file process at a time bounds the suite's memory.
+    command: 'node --test --test-concurrency=1 --test-timeout=240000 "test/*.test.js"',
   },
   {
     name: 'pino-pretty',

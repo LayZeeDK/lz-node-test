@@ -143,14 +143,25 @@ describe('lzParseOptions', () => {
     });
   });
 
-  it("mutates sonic-boom's index.js and runs its test files with their own 240 s test timeout", () => {
+  it("mutates fast-json-stringify's sources, and runs its test files one at a time", () => {
+    const { project } = lzParseOptions(required.with(1, 'fast-json-stringify'));
+
+    assert.deepEqual(project, {
+      name: 'fast-json-stringify',
+      mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
+      testFiles: ['test/*.test.js'],
+      command: 'node --test --test-concurrency=1',
+    });
+  });
+
+  it("mutates sonic-boom's index.js and runs its test files one at a time with their own 240 s test timeout", () => {
     const { project } = lzParseOptions(required.with(1, 'sonic-boom'));
 
     assert.deepEqual(project, {
       name: 'sonic-boom',
       mutate: ['index.js'],
       testFiles: ['test/*.test.js'],
-      command: 'node --test --test-timeout=240000 "test/*.test.js"',
+      command: 'node --test --test-concurrency=1 --test-timeout=240000 "test/*.test.js"',
     });
   });
 
