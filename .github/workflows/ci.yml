@@ -80,6 +80,18 @@ jobs:
             config: test-code
             mutated: '!packages/node-test-extensions/test/**/*.test.ts'
             timeout: 30
+          - project: '@layzee/stryker-mutator-core'
+            slug: stryker-mutator-core
+            root: packages/stryker-mutator-core
+            config: src
+            mutated: '!packages/stryker-mutator-core/src/**'
+            timeout: 30
+          - project: '@layzee/stryker-mutator-core'
+            slug: stryker-mutator-core
+            root: packages/stryker-mutator-core
+            config: test-code
+            mutated: '!packages/stryker-mutator-core/test/**/*.test.ts'
+            timeout: 30
           - project: '@layzee/stryker-node-mutators'
             slug: stryker-node-mutators
             root: packages/stryker-node-mutators
@@ -134,6 +146,7 @@ jobs:
           echo "prefix=stryker-inc-${{ matrix.project }}.${{ matrix.config }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
           'tsconfig.base.json', 'packages/node-test-extensions/package.json', 'packages/node-test-extensions/src/**',
+          'packages/stryker-mutator-core/package.json', 'packages/stryker-mutator-core/src/**',
           'packages/stryker-node-mutators/package.json', 'packages/stryker-node-test-runner/package.json',
           'packages/stryker-node-mutators/src/**', 'packages/stryker-node-test-runner/src/**',
           'packages/stryker-node-test-mutators/package.json', 'packages/stryker-node-test-mutators/src/**',
