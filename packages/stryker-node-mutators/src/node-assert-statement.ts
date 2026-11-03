@@ -1,5 +1,5 @@
 import { lzAwaited, type LzOperator } from '@layzee/stryker-mutator-core';
-import { isNodeAssertCall } from './bindings.ts';
+import { isNodeAssertCall } from './node-bindings.ts';
 
 /**
  * AssertionRemoval: removes a `node:assert` statement from production code. Stryker's CallExpression mutator removes a

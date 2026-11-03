@@ -1,5 +1,5 @@
 import type { LzOperator } from '@layzee/stryker-mutator-core';
-import { isNodeAssertCall } from './bindings.ts';
+import { isNodeAssertCall } from './node-bindings.ts';
 
 /**
  * StatementRemoval for `await f();`: Stryker's CallExpression mutator removes `f();` but not an awaited call, so a

@@ -92,6 +92,18 @@ jobs:
             config: test-code
             mutated: '!packages/stryker-node-mutators/test/**/*.test.ts'
             timeout: 30
+          - project: '@layzee/stryker-node-test-mutators'
+            slug: stryker-node-test-mutators
+            root: packages/stryker-node-test-mutators
+            config: src
+            mutated: '!packages/stryker-node-test-mutators/src/**'
+            timeout: 30
+          - project: '@layzee/stryker-node-test-mutators'
+            slug: stryker-node-test-mutators
+            root: packages/stryker-node-test-mutators
+            config: test-code
+            mutated: '!packages/stryker-node-test-mutators/test/**/*.test.ts'
+            timeout: 30
           - project: '@layzee/stryker-node-test-runner'
             slug: stryker-node-test-runner
             root: packages/stryker-node-test-runner
@@ -124,6 +136,7 @@ jobs:
           'tsconfig.base.json', 'packages/node-test-extensions/package.json', 'packages/node-test-extensions/src/**',
           'packages/stryker-node-mutators/package.json', 'packages/stryker-node-test-runner/package.json',
           'packages/stryker-node-mutators/src/**', 'packages/stryker-node-test-runner/src/**',
+          'packages/stryker-node-test-mutators/package.json', 'packages/stryker-node-test-mutators/src/**',
           format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
           '!**/out-tsc/**', matrix.mutated) }}-" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

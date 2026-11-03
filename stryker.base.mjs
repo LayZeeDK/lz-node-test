@@ -1,19 +1,30 @@
 // What each package's Stryker configs share. Stryker runs from the workspace root, so that the sandbox keeps the
 // packages' tsconfig extends and the workspace's links.
-import '@layzee/stryker-node-mutators';
 
 // The packages import each other and load the runner and the operators from their TypeScript source.
 export const source = '--conditions=@lz-node-test/source';
 
 /**
- * A package's config for its test code: `config` with the operators for test files installed in place of the
- * production ones. The replace install has to run after this module's add install ends, and an ES module's sibling
- * static import starts before an earlier sibling's top-level await settles.
+ * A package's config for its production code: `config` with the production operators added to Stryker's mutators.
+ * The installs live here and not in the packages' configs, as an import there would make each package depend on the
+ * mutator packages, which depend on some of them.
+ *
+ * @param {import('@stryker-mutator/api/core').PartialStrykerOptions} config
+ */
+export async function production(config) {
+  await import('@layzee/stryker-node-mutators');
+
+  return config;
+}
+
+/**
+ * A package's config for its test code: `config` with the test-code operators in place of Stryker's mutators. It
+ * installs no production operators, which replace mode would keep.
  *
  * @param {import('@stryker-mutator/api/core').PartialStrykerOptions} config
  */
 export async function testCode(config) {
-  await import('@layzee/stryker-node-mutators/test-code');
+  await import('@layzee/stryker-node-test-mutators');
 
   return config;
 }

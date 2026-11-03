@@ -1,9 +1,10 @@
-import { reportFiles, testCode } from '../../stryker.base.mjs';
-import base from './stryker.config.mjs';
+import base, { reportFiles, source, testCode } from '../../stryker.base.mjs';
 
 export default await testCode({
   ...base,
   mutate: ['tools/eslint-rules/*.test.ts'],
+  tsconfigFile: 'tools/eslint-rules/tsconfig.stryker.json',
   incrementalFile: 'reports/stryker-incremental/@lz-node-test/eslint-rules.test-code.json',
   ...reportFiles('@lz-node-test/eslint-rules.test-code'),
+  lzNodeTest: { testFiles: ['tools/eslint-rules/*.test.ts'], nodeArgs: [source] },
 });

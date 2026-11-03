@@ -5,7 +5,7 @@ import { EventEmitter } from 'node:events';
 import { Writable } from 'node:stream';
 import { describe, it, type TestContext } from 'node:test';
 
-import { onSent, share, total } from './node-apis.ts';
+import { onSent, share, total } from './sample.ts';
 
 // env-schema/test/make-test.js:6
 function checkShare(t: TestContext, part: number, whole: number, expected: number): void {

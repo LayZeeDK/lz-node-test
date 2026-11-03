@@ -1,7 +1,8 @@
 import type { NodePath, types } from '@babel/core';
 
 import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
-import { isProcess, lzBuiltin } from './bindings.ts';
+import { lzBuiltin } from './bindings.ts';
+import { isProcess } from './node-bindings.ts';
 
 const listenMethods: ReadonlySet<string | undefined> = new Set([
   'on',

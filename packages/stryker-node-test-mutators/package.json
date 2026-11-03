@@ -1,0 +1,64 @@
+{
+  "name": "@layzee/stryker-node-test-mutators",
+  "version": "0.0.0",
+  "private": true,
+  "description": "StrykerJS mutators for test files that use node:assert and node:test",
+  "license": "MIT",
+  "keywords": [
+    "stryker",
+    "mutation-testing",
+    "node:test",
+    "node:assert"
+  ],
+  "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/stryker-node-test-mutators#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LayZeeDK/lz-node-test.git",
+    "directory": "packages/stryker-node-test-mutators"
+  },
+  "bugs": {
+    "url": "https://github.com/LayZeeDK/lz-node-test/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@lz-node-test/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@layzee/stryker-mutator-core": "*",
+    "@layzee/stryker-node-mutators": "*"
+  },
+  "peerDependencies": {
+    "@babel/core": "~8.0.0",
+    "@stryker-mutator/core": "^10.1.1"
+  },
+  "devDependencies": {
+    "@layzee/node-test-extensions": "*"
+  },
+  "nx": {
+    "tags": [
+      "type:lib"
+    ],
+    "targets": {
+      "mutate": {},
+      "mutate-src": {},
+      "mutate-test-code": {}
+    }
+  }
+}

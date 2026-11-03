@@ -7,9 +7,9 @@ import type { Location } from '@stryker-mutator/api/core';
 import { lzTestEach } from '@layzee/node-test-extensions';
 import type { LzOperator } from '@layzee/stryker-mutator-core';
 import { instrumentWith, mutantsOf } from '../mutants-of.fixtures.ts';
-import { productionOperators, testOperators } from '../../src/operators.ts';
+import { productionOperators } from '../../src/operators.ts';
 
-const operators = [...productionOperators, ...testOperators];
+const operators = productionOperators;
 const allowed: ReadonlySet<string> = new Set(['Error', 'Promise.reject']);
 const keywords: ReadonlySet<string> = new Set([
   'catch',

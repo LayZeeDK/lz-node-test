@@ -5,7 +5,7 @@ import { deepStrictEqual as same, rejects, strict, strictEqual, throws } from 'n
 import { describe, it } from 'node:test';
 import { callbackify } from 'node:util';
 
-import { share, total } from './node-apis.ts';
+import { share, total } from './sample.ts';
 
 describe('assertions reached in other ways', () => {
   it('checks through a named and a renamed import', () => {

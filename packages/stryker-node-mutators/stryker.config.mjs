@@ -1,7 +1,6 @@
-import base, { reportFiles, source } from '../../stryker.base.mjs';
+import base, { production, reportFiles, source } from '../../stryker.base.mjs';
 
-/** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
-export default {
+export default await production({
   ...base,
   // The synthetic sample is code that exists to be mutated by the production operators.
   mutate: ['packages/stryker-node-mutators/src/**/*.ts', 'packages/stryker-node-mutators/test/synthetic/node-apis.ts'],
@@ -9,4 +8,4 @@ export default {
   incrementalFile: 'reports/stryker-incremental/@layzee/stryker-node-mutators.src.json',
   ...reportFiles('@layzee/stryker-node-mutators.src'),
   lzNodeTest: { testFiles: ['packages/stryker-node-mutators/test/**/*.test.ts'], nodeArgs: [source] },
-};
+});

@@ -10,6 +10,9 @@
       "path": "./packages/stryker-node-mutators"
     },
     {
+      "path": "./packages/stryker-node-test-mutators"
+    },
+    {
       "path": "./packages/node-test-extensions"
     },
     {

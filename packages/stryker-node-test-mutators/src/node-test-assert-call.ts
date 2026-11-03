@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
 import { lzAwaited, type LzBabelTypes, type LzOperator } from '@layzee/stryker-mutator-core';
-import { assertMethod } from './bindings.ts';
+import { lzAssertMethod } from '@layzee/stryker-node-mutators/bindings';
 
 const message = 'Stryker: assertion reached';
 const asyncMethods: ReadonlySet<string> = new Set(['rejects', 'doesNotReject']);
@@ -58,7 +58,7 @@ function assertionMethod(path: NodePath, node: types.Expression): string | undef
     return undefined;
   }
 
-  const method = assertMethod(path, node.callee);
+  const method = lzAssertMethod(path, node.callee);
 
   return method === 'fail' ? undefined : method;
 }

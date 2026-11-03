@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
 import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
-import { assertMethod, isTestContext } from './bindings.ts';
+import { lzAssertMethod } from '@layzee/stryker-node-mutators/bindings';
 
 const message = 'Stryker';
 const testFunctions: ReadonlySet<string | undefined> = new Set(['it', 'test']);
@@ -46,7 +46,7 @@ export const nodeTestAssertValidator: LzOperator = {
 /** How a validator expects the argument at `path` to fail: the assertion's method, or `throws` for a test function. */
 function checkedBy(path: NodePath, call: types.CallExpression): string | undefined {
   if (path.key === 0) {
-    return assertMethod(path, call.callee);
+    return lzAssertMethod(path, call.callee);
   }
 
   return path.key === call.arguments.length - 1 && expectsMatchedFailure(path, call) ? 'throws' : undefined;
@@ -141,4 +141,9 @@ function isNodeTest(path: NodePath, callee: types.Node): boolean {
 /** node:test's default or namespace import, or its `it` or `test`, which also carry the other test functions. */
 function isTestImport(from: ReturnType<typeof lzImportOf>): boolean {
   return from?.source === 'node:test' && (from.imported === undefined || testFunctions.has(from.imported));
+}
+
+/** A parameter, which node:test passes the test context in. */
+function isTestContext(path: NodePath, identifier: types.Identifier): boolean {
+  return path.scope.getBinding(identifier.name)?.kind === 'param';
 }

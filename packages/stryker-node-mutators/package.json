@@ -2,7 +2,7 @@
   "name": "@layzee/stryker-node-mutators",
   "version": "0.0.0",
   "private": true,
-  "description": "StrykerJS mutators for code that uses Node.js APIs and node:assert, and for mutating test files",
+  "description": "StrykerJS mutators for code that uses Node.js APIs and node:assert",
   "license": "MIT",
   "keywords": [
     "stryker",
@@ -28,10 +28,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./test-code": {
-      "@lz-node-test/source": "./src/test-code.ts",
-      "types": "./dist/test-code.d.ts",
-      "default": "./dist/test-code.js"
+    "./bindings": {
+      "@lz-node-test/source": "./src/bindings.ts",
+      "types": "./dist/bindings.d.ts",
+      "default": "./dist/bindings.js"
     },
     "./package.json": "./package.json"
   },

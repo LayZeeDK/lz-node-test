@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
 import { lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
-import { isProcess } from './bindings.ts';
+import { isProcess } from './node-bindings.ts';
 
 /**
  * Flips the exit status that `process.exitCode = N` sets: a failure becomes a success and a success a failure. Stryker

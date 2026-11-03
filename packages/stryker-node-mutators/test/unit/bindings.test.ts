@@ -3,14 +3,14 @@ import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
 import type { LzOperator } from '@layzee/stryker-mutator-core';
-import { assertMethod } from '../../src/bindings.ts';
+import { lzAssertMethod } from '../../src/bindings.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 
 const probe: LzOperator = {
   name: 'Probe',
   sample: '',
   *mutate(path, t) {
-    const method = path.isCallExpression() ? assertMethod(path, path.node.callee) : undefined;
+    const method = path.isCallExpression() ? lzAssertMethod(path, path.node.callee) : undefined;
 
     if (method !== undefined) {
       yield t.stringLiteral(method);
@@ -18,7 +18,7 @@ const probe: LzOperator = {
   },
 };
 
-describe('assertMethod', () => {
+describe('lzAssertMethod', () => {
   lzTestEach([
     ['a call of the default import', "import assert from 'node:assert';\nassert(x);", ['"ok"']],
     ['a method of the default import', "import assert from 'node:assert/strict';\nassert.equal(x, 1);", ['"equal"']],
