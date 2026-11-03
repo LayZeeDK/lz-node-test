@@ -2,7 +2,7 @@
 // packages' tsconfig extends and the workspace's links.
 
 // The packages import each other and load the runner and the operators from their TypeScript source.
-export const source = '--conditions=@lz-node-test/source';
+export const source = '--conditions=@layzee/source';
 
 /**
  * A package's config for its production code: `config` with the production operators added to Stryker's mutators.

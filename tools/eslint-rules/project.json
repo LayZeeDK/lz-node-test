@@ -4,7 +4,7 @@
   "tags": ["type:tool"],
   "targets": {
     "test": {
-      "command": "node --conditions=@lz-node-test/source --test \"*.test.ts\"",
+      "command": "node --conditions=@layzee/source --test \"*.test.ts\"",
       "options": { "cwd": "{projectRoot}" },
       "inputs": [
         "default",

@@ -24,7 +24,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "@lz-node-test/source": "./src/index.ts",
+      "@layzee/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
@@ -38,7 +38,7 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\""
+    "test": "node --conditions=@layzee/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\""
   },
   "dependencies": {
     "@layzee/stryker-mutator-core": "*",

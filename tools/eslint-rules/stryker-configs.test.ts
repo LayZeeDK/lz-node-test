@@ -45,8 +45,8 @@ const reportNames: readonly (readonly [file: string, name: string])[] = [
   ['packages/stryker-node-test-mutators/stryker.test-code.config.mjs', '@layzee/stryker-node-test-mutators.test-code'],
   ['packages/stryker-node-test-runner/stryker.config.mjs', '@layzee/stryker-node-test-runner.src'],
   ['packages/stryker-node-test-runner/stryker.test-code.config.mjs', '@layzee/stryker-node-test-runner.test-code'],
-  ['tools/eslint-rules/stryker.config.mjs', '@lz-node-test/eslint-rules.src'],
-  ['tools/eslint-rules/stryker.test-code.config.mjs', '@lz-node-test/eslint-rules.test-code'],
+  ['tools/eslint-rules/stryker.config.mjs', '@layzee/eslint-rules.src'],
+  ['tools/eslint-rules/stryker.test-code.config.mjs', '@layzee/eslint-rules.test-code'],
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

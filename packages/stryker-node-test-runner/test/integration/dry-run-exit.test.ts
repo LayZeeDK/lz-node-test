@@ -55,7 +55,7 @@ const strykerMainWithWorker = [
   `await import(${src('index.ts')});`,
   'const worker = spawnSync(',
   '  process.execPath,',
-  `  ['--conditions=@lz-node-test/source', '--input-type=module', '--eval', ${JSON.stringify(dryRunInOwnProcess)}],`,
+  `  ['--conditions=@layzee/source', '--input-type=module', '--eval', ${JSON.stringify(dryRunInOwnProcess)}],`,
   "  { encoding: 'utf8', windowsHide: true },",
   ');',
   'const stores = readdirSync(tmpdir())',
@@ -96,7 +96,7 @@ describe('the runner module in a process whose parent never loads it', () => {
 
     const child = spawnSync(
       process.execPath,
-      ['--conditions=@lz-node-test/source', '--input-type=module', '--eval', dryRunInOwnProcess],
+      ['--conditions=@layzee/source', '--input-type=module', '--eval', dryRunInOwnProcess],
       { cwd: project, env: ownEnv(tmp), encoding: 'utf8', windowsHide: true },
     );
 
@@ -111,7 +111,7 @@ describe("the runner module in Stryker's main process", () => {
 
     const child = spawnSync(
       process.execPath,
-      ['--conditions=@lz-node-test/source', '--input-type=module', '--eval', strykerMainWithWorker],
+      ['--conditions=@layzee/source', '--input-type=module', '--eval', strykerMainWithWorker],
       { cwd: project, env: ownEnv(tmp), encoding: 'utf8', windowsHide: true },
     );
     assert.equal(child.stdout, 'complete lz-node-test-dry-run-<main>-store <file>.peak <file>.start-up', child.stderr);
@@ -129,7 +129,7 @@ describe("the runner module in Stryker's main process", () => {
 
     const child = spawnSync(
       process.execPath,
-      ['--conditions=@lz-node-test/source', '--input-type=module', '--eval', strykerMain(end)],
+      ['--conditions=@layzee/source', '--input-type=module', '--eval', strykerMain(end)],
       { env: ownEnv(tmp), encoding: 'utf8', windowsHide: true },
     );
     const dir = child.stdout;

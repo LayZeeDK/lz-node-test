@@ -24,6 +24,6 @@
     "strict": true,
     "target": "es2024",
     "verbatimModuleSyntax": true,
-    "customConditions": ["@lz-node-test/source"]
+    "customConditions": ["@layzee/source"]
   }
 }

@@ -24,7 +24,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "@lz-node-test/source": "./src/index.ts",
+      "@layzee/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
@@ -38,9 +38,9 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "test": "node --conditions=@lz-node-test/source --test \"test/unit/**/*.test.ts\"",
-    "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\"",
-    "bench": "node --conditions=@lz-node-test/source test/runner.bench.ts"
+    "test": "node --conditions=@layzee/source --test \"test/unit/**/*.test.ts\"",
+    "test-integration": "node --conditions=@layzee/source --test \"test/integration/**/*.test.ts\"",
+    "bench": "node --conditions=@layzee/source test/runner.bench.ts"
   },
   "peerDependencies": {
     "@stryker-mutator/api": "^10.1.1",
