@@ -56,13 +56,13 @@ jobs:
         # lists, as exclusions, the files the config mutates. Stryker's incremental mode sees changes to those and to
         # the test files; every other input goes into the cache key below.
         include:
-          - project: eslint-rules
+          - project: '@lz-node-test/eslint-rules'
             slug: eslint-rules
             root: tools/eslint-rules
             config: src
             mutated: '!tools/eslint-rules/*.ts'
             timeout: 30
-          - project: eslint-rules
+          - project: '@lz-node-test/eslint-rules'
             slug: eslint-rules
             root: tools/eslint-rules
             config: test-code
