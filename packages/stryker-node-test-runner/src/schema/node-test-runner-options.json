@@ -1,11 +1,11 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
   "type": "object",
-  "title": "LzStrykerNodeTestRunnerOptions",
+  "title": "LzNodeTestRunnerOptions",
   "properties": {
-    "lzStrykerNodeTest": {
-      "description": "Configuration for the lz-stryker-node-test test runner, which runs each test file with node and node:test.",
-      "title": "LzStrykerNodeTestOptions",
+    "lzNodeTest": {
+      "description": "Configuration for the lz-node-test test runner, which runs each test file with node and node:test.",
+      "title": "LzNodeTestOptions",
       "type": "object",
       "additionalProperties": false,
       "default": {},

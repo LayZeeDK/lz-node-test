@@ -26,7 +26,7 @@ import {
 
 shareCompileCache();
 
-describe('LzStrykerNodeTestRunner filter, bail and mutant activation', () => {
+describe('LzNodeTestTestRunner filter, bail and mutant activation', () => {
   it('runs neither the tests outside the filter nor their beforeEach and afterEach hooks', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
@@ -167,7 +167,7 @@ describe('LzStrykerNodeTestRunner filter, bail and mutant activation', () => {
     });
   });
 
-  it("runs only the files of Stryker's --testFiles in the dry run, also outside lzStrykerNodeTest.testFiles", async (t) => {
+  it("runs only the files of Stryker's --testFiles in the dry run, also outside lzNodeTest.testFiles", async (t) => {
     const dir = project(t, { 'a.test.mjs': passing, 'b.test.mjs': failing, 'c.spec.mjs': failing });
     const runner = await initRunner(['*.test.mjs'], {}, { testFiles: ['c.spec.mjs'] });
     const b = join(dir, 'b.test.mjs');

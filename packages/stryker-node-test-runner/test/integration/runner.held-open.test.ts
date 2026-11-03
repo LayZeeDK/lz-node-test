@@ -19,7 +19,7 @@ shareCompileCache();
 const server = "import { createServer } from 'node:http';";
 const listen = 'await new Promise((resolve) => createServer().listen(0, resolve));';
 
-describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', () => {
+describe('LzNodeTestTestRunner with a test file that its tests keep alive', () => {
   it('reports a mutant killed at once when a failed test leaves a server listening', async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(server, `it('fails', async () => { ${listen} assert.fail('expected failure'); });`),
@@ -59,7 +59,7 @@ describe('LzStrykerNodeTestRunner with a test file that its tests keep alive', (
       errorMessage:
         `Test file "${join(dir, 'a.test.mjs')}" stayed alive after its tests and root after hooks ended, held open ` +
         'by TCPServerWrap, so node --test would not end either. Close what its tests open in an after hook, or pass ' +
-        '--test-force-exit in lzStrykerNodeTest.nodeArgs, as for node --test (NODE_OPTIONS does not allow it); node:test ' +
+        '--test-force-exit in lzNodeTest.nodeArgs, as for node --test (NODE_OPTIONS does not allow it); node:test ' +
         'then loses errors raised after the tests and root after hooks end.',
     });
   });

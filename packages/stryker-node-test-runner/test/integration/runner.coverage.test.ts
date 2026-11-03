@@ -22,7 +22,7 @@ import {
 
 shareCompileCache();
 
-describe('LzStrykerNodeTestRunner coverage', () => {
+describe('LzNodeTestTestRunner coverage', () => {
   it('reports the results and coverage of every test, including coverage of the processes a test starts', async (t) => {
     const child = `${cover} cover('f-shared'); cover('f-child');`;
     const dir = project(t, {

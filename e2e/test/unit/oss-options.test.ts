@@ -272,8 +272,8 @@ describe('lzStrykerOptions', () => {
     assert.deepEqual(lzStrykerOptions('lz', project), {
       mutate: ['index.js'],
       plugins: ['@stryker-mutator/*', '@layzee/stryker-node-test-runner'],
-      testRunner: 'lz-stryker-node-test',
-      lzStrykerNodeTest: { testFiles: ['test/*.test.js'] },
+      testRunner: 'lz-node-test',
+      lzNodeTest: { testFiles: ['test/*.test.js'] },
     });
   });
 

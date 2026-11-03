@@ -24,7 +24,7 @@ import {
 
 shareCompileCache();
 
-describe('LzStrykerNodeTestRunner with the test context', () => {
+describe('LzNodeTestTestRunner with the test context', () => {
   it("reports a test as its plan has it, and counts what runs after a test's body returns, while node:test waits for the plan, as the test's coverage", async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(

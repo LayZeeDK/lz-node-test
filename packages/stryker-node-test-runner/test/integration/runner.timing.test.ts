@@ -22,7 +22,7 @@ import {
 
 shareCompileCache();
 
-describe('LzStrykerNodeTestRunner timing', () => {
+describe('LzNodeTestTestRunner timing', () => {
   it("times each test with the time its file's run spent outside the tests, such as starting node", async (t) => {
     project(t, { 'a.test.mjs': fixture("it('first', () => {});", "it('second', () => {});") });
     const runner = await initRunner(['*.test.mjs']);

@@ -27,7 +27,7 @@ import {
   summary,
   strykerOptions,
 } from '../runner.fixtures.ts';
-import { LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../../src/index.ts';
+import { LzNodeTestTestRunner, type LzNodeTestOptions } from '../../src/index.ts';
 
 const compileCache = shareCompileCache();
 
@@ -39,15 +39,15 @@ function writesOnLoad(file: string, expression: string): string {
   );
 }
 
-describe('LzStrykerNodeTestRunner', () => {
+describe('LzNodeTestTestRunner', () => {
   it('can reload the environment', () => {
-    assert.deepEqual(new LzStrykerNodeTestRunner(strykerOptions(), logger()).capabilities(), {
+    assert.deepEqual(new LzNodeTestTestRunner(strykerOptions(), logger()).capabilities(), {
       reloadEnvironment: true,
     });
   });
 
   it('runs nothing before it is initialized', async () => {
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(), logger());
+    const runner = new LzNodeTestTestRunner(strykerOptions(), logger());
 
     assert.deepEqual(await settle(runner.dryRun(dryRun)), {
       status: DryRunStatus.Complete,
@@ -57,7 +57,7 @@ describe('LzStrykerNodeTestRunner', () => {
   });
 
   it('rejects, instead of throwing, when the dry run fails before it runs a file', async () => {
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(), logger());
+    const runner = new LzNodeTestTestRunner(strykerOptions(), logger());
 
     // @ts-expect-error -- a test file that is no string, which makes the dry run fail before it runs a file
     await assert.rejects(runner.dryRun({ ...dryRun, testFiles: [42] }), TypeError);
@@ -67,31 +67,23 @@ describe('LzStrykerNodeTestRunner', () => {
     const debug: string[] = [];
     const warnings: string[] = [];
 
-    await new LzStrykerNodeTestRunner(strykerOptions(), logger({ debug, warnings })).dispose();
+    await new LzNodeTestTestRunner(strykerOptions(), logger({ debug, warnings })).dispose();
 
     assert.deepEqual([debug, warnings], [[], []]);
   });
 
   it('fails to initialize without test files', async (t) => {
     project(t, { 'a.test.mjs': passing });
-    const options = { lzStrykerNodeTest: { testFiles: ['none/*.test.mjs'] } };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger());
+    const options = { lzNodeTest: { testFiles: ['none/*.test.mjs'] } };
+    const runner = new LzNodeTestTestRunner(strykerOptions(options), logger());
 
     await assert.rejects(runner.init(), { message: 'No test files match ["none/*.test.mjs"]' });
     await runner.dispose();
   });
 
   lzTestFor<readonly [string, string, string | undefined]>([
-    [
-      'refuses',
-      '21.20.0',
-      'The lz-stryker-node-test test runner needs Node.js 22.18 or later, and this is Node.js 21.20.0.',
-    ],
-    [
-      'refuses',
-      '22.17.1',
-      'The lz-stryker-node-test test runner needs Node.js 22.18 or later, and this is Node.js 22.17.1.',
-    ],
+    ['refuses', '21.20.0', 'The lz-node-test test runner needs Node.js 22.18 or later, and this is Node.js 21.20.0.'],
+    ['refuses', '22.17.1', 'The lz-node-test test runner needs Node.js 22.18 or later, and this is Node.js 22.17.1.'],
     ['runs on', '22.18.0', undefined],
     ['runs on', '23.0.0', undefined],
   ])('%s Node.js %s', async ([, version, message], t) => {
@@ -99,10 +91,7 @@ describe('LzStrykerNodeTestRunner', () => {
     Object.defineProperty(process.versions, 'node', { value: version });
     t.after(() => Object.defineProperty(process.versions, 'node', { value }));
     project(t, { 'a.test.mjs': passing });
-    const runner = new LzStrykerNodeTestRunner(
-      strykerOptions({ lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } }),
-      logger(),
-    );
+    const runner = new LzNodeTestTestRunner(strykerOptions({ lzNodeTest: { testFiles: ['a.test.mjs'] } }), logger());
     t.after(() => runner.dispose());
 
     if (message === undefined) {
@@ -115,8 +104,8 @@ describe('LzStrykerNodeTestRunner', () => {
   it("warns and runs nothing without test files when Stryker's allowEmpty is set", async (t) => {
     project(t, { 'a.test.mjs': failing });
     const warnings: string[] = [];
-    const options = { allowEmpty: true, lzStrykerNodeTest: { testFiles: ['none/*.test.mjs'] } };
-    const runner = new LzStrykerNodeTestRunner(strykerOptions(options), logger({ debugEnabled: false, warnings }));
+    const options = { allowEmpty: true, lzNodeTest: { testFiles: ['none/*.test.mjs'] } };
+    const runner = new LzNodeTestTestRunner(strykerOptions(options), logger({ debugEnabled: false, warnings }));
     t.after(() => runner.dispose());
 
     await runner.init();
@@ -160,10 +149,7 @@ describe('LzStrykerNodeTestRunner', () => {
       process.env['NODE_COMPILE_CACHE'] = compileCache;
     });
     delete process.env['NODE_COMPILE_CACHE'];
-    const runner = new LzStrykerNodeTestRunner(
-      strykerOptions({ lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } }),
-      logger(),
-    );
+    const runner = new LzNodeTestTestRunner(strykerOptions({ lzNodeTest: { testFiles: ['a.test.mjs'] } }), logger());
 
     const initialized = runner.init();
     await runner.dispose();
@@ -209,7 +195,7 @@ describe('LzStrykerNodeTestRunner', () => {
 
   it('removes the directories that runners of ended processes left behind when it is initialized', async (t) => {
     project(t, { 'a.test.mjs': passing });
-    const left = join(tmpdir(), `lz-stryker-node-test-${noProcess}-left`);
+    const left = join(tmpdir(), `lz-node-test-${noProcess}-left`);
     mkdirSync(join(left, 'out'), { recursive: true });
     t.after(() => {
       rmSync(left, { recursive: true, force: true });
@@ -231,7 +217,7 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.deepEqual({ exitCode, stderr, count: records.length }, { exitCode: 0, stderr: '', count: 1 });
     const outDir = readFileSync(join(dir, 'out-dir.txt'), 'utf8');
     assert.equal(dirname(dirname(outDir)), resolve(tmpdir()));
-    assert.ok(basename(dirname(outDir)).startsWith(`lz-stryker-node-test-${process.pid}-`), outDir);
+    assert.ok(basename(dirname(outDir)).startsWith(`lz-node-test-${process.pid}-`), outDir);
     assert.ok(!existsSync(dirname(outDir)));
   });
 
@@ -404,7 +390,7 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.ok(result.errorMessage.length > prefix.length, result.errorMessage);
   });
 
-  lzTestFor([{}, { lzStrykerNodeTest: {} }])(
+  lzTestFor([{}, { lzNodeTest: {} }])(
     "runs the .spec and .test files that Nx's convention names, outside node_modules, by default, with the options %j",
     async (options, t) => {
       const dir = project(t, {
@@ -414,7 +400,7 @@ describe('LzStrykerNodeTestRunner', () => {
         'd.test.mjs': failing,
         'e.ts': failing,
       });
-      const runner = await initRunner(undefined, options.lzStrykerNodeTest);
+      const runner = await initRunner(undefined, options.lzNodeTest);
       t.after(() => runner.dispose());
 
       const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
@@ -426,10 +412,10 @@ describe('LzStrykerNodeTestRunner', () => {
     },
   );
 
-  it('passes lzStrykerNodeTest.nodeArgs to the node process of each test file', async (t) => {
+  it('passes lzNodeTest.nodeArgs to the node process of each test file', async (t) => {
     const dir = project(t, { 'a.test.mjs': writesOnLoad('exec-argv.json', 'JSON.stringify(process.execArgv)') });
-    const execArgv = async (lzStrykerNodeTest: LzStrykerNodeTestOptions) => {
-      const runner = await initRunner(undefined, lzStrykerNodeTest);
+    const execArgv = async (lzNodeTest: LzNodeTestOptions) => {
+      const runner = await initRunner(undefined, lzNodeTest);
       await settle(runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }));
 
       const argv: unknown = JSON.parse(readFileSync(join(dir, 'exec-argv.json'), 'utf8'));
@@ -449,7 +435,7 @@ describe('LzStrykerNodeTestRunner', () => {
     assert.deepEqual(await execArgv({ testFiles: ['a.test.mjs'] }), [reporterArg]);
   });
 
-  it('runs its own reporter only, whatever reporters NODE_OPTIONS and lzStrykerNodeTest.nodeArgs name', async (t) => {
+  it('runs its own reporter only, whatever reporters NODE_OPTIONS and lzNodeTest.nodeArgs name', async (t) => {
     const dir = project(t, { 'a.test.mjs': passing });
     const nodeOptions = process.env['NODE_OPTIONS'];
     t.after(() => {

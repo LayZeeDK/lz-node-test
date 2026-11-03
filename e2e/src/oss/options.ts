@@ -34,8 +34,8 @@ export type LzStrykerOptions =
   | {
       readonly mutate: readonly string[];
       readonly plugins: readonly string[];
-      readonly testRunner: 'lz-stryker-node-test';
-      readonly lzStrykerNodeTest: { readonly testFiles: readonly string[] };
+      readonly testRunner: 'lz-node-test';
+      readonly lzNodeTest: { readonly testFiles: readonly string[] };
     }
   | {
       readonly mutate: readonly string[];
@@ -224,8 +224,8 @@ export function lzStrykerOptions(side: LzSide, { mutate, testFiles, command }: L
     ? {
         mutate,
         plugins: ['@stryker-mutator/*', '@layzee/stryker-node-test-runner'],
-        testRunner: 'lz-stryker-node-test',
-        lzStrykerNodeTest: { testFiles },
+        testRunner: 'lz-node-test',
+        lzNodeTest: { testFiles },
       }
     : { mutate, testRunner: 'command', commandRunner: { command }, coverageAnalysis: 'off' };
 }

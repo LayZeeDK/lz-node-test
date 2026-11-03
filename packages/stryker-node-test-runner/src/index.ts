@@ -1,6 +1,1 @@
-export {
-  LzStrykerNodeTestRunner,
-  strykerPlugins,
-  strykerValidationSchema,
-  type LzStrykerNodeTestOptions,
-} from './runner.ts';
+export { LzNodeTestTestRunner, strykerPlugins, strykerValidationSchema, type LzNodeTestOptions } from './runner.ts';

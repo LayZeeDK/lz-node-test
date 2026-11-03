@@ -453,7 +453,7 @@ export interface ModuleHooks {
   readonly load: LoadHookSync;
 }
 
-const wrappedUrl = 'lz-stryker-node-test:node-test/';
+const wrappedUrl = 'lz-node-test:node-test/';
 
 /**
  * Module hooks that make `import 'node:test'` and `require('node:test')` give the wrapped module on

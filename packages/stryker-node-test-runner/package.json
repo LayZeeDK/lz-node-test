@@ -50,7 +50,7 @@
     "@layzee/lz-node-test": "*"
   },
   "initStrykerConfig": {
-    "testRunner": "lz-stryker-node-test",
+    "testRunner": "lz-node-test",
     "appendPlugins": [
       "@layzee/stryker-node-test-runner"
     ]

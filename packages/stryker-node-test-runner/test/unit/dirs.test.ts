@@ -185,9 +185,9 @@ describe('ownDir', () => {
 
 describe('lzDirPrefix', () => {
   const rows: [Parameters<typeof lzDirPrefix>[0], string][] = [
-    ['run', 'lz-stryker-node-test-111-'],
-    ['cache', 'lz-stryker-node-test-cache-111-'],
-    ['dryRun', 'lz-stryker-node-test-dry-run-111-'],
+    ['run', 'lz-node-test-111-'],
+    ['cache', 'lz-node-test-cache-111-'],
+    ['dryRun', 'lz-node-test-dry-run-111-'],
   ];
 
   lzTestEach(rows)('names the %s directories of a process %s', (kind, prefix) => {
@@ -198,15 +198,15 @@ describe('lzDirPrefix', () => {
 describe('removeLeftDirs', () => {
   it('removes the run, cache and dry-run directories whose processes ended, and leaves everything else', (t) => {
     const names = [
-      'lz-stryker-node-test-111-a',
-      'lz-stryker-node-test-cache-111-b',
+      'lz-node-test-111-a',
+      'lz-node-test-cache-111-b',
       basename(lzDryRunDir(111)),
-      'lz-stryker-node-test-222-c',
-      'lz-stryker-node-test-cache-222-d',
+      'lz-node-test-222-c',
+      'lz-node-test-cache-222-d',
       basename(lzDryRunDir(222)),
-      'lz-stryker-node-test-e',
+      'lz-node-test-e',
       'other-111-f',
-      'other-lz-stryker-node-test-111-g',
+      'other-lz-node-test-111-g',
     ];
     const dir = tempDirWith(t, 'left-dirs-', names);
     const asked: number[] = [];
@@ -223,11 +223,7 @@ describe('removeLeftDirs', () => {
   });
 
   it("leaves the directories of other users' runners", (t) => {
-    const names = [
-      'lz-stryker-node-test-111-mine',
-      'lz-stryker-node-test-111-theirs',
-      'lz-stryker-node-test-222-running',
-    ];
+    const names = ['lz-node-test-111-mine', 'lz-node-test-111-theirs', 'lz-node-test-222-running'];
     const dir = tempDirWith(t, 'left-dirs-', names);
     const asked: string[] = [];
     removeLeftDirs(dir, {
@@ -247,7 +243,7 @@ describe('removeLeftDirs', () => {
   });
 
   it('leaves a directory it cannot check or remove yet and goes on with the others', (t) => {
-    const names = ['lz-stryker-node-test-111-a', 'lz-stryker-node-test-111-b', 'lz-stryker-node-test-111-c'];
+    const names = ['lz-node-test-111-a', 'lz-node-test-111-b', 'lz-node-test-111-c'];
     const dir = tempDirWith(t, 'left-dirs-', names);
     const removed: string[] = [];
 

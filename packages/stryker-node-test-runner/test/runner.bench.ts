@@ -210,8 +210,8 @@ async function round(tasks: [name: string, fn: () => unknown][]): Promise<Map<st
 
 async function loadRunner(path: string, dir: string): Promise<BenchRunner> {
   const module: unknown = await import(pathToFileURL(resolve(path)).href);
-  const options = { lzStrykerNodeTest: { testFiles: [join(dir, '*.test.mjs').replaceAll('\\', '/')] } };
-  const runner = construct(member(module, 'LzStrykerNodeTestRunner'), [
+  const options = { lzNodeTest: { testFiles: [join(dir, '*.test.mjs').replaceAll('\\', '/')] } };
+  const runner = construct(member(module, 'LzNodeTestTestRunner'), [
     strykerOptions(options),
     logger({ debugEnabled: false }),
   ]);

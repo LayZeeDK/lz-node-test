@@ -20,7 +20,7 @@ import {
   type TestResult,
 } from '@stryker-mutator/api/test-runner';
 
-import { lzShortenHeldOpen, LzStrykerNodeTestRunner, type LzStrykerNodeTestOptions } from '../src/runner.ts';
+import { lzShortenHeldOpen, LzNodeTestTestRunner, type LzNodeTestOptions } from '../src/runner.ts';
 
 export const activeMutant = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
 export const hookUrl = pathToFileURL(join(import.meta.dirname, '..', 'src', 'hook.ts')).href;
@@ -116,7 +116,7 @@ export function logger({
 }
 
 export interface RunnerOptions {
-  readonly lzStrykerNodeTest?: LzStrykerNodeTestOptions;
+  readonly lzNodeTest?: LzNodeTestOptions;
   readonly testFiles?: readonly string[];
   readonly concurrency?: number;
   readonly checkers?: readonly string[];
@@ -127,23 +127,23 @@ export function strykerOptions({
   testFiles = [],
   checkers = [],
   ...options
-}: RunnerOptions = {}): ConstructorParameters<typeof LzStrykerNodeTestRunner>[0] {
+}: RunnerOptions = {}): ConstructorParameters<typeof LzNodeTestTestRunner>[0] {
   return { allowEmpty: false, timeoutFactor: 1.5, ...options, testFiles: [...testFiles], checkers: [...checkers] };
 }
 
 export async function initRunner(
   testFiles?: string[],
-  lzStrykerNodeTest?: LzStrykerNodeTestOptions,
+  lzNodeTest?: LzNodeTestOptions,
   {
     log = logger(),
     heldOpenMs,
     ...options
-  }: Omit<RunnerOptions, 'lzStrykerNodeTest'> & { readonly log?: Logger; readonly heldOpenMs?: number } = {},
-): Promise<LzStrykerNodeTestRunner> {
-  const lzOptions = (testFiles ?? lzStrykerNodeTest) && {
-    lzStrykerNodeTest: { ...lzStrykerNodeTest, ...(testFiles && { testFiles }) },
+  }: Omit<RunnerOptions, 'lzNodeTest'> & { readonly log?: Logger; readonly heldOpenMs?: number } = {},
+): Promise<LzNodeTestTestRunner> {
+  const lzOptions = (testFiles ?? lzNodeTest) && {
+    lzNodeTest: { ...lzNodeTest, ...(testFiles && { testFiles }) },
   };
-  const runner = new LzStrykerNodeTestRunner(strykerOptions({ ...options, ...lzOptions }), log);
+  const runner = new LzNodeTestTestRunner(strykerOptions({ ...options, ...lzOptions }), log);
 
   if (heldOpenMs !== undefined) {
     lzShortenHeldOpen(runner, heldOpenMs);
@@ -220,7 +220,7 @@ const stalledExitDelayMs = 10_000;
 
 export function ownCacheDirs(): string[] {
   return readdirSync(tmpdir())
-    .filter((name) => name.startsWith(`lz-stryker-node-test-cache-${process.pid}-`))
+    .filter((name) => name.startsWith(`lz-node-test-cache-${process.pid}-`))
     .sort();
 }
 

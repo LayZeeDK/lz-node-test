@@ -7,5 +7,5 @@ export default {
   tsconfigFile: 'tools/eslint-rules/tsconfig.stryker.json',
   incrementalFile: 'reports/stryker-incremental/eslint-rules.src.json',
   ...reportFiles('eslint-rules.src'),
-  lzStrykerNodeTest: { testFiles: ['tools/eslint-rules/*.test.ts'], nodeArgs: [source] },
+  lzNodeTest: { testFiles: ['tools/eslint-rules/*.test.ts'], nodeArgs: [source] },
 };

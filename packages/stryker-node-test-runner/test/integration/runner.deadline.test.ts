@@ -71,7 +71,7 @@ function stopHanging(): void {
   delete process.env['LZ_FIXTURE_HANG'];
 }
 
-describe('LzStrykerNodeTestRunner deadline', () => {
+describe('LzNodeTestTestRunner deadline', () => {
   it("times out a mutant run once its tests' time and each file's start-up counted once have passed, before Stryker's timeout", async (t) => {
     const dir = project(t, { 'a.test.mjs': slowStart });
     const runner = await initRunner(['a.test.mjs']);

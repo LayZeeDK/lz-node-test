@@ -14,7 +14,7 @@ export interface MemoryLimits {
 }
 
 /**
- * Without lzStrykerNodeTest.maxMemoryMB, a mutant run gives a file its dry-run peak times 1.5 plus 1024 MB, as Stryker scales
+ * Without lzNodeTest.maxMemoryMB, a mutant run gives a file its dry-run peak times 1.5 plus 1024 MB, as Stryker scales
  * and pads its timeouts.
  */
 export function memoryLimits(maxMemoryMB: number | undefined, store: LzDryRunStore, log: Logger): MemoryLimits {
@@ -46,7 +46,7 @@ function dryRunPeaks(store: LzDryRunStore, log: Logger): MemoryLimits {
         log.warn(
           `The dry run left no readable memory peak for "${file}", ` +
             `so each process of its mutant runs may hold ${limitMB} MB. ` +
-            'Set lzStrykerNodeTest.maxMemoryMB to choose the limit.',
+            'Set lzNodeTest.maxMemoryMB to choose the limit.',
         );
       }
 

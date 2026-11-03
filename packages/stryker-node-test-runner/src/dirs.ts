@@ -77,7 +77,7 @@ export function isOwn(
   return user.getuid === undefined || stat(path).uid === user.getuid();
 }
 
-const lzDirBase = 'lz-stryker-node-test-';
+const lzDirBase = 'lz-node-test-';
 const lzDirKinds = { run: '', cache: 'cache-', dryRun: 'dry-run-' };
 const lzDirPattern = new RegExp(`^${lzDirBase}(?:${Object.values(lzDirKinds).join('|')})(\\d+)-`);
 

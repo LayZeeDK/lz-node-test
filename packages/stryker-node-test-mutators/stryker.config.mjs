@@ -11,5 +11,5 @@ export default {
   tsconfigFile: 'packages/stryker-node-test-mutators/tsconfig.stryker.json',
   incrementalFile: 'reports/stryker-incremental/stryker-node-test-mutators.src.json',
   ...reportFiles('stryker-node-test-mutators.src'),
-  lzStrykerNodeTest: { testFiles: ['packages/stryker-node-test-mutators/test/**/*.test.ts'], nodeArgs: [source] },
+  lzNodeTest: { testFiles: ['packages/stryker-node-test-mutators/test/**/*.test.ts'], nodeArgs: [source] },
 };

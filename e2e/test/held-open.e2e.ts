@@ -14,7 +14,7 @@ it('fails the dry run without a report when a passing test leaves a server liste
 it('names the test file, what held it open and the fix in the dry run error', () => {
   assert.match(
     strict.output,
-    /Test file "[^"]*server\.test\.js" stayed alive after its tests and root after hooks ended, held open by TCPServerWrap, so node --test would not end either\. Close what its tests open in an after hook, or pass --test-force-exit in lzStrykerNodeTest\.nodeArgs/,
+    /Test file "[^"]*server\.test\.js" stayed alive after its tests and root after hooks ended, held open by TCPServerWrap, so node --test would not end either\. Close what its tests open in an after hook, or pass --test-force-exit in lzNodeTest\.nodeArgs/,
   );
 });
 

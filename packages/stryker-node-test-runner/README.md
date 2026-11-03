@@ -4,8 +4,8 @@ A [StrykerJS](https://stryker-mutator.io/) test runner for `node:test`. It runs 
 process with `node:test`, so the tests run as they do under `node --test`. It is ESM only, needs Node.js 22.18 or
 later, and is tested on Node.js 22 and 24.
 
-- Stryker plugin name: `lz-stryker-node-test`
-- Stryker options key: `lzStrykerNodeTest`
+- Stryker plugin name: `lz-node-test`
+- Stryker options key: `lzNodeTest`
 
 ## Quick start
 
@@ -28,19 +28,19 @@ Answer the initializer's questions as follows:
 1. For the preset, pick `None/other`.
 2. For the test runner, pick `@layzee/node`. The initializer names each runner after its package: it removes
    `@stryker-mutator/` and the first `stryker-` from the package name, then keeps the text before the first hyphen.
-   The configuration that it writes still names the runner `lz-stryker-node-test` and loads this package through
+   The configuration that it writes still names the runner `lz-node-test` and loads this package through
    `appendPlugins`.
 3. For the build command, keep the default, `none`, unless your tests need a build.
 
 The other questions ask for the reporters, the package manager, and the configuration file type. Answer them as you
 like. Then read the configuration file that the initializer wrote. When the default pattern does not match your test
-files, add `lzStrykerNodeTest.testFiles`, as [Configure Stryker](#configure-stryker) describes.
+files, add `lzNodeTest.testFiles`, as [Configure Stryker](#configure-stryker) describes.
 
 With pnpm, the initializer also lists this package in `plugins`. Keep both `plugins` and `appendPlugins`.
 
 If the initializer warns `Could not fetch additional initialization config`, it writes `testRunner: "@layzee/node"`
 and no `appendPlugins`, and Stryker then fails with `Cannot find TestRunner plugin`. Set
-`testRunner: 'lz-stryker-node-test'` and `appendPlugins: ['@layzee/stryker-node-test-runner']` by hand, as
+`testRunner: 'lz-node-test'` and `appendPlugins: ['@layzee/stryker-node-test-runner']` by hand, as
 [Configure Stryker](#configure-stryker) shows.
 
 ## Install
@@ -61,8 +61,8 @@ Load the plugin and select the runner in your Stryker configuration file, for ex
 export default {
   mutate: ['src/**/*.js'],
   appendPlugins: ['@layzee/stryker-node-test-runner'],
-  testRunner: 'lz-stryker-node-test',
-  lzStrykerNodeTest: { testFiles: ['test/**/*.test.js'] },
+  testRunner: 'lz-node-test',
+  lzNodeTest: { testFiles: ['test/**/*.test.js'] },
   reporters: ['clear-text', 'progress'],
 };
 ```
@@ -77,7 +77,7 @@ matches files named only `spec` or `test`, such as `test.js` or a Karma `src/tes
 files. Set it as well for other names, such as `.test.mjs` files.
 
 Stryker has a `testFiles` option of its own, `--testFiles` on the command line, apart from
-`lzStrykerNodeTest.testFiles`. The runner looks for the files that either option matches. When Stryker's `testFiles`
+`lzNodeTest.testFiles`. The runner looks for the files that either option matches. When Stryker's `testFiles`
 is set, the dry run runs only those files, and Stryker runs only their tests for each mutant.
 
 When no file matches, the runner stops before the dry run with the error `No test files match`, followed by the
@@ -103,7 +103,7 @@ Each of these errors fails the dry run. For such code, add a loader to `nodeArgs
 [tsx](https://tsx.is/):
 
 ```js
-lzStrykerNodeTest: { nodeArgs: ['--import', 'tsx'] },
+lzNodeTest: { nodeArgs: ['--import', 'tsx'] },
 ```
 
 The runner starts a new `node` process for each test file of each mutant run, and the loader compiles the file and its
@@ -111,14 +111,14 @@ imports again in each of them. To compile once instead, let Stryker build the co
 
 ```js
 buildCommand: 'tsc -b',
-lzStrykerNodeTest: { testFiles: ['dist/**/*.spec.js'] },
+lzNodeTest: { testFiles: ['dist/**/*.spec.js'] },
 ```
 
 Stryker runs `buildCommand` in its sandbox after it places the mutants in the code.
 
 ## Options
 
-All options sit under `lzStrykerNodeTest`.
+All options sit under `lzNodeTest`.
 
 | Option        | Type       | Default                               | Description                                                                                                                                                                                                                                                                                                      |
 | ------------- | ---------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -127,7 +127,7 @@ All options sit under `lzStrykerNodeTest`.
 | `maxMemoryMB` | `number`   | from the dry run                      | The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. The default is the most memory that a process of the test file held in the dry run, times 1.5, plus 1024.                                                                             |
 
 `nodeArgs` reach the process of each test file. Stryker's own `testRunnerNodeArgs` reach Stryker's worker process,
-which runs the runner but not the tests. To debug a test file, set `lzStrykerNodeTest.testFiles` to that file, run
+which runs the runner but not the tests. To debug a test file, set `lzNodeTest.testFiles` to that file, run
 Stryker with `--concurrency 1`, and pass `--inspect-brk` in `nodeArgs`. Each process of that file then waits for a
 debugger, one at a time.
 
@@ -351,15 +351,15 @@ To fix it, close what the tests open in an `after` hook. If you cannot, pass `--
 
 When the test files run under Node.js's permission model (`--permission`), give them two permissions:
 
-- `--allow-fs-write` for the runner's run directories, `lz-stryker-node-test-*` in `os.tmpdir()`. Each process
+- `--allow-fs-write` for the runner's run directories, `lz-node-test-*` in `os.tmpdir()`. Each process
   writes its results there. Without write access, every test file ends with "Missing test results".
 - `--allow-worker`. Each process watches its memory from a worker thread. Without it, no memory limit applies, and
   `maxMemoryMB` has no effect.
 
 ## Temporary files
 
-The runner keeps its run directories in `os.tmpdir()`, named `lz-stryker-node-test-*`, and removes them when the run
+The runner keeps its run directories in `os.tmpdir()`, named `lz-node-test-*`, and removes them when the run
 ends. What the dry run measured of each test file, its memory peak and its start-up, is kept in
-`lz-stryker-node-test-dry-run-<pid>-store` and stays until Stryker's own process exits, as the mutant runs read it.
+`lz-node-test-dry-run-<pid>-store` and stays until Stryker's own process exits, as the mutant runs read it.
 When Stryker is killed instead, the next run removes it, as it removes any directory that a crashed run left behind.
 With `maxMemoryMB` set, the runner records no peaks.

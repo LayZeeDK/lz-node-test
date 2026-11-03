@@ -7,5 +7,5 @@ export default {
   tsconfigFile: 'packages/lz-node-test/tsconfig.stryker.json',
   incrementalFile: 'reports/stryker-incremental/lz-node-test.src.json',
   ...reportFiles('lz-node-test.src'),
-  lzStrykerNodeTest: { testFiles: ['packages/lz-node-test/test/**/*.test.ts'], nodeArgs: [source] },
+  lzNodeTest: { testFiles: ['packages/lz-node-test/test/**/*.test.ts'], nodeArgs: [source] },
 };

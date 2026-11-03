@@ -22,7 +22,7 @@ import {
 
 shareCompileCache();
 
-describe('LzStrykerNodeTestRunner limits', () => {
+describe('LzNodeTestTestRunner limits', () => {
   const loop = (hits: number) =>
     [
       'const ns = globalThis.__stryker__;',
@@ -122,7 +122,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
   });
   lzTestFor<readonly [string, number | undefined, readonly [number, number], number]>([
     ['the 1024 MB floor, with a warning once,', undefined, [1024, 1024], 1],
-    ['lzStrykerNodeTest.maxMemoryMB when set, without a warning,', 1500, [1500, 1500], 0],
+    ['lzNodeTest.maxMemoryMB when set, without a warning,', 1500, [1500, 1500], 0],
   ])(
     'gives the processes of a file that the dry run did not run %s in every mutant run',
     async ([, maxMemoryMB, expected, warningCount], t) => {
@@ -162,7 +162,7 @@ describe('LzStrykerNodeTestRunner limits', () => {
     },
   );
 
-  it('ends a dry run under lzStrykerNodeTest.maxMemoryMB as an error that names the first file, in order, that held more', async (t) => {
+  it('ends a dry run under lzNodeTest.maxMemoryMB as an error that names the first file, in order, that held more', async (t) => {
     const waits = fixture("it('waits', async () => { await new Promise((resolve) => setTimeout(resolve, 1_000)); });");
     const dir = project(t, { 'a.test.mjs': waits, 'b.test.mjs': waits });
     const runner = await initRunner(['*.test.mjs'], { maxMemoryMB: 10 }, { concurrency: 2 });
@@ -174,8 +174,8 @@ describe('LzStrykerNodeTestRunner limits', () => {
     assert.ok(rssMB > 10, result.errorMessage);
     assert.equal(
       result.errorMessage,
-      `A process of "${join(dir, 'a.test.mjs')}" held ${rssMB} MB in the dry run, more than lzStrykerNodeTest.maxMemoryMB ` +
-        "(10 MB), so its mutant runs would time out. Raise lzStrykerNodeTest.maxMemoryMB, or leave it out to derive each file's " +
+      `A process of "${join(dir, 'a.test.mjs')}" held ${rssMB} MB in the dry run, more than lzNodeTest.maxMemoryMB ` +
+        "(10 MB), so its mutant runs would time out. Raise lzNodeTest.maxMemoryMB, or leave it out to derive each file's " +
         'limit from the dry run.',
     );
   });

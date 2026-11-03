@@ -28,7 +28,7 @@ import { lzFileError } from '../../src/runner.ts';
 
 shareCompileCache();
 
-describe('LzStrykerNodeTestRunner endings', () => {
+describe('LzNodeTestTestRunner endings', () => {
   it('ends the processes that the tests of a test file leave running once its run is over', async (t) => {
     let pidFile = '';
     // Before project()'s cleanup, which after hooks run in order: a child left running would hold the directory.

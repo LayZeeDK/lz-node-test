@@ -14,7 +14,7 @@ import { activeMutantEnv, envNames, type ProcessRecord, type RecordedTest } from
 import { callMember, construct, member } from '../reflect.fixtures.ts';
 import { activeMutant, dryRun, hookUrl, logger, strykerOptions } from '../runner.fixtures.ts';
 import {
-  LzStrykerNodeTestRunner,
+  LzNodeTestTestRunner,
   lzFileError,
   lzFilesFor,
   lzRunEnv,
@@ -157,12 +157,11 @@ describe('lzFileError', () => {
   });
 });
 
-describe('LzStrykerNodeTestRunner options', () => {
-  const runner = (lzStrykerNodeTest: unknown) =>
-    new LzStrykerNodeTestRunner({ ...strykerOptions(), lzStrykerNodeTest }, logger());
+describe('LzNodeTestTestRunner options', () => {
+  const runner = (lzNodeTest: unknown) => new LzNodeTestTestRunner({ ...strykerOptions(), lzNodeTest }, logger());
 
   it("takes Stryker's two constructor parameters only", () => {
-    assert.equal(LzStrykerNodeTestRunner.length, 2);
+    assert.equal(LzNodeTestTestRunner.length, 2);
   });
 
   lzTestEach([
@@ -170,11 +169,11 @@ describe('LzStrykerNodeTestRunner options', () => {
     ['empty options', {}],
     ['every option', { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'], maxMemoryMB: 512 }],
   ])('takes %s', (_title, options) => {
-    assert.ok(runner(options) instanceof LzStrykerNodeTestRunner);
+    assert.ok(runner(options) instanceof LzNodeTestTestRunner);
   });
 
   lzTestFor([null, [], 'options'])('refuses %j, which is no options object', (options) => {
-    assert.throws(() => runner(options), { message: 'not valid lzStrykerNodeTest options' });
+    assert.throws(() => runner(options), { message: 'not valid lzNodeTest options' });
   });
 
   lzTestEach([
@@ -184,17 +183,17 @@ describe('LzStrykerNodeTestRunner options', () => {
     [{ nodeArgs: [null] }, 'nodeArgs'],
     [{ maxMemoryMB: '512' }, 'maxMemoryMB'],
   ])('refuses %j, naming %s', (options, field) => {
-    assert.throws(() => runner(options), { message: `not valid lzStrykerNodeTest options: ${field}` });
+    assert.throws(() => runner(options), { message: `not valid lzNodeTest options: ${field}` });
   });
 });
 
-describe('LzStrykerNodeTestRunner dry run coverage', () => {
+describe('LzNodeTestTestRunner dry run coverage', () => {
   /** A runner whose test file reports `record` without running. */
-  class RecordingRunner extends LzStrykerNodeTestRunner {
+  class RecordingRunner extends LzNodeTestTestRunner {
     readonly #record: ProcessRecord;
 
     constructor(record: ProcessRecord, log: Logger) {
-      super(strykerOptions({ lzStrykerNodeTest: { maxMemoryMB: 512 } }), log);
+      super(strykerOptions({ lzNodeTest: { maxMemoryMB: 512 } }), log);
       this.#record = record;
     }
 

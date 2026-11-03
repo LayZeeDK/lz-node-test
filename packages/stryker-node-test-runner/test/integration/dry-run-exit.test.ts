@@ -30,11 +30,11 @@ function strykerMain(end: string): string {
 
 /** Builds a runner, as a test file under `node --test` does, and runs a dry run that records each file's peak. */
 const dryRunInOwnProcess = [
-  `const { LzStrykerNodeTestRunner } = await import(${src('index.ts')});`,
+  `const { LzNodeTestTestRunner } = await import(${src('index.ts')});`,
   "const log = Object.fromEntries(['trace', 'debug', 'info', 'warn', 'error', 'fatal'].map((level) => [level, () => {}]));",
   'Object.assign(log, { isTraceEnabled: () => false, isDebugEnabled: () => false, isInfoEnabled: () => false });',
-  'const runner = new LzStrykerNodeTestRunner(',
-  "  { allowEmpty: false, testFiles: [], checkers: [], timeoutFactor: 1.5, lzStrykerNodeTest: { testFiles: ['a.test.mjs'] } },",
+  'const runner = new LzNodeTestTestRunner(',
+  "  { allowEmpty: false, testFiles: [], checkers: [], timeoutFactor: 1.5, lzNodeTest: { testFiles: ['a.test.mjs'] } },",
   '  log,',
   ');',
   'await runner.init();',
@@ -59,7 +59,7 @@ const strykerMainWithWorker = [
   "  { encoding: 'utf8', windowsHide: true },",
   ');',
   'const stores = readdirSync(tmpdir())',
-  "  .filter((name) => name.startsWith('lz-stryker-node-test-dry-run-'))",
+  "  .filter((name) => name.startsWith('lz-node-test-dry-run-'))",
   '  .flatMap((name) => [',
   "    name.replace(`-${process.pid}-`, '-<main>-'),",
   "    ...readdirSync(join(tmpdir(), name)).map((record) => record.replace(/^[0-9a-f]{64}/, '<file>')).sort(),",
@@ -74,7 +74,7 @@ function ownEnv(tmp: string): NodeJS.ProcessEnv {
 }
 
 function storesIn(dir: string): string[] {
-  return readdirSync(dir).filter((name) => name.startsWith('lz-stryker-node-test-dry-run-'));
+  return readdirSync(dir).filter((name) => name.startsWith('lz-node-test-dry-run-'));
 }
 
 /** A temporary directory with a project of one passing test file, for a process to run in with that TEMP. */
@@ -114,11 +114,7 @@ describe("the runner module in Stryker's main process", () => {
       ['--conditions=@lz-node-test/source', '--input-type=module', '--eval', strykerMainWithWorker],
       { cwd: project, env: ownEnv(tmp), encoding: 'utf8', windowsHide: true },
     );
-    assert.equal(
-      child.stdout,
-      'complete lz-stryker-node-test-dry-run-<main>-store <file>.peak <file>.start-up',
-      child.stderr,
-    );
+    assert.equal(child.stdout, 'complete lz-node-test-dry-run-<main>-store <file>.peak <file>.start-up', child.stderr);
     assert.deepEqual(storesIn(tmp), []);
   });
 
