@@ -24,4 +24,4 @@
 
 ## Proving tests
 
-- Prove that a test catches a change with `npx nx run <project>:mutate-src --mutate <file>:<lines>`, not by reverting code or writing a control test by hand
+- Prove that a test catches a change with `npx nx run <project>:mutate-src --mutate <file>:<lines>` (for example `npx nx run @layzee/stryker-node-test-runner:mutate-src --mutate packages/stryker-node-test-runner/src/dirs.ts:80`), not by reverting code or writing a control test by hand

@@ -34,12 +34,12 @@ const ignorePatterns = ['/.claude', '/.nx', '/plans', '/e2e', '/reports'];
 
 // Each config's reports, named as the mutate-src and mutate-test-code targets read them.
 const reportNames: readonly (readonly [file: string, name: string])[] = [
-  ['packages/node-test-extensions/stryker.config.mjs', 'lz-node-test.src'],
-  ['packages/node-test-extensions/stryker.test-code.config.mjs', 'lz-node-test.test-code'],
-  ['packages/stryker-node-test-mutators/stryker.config.mjs', 'stryker-node-test-mutators.src'],
-  ['packages/stryker-node-test-mutators/stryker.test-code.config.mjs', 'stryker-node-test-mutators.test-code'],
-  ['packages/stryker-node-test-runner/stryker.config.mjs', 'stryker-node-test-runner.src'],
-  ['packages/stryker-node-test-runner/stryker.test-code.config.mjs', 'stryker-node-test-runner.test-code'],
+  ['packages/node-test-extensions/stryker.config.mjs', '@layzee/node-test-extensions.src'],
+  ['packages/node-test-extensions/stryker.test-code.config.mjs', '@layzee/node-test-extensions.test-code'],
+  ['packages/stryker-node-test-mutators/stryker.config.mjs', '@layzee/stryker-node-test-mutators.src'],
+  ['packages/stryker-node-test-mutators/stryker.test-code.config.mjs', '@layzee/stryker-node-test-mutators.test-code'],
+  ['packages/stryker-node-test-runner/stryker.config.mjs', '@layzee/stryker-node-test-runner.src'],
+  ['packages/stryker-node-test-runner/stryker.test-code.config.mjs', '@layzee/stryker-node-test-runner.test-code'],
   ['tools/eslint-rules/stryker.config.mjs', 'eslint-rules.src'],
   ['tools/eslint-rules/stryker.test-code.config.mjs', 'eslint-rules.test-code'],
 ];

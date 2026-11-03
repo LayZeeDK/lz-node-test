@@ -52,45 +52,54 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # `mutated` lists, as exclusions, the files the config mutates. Stryker's incremental mode sees changes to
-        # those and to the test files; every other input goes into the cache key below.
+        # `slug` names the report artifact, as an artifact name cannot hold the slash of a project name. `mutated`
+        # lists, as exclusions, the files the config mutates. Stryker's incremental mode sees changes to those and to
+        # the test files; every other input goes into the cache key below.
         include:
           - project: eslint-rules
+            slug: eslint-rules
             root: tools/eslint-rules
             config: src
             mutated: '!tools/eslint-rules/*.ts'
             timeout: 30
           - project: eslint-rules
+            slug: eslint-rules
             root: tools/eslint-rules
             config: test-code
             mutated: '!tools/eslint-rules/*.test.ts'
             timeout: 30
-          - project: lz-node-test
+          - project: '@layzee/node-test-extensions'
+            slug: node-test-extensions
             root: packages/node-test-extensions
             config: src
             mutated: '!packages/node-test-extensions/src/**'
             timeout: 30
-          - project: lz-node-test
+          - project: '@layzee/node-test-extensions'
+            slug: node-test-extensions
             root: packages/node-test-extensions
             config: test-code
             mutated: '!packages/node-test-extensions/test/**/*.test.ts'
             timeout: 30
-          - project: stryker-node-test-mutators
+          - project: '@layzee/stryker-node-test-mutators'
+            slug: stryker-node-test-mutators
             root: packages/stryker-node-test-mutators
             config: src
             mutated: "!packages/stryker-node-test-mutators/src/**\n!packages/stryker-node-test-mutators/test/synthetic/node-apis.ts"
             timeout: 45
-          - project: stryker-node-test-mutators
+          - project: '@layzee/stryker-node-test-mutators'
+            slug: stryker-node-test-mutators
             root: packages/stryker-node-test-mutators
             config: test-code
             mutated: '!packages/stryker-node-test-mutators/test/**/*.test.ts'
             timeout: 30
-          - project: stryker-node-test-runner
+          - project: '@layzee/stryker-node-test-runner'
+            slug: stryker-node-test-runner
             root: packages/stryker-node-test-runner
             config: src
             mutated: '!packages/stryker-node-test-runner/src/**'
             timeout: 180
-          - project: stryker-node-test-runner
+          - project: '@layzee/stryker-node-test-runner'
+            slug: stryker-node-test-runner
             root: packages/stryker-node-test-runner
             config: test-code
             mutated: '!packages/stryker-node-test-runner/test/**/*.test.ts'
@@ -150,5 +159,5 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: mutation-report-${{ matrix.project }}.${{ matrix.config }}
+          name: mutation-report-${{ matrix.slug }}.${{ matrix.config }}
           path: reports/mutation/${{ matrix.project }}.${{ matrix.config }}.html

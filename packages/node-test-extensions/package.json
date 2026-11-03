@@ -26,7 +26,6 @@
     "test-integration": "node --conditions=@lz-node-test/source --test \"test/integration/**/*.test.ts\""
   },
   "nx": {
-    "name": "lz-node-test",
     "tags": [
       "type:lib"
     ],
