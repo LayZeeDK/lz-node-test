@@ -31,6 +31,7 @@ import {
   lzCheckpointKey,
   lzCheckpointReporterName,
   lzEndCheckpoint,
+  lzInstalledVersions,
   lzStartCheckpoint,
 } from './checkpoint.ts';
 import {
@@ -136,11 +137,14 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
   }
 
   const tarballDigests = tarballs.map((tarball) => createHash('sha256').update(readFileSync(tarball)).digest('hex'));
+  const installed = lzInstalledVersions(readFileSync(join(dir, 'node_modules', '.package-lock.json'), 'utf8'));
   const checkpointKey = (side: LzSide): string =>
     lzCheckpointKey({
       project: options.project,
       sourceCommit: header.sourceCommit,
       node: header.node,
+      platform: header.platform,
+      installed,
       mutate: header.mutate,
       mutantTimeoutMs: header.mutantTimeoutMs,
       config: lzStrykerConfig(side, options.project),
@@ -187,14 +191,17 @@ async function runSide(
   await settled("Removing an earlier run's report and log", () => {
     lzClearSideFiles(out, side);
   });
-  // A checkpoint that cannot be read, such as one Stryker's own final write left cut short, would fail every rerun.
-  const resumed = await settled('Checkpoint', () => lzStartCheckpoint(checkpoint, checkpointKey));
+  // A checkpoint that cannot be read, such as one Stryker's own final write left cut short, would fail every rerun:
+  // it goes, and the run starts a new one.
+  const firstStart = await settled('Checkpoint', () => lzStartCheckpoint(checkpoint, checkpointKey));
+  const resumed = firstStart.ok
+    ? firstStart
+    : await settled('Checkpoint after removing the unreadable one', () => {
+        lzEndCheckpoint(checkpoint);
+        process.stdout.write(`Removed ${checkpoint}, which could not be read; ${side} starts afresh.\n`);
 
-  if (!resumed.ok) {
-    await settled('Removing the unreadable checkpoint', () => {
-      lzEndCheckpoint(checkpoint);
-    });
-  }
+        return lzStartCheckpoint(checkpoint, checkpointKey);
+      });
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);

@@ -15,6 +15,7 @@ import {
   lzCheckpointReport,
   LzCheckpointReporter,
   lzEndCheckpoint,
+  lzInstalledVersions,
   lzStartCheckpoint,
 } from '../../src/oss/checkpoint.ts';
 
@@ -256,11 +257,28 @@ describe('lzCheckpointMutants', () => {
   });
 });
 
+describe('lzInstalledVersions', () => {
+  it("lists each installed package's path and version, sorted, whatever the order npm wrote them in", () => {
+    const lockfile = JSON.stringify({
+      name: 'p',
+      packages: { 'node_modules/b': { version: '2.0.0' }, 'node_modules/a': { version: '1.0.0', dev: true } },
+    });
+
+    assert.equal(lzInstalledVersions(lockfile), 'node_modules/a@1.0.0\nnode_modules/b@2.0.0');
+  });
+
+  it('refuses a file that lists no packages', () => {
+    assert.throws(() => lzInstalledVersions('{"name": "p"}'), /lists no "packages"/);
+  });
+});
+
 describe('lzCheckpointKey', () => {
   const inputs: LzCheckpointKeyInputs = {
     project: { name: 'p', mutate: ['index.js'], testFiles: ['test/*.js'], nodeTestFlags: [], patches: [] },
     sourceCommit: 'c1',
     node: 'v22.23.1',
+    platform: 'win32-arm64',
+    installed: 'node_modules/ajv@8.17.1',
     mutate: ['index.js:1-10'],
     mutantTimeoutMs: 30_000,
     config: 'export default {};\n',
@@ -272,6 +290,8 @@ describe('lzCheckpointKey', () => {
       { ...inputs, project: { ...inputs.project, nodeTestFlags: ['--test-concurrency=1'] } },
       { ...inputs, sourceCommit: 'c2' },
       { ...inputs, node: 'v24.18.1' },
+      { ...inputs, platform: 'linux-arm64' },
+      { ...inputs, installed: 'node_modules/ajv@8.17.2' },
       { ...inputs, mutate: ['index.js:1-11'] },
       { ...inputs, mutantTimeoutMs: null },
       { ...inputs, config: 'export default { a: 1 };\n' },
@@ -280,7 +300,7 @@ describe('lzCheckpointKey', () => {
 
     assert.deepEqual(
       changed.map((other) => lzCheckpointKey(other) === lzCheckpointKey(inputs)),
-      [false, false, false, false, false, false, false],
+      [false, false, false, false, false, false, false, false, false],
     );
   });
 

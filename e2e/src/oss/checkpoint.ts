@@ -6,7 +6,7 @@ import { commonTokens, declareClassPlugin, PluginKind, tokens } from '@stryker-m
 import type { DryRunCompletedEvent, Reporter } from '@stryker-mutator/api/report';
 import type { TestResult } from '@stryker-mutator/api/test-runner';
 
-import { lzParseReport } from '../report.ts';
+import { lzIsRecord, lzParseReport } from '../report.ts';
 import type { LzOssProject } from './options.ts';
 
 /** The name the driver adds to Stryker's `--reporters`. */
@@ -125,6 +125,9 @@ export interface LzCheckpointKeyInputs {
   readonly project: LzOssProject;
   readonly sourceCommit: string;
   readonly node: string;
+  readonly platform: string;
+  /** lzInstalledVersions of the copy: a clone without a lockfile can install newer dependencies on a rerun. */
+  readonly installed: string;
   readonly mutate: readonly string[];
   readonly mutantTimeoutMs: number | null;
   /** The side's generated Stryker configuration. */
@@ -134,6 +137,23 @@ export interface LzCheckpointKeyInputs {
 
 export function lzCheckpointKey(inputs: LzCheckpointKeyInputs): string {
   return JSON.stringify({ ...inputs, tarballDigests: [...inputs.tarballDigests].sort() });
+}
+
+/** Each installed package's path and version from npm's `node_modules/.package-lock.json`, one per line, sorted. */
+export function lzInstalledVersions(hiddenLockfile: string): string {
+  const lockfile: unknown = JSON.parse(hiddenLockfile);
+  const packages = lzIsRecord(lockfile) ? lockfile['packages'] : undefined;
+
+  if (!lzIsRecord(packages)) {
+    throw new Error('npm\'s node_modules/.package-lock.json lists no "packages".');
+  }
+
+  return Object.entries(packages)
+    .map(
+      ([path, entry]) => `${path}@${lzIsRecord(entry) && typeof entry['version'] === 'string' ? entry['version'] : ''}`,
+    )
+    .sort()
+    .join('\n');
 }
 
 /** The arguments that have Stryker resume from `file`, keep it up to date through this module, and overwrite it at the end. */
