@@ -37,8 +37,12 @@ export interface LzSideResult {
   readonly stryker: LzStrykerResult | null;
   /** Each step that threw, so a failed step leaves the result of the others. */
   readonly errors: readonly string[];
+  /** For a resumed side, the last run's time only. */
   readonly wallMs: number;
-  /** Mutants this run took from the checkpoint of an earlier run of the same part that ended before its report. */
+  /**
+   * Mutants in the checkpoint that an earlier run of the same part left when it ended before its report; Stryker
+   * retests those whose code or tests changed.
+   */
   readonly resumedMutants: number;
   readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
   readonly newInOsTmp: readonly string[];

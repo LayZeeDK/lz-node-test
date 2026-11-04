@@ -131,16 +131,13 @@ export interface LzStrykerRunOptions {
   readonly reporters?: readonly string[];
 }
 
-/** The arguments of `node` that run Stryker; `progress` adds Stryker's append-only progress reporter. */
+/** The arguments of `node` that run Stryker, reporting to clear-text, json and `reporters`. */
 export function lzStrykerCommand(
   configFile: string,
   concurrency: number,
   args: readonly string[],
-  progress: boolean,
-  extraReporters: readonly string[] = [],
+  reporters: readonly string[],
 ): string[] {
-  const reporters = ['clear-text', 'json', ...(progress ? ['progress-append-only'] : []), ...extraReporters];
-
   return [
     strykerBin,
     'run',
@@ -148,7 +145,7 @@ export function lzStrykerCommand(
     '--concurrency',
     String(concurrency),
     '--reporters',
-    reporters.join(','),
+    ['clear-text', 'json', ...reporters].join(','),
     ...args,
   ];
 }
@@ -157,7 +154,13 @@ export async function lzStryker(
   dir: string,
   configFile: string,
   concurrency: number,
-  { tmp = join(dir, 'tmp'), timeoutMs = lzStrykerTimeoutMs, args = [], logFile, reporters }: LzStrykerRunOptions = {},
+  {
+    tmp = join(dir, 'tmp'),
+    timeoutMs = lzStrykerTimeoutMs,
+    args = [],
+    logFile,
+    reporters = [],
+  }: LzStrykerRunOptions = {},
 ): Promise<LzStrykerRun> {
   const report = join(dir, lzReportFile);
   const before = new Set(readdirSync(tmp));
@@ -166,7 +169,11 @@ export async function lzStryker(
   rmSync(report, { force: true });
   const { exitCode, stdout, stderr, timedOut } = await lzExec(
     process.execPath,
-    lzStrykerCommand(configFile, concurrency, args, logFile !== undefined, reporters),
+    // A run followed through a log gets Stryker's progress line every 10 s.
+    lzStrykerCommand(configFile, concurrency, args, [
+      ...(logFile === undefined ? [] : ['progress-append-only']),
+      ...reporters,
+    ]),
     { cwd: dir, env: consumerEnv(tmp), timeoutMs, logFile },
   );
   const outcome: LzStrykerOutcome = {

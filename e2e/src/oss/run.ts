@@ -26,7 +26,13 @@ import {
   lzStryker,
   type LzStrykerRun,
 } from '../fixture.ts';
-import { lzCheckpointArgs, lzCheckpointReporterName, lzEndCheckpoint, lzStartCheckpoint } from './checkpoint.ts';
+import {
+  lzCheckpointArgs,
+  lzCheckpointKey,
+  lzCheckpointReporterName,
+  lzEndCheckpoint,
+  lzStartCheckpoint,
+} from './checkpoint.ts';
 import {
   lzOssPreparedPrefix,
   lzOssRunPrefix,
@@ -129,18 +135,20 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     return;
   }
 
-  // What decides the mutants' results, so a checkpoint from a run that differs in any of them is not reused.
-  const checkpointKey = JSON.stringify({
-    project: header.project,
-    sourceCommit: header.sourceCommit,
-    node: header.node,
-    mutate: header.mutate,
-    mutantTimeoutMs: header.mutantTimeoutMs,
-    tarballs: tarballs.map((tarball) => createHash('sha256').update(readFileSync(tarball)).digest('hex')).sort(),
-  });
+  const tarballDigests = tarballs.map((tarball) => createHash('sha256').update(readFileSync(tarball)).digest('hex'));
+  const checkpointKey = (side: LzSide): string =>
+    lzCheckpointKey({
+      project: options.project,
+      sourceCommit: header.sourceCommit,
+      node: header.node,
+      mutate: header.mutate,
+      mutantTimeoutMs: header.mutantTimeoutMs,
+      config: lzStrykerConfig(side, options.project),
+      tarballDigests,
+    });
   // One side after the other, so that the two never share the machine.
   const runs = await options.sides.reduce<Promise<readonly LzSideRun[]>>(
-    async (earlier, side) => [...(await earlier), await runSide(side, context, checkpointKey)],
+    async (earlier, side) => [...(await earlier), await runSide(side, context, checkpointKey(side))],
     Promise.resolve([]),
   );
 
@@ -179,7 +187,14 @@ async function runSide(
   await settled("Removing an earlier run's report and log", () => {
     lzClearSideFiles(out, side);
   });
-  const resumed = await settled('Checkpoint', () => lzStartCheckpoint(checkpoint, `${checkpointKey}\n${side}`));
+  // A checkpoint that cannot be read, such as one Stryker's own final write left cut short, would fail every rerun.
+  const resumed = await settled('Checkpoint', () => lzStartCheckpoint(checkpoint, checkpointKey));
+
+  if (!resumed.ok) {
+    await settled('Removing the unreadable checkpoint', () => {
+      lzEndCheckpoint(checkpoint);
+    });
+  }
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
@@ -188,9 +203,9 @@ async function runSide(
     lzStryker(dir, configFile(side), options.concurrency, {
       tmp: runTmp,
       timeoutMs: options.timeLimitMinutes * 60_000,
-      args: [...lzStrykerArgs(options), ...lzCheckpointArgs(checkpoint)],
+      args: [...lzStrykerArgs(options), ...(resumed.ok ? lzCheckpointArgs(checkpoint) : [])],
       logFile: join(out, `${side}.log`),
-      reporters: [lzCheckpointReporterName],
+      reporters: resumed.ok ? [lzCheckpointReporterName] : [],
     }),
   );
   const wallMs = Math.round(performance.now() - started);

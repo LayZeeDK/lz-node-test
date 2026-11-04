@@ -6,7 +6,8 @@ import { commonTokens, declareClassPlugin, PluginKind, tokens } from '@stryker-m
 import type { DryRunCompletedEvent, Reporter } from '@stryker-mutator/api/report';
 import type { TestResult } from '@stryker-mutator/api/test-runner';
 
-import { lzIsRecord } from '../report.ts';
+import { lzParseReport } from '../report.ts';
+import type { LzOssProject } from './options.ts';
 
 /** The name the driver adds to Stryker's `--reporters`. */
 export const lzCheckpointReporterName = 'lz-checkpoint';
@@ -15,13 +16,20 @@ export interface LzCheckpointDeps {
   /** The folder Stryker runs in, which report file names are relative to. */
   readonly cwd: string;
   readonly now: () => number;
-  readonly readSource: (file: string) => string;
+  /** Undefined for a file that cannot be read, which Stryker's own report tolerates too. */
+  readonly readSource: (file: string) => string | undefined;
 }
 
 const defaultDeps: LzCheckpointDeps = {
   cwd: process.cwd(),
   now: () => Date.now(),
-  readSource: (file) => readFileSync(file, 'utf8'),
+  readSource: (file) => {
+    try {
+      return readFileSync(file, 'utf8');
+    } catch {
+      return undefined;
+    }
+  },
 };
 
 /**
@@ -33,9 +41,9 @@ export class LzCheckpointReporter implements Reporter {
   readonly #file: string;
   readonly #deps: LzCheckpointDeps;
   readonly #intervalMs: number;
-  readonly #mutants: MutantResult[] = [];
+  readonly #mutants: Readonly<MutantResult>[] = [];
   #tests: readonly TestResult[] = [];
-  #lastWrite: number | undefined;
+  #lastWrite: number;
 
   constructor(
     { incrementalFile }: Pick<StrykerOptions, 'incrementalFile'>,
@@ -45,6 +53,7 @@ export class LzCheckpointReporter implements Reporter {
     this.#file = incrementalFile;
     this.#deps = deps;
     this.#intervalMs = intervalMs;
+    this.#lastWrite = deps.now();
   }
 
   onDryRunCompleted({ result }: DryRunCompletedEvent): void {
@@ -55,16 +64,19 @@ export class LzCheckpointReporter implements Reporter {
     this.#mutants.push(result);
     const now = this.#deps.now();
 
-    this.#lastWrite ??= now;
-
     if (now - this.#lastWrite >= this.#intervalMs) {
       this.#lastWrite = now;
-      const { cwd, readSource } = this.#deps;
-      const temporary = `${this.#file}.tmp`;
-
-      writeFileSync(temporary, JSON.stringify(lzCheckpointReport(this.#mutants, this.#tests, cwd, readSource)));
-      renameSync(temporary, this.#file);
+      this.#write();
     }
+  }
+
+  /** Through a file beside it and a rename, so a run ended mid-write keeps the previous checkpoint. */
+  #write(): void {
+    const { cwd, readSource } = this.#deps;
+    const temporary = `${this.#file}.tmp`;
+
+    writeFileSync(temporary, JSON.stringify(lzCheckpointReport(this.#mutants, this.#tests, cwd, readSource)));
+    renameSync(temporary, this.#file);
   }
 }
 
@@ -72,26 +84,28 @@ export const strykerPlugins = [declareClassPlugin(PluginKind.Reporter, lzCheckpo
 
 /** A mutation report of `mutants` and the dry run's `tests`, in the form Stryker reads with `--incremental`. */
 export function lzCheckpointReport(
-  mutants: readonly MutantResult[],
+  mutants: readonly Readonly<MutantResult>[],
   tests: readonly TestResult[],
   cwd: string,
-  readSource: (file: string) => string,
+  readSource: (file: string) => string | undefined,
 ): schema.MutationTestResult {
   const files: Record<string, schema.FileResult> = {};
   const testFiles: Record<string, schema.TestFile> = {};
 
   mutants.forEach(({ fileName, ...mutant }) => {
     const file = (files[reportName(cwd, fileName)] ??= {
-      language: ['.ts', '.tsx', '.mts', '.cts'].includes(extname(fileName)) ? 'typescript' : 'javascript',
-      source: readSource(fileName),
+      language: languageOf(fileName),
+      source: readSource(fileName) ?? '',
       mutants: [],
     });
 
     file.mutants.push(mutant);
   });
   tests.forEach(({ id, name, fileName, startPosition }) => {
-    const file = (testFiles[fileName === undefined ? '' : reportName(cwd, fileName)] ??=
-      fileName === undefined ? { tests: [] } : { source: readSource(fileName), tests: [] });
+    const file = (testFiles[fileName === undefined ? '' : reportName(cwd, fileName)] ??= testFile(
+      fileName,
+      readSource,
+    ));
 
     file.tests.push({
       id,
@@ -105,62 +119,67 @@ export function lzCheckpointReport(
   return { schemaVersion: '1.0', thresholds: { high: 80, low: 60 }, files, testFiles };
 }
 
+/** What decides a side's mutant results beyond the code Stryker diffs itself, so a run that differs starts afresh. */
+export interface LzCheckpointKeyInputs {
+  /** The whole definition: its patches, test files and flags decide results that Stryker's diff cannot see. */
+  readonly project: LzOssProject;
+  readonly sourceCommit: string;
+  readonly node: string;
+  readonly mutate: readonly string[];
+  readonly mutantTimeoutMs: number | null;
+  /** The side's generated Stryker configuration. */
+  readonly config: string;
+  readonly tarballDigests: readonly string[];
+}
+
+export function lzCheckpointKey(inputs: LzCheckpointKeyInputs): string {
+  return JSON.stringify({ ...inputs, tarballDigests: [...inputs.tarballDigests].sort() });
+}
+
 /** The arguments that have Stryker resume from `file`, keep it up to date through this module, and overwrite it at the end. */
 export function lzCheckpointArgs(file: string): string[] {
   return ['--incremental', '--incrementalFile', file, '--appendPlugins', import.meta.filename];
 }
 
 /**
- * Keeps the checkpoint at `file` only when it was written under `key`, which names what decides the mutants' results
- * (such as the runner's tarballs), and returns how many mutants the run reuses.
+ * Keeps the checkpoint at `file` only when it was written under `key`, and returns how many mutants it holds. Stryker
+ * still retests those whose code or tests changed.
  */
 export function lzStartCheckpoint(file: string, key: string): number {
   const keyFile = `${file}.key`;
 
   if (!existsSync(keyFile) || readFileSync(keyFile, 'utf8') !== key) {
+    if (existsSync(file)) {
+      process.stdout.write(`Discarded ${file}: it was written by a run with other options, tarballs or project.\n`);
+    }
+
     rmSync(file, { force: true });
     writeFileSync(keyFile, key);
   }
 
-  return lzCheckpointMutants(file);
+  return existsSync(file) ? lzCheckpointMutants(file) : 0;
 }
 
-/** After a run that wrote its report, which the side's `mutation.json` now holds. */
+/** After a run that wrote its report, which the side's `mutation.json` now holds, or one that could not resume. */
 export function lzEndCheckpoint(file: string): void {
-  rmSync(file, { force: true });
-  rmSync(`${file}.key`, { force: true });
+  [file, `${file}.key`, `${file}.tmp`].forEach((path) => {
+    rmSync(path, { force: true });
+  });
 }
 
-/** How many mutants the checkpoint at `file` holds; 0 when there is none. */
+/** How many mutants the checkpoint at `file` holds. */
 export function lzCheckpointMutants(file: string): number {
-  let text: string;
+  return [...lzParseReport(readFileSync(file, 'utf8')).values()].reduce((count, mutants) => count + mutants.length, 0);
+}
 
-  try {
-    text = readFileSync(file, 'utf8');
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      return 0;
-    }
+function testFile(fileName: string | undefined, readSource: (file: string) => string | undefined): schema.TestFile {
+  const source = fileName === undefined ? undefined : readSource(fileName);
 
-    throw error;
-  }
+  return source === undefined ? { tests: [] } : { source, tests: [] };
+}
 
-  const report: unknown = JSON.parse(text);
-  const files = lzIsRecord(report) ? report['files'] : undefined;
-
-  if (!lzIsRecord(files)) {
-    throw new Error(`${file} holds no mutation report.`);
-  }
-
-  return Object.values(files).reduce<number>((count, entry) => {
-    const mutants = lzIsRecord(entry) ? entry['mutants'] : undefined;
-
-    if (!Array.isArray(mutants)) {
-      throw new Error(`${file} holds no mutation report.`);
-    }
-
-    return count + mutants.length;
-  }, 0);
+function languageOf(fileName: string): string {
+  return ['.ts', '.tsx', '.mts', '.cts'].includes(extname(fileName)) ? 'typescript' : 'javascript';
 }
 
 /** Stryker's report file name: relative to the folder it runs in, with forward slashes. */

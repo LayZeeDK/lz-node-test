@@ -34,7 +34,7 @@ describe('lzConcurrency', () => {
 
 describe('lzStrykerCommand', () => {
   it('reports in clear text and JSON, with the extra arguments last', () => {
-    assert.deepEqual(lzStrykerCommand('s.mjs', 3, ['--mutate', 'a.js'], false).slice(1), [
+    assert.deepEqual(lzStrykerCommand('s.mjs', 3, ['--mutate', 'a.js'], []).slice(1), [
       'run',
       's.mjs',
       '--concurrency',
@@ -46,13 +46,9 @@ describe('lzStrykerCommand', () => {
     ]);
   });
 
-  it("adds Stryker's progress line every 10 s when the run is followed through a log", () => {
-    assert.equal(lzStrykerCommand('s.mjs', 3, [], true)[6], 'clear-text,json,progress-append-only');
-  });
-
   it('adds further reporters to the one --reporters, as a second one would replace the first', () => {
     assert.equal(
-      lzStrykerCommand('s.mjs', 3, [], true, ['lz-checkpoint'])[6],
+      lzStrykerCommand('s.mjs', 3, [], ['progress-append-only', 'lz-checkpoint'])[6],
       'clear-text,json,progress-append-only,lz-checkpoint',
     );
   });

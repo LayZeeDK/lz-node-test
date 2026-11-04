@@ -140,8 +140,10 @@ export const lzOssUsage =
   '            mutant at a mutation.json position, widen the range by one column on each side:\n' +
   '            file.js:12:4-12:20 for a mutant at 12:5-12:19.\n' +
   '  A side that ends before its report, such as at --time-limit-minutes, leaves <side>.checkpoint.json in --out\n' +
-  '  with the mutants it tested. A rerun into the same --out with the same project, source commit, Node.js, --mutate,\n' +
-  '  --mutant-timeout-ms and tarballs tests only the rest; any other rerun starts afresh.\n' +
+  '  with the mutants it tested, and <side>.checkpoint.json.key naming what it ran with. A rerun into the same --out\n' +
+  '  with the same project definition, source commit, Node.js, --mutate, --mutant-timeout-ms and tarballs tests only\n' +
+  '  the rest; any other rerun discards the checkpoint and says so. A clone with uncommitted changes is not told\n' +
+  '  apart from its commit.\n' +
   "  --merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside\n" +
   '            it. Batches of one side merge into one; a mutant in two batches is refused. A merged result.json\n' +
   '            is refused: merges do not compose, so merge the runs it lists in mergedFrom. A side that wrote no\n' +
