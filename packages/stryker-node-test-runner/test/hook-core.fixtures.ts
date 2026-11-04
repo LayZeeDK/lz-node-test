@@ -178,6 +178,8 @@ export interface Harness {
   readonly wrapped: () => NodeTestModule;
   /** Adds an exit listener as the test file would, after the hook's. */
   readonly onExit: (listener: () => void) => void;
+  /** Runs the `beforeExit` listeners, as Node.js does once the event loop is empty. */
+  readonly emptied: () => void;
   /** Runs the listeners as Node.js does: `beforeExit` on a natural end, then the exit listeners there are then. */
   readonly exit: (options?: { readonly natural: boolean }) => void;
   /** The codes the hook ended the process with, `undefined` for node:test's own. */
@@ -198,6 +200,11 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
   const exits: Harness['exits'][number][] = [];
   const timers: Harness['timers'][number][] = [];
   let resources: readonly string[] = ['PipeWrap'];
+  const emptied = () => {
+    for (const listener of [...beforeExitListeners]) {
+      listener();
+    }
+  };
   const deps: HookDependencies = {
     env,
     execArgv: [],
@@ -271,9 +278,10 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     onExit: (listener) => {
       listeners.push(listener);
     },
+    emptied,
     exit: ({ natural } = { natural: true }) => {
-      for (const listener of natural ? [...beforeExitListeners] : []) {
-        listener();
+      if (natural) {
+        emptied();
       }
 
       for (const listener of [...listeners]) {

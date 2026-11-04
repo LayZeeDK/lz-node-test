@@ -643,33 +643,18 @@ describe('install', () => {
     );
 
     /** A file with one test that has started and not ended, whose event loop has emptied; `stall` sets its stall time. */
-    function stalling(stall: number | undefined) {
-      const beforeExit: (() => void)[] = [];
-      const h = installedHarness(
-        { ...fileEnv(), [envNames.stall]: stall === undefined ? undefined : String(stall) },
-        {
-          onBeforeExit: (listener) => {
-            beforeExit.push(listener);
-          },
-        },
-      );
+    function stalling(stall: number | undefined): Harness {
+      const h = installedHarness({ ...fileEnv(), [envNames.stall]: stall === undefined ? undefined : String(stall) });
       h.wrapped().it('waits', () => {});
       enqueue(h.deps, 'waits');
       void bodyOf(h.fake.registrations, 'waits')(testContext());
 
-      return {
-        h,
-        emptied: () => {
-          for (const listener of beforeExit) {
-            listener();
-          }
-        },
-      };
+      return h;
     }
 
     it('ends a file with exit code 1 when no test result follows its emptied event loop within the stall time', () => {
-      const { h, emptied } = stalling(300);
-      emptied();
+      const h = stalling(300);
+      h.emptied();
       h.timers[0]?.fire();
       h.exit({ natural: false });
 
@@ -697,8 +682,8 @@ describe('install', () => {
         },
       ],
     ])('keeps a file running when %s within the stall time', ([, then]) => {
-      const { h, emptied } = stalling(300);
-      emptied();
+      const h = stalling(300);
+      h.emptied();
       then(h);
 
       assert.deepEqual(
@@ -712,8 +697,8 @@ describe('install', () => {
     });
 
     it('waits for no stall without the stall variable, as in a dry run', () => {
-      const { h, emptied } = stalling(undefined);
-      emptied();
+      const h = stalling(undefined);
+      h.emptied();
 
       assert.deepEqual(h.timers, []);
     });

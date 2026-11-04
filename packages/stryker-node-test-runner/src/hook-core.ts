@@ -245,8 +245,7 @@ export function install(deps: HookDependencies): boolean {
       peakMemoryMB: dryRun ? deps.peakMemoryMB() : undefined,
       ...(diagnostics.length > 0 && { diagnostics }),
       ...(main && !outcome?.summarized && !natural && !outcome?.complete && { unfinished: true }),
-      ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
-      ...(outcome?.stalledMs !== undefined && { stalledMs: outcome.stalledMs }),
+      ...outcome?.why,
       lifetime: { start: started, end: written },
       ...(main && { testSpans: currentTests.spansAt(written) }),
     };
@@ -267,16 +266,15 @@ interface Ending {
   /** node:test has reported another event. */
   readonly reported: (event: TestEvent) => void;
   /**
-   * Whether node:test has reported its summary; and whether it had reported every top-level suite and test when the
-   * hook ended the process, and what held it open, or how long it waited for a pending test.
+   * Whether node:test has reported its summary. Whether it had reported every top-level suite and test when the hook
+   * ended the process, and why the hook ended it.
    */
   readonly outcome: () => LzEnded & { readonly summarized: boolean };
 }
 
 interface LzEnded {
   readonly complete: boolean;
-  readonly heldOpen?: readonly string[];
-  readonly stalledMs?: number;
+  readonly why: Pick<ProcessRecord, 'heldOpen' | 'stalledMs'>;
 }
 
 /**
@@ -311,7 +309,7 @@ export function ending(
   let pending = 0;
   let threw = false;
   let armed = false;
-  let ended: LzEnded = { complete: false };
+  let ended: LzEnded = { complete: false, why: {} };
   const before = deps.activeResources();
   // What the tests opened, not what the process had before they ran, such as the stdio pipes that loading node:test
   // opens.
@@ -331,8 +329,8 @@ export function ending(
   // node:test reports a test a little after it ends, so a failure can arrive after the hooks have settled. It reports a
   // suite after everything inside it, so once each enqueued top-level one is reported, everything is.
   const allReported = () => reportedTopLevel >= enqueuedTopLevel;
-  const end = (code: number | undefined, why: Omit<LzEnded, 'complete'> = {}) => {
-    ended = { complete: allReported(), ...why };
+  const end = (code: number | undefined, why: LzEnded['why'] = {}) => {
+    ended = { complete: allReported(), why };
     deps.exit(code);
   };
   const check = () => {
