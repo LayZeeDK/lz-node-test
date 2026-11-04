@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   copyFileSync,
   cpSync,
@@ -5,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -24,6 +26,7 @@ import {
   lzStryker,
   type LzStrykerRun,
 } from '../fixture.ts';
+import { lzCheckpointArgs, lzCheckpointReporterName, lzEndCheckpoint, lzStartCheckpoint } from './checkpoint.ts';
 import {
   lzOssPreparedPrefix,
   lzOssRunPrefix,
@@ -126,9 +129,18 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     return;
   }
 
+  // What decides the mutants' results, so a checkpoint from a run that differs in any of them is not reused.
+  const checkpointKey = JSON.stringify({
+    project: header.project,
+    sourceCommit: header.sourceCommit,
+    node: header.node,
+    mutate: header.mutate,
+    mutantTimeoutMs: header.mutantTimeoutMs,
+    tarballs: tarballs.map((tarball) => createHash('sha256').update(readFileSync(tarball)).digest('hex')).sort(),
+  });
   // One side after the other, so that the two never share the machine.
   const runs = await options.sides.reduce<Promise<readonly LzSideRun[]>>(
-    async (earlier, side) => [...(await earlier), await runSide(side, context)],
+    async (earlier, side) => [...(await earlier), await runSide(side, context, checkpointKey)],
     Promise.resolve([]),
   );
 
@@ -155,13 +167,19 @@ export function lzClearSideFiles(out: string, side: LzSide): void {
  * Each step is settled, so a throw in one still stops the sampler, ends leftovers, lets result.json be written and
  * lets the next side run.
  */
-async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext): Promise<LzSideRun> {
+async function runSide(
+  side: LzSide,
+  { options, out, dir, runTmp }: LzRunContext,
+  checkpointKey: string,
+): Promise<LzSideRun> {
   const errors: string[] = [];
   const settled = settledInto(errors);
+  const checkpoint = join(out, `${side}.checkpoint.json`);
 
   await settled("Removing an earlier run's report and log", () => {
     lzClearSideFiles(out, side);
   });
+  const resumed = await settled('Checkpoint', () => lzStartCheckpoint(checkpoint, `${checkpointKey}\n${side}`));
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
   const sampler = lzStartSampler();
   const excluded = new Set([sampler.pid]);
@@ -170,8 +188,9 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext
     lzStryker(dir, configFile(side), options.concurrency, {
       tmp: runTmp,
       timeoutMs: options.timeLimitMinutes * 60_000,
-      args: lzStrykerArgs(options),
+      args: [...lzStrykerArgs(options), ...lzCheckpointArgs(checkpoint)],
       logFile: join(out, `${side}.log`),
+      reporters: [lzCheckpointReporterName],
     }),
   );
   const wallMs = Math.round(performance.now() - started);
@@ -191,6 +210,7 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext
   await settled('Report copy', () => {
     if (run.ok && run.value.reported) {
       copyFileSync(join(dir, lzReportFile), join(out, `${side}.mutation.json`));
+      lzEndCheckpoint(checkpoint);
     }
   });
   const osTmpAfter = await settled('TMP listing after the run', () => readdirSync(tmpdir()));
@@ -206,6 +226,7 @@ async function runSide(side: LzSide, { options, out, dir, runTmp }: LzRunContext
       stryker: run.ok ? strykerResult(run.value) : null,
       errors,
       wallMs,
+      resumedMutants: resumed.ok ? resumed.value : 0,
       processes: {
         ...lzPeaks(samples),
         leftover: ended.map(({ leftover: { pid, name }, ending }) => ({

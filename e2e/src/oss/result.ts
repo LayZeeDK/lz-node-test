@@ -38,6 +38,8 @@ export interface LzSideResult {
   /** Each step that threw, so a failed step leaves the result of the others. */
   readonly errors: readonly string[];
   readonly wallMs: number;
+  /** Mutants this run took from the checkpoint of an earlier run of the same part that ended before its report. */
+  readonly resumedMutants: number;
   readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
   readonly newInOsTmp: readonly string[];
   readonly leftoverStrykerTmp: readonly string[];
