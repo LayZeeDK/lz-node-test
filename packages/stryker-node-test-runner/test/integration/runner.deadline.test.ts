@@ -73,7 +73,7 @@ const unrefWait = fixture(
   "it('waits on a timer', async () => { await new Promise((resolve) => setTimeout(resolve, 600)); });",
 );
 
-const nodeMajor = Number(process.versions.node.split('.')[0]);
+const nodeMajor = Number.parseInt(process.versions.node, 10);
 
 /** Resolves once the process whose pid `path` holds has exited. */
 async function processExit(path: string): Promise<void> {

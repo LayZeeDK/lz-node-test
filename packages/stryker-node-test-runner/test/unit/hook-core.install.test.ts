@@ -696,8 +696,12 @@ describe('install', () => {
       assert.deepEqual(h.exits, []);
     });
 
-    it('waits for no stall without the stall variable, as in a dry run', () => {
-      const h = stalling(undefined);
+    lzTestFor<readonly [string, number | undefined]>([
+      ['without the stall variable, as in a dry run', undefined],
+      ['for a stall time longer than a timer can hold', 2 ** 31],
+      ['for a stall time that is not a whole number of milliseconds', 0.5],
+    ])('waits for no stall %s', ([, stall]) => {
+      const h = stalling(stall);
       h.emptied();
 
       assert.deepEqual(h.timers, []);

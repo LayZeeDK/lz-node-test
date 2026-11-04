@@ -357,7 +357,8 @@ export function ending(
     armOnceSettled();
   };
 
-  if (stallMs > 0) {
+  // setTimeout fires at once for a delay it cannot hold.
+  if (Number.isInteger(stallMs) && stallMs > 0 && stallMs <= 2 ** 31 - 1) {
     deps.onBeforeExit(() => {
       const since = results;
       deps.later(() => {

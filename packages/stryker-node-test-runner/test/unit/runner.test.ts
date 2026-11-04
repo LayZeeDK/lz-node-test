@@ -493,9 +493,9 @@ describe('lzRunEnv', () => {
     const base = { [envNames.stall]: '100' };
 
     assert.equal(envOf({ base, stallMs: 300 })[envNames.stall], '300');
-    const dryRun: LzRunOptions = { dryRun: true, disableBail: true, coverageAnalysis: 'perTest' };
+    const dryRunOptions = { dryRun: true, disableBail: true, coverageAnalysis: 'perTest' } satisfies LzRunOptions;
 
-    assert.equal(envOf({ base, stallMs: 300, run: dryRun })[envNames.stall], undefined);
+    assert.equal(envOf({ base, stallMs: 300, run: dryRunOptions })[envNames.stall], undefined);
     assert.equal(envOf({ base })[envNames.stall], undefined);
   });
 
