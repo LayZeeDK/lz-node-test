@@ -273,7 +273,8 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
     return errorEnd(`Unreadable test results for "${file}": ${unreadable}`);
   }
 
-  const stalledMs = records.find((record) => record.main)?.stalledMs;
+  const main = records.find((record) => record.main);
+  const stalledMs = main?.stalledMs;
 
   if (stalledMs !== undefined) {
     return {
@@ -304,8 +305,6 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   if (exitCode !== 0 && !failed) {
     return errorEnd(lzFileError(file, fileRun));
   }
-
-  const main = records.find((record) => record.main);
 
   if (!main) {
     return errorEnd(
@@ -467,7 +466,7 @@ export function lzRunEnv({
   }
 
   if (!run.dryRun && stallMs !== undefined) {
-    env[envNames.stallMs] = String(stallMs);
+    env[envNames.stall] = String(stallMs);
   }
 
   return env;

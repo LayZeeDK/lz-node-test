@@ -219,6 +219,7 @@ describe('lzParseRecord', () => {
       diagnostics: ['late error'],
       unfinished: true,
       heldOpen: ['TCPServerWrap'],
+      stalledMs: 5000,
       lifetime: { start: 10, end: 20 },
       testSpans: {
         [`${file} > t`]: [
@@ -266,6 +267,7 @@ describe('lzParseRecord', () => {
     [withFields({ diagnostics: [1] }), 'diagnostics'],
     [withFields({ unfinished: false }), 'unfinished'],
     [withFields({ heldOpen: [null] }), 'heldOpen'],
+    [withFields({ stalledMs: '5000' }), 'stalledMs'],
     [withFields({ lifetime: { start: 1 } }), 'lifetime'],
     [withFields({ lifetime: { start: '1', end: 2 } }), 'lifetime'],
     [withFields({ testSpans: [] }), 'testSpans'],

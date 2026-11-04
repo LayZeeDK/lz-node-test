@@ -165,9 +165,9 @@ export function install(deps: HookDependencies): boolean {
 
   const bail = deps.env[envNames.bail] === 'true';
   const dryRun = deps.env[envNames.dryRun] === 'true';
-  const stallMs = Number(deps.env[envNames.stallMs]);
+  const stallMs = Number(deps.env[envNames.stall]);
   Reflect.deleteProperty(deps.env, envNames.bail);
-  Reflect.deleteProperty(deps.env, envNames.stallMs);
+  Reflect.deleteProperty(deps.env, envNames.stall);
   const testFile = deps.env[envNames.file];
   Reflect.deleteProperty(deps.env, envNames.file);
   const tests: RecordedTest[] = [];
@@ -176,7 +176,6 @@ export function install(deps: HookDependencies): boolean {
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
   let summarized = false;
   let end: Ending | undefined;
-  let stalledMs: number | undefined;
 
   if (main) {
     const positions = new Map<string, Position>();
@@ -188,6 +187,7 @@ export function install(deps: HookDependencies): boolean {
         Reflect.apply(nodeTest.after, nodeTest, [hook]);
       },
       Number(deps.env[envNames.heldOpen]) || heldOpenMs,
+      stallMs,
     );
     end = ends;
     // ES modules are named by their URL, CommonJS modules by their path.
@@ -198,29 +198,9 @@ export function install(deps: HookDependencies): boolean {
         column: columnNumber,
       }));
     const recordEvent = recordEvents(testFile, tests, positions, diagnostics);
-    // Node.js 24 keeps the process alive while a test is pending, even once its event loop is empty, where Node.js 22
-    // cancels the test. A mutant run ends the file when no test result follows the empty event loop within stallMs.
-    let results = 0;
-
-    if (stallMs > 0) {
-      deps.onBeforeExit(() => {
-        const since = results;
-        deps.later(() => {
-          if (results === since) {
-            stalledMs = stallMs;
-            deps.exit(1);
-          }
-        }, stallMs);
-      });
-    }
-
     deps.global[reporting] = (event) => {
       if (event.type === 'test:summary') {
         summarized = true;
-      }
-
-      if (isResult(event.type)) {
-        results++;
       }
 
       recordEvent(event);
@@ -271,7 +251,7 @@ export function install(deps: HookDependencies): boolean {
       ...(diagnostics.length > 0 && { diagnostics }),
       ...(main && !summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
-      ...(stalledMs !== undefined && { stalledMs }),
+      ...(outcome?.stalledMs !== undefined && { stalledMs: outcome.stalledMs }),
       lifetime: { start: started, end: written },
       ...(main && { testSpans: currentTests.spansAt(written) }),
     };
@@ -291,8 +271,15 @@ interface Ending {
   readonly track: (hook: Body) => Body;
   /** node:test has reported another event. */
   readonly reported: (event: TestEvent) => void;
-  /** Whether node:test had reported every top-level suite and test when the hook ended the process, and what held it open. */
-  readonly outcome: () => { readonly complete: boolean; readonly heldOpen?: readonly string[] };
+  /**
+   * Whether node:test had reported every top-level suite and test when the hook ended the process, and what held it
+   * open, or how long it waited for a pending test.
+   */
+  readonly outcome: () => {
+    readonly complete: boolean;
+    readonly heldOpen?: readonly string[];
+    readonly stalledMs?: number;
+  };
 }
 
 /**
@@ -306,14 +293,21 @@ interface Ending {
  * node:test runs root `after` hooks in the order they were added, once every top-level suite and test has finished.
  * The ending adds its own at the file's first registration, not earlier: node:test sets itself up on its first use, and
  * an error thrown before that, while the file loads, must stay an ordinary uncaught exception.
+ *
+ * Node.js 24 keeps the process alive while a test is pending, even once its event loop is empty, where Node.js 22
+ * cancels the test. With a `stallMs`, a file whose event loop empties before node:test's summary ends with exit code 1
+ * when no test result follows within `stallMs`.
  */
 export function ending(
-  deps: Pick<HookDependencies, 'exit' | 'activeResources' | 'later'>,
+  deps: Pick<HookDependencies, 'exit' | 'activeResources' | 'later' | 'onBeforeExit'>,
   tests: RecordedTest[],
   rootAfter: (hook: () => void) => void,
   graceMs: number,
+  stallMs = 0,
 ): Ending {
   let enqueuedTopLevel = 0;
+  let results = 0;
+  let summarized = false;
   let reportedTopLevel = 0;
   let hooked = false;
   let finished = false;
@@ -368,6 +362,18 @@ export function ending(
     armOnceSettled();
   };
 
+  if (stallMs > 0) {
+    deps.onBeforeExit(() => {
+      const since = results;
+      deps.later(() => {
+        if (results === since && !summarized) {
+          ended = { complete: allReported(), stalledMs: stallMs };
+          deps.exit(1);
+        }
+      }, stallMs);
+    });
+  }
+
   return {
     registering: () => {
       if (!hooked) {
@@ -387,6 +393,12 @@ export function ending(
       if (type === 'test:enqueue' && data.nesting === 0) {
         enqueuedTopLevel++;
       }
+
+      if (isResult(type)) {
+        results++;
+      }
+
+      summarized ||= type === 'test:summary';
 
       if (isResult(type) && data.nesting === 0 && !fileLevel(data.details)) {
         reportedTopLevel++;

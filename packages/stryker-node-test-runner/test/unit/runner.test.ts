@@ -489,6 +489,16 @@ describe('lzRunEnv', () => {
     assert.equal(envOf({ base: { [envNames.heldOpen]: '200' } })[envNames.heldOpen], undefined);
   });
 
+  it("passes Stryker's timeoutMS on as the stall time of a mutant run only, whatever the parent's environment sets", () => {
+    const base = { [envNames.stall]: '100' };
+
+    assert.equal(envOf({ base, stallMs: 300 })[envNames.stall], '300');
+    const dryRun: LzRunOptions = { dryRun: true, disableBail: true, coverageAnalysis: 'perTest' };
+
+    assert.equal(envOf({ base, stallMs: 300, run: dryRun })[envNames.stall], undefined);
+    assert.equal(envOf({ base })[envNames.stall], undefined);
+  });
+
   it("uses the runner's compile cache directory unless the environment names one", () => {
     const inherited = { NODE_COMPILE_CACHE: 'inherited' };
 

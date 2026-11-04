@@ -642,6 +642,78 @@ describe('install', () => {
       },
     );
 
+    /** A file with one test that has started and not ended, whose event loop has emptied; `stall` sets its stall time. */
+    function stalling(stall: string | undefined) {
+      const beforeExit: (() => void)[] = [];
+      const h = installedHarness(
+        { ...fileEnv(), [envNames.stall]: stall },
+        {
+          onBeforeExit: (listener) => {
+            beforeExit.push(listener);
+          },
+        },
+      );
+      h.wrapped().it('waits', () => {});
+      enqueue(h.deps, 'waits');
+      void bodyOf(h.fake.registrations, 'waits')(testContext());
+
+      return {
+        h,
+        emptied: () => {
+          for (const listener of beforeExit) {
+            listener();
+          }
+        },
+        stallTimers: () => h.timers.filter(({ ms }) => ms === 300),
+      };
+    }
+
+    it('ends a file with exit code 1 when no test result follows its emptied event loop within the stall time', () => {
+      const { h, emptied, stallTimers } = stalling('300');
+      emptied();
+      stallTimers()[0]?.fire();
+      h.exit({ natural: false });
+
+      assert.deepEqual(h.exits, [1]);
+      assert.deepEqual(h.records[0]?.record, {
+        main: true,
+        tests: [],
+        stalledMs: 300,
+        lifetime,
+        testSpans: spans('waits'),
+      });
+    });
+
+    lzTestFor<readonly [string, (h: Harness) => void]>([
+      [
+        'a test result follows',
+        (h) => {
+          report(h.deps, 'waits', 'pass');
+        },
+      ],
+      [
+        'node:test reports its summary',
+        (h) => {
+          send(h.deps, { type: 'test:summary', data: { name: '', nesting: 0 } });
+        },
+      ],
+    ])('keeps a file running when %s within the stall time', ([, then]) => {
+      const { h, emptied, stallTimers } = stalling('300');
+      emptied();
+      then(h);
+      stallTimers()[0]?.fire();
+
+      assert.deepEqual(h.exits, []);
+    });
+
+    it('waits for no stall without the stall variable, as in a dry run', () => {
+      const { h, emptied, stallTimers } = stalling(undefined);
+      emptied();
+
+      assert.deepEqual(stallTimers(), []);
+      assert.deepEqual(h.exits, []);
+    });
+
     it('names only what the tests opened, also when something the process had before is gone', () => {
       const h = installedHarness(fileEnv());
       h.wrapped().it('passes', () => {});

@@ -94,7 +94,7 @@ export interface ProcessRecord {
   readonly heldOpen?: readonly string[];
   /**
    * Set when the hook ended a mutant run's test file whose event loop had emptied with a test still pending, and which
-   * no test result followed for this many milliseconds. Node.js 24 waits for such a test forever; Node.js 22 cancels it.
+   * no test result followed for this many milliseconds.
    */
   readonly stalledMs?: number;
   /** From when the hook ran in the process or thread to when it wrote this record. */
@@ -118,7 +118,7 @@ export const envNames = Object.freeze({
   bail: 'LZ_STRYKER_NODE_TEST_BAIL',
   activeMutant: 'LZ_STRYKER_NODE_TEST_ACTIVE_MUTANT',
   heldOpen: 'LZ_STRYKER_NODE_TEST_HELD_OPEN_MS',
-  stallMs: 'LZ_STRYKER_NODE_TEST_STALL_MS',
+  stall: 'LZ_STRYKER_NODE_TEST_STALL_MS',
   dryRunOwner: 'LZ_STRYKER_NODE_TEST_DRY_RUN_OWNER',
 });
 
