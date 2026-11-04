@@ -73,8 +73,9 @@ const projects: readonly LzOssProject[] = [
     name: 'fast-json-stringify',
     mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
     testFiles: ['test/*.test.js'],
-    // A mutant whose memory grows without bound would grow in every file process at once.
-    nodeTestFlags: ['--test-concurrency=1'],
+    // One process for all 60 test files instead of one each: a mutant whose memory grows without bound grows in one
+    // process, and the suite starts 3 processes instead of 63.
+    nodeTestFlags: ['--experimental-test-isolation=none'],
     // Both sides' test processes share one sandbox, and this test writes, requires and deletes fixed file names in it.
     // Keyed by process, as the command runner runs in Stryker's own process, which has no STRYKER_MUTATOR_WORKER.
     patches: [

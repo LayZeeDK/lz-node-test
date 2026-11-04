@@ -159,14 +159,14 @@ describe('lzParseOptions', () => {
     });
   });
 
-  it("mutates fast-json-stringify's sources, and runs its test files one at a time with fixtures per process", () => {
+  it("mutates fast-json-stringify's sources, and runs its test files in one process with fixtures per process", () => {
     const { project } = lzParseOptions(required.with(1, 'fast-json-stringify'));
 
     assert.deepEqual(project, {
       name: 'fast-json-stringify',
       mutate: ['index.js', 'lib/**/*.js', '!lib/schema-validator.js'],
       testFiles: ['test/*.test.js'],
-      nodeTestFlags: ['--test-concurrency=1'],
+      nodeTestFlags: ['--experimental-test-isolation=none'],
       patches: [
         {
           file: 'test/standalone-mode.test.js',
@@ -177,7 +177,7 @@ describe('lzParseOptions', () => {
         },
       ],
     });
-    assert.equal(lzNodeTestCommand(project), 'node --test --test-concurrency=1 "test/*.test.js"');
+    assert.equal(lzNodeTestCommand(project), 'node --test --experimental-test-isolation=none "test/*.test.js"');
   });
 
   it("mutates sonic-boom's index.js, runs its test files one at a time with their own 240 s test timeout, and opens a path no mkdir can create", () => {
