@@ -271,8 +271,8 @@ export function lzNodeTestCommand({ testFiles, nodeTestFlags }: LzOssProject): s
 }
 
 /**
- * Both sides import the operators, so they mutate the same code into the same mutants. The command side runs the
- * project's own command, with coverage analysis off as that runner reports no coverage.
+ * Both sides import the operators, so they mutate the same code into the same mutants. The command side runs
+ * lzNodeTestCommand's `node --test`, with coverage analysis off as that runner reports no coverage.
  */
 export function lzStrykerOptions(side: LzSide, project: LzOssProject): LzStrykerOptions {
   const { mutate, testFiles } = project;

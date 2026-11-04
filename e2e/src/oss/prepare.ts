@@ -27,10 +27,17 @@ const fileWrite =
 /**
  * The test files that call a file-writing `fs` function, each with the calls it makes. Stryker's workers share one
  * sandbox, so such a test can collide with itself in another worker when it writes a fixed path; this flags the file
- * for a look, it cannot tell a fixed path from a unique one.
+ * for a look, it cannot tell a fixed path from a unique one. `patched` names the files a patch already deals with.
  */
-export function lzFileWriters(dir: string, testFiles: readonly string[]): ReadonlyMap<string, readonly string[]> {
-  const files = [...new Set(testFiles.flatMap((pattern) => globSync(pattern, { cwd: dir })))].sort();
+export function lzFileWriters(
+  dir: string,
+  testFiles: readonly string[],
+  patched: readonly string[],
+): ReadonlyMap<string, readonly string[]> {
+  const files = [...new Set(testFiles.flatMap((pattern) => globSync(pattern, { cwd: dir })))]
+    .map((file) => file.replaceAll('\\', '/'))
+    .filter((file) => !patched.includes(file))
+    .sort();
 
   return new Map(
     files.flatMap((file): [string, string[]][] => {
@@ -38,7 +45,7 @@ export function lzFileWriters(dir: string, testFiles: readonly string[]): Readon
         call.replace(/\s*\($/, ''),
       );
 
-      return calls.length === 0 ? [] : [[file.replaceAll('\\', '/'), calls.sort()]];
+      return calls.length === 0 ? [] : [[file, calls.sort()]];
     }),
   );
 }

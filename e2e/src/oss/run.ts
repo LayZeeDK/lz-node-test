@@ -84,8 +84,14 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     verbatimSymlinks: true,
     filter: (path) => !copied.has(relative(options.source, path)),
   });
-  lzApplyPatches(dir, options.project.patches);
-  lzFileWriters(dir, options.project.testFiles).forEach((calls, file) => {
+  const { patches, testFiles } = options.project;
+
+  lzApplyPatches(dir, patches);
+  lzFileWriters(
+    dir,
+    testFiles,
+    patches.map(({ file }) => file),
+  ).forEach((calls, file) => {
     process.stdout.write(
       `${file} writes files (${calls.join(', ')}); a fixed path there would collide across Stryker workers.\n`,
     );

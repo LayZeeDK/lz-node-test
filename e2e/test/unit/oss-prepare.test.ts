@@ -60,8 +60,20 @@ describe('lzFileWriters', () => {
     writeFileSync(join(dir, 'writes.js'), 'fs.writeFileSync(p, c)\n');
 
     assert.deepEqual(
-      lzFileWriters(dir, ['test/*.test.js']),
+      lzFileWriters(dir, ['test/*.test.js'], []),
       new Map([['test/writes.test.js', ['rmSync', 'writeFile']]]),
+    );
+  });
+
+  it('leaves out the files the driver patched, whose writes are already dealt with', (t) => {
+    const dir = project(t);
+
+    writeFileSync(join(dir, 'test', 'patched.test.js'), 'fs.writeFileSync(p, c)\n');
+    writeFileSync(join(dir, 'test', 'other.test.js'), 'fs.writeFileSync(p, c)\n');
+
+    assert.deepEqual(
+      lzFileWriters(dir, ['test/*.test.js'], ['test/patched.test.js']),
+      new Map([['test/other.test.js', ['writeFileSync']]]),
     );
   });
 });
