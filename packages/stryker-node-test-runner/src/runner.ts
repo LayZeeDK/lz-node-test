@@ -273,6 +273,17 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
     return errorEnd(`Unreadable test results for "${file}": ${unreadable}`);
   }
 
+  const stalledMs = records.find((record) => record.main)?.stalledMs;
+
+  if (stalledMs !== undefined) {
+    return {
+      end: {
+        status: DryRunStatus.Timeout,
+        reason: `A test was still pending ${stalledMs} ms after its file's event loop emptied (Stryker's timeoutMS)`,
+      },
+    };
+  }
+
   for (const record of records) {
     const timeout = determineHitLimitReached(record.hitCount, run.hitLimit);
 
@@ -386,6 +397,8 @@ export interface LzRunEnvInput {
   readonly nodeOptions: readonly string[];
   readonly memoryLimitMB?: number | undefined;
   readonly heldOpenMs?: number | undefined;
+  /** Stryker's timeoutMS: how long a mutant run waits for a test result once a file's event loop is empty. */
+  readonly stallMs?: number | undefined;
 }
 
 export function lzRunEnv({
@@ -398,6 +411,7 @@ export function lzRunEnv({
   nodeOptions,
   memoryLimitMB,
   heldOpenMs,
+  stallMs,
 }: LzRunEnvInput): NodeJS.ProcessEnv & { NODE_OPTIONS: string } {
   const runState = new Set([
     // Set when Stryker itself runs under `node --test`; node:test in the test file would then ignore `.only` and
@@ -452,6 +466,10 @@ export function lzRunEnv({
     env[envNames.bail] = 'true';
   }
 
+  if (!run.dryRun && stallMs !== undefined) {
+    env[envNames.stallMs] = String(stallMs);
+  }
+
   return env;
 }
 
@@ -465,7 +483,7 @@ export function lzShortenHeldOpen(runner: LzNodeTestTestRunner, ms: number): voi
 /** The Stryker options the runner reads, of all that Stryker passes it. */
 type RunnerStrykerOptions = Pick<
   StrykerOptions,
-  'allowEmpty' | 'checkers' | 'concurrency' | 'testFiles' | 'timeoutFactor'
+  'allowEmpty' | 'checkers' | 'concurrency' | 'testFiles' | 'timeoutFactor' | 'timeoutMS'
 > & {
   readonly lzNodeTest?: unknown;
 };
@@ -489,6 +507,7 @@ export class LzNodeTestTestRunner implements TestRunner {
   readonly #memoryLimits: MemoryLimits;
   readonly #startUps: LzStartUps;
   readonly #allowEmpty: boolean;
+  readonly #stallMs: number;
   readonly #log: Logger;
 
   constructor(options: RunnerStrykerOptions, log: Logger) {
@@ -506,6 +525,7 @@ export class LzNodeTestTestRunner implements TestRunner {
     this.#memoryLimits = memoryLimits(lzNodeTest.maxMemoryMB, this.#dryRunStore, log);
     this.#startUps = lzStartUps(this.#dryRunStore, options.timeoutFactor, log);
     this.#allowEmpty = options.allowEmpty;
+    this.#stallMs = options.timeoutMS;
     this.#log = log;
   }
 
@@ -719,6 +739,7 @@ export class LzNodeTestTestRunner implements TestRunner {
         nodeOptions,
         memoryLimitMB,
         heldOpenMs: shortenedHeldOpen.get(this),
+        stallMs: this.#stallMs,
       });
       const fileArgs = [...this.#nodeArgs, file];
       const args = [`--test-reporter=${reporterUrl}`, ...fileArgs];

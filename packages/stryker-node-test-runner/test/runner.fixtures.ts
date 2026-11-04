@@ -121,6 +121,7 @@ export interface RunnerOptions {
   readonly concurrency?: number;
   readonly checkers?: readonly string[];
   readonly allowEmpty?: boolean;
+  readonly timeoutMS?: number;
 }
 
 export function strykerOptions({
@@ -128,7 +129,14 @@ export function strykerOptions({
   checkers = [],
   ...options
 }: RunnerOptions = {}): ConstructorParameters<typeof LzNodeTestTestRunner>[0] {
-  return { allowEmpty: false, timeoutFactor: 1.5, ...options, testFiles: [...testFiles], checkers: [...checkers] };
+  return {
+    allowEmpty: false,
+    timeoutFactor: 1.5,
+    timeoutMS: 5000,
+    ...options,
+    testFiles: [...testFiles],
+    checkers: [...checkers],
+  };
 }
 
 export async function initRunner(

@@ -92,6 +92,11 @@ export interface ProcessRecord {
   readonly unfinished?: true;
   /** What kept the test file's process alive after its tests and root `after` hooks, when the hook ended it for that. */
   readonly heldOpen?: readonly string[];
+  /**
+   * Set when the hook ended a mutant run's test file whose event loop had emptied with a test still pending, and which
+   * no test result followed for this many milliseconds. Node.js 24 waits for such a test forever; Node.js 22 cancels it.
+   */
+  readonly stalledMs?: number;
   /** From when the hook ran in the process or thread to when it wrote this record. */
   readonly lifetime?: LzTimeWindow;
   /**
@@ -113,6 +118,7 @@ export const envNames = Object.freeze({
   bail: 'LZ_STRYKER_NODE_TEST_BAIL',
   activeMutant: 'LZ_STRYKER_NODE_TEST_ACTIVE_MUTANT',
   heldOpen: 'LZ_STRYKER_NODE_TEST_HELD_OPEN_MS',
+  stallMs: 'LZ_STRYKER_NODE_TEST_STALL_MS',
   dryRunOwner: 'LZ_STRYKER_NODE_TEST_DRY_RUN_OWNER',
 });
 
@@ -294,6 +300,7 @@ export function lzParseRecord(json: string): ProcessRecord {
     diagnostics,
     unfinished,
     heldOpen,
+    stalledMs,
     lifetime,
     testSpans,
   } = record;
@@ -312,6 +319,7 @@ export function lzParseRecord(json: string): ProcessRecord {
     ...optional('diagnostics', diagnostics, isStrings, notARecord),
     ...optional('unfinished', unfinished, isTrue, notARecord),
     ...optional('heldOpen', heldOpen, isStrings, notARecord),
+    ...optional('stalledMs', stalledMs, isNumber, notARecord),
     ...optional('lifetime', lifetime, isWindow, notARecord),
     ...optional('testSpans', testSpans, isSpans, notARecord),
   };

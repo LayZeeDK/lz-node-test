@@ -176,6 +176,9 @@ once per run as under `node --test`.
   Stryker keeps the worker running. A mutant that runs one test of each file gets Stryker's timeout unchanged.
   The runner measures each file's start-up in the dry run. A file without a measured start-up, such as one that
   Stryker's `--testFiles` left out of the dry run, keeps Stryker's timeout, and the runner warns about it once.
+- **A test left pending.** When a test file's event loop empties while a test is still pending, Node.js 22 cancels
+  the test, and Node.js 24 waits for it, as an unref'd timer or process may still settle it. In a mutant run, the
+  runner ends such a file when no test result follows within Stryker's `timeoutMS`; the mutant is then a `Timeout`.
 - **Output.** The runner discards each test file's stdout. It keeps the last 8 KiB of stderr and shows it when a file
   fails outside its tests.
 - **Coverage analysis.** The runner supports Stryker's `coverageAnalysis` values `off`, `all` and `perTest`. With
@@ -218,6 +221,7 @@ wait ends.
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------- | -------------- |
 | A process held more memory than its limit                                                                          | error if `maxMemoryMB` is set | `Timeout`      |
 | A results file of a process could not be read                                                                      | error                         | `RuntimeError` |
+| A test was still pending `timeoutMS` after the event loop emptied, with no test result since                       | does not apply                | `Timeout`      |
 | The mutant's code ran more often than Stryker's hit limit allows                                                   | does not apply                | `Timeout`      |
 | `node` exited with a code other than 0, and no test failed                                                         | error                         | `RuntimeError` |
 | The test file's process wrote no results                                                                           | error                         | `RuntimeError` |

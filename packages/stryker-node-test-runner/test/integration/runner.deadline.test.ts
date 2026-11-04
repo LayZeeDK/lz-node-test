@@ -55,6 +55,26 @@ const lateClose = fixture(
   '});',
 );
 
+/** With LZ_FIXTURE_PENDING set, its test waits on nothing that could settle it: `callback` or `promise`. */
+const pending = fixture(
+  "it('waits', (t, done) => {",
+  "  if (process.env.LZ_FIXTURE_PENDING === 'promise') { new Promise(() => {}).then(done); }",
+  "  else if (process.env.LZ_FIXTURE_PENDING !== 'callback') { done(); }",
+  '});',
+  "it('passes', () => {});",
+);
+
+/**
+ * A test that waits 100 ms on an unref'd timer, which Node.js 24 waits for and Node.js 22 cancels, then one that waits
+ * 600 ms on a ref'd timer.
+ */
+const unrefWait = fixture(
+  "it('waits on an unref timer', async () => { await new Promise((resolve) => setTimeout(resolve, 100).unref()); });",
+  "it('waits on a timer', async () => { await new Promise((resolve) => setTimeout(resolve, 600)); });",
+);
+
+const nodeMajor = Number(process.versions.node.split('.')[0]);
+
 /** Resolves once the process whose pid `path` holds has exited. */
 async function processExit(path: string): Promise<void> {
   while (!existsSync(path) || isRunning(Number(readFileSync(path, 'utf8')))) {
@@ -174,6 +194,47 @@ describe('LzNodeTestTestRunner deadline', () => {
       status: MutantRunStatus.Survived,
       nrOfTests: 3,
     });
+  });
+
+  for (const kind of ['callback', 'promise']) {
+    it(`times out a mutant run Stryker's timeoutMS after a ${kind} test is left pending with nothing to settle it`, async (t) => {
+      project(t, { 'a.test.mjs': pending });
+      const runner = await initRunner(['a.test.mjs'], undefined, { timeoutMS: 300 });
+      const { tests } = complete(await settle(runner.dryRun(dryRun)));
+      process.env['LZ_FIXTURE_PENDING'] = kind;
+      t.after(() => {
+        delete process.env['LZ_FIXTURE_PENDING'];
+      });
+
+      const started = performance.now();
+      const result = await settle(runner.mutantRun(mutantRunOptions({ testFilter: tests.map((test) => test.id) })));
+      const elapsed = performance.now() - started;
+
+      // Node.js 22 cancels a pending test once the event loop is empty; Node.js 24 waits for it.
+      const expected =
+        nodeMajor >= 24
+          ? {
+              status: MutantRunStatus.Timeout,
+              reason: "A test was still pending 300 ms after its file's event loop emptied (Stryker's timeoutMS)",
+            }
+          : { status: MutantRunStatus.Killed, reason: undefined };
+
+      assert.deepEqual(
+        { status: result.status, reason: result.status === MutantRunStatus.Timeout ? result.reason : undefined },
+        expected,
+      );
+      assert.ok(elapsed < 5000, `${elapsed} ms`);
+    });
+  }
+
+  it("keeps the results of a test that an unref'd timer settles within Stryker's timeoutMS and of the tests after it", async (t) => {
+    project(t, { 'a.test.mjs': unrefWait });
+    const runner = await initRunner(['a.test.mjs'], undefined, { timeoutMS: 300 });
+    const { tests } = complete(await settle(runner.dryRun(dryRun)));
+
+    const result = await settle(runner.mutantRun(mutantRunOptions({ testFilter: tests.map((test) => test.id) })));
+
+    assert.strictEqual(result.status, nodeMajor >= 24 ? MutantRunStatus.Survived : MutantRunStatus.Killed);
   });
 
   it('runs the mutants of a file the dry run did not run, warning once that it has no start-up time', async (t) => {

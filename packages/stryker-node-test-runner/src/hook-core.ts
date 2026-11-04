@@ -165,7 +165,9 @@ export function install(deps: HookDependencies): boolean {
 
   const bail = deps.env[envNames.bail] === 'true';
   const dryRun = deps.env[envNames.dryRun] === 'true';
+  const stallMs = Number(deps.env[envNames.stallMs]);
   Reflect.deleteProperty(deps.env, envNames.bail);
+  Reflect.deleteProperty(deps.env, envNames.stallMs);
   const testFile = deps.env[envNames.file];
   Reflect.deleteProperty(deps.env, envNames.file);
   const tests: RecordedTest[] = [];
@@ -174,6 +176,7 @@ export function install(deps: HookDependencies): boolean {
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
   let summarized = false;
   let end: Ending | undefined;
+  let stalledMs: number | undefined;
 
   if (main) {
     const positions = new Map<string, Position>();
@@ -195,9 +198,29 @@ export function install(deps: HookDependencies): boolean {
         column: columnNumber,
       }));
     const recordEvent = recordEvents(testFile, tests, positions, diagnostics);
+    // Node.js 24 keeps the process alive while a test is pending, even once its event loop is empty, where Node.js 22
+    // cancels the test. A mutant run ends the file when no test result follows the empty event loop within stallMs.
+    let results = 0;
+
+    if (stallMs > 0) {
+      deps.onBeforeExit(() => {
+        const since = results;
+        deps.later(() => {
+          if (results === since) {
+            stalledMs = stallMs;
+            deps.exit(1);
+          }
+        }, stallMs);
+      });
+    }
+
     deps.global[reporting] = (event) => {
       if (event.type === 'test:summary') {
         summarized = true;
+      }
+
+      if (isResult(event.type)) {
+        results++;
       }
 
       recordEvent(event);
@@ -248,6 +271,7 @@ export function install(deps: HookDependencies): boolean {
       ...(diagnostics.length > 0 && { diagnostics }),
       ...(main && !summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
+      ...(stalledMs !== undefined && { stalledMs }),
       lifetime: { start: started, end: written },
       ...(main && { testSpans: currentTests.spansAt(written) }),
     };
