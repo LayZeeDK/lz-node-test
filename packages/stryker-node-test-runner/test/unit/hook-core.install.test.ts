@@ -698,6 +698,8 @@ describe('install', () => {
 
     lzTestFor<readonly [string, number | undefined]>([
       ['without the stall variable, as in a dry run', undefined],
+      ['for no stall time', 0],
+      ['for a negative stall time', -1],
       ['for a stall time longer than a timer can hold', 2 ** 31],
       ['for a stall time that is not a whole number of milliseconds', 0.5],
     ])('waits for no stall %s', ([, stall]) => {
@@ -705,6 +707,22 @@ describe('install', () => {
       h.emptied();
 
       assert.deepEqual(h.timers, []);
+    });
+
+    lzTestFor([1, 2 ** 31 - 1])('waits a stall time of %s ms, which a timer can hold', (stall) => {
+      const h = stalling(stall);
+      h.emptied();
+
+      assert.deepEqual(
+        h.timers.map(({ ms }) => ms),
+        [stall],
+      );
+    });
+
+    it('takes the stall variable out of the environment that the tests and the processes they start see', () => {
+      const h = stalling(300);
+
+      assert.equal(h.deps.env[envNames.stall], undefined);
     });
 
     it('names only what the tests opened, also when something the process had before is gone', () => {
