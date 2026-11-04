@@ -159,7 +159,7 @@ describe('lzParseOptions', () => {
     });
   });
 
-  it("mutates fast-json-stringify's sources, and runs its test files one at a time with fixtures per worker", () => {
+  it("mutates fast-json-stringify's sources, and runs its test files one at a time with fixtures per process", () => {
     const { project } = lzParseOptions(required.with(1, 'fast-json-stringify'));
 
     assert.deepEqual(project, {
@@ -172,7 +172,7 @@ describe('lzParseOptions', () => {
           file: 'test/standalone-mode.test.js',
           from: "const tmpDir = 'test/fixtures'",
           to:
-            "const tmpDir = path.join('test/fixtures', `worker-${process.env.STRYKER_MUTATOR_WORKER ?? 'none'}`); " +
+            "const tmpDir = path.join('test/fixtures', `process-${process.pid}`); " +
             'fs.mkdirSync(tmpDir, { recursive: true })',
         },
       ],

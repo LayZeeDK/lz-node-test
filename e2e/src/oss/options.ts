@@ -75,14 +75,13 @@ const projects: readonly LzOssProject[] = [
     testFiles: ['test/*.test.js'],
     // A mutant whose memory grows without bound would grow in every file process at once.
     nodeTestFlags: ['--test-concurrency=1'],
-    // Stryker's workers share one sandbox, and this test writes, requires and deletes fixed file names in it.
+    // Stryker's workers share one sandbox, and this test writes, requires and deletes fixed file names in it. Keyed by
+    // process, as the command runner runs in Stryker's own process, which has no STRYKER_MUTATOR_WORKER.
     patches: [
       {
         file: 'test/standalone-mode.test.js',
         from: "const tmpDir = 'test/fixtures'",
-        to:
-          "const tmpDir = path.join('test/fixtures', `worker-${process.env.STRYKER_MUTATOR_WORKER ?? 'none'}`); " +
-          'fs.mkdirSync(tmpDir, { recursive: true })',
+        to: "const tmpDir = path.join('test/fixtures', `process-${process.pid}`); fs.mkdirSync(tmpDir, { recursive: true })",
       },
     ],
   },
