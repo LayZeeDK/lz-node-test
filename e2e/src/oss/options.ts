@@ -105,7 +105,16 @@ const projects: readonly LzOssProject[] = [
     testFiles: ['test/*.test.js'],
     // write.test.js runs out of heap below 2 GB; one file process at a time bounds the suite's memory.
     nodeTestFlags: ['--test-concurrency=1', '--test-timeout=240000'],
-    patches: [],
+    // This test expects the open to fail, but a mutant that turns mkdir on creates the folder on the drive the run
+    // is on (C:\path\to on Windows), and from then on the test fails without a mutant. A folder can never be created
+    // under a file.
+    patches: [
+      {
+        file: 'test/sync.test.js',
+        from: "dest: '/path/to/nowwhere'",
+        to: 'dest: `${__filename}/nowwhere`',
+      },
+    ],
   },
   {
     name: 'pino-pretty',
