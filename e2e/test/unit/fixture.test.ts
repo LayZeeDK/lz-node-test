@@ -49,6 +49,13 @@ describe('lzStrykerCommand', () => {
   it("adds Stryker's progress line every 10 s when the run is followed through a log", () => {
     assert.equal(lzStrykerCommand('s.mjs', 3, [], true)[6], 'clear-text,json,progress-append-only');
   });
+
+  it('adds further reporters to the one --reporters, as a second one would replace the first', () => {
+    assert.equal(
+      lzStrykerCommand('s.mjs', 3, [], true, ['lz-checkpoint'])[6],
+      'clear-text,json,progress-append-only,lz-checkpoint',
+    );
+  });
 });
 
 function mutant(line: number, replacement: string): LzMutantDetail {

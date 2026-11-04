@@ -127,6 +127,8 @@ export interface LzStrykerRunOptions {
   readonly args?: readonly string[];
   /** Receives Stryker's output as it arrives, with a progress line every 10 s. */
   readonly logFile?: string;
+  /** Reporters beside clear-text and json, which `args` cannot add: a second `--reporters` replaces the first. */
+  readonly reporters?: readonly string[];
 }
 
 /** The arguments of `node` that run Stryker; `progress` adds Stryker's append-only progress reporter. */
@@ -135,17 +137,27 @@ export function lzStrykerCommand(
   concurrency: number,
   args: readonly string[],
   progress: boolean,
+  extraReporters: readonly string[] = [],
 ): string[] {
-  const reporters = progress ? 'clear-text,json,progress-append-only' : 'clear-text,json';
+  const reporters = ['clear-text', 'json', ...(progress ? ['progress-append-only'] : []), ...extraReporters];
 
-  return [strykerBin, 'run', configFile, '--concurrency', String(concurrency), '--reporters', reporters, ...args];
+  return [
+    strykerBin,
+    'run',
+    configFile,
+    '--concurrency',
+    String(concurrency),
+    '--reporters',
+    reporters.join(','),
+    ...args,
+  ];
 }
 
 export async function lzStryker(
   dir: string,
   configFile: string,
   concurrency: number,
-  { tmp = join(dir, 'tmp'), timeoutMs = lzStrykerTimeoutMs, args = [], logFile }: LzStrykerRunOptions = {},
+  { tmp = join(dir, 'tmp'), timeoutMs = lzStrykerTimeoutMs, args = [], logFile, reporters }: LzStrykerRunOptions = {},
 ): Promise<LzStrykerRun> {
   const report = join(dir, lzReportFile);
   const before = new Set(readdirSync(tmp));
@@ -154,7 +166,7 @@ export async function lzStryker(
   rmSync(report, { force: true });
   const { exitCode, stdout, stderr, timedOut } = await lzExec(
     process.execPath,
-    lzStrykerCommand(configFile, concurrency, args, logFile !== undefined),
+    lzStrykerCommand(configFile, concurrency, args, logFile !== undefined, reporters),
     { cwd: dir, env: consumerEnv(tmp), timeoutMs, logFile },
   );
   const outcome: LzStrykerOutcome = {
