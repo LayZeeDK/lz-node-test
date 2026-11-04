@@ -643,10 +643,10 @@ describe('install', () => {
     );
 
     /** A file with one test that has started and not ended, whose event loop has emptied; `stall` sets its stall time. */
-    function stalling(stall: string | undefined) {
+    function stalling(stall: number | undefined) {
       const beforeExit: (() => void)[] = [];
       const h = installedHarness(
-        { ...fileEnv(), [envNames.stall]: stall },
+        { ...fileEnv(), [envNames.stall]: stall === undefined ? undefined : String(stall) },
         {
           onBeforeExit: (listener) => {
             beforeExit.push(listener);
@@ -664,14 +664,13 @@ describe('install', () => {
             listener();
           }
         },
-        stallTimers: () => h.timers.filter(({ ms }) => ms === 300),
       };
     }
 
     it('ends a file with exit code 1 when no test result follows its emptied event loop within the stall time', () => {
-      const { h, emptied, stallTimers } = stalling('300');
+      const { h, emptied } = stalling(300);
       emptied();
-      stallTimers()[0]?.fire();
+      h.timers[0]?.fire();
       h.exit({ natural: false });
 
       assert.deepEqual(h.exits, [1]);
@@ -698,20 +697,25 @@ describe('install', () => {
         },
       ],
     ])('keeps a file running when %s within the stall time', ([, then]) => {
-      const { h, emptied, stallTimers } = stalling('300');
+      const { h, emptied } = stalling(300);
       emptied();
       then(h);
-      stallTimers()[0]?.fire();
+
+      assert.deepEqual(
+        h.timers.map(({ ms }) => ms),
+        [300],
+      );
+
+      h.timers[0]?.fire();
 
       assert.deepEqual(h.exits, []);
     });
 
     it('waits for no stall without the stall variable, as in a dry run', () => {
-      const { h, emptied, stallTimers } = stalling(undefined);
+      const { h, emptied } = stalling(undefined);
       emptied();
 
-      assert.deepEqual(stallTimers(), []);
-      assert.deepEqual(h.exits, []);
+      assert.deepEqual(h.timers, []);
     });
 
     it('names only what the tests opened, also when something the process had before is gone', () => {

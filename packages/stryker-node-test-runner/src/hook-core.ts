@@ -174,7 +174,6 @@ export function install(deps: HookDependencies): boolean {
   const currentTests = lzCurrentTests({ ns, env: deps.env, now: deps.now });
   const diagnostics: string[] = [];
   const main = testFile !== undefined && deps.threadId === 0 && deps.mainFile === testFile;
-  let summarized = false;
   let end: Ending | undefined;
 
   if (main) {
@@ -199,10 +198,6 @@ export function install(deps: HookDependencies): boolean {
       }));
     const recordEvent = recordEvents(testFile, tests, positions, diagnostics);
     deps.global[reporting] = (event) => {
-      if (event.type === 'test:summary') {
-        summarized = true;
-      }
-
       recordEvent(event);
       ends.reported(event);
     };
@@ -249,7 +244,7 @@ export function install(deps: HookDependencies): boolean {
       mutantCoverage: dryRun ? ns.mutantCoverage : undefined,
       peakMemoryMB: dryRun ? deps.peakMemoryMB() : undefined,
       ...(diagnostics.length > 0 && { diagnostics }),
-      ...(main && !summarized && !natural && !outcome?.complete && { unfinished: true }),
+      ...(main && !outcome?.summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...(outcome?.heldOpen && { heldOpen: outcome.heldOpen }),
       ...(outcome?.stalledMs !== undefined && { stalledMs: outcome.stalledMs }),
       lifetime: { start: started, end: written },
@@ -272,14 +267,16 @@ interface Ending {
   /** node:test has reported another event. */
   readonly reported: (event: TestEvent) => void;
   /**
-   * Whether node:test had reported every top-level suite and test when the hook ended the process, and what held it
-   * open, or how long it waited for a pending test.
+   * Whether node:test has reported its summary; and whether it had reported every top-level suite and test when the
+   * hook ended the process, and what held it open, or how long it waited for a pending test.
    */
-  readonly outcome: () => {
-    readonly complete: boolean;
-    readonly heldOpen?: readonly string[];
-    readonly stalledMs?: number;
-  };
+  readonly outcome: () => LzEnded & { readonly summarized: boolean };
+}
+
+interface LzEnded {
+  readonly complete: boolean;
+  readonly heldOpen?: readonly string[];
+  readonly stalledMs?: number;
 }
 
 /**
@@ -303,7 +300,7 @@ export function ending(
   tests: RecordedTest[],
   rootAfter: (hook: () => void) => void,
   graceMs: number,
-  stallMs = 0,
+  stallMs: number,
 ): Ending {
   let enqueuedTopLevel = 0;
   let results = 0;
@@ -314,7 +311,7 @@ export function ending(
   let pending = 0;
   let threw = false;
   let armed = false;
-  let ended: ReturnType<Ending['outcome']> = { complete: false };
+  let ended: LzEnded = { complete: false };
   const before = deps.activeResources();
   // What the tests opened, not what the process had before they ran, such as the stdio pipes that loading node:test
   // opens.
@@ -334,8 +331,8 @@ export function ending(
   // node:test reports a test a little after it ends, so a failure can arrive after the hooks have settled. It reports a
   // suite after everything inside it, so once each enqueued top-level one is reported, everything is.
   const allReported = () => reportedTopLevel >= enqueuedTopLevel;
-  const end = (code: number | undefined, heldOpen?: readonly string[]) => {
-    ended = { complete: allReported(), ...(heldOpen && { heldOpen }) };
+  const end = (code: number | undefined, why: Omit<LzEnded, 'complete'> = {}) => {
+    ended = { complete: allReported(), ...why };
     deps.exit(code);
   };
   const check = () => {
@@ -352,7 +349,7 @@ export function ending(
 
     armed = true;
     deps.later(() => {
-      end(undefined, opened());
+      end(undefined, { heldOpen: opened() });
     }, graceMs);
     check();
   };
@@ -367,8 +364,7 @@ export function ending(
       const since = results;
       deps.later(() => {
         if (results === since && !summarized) {
-          ended = { complete: allReported(), stalledMs: stallMs };
-          deps.exit(1);
+          end(1, { stalledMs: stallMs });
         }
       }, stallMs);
     });
@@ -394,14 +390,14 @@ export function ending(
         enqueuedTopLevel++;
       }
 
-      if (isResult(type)) {
-        results++;
-      }
-
       summarized ||= type === 'test:summary';
 
-      if (isResult(type) && data.nesting === 0 && !fileLevel(data.details)) {
-        reportedTopLevel++;
+      if (isResult(type)) {
+        results++;
+
+        if (data.nesting === 0 && !fileLevel(data.details)) {
+          reportedTopLevel++;
+        }
       }
 
       // Also a root `after` hook that node:test ended by its timeout, whose function never settles; node:test runs none
@@ -413,7 +409,7 @@ export function ending(
 
       check();
     },
-    outcome: () => ended,
+    outcome: () => ({ ...ended, summarized }),
   };
 }
 
