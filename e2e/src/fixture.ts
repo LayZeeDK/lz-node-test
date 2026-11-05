@@ -117,6 +117,10 @@ function reportOf(run: LzStrykerRun): LzReport {
     );
   }
 
+  if (run.exitCode !== 0) {
+    throw new Error(`Stryker wrote a report, then failed (exit code ${run.exitCode}):\n${run.output}`);
+  }
+
   return run.report;
 }
 

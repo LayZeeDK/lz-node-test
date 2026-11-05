@@ -106,6 +106,14 @@ describe('lzMutants', () => {
     });
   });
 
+  it('refuses a run that wrote its report and then failed, and shows the exit code and output', () => {
+    const run = { ...reported({ 'src/a.ts': [mutant(1, '""')] }), exitCode: 1, output: 'dispose failed' };
+
+    assert.throws(() => lzMutants(run, 'src/a.ts'), {
+      message: 'Stryker wrote a report, then failed (exit code 1):\ndispose failed',
+    });
+  });
+
   it('refuses a run with no report, and says when it timed out', () => {
     assert.throws(() => lzMutants(unreported(true), 'src/a.ts'), {
       message: `Stryker wrote no report (exit code 1, ended after ${lzStrykerTimeoutMs / 60_000} minutes):\nError during import`,
