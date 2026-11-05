@@ -65,6 +65,19 @@ describe('LzNodeTestCatchAssert', () => {
       `${strict}try {\n  parse('');\n} catch (error) {\n  process.nextTick(() => assert.ok(error));\n}`,
     ],
     ['an empty try block', `${strict}try {\n} catch (error) {\n  assert.ok(error);\n}`],
+    // fast-json-stringify/test/invalidSchema.test.js
+    [
+      'a try block that ends in a fail, which already fails when the call stops throwing',
+      `${strict}try {\n  parse('');\n  assert.fail('should throw');\n} catch (error) {\n  assert.ok(error);\n}`,
+    ],
+    [
+      "a try block that ends in the test context's fail",
+      `${test}it('works', (t) => {\n  try {\n    parse('');\n    t.assert.fail('should throw');\n  } catch (e) {\n    t.assert.ok(e);\n  }\n});`,
+    ],
+    [
+      'a try block that ends in a throw',
+      `${strict}try {\n  parse('');\n  throw new Error('should throw');\n} catch (error) {\n  assert.ok(error);\n}`,
+    ],
     ['a try without a catch', `${strict}try {\n  parse('');\n} finally {\n  assert.ok(true);\n}`],
     [
       'an assertion in the try block',

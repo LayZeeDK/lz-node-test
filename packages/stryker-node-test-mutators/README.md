@@ -46,6 +46,10 @@ name, as in `await lzNodeTestMutators({ experimental: { LzNodeTestCatchAssert: t
 [`@layzee/stryker-node-mutators`](../stryker-node-mutators/README.md#opt-in-and-experimental-mutators); this package
 has no opt-in mutators yet, so `extended: true` turns on nothing.
 
+`LzNodeTestAssertCall` and `LzNodeTestAssertValidator` find `node:assert` and `node:test` through an ES module
+`import`, not a CommonJS `require`, so a CommonJS test file gets no mutant from them. `LzNodeTestCatchAssert` finds
+assertions by name and also counts a `require`d `assert`.
+
 ### Default mutators
 
 | Mutator                     | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -62,9 +66,9 @@ An example mutant of each:
 
 ### Experimental mutators
 
-| Mutator                 | What it changes                                                                                                                                                                                                                                                                                                                              |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LzNodeTestCatchAssert` | Empties the `try` block of a `try`/`catch` whose `catch` asserts and throws nothing. A survivor is a test that passes when the code under test stops throwing; `assert.throws`, `assert.rejects` or a plan would catch it. Assertions are found by name, so a `require`d `assert` counts, and functions inside the `catch` are not searched. |
+| Mutator                 | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LzNodeTestCatchAssert` | Empties the `try` block of a `try`/`catch` whose `catch` asserts and throws nothing. A survivor is a test that passes when the code under test stops throwing; `assert.throws`, `assert.rejects` or a plan would catch it. Assertions are found by name, so a `require`d `assert` counts, and functions inside the `catch` are not searched. A `try` block that ends in a `throw` or an `assert.fail(...)` is left alone, as its test already fails when the code stops throwing. |
 
 | Mutator                 | Original                                                 | Mutated                                      |
 | ----------------------- | -------------------------------------------------------- | -------------------------------------------- |

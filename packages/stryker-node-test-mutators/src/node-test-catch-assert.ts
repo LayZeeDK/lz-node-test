@@ -7,13 +7,13 @@ import { lzCalleeRoot, lzPropertyName, type LzOperator } from '@layzee/stryker-m
  * passes when the code under test stops throwing; `assert.throws` or a plan would catch it. Assertions are matched by
  * syntax, so CommonJS `require` of node:assert counts, unlike in LzNodeTestAssertCall, which follows the import: any
  * method other than `fail` of a callee rooted at `assert` or of an `assert` member, and a call of `assert` itself.
- * Functions inside the `catch` are not searched.
+ * Functions inside the `catch` are not searched. A `try` block that ends in a `throw` or a `fail` is left alone.
  */
 export const nodeTestCatchAssert: LzOperator<'LzNodeTestCatchAssert'> = {
   name: 'LzNodeTestCatchAssert',
   sample: "try {\n  JSON.parse('');\n} catch (error) {\n  assert.ok(error);\n}\n",
   *mutate(path, t) {
-    if (!path.isBlockStatement() || path.node.body.length === 0) {
+    if (!path.isBlockStatement() || path.node.body.length === 0 || endsInFailure(path.node.body)) {
       return;
     }
 
@@ -51,19 +51,36 @@ function assertsWithoutThrow(body: NodePath<types.BlockStatement>): boolean {
   return found.asserts && !found.throws;
 }
 
-function isAssertion(callee: types.Node): boolean {
-  if (callee.type === 'Identifier') {
-    return callee.name === 'assert';
-  }
+/** A try block whose last statement throws or fails already fails its test when the code before it stops throwing. */
+function endsInFailure(body: readonly types.Statement[]): boolean {
+  const last = body.at(-1);
 
-  const method = lzPropertyName(callee);
-
-  if (method === undefined || method === 'fail') {
-    return false;
+  if (last?.type === 'ThrowStatement') {
+    return true;
   }
 
   return (
-    lzCalleeRoot(callee)?.name === 'assert' ||
-    (callee.type === 'MemberExpression' && lzPropertyName(callee.object) === 'assert')
+    last?.type === 'ExpressionStatement' &&
+    last.expression.type === 'CallExpression' &&
+    assertMethod(last.expression.callee) === 'fail'
   );
+}
+
+function isAssertion(callee: types.Node): boolean {
+  const method = assertMethod(callee);
+
+  return method !== undefined && method !== 'fail';
+}
+
+function assertMethod(callee: types.Node): string | undefined {
+  if (callee.type === 'Identifier') {
+    return callee.name === 'assert' ? 'ok' : undefined;
+  }
+
+  const method = lzPropertyName(callee);
+  const onAssert =
+    lzCalleeRoot(callee)?.name === 'assert' ||
+    (callee.type === 'MemberExpression' && lzPropertyName(callee.object) === 'assert');
+
+  return onAssert ? method : undefined;
 }
