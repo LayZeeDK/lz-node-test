@@ -418,6 +418,7 @@ export function ending(
       summarized ||= type === 'test:summary';
 
       if (isResult(type)) {
+        // Stryker disable next-line UpdateOperator: equivalent, as the stall check only asks whether the count changed
         results++;
 
         if (data.nesting === 0 && !fileLevel(data.details)) {
