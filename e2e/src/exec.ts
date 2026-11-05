@@ -38,7 +38,9 @@ export async function lzExec(
         }, timeoutMs)
       : undefined;
   // 'close' also waits for the processes the child started that still hold its stdout or stderr.
-  child.once('exit', () => clearTimeout(timer));
+  child.once('exit', () => {
+    clearTimeout(timer);
+  });
   const log = logFile === undefined ? undefined : openSync(logFile, 'w');
   const collect = (stream: Readable): string[] => {
     const chunks: string[] = [];
