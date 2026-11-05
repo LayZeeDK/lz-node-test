@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, it, type TestContext } from 'node:test';
 
-import { lzPartRanges } from '../../src/oss/parts.ts';
+import { lzMutantsByLine, lzPartRanges } from '../../src/oss/parts.ts';
 
 const source = [
   "'use strict'",
@@ -26,7 +29,7 @@ describe('lzPartRanges', () => {
     assert.deepEqual(lzPartRanges('index.js', source, 2), ['index.js:1-6', 'index.js:7-11']);
   });
 
-  it('weighs the lines by the mutants that start on them when counts are given', () => {
+  it('weighs each line as given', () => {
     const mutantsByLine = new Map([
       [4, 1],
       [8, 1],
@@ -34,7 +37,10 @@ describe('lzPartRanges', () => {
       [11, 4],
     ]);
 
-    assert.deepEqual(lzPartRanges('index.js', source, 2, mutantsByLine), ['index.js:1-10', 'index.js:11-11']);
+    assert.deepEqual(
+      lzPartRanges('index.js', source, 2, (line) => mutantsByLine.get(line) ?? 0),
+      ['index.js:1-10', 'index.js:11-11'],
+    );
   });
 
   it('never cuts inside a statement or between two statements that share a line', () => {
@@ -43,7 +49,59 @@ describe('lzPartRanges', () => {
     assert.deepEqual(ranges, ['index.js:1-2', 'index.js:3-6', 'index.js:7-9', 'index.js:10-10', 'index.js:11-11']);
   });
 
+  it('counts lines as Stryker does, where U+2028 also ends a line', () => {
+    const ranges = lzPartRanges('index.js', "const a = ' '\nconst b = 1\nconst c = 2", 3);
+
+    assert.deepEqual(ranges, ['index.js:1-2', 'index.js:3-3', 'index.js:4-4']);
+  });
+
   it('refuses a part count below 1', () => {
     assert.throws(() => lzPartRanges('index.js', source, 0), { message: 'parts is a positive integer; got 0.' });
+  });
+});
+
+function reportWith(t: TestContext, mutantLinesByFile: Readonly<Record<string, readonly number[]>>): string {
+  const dir = mkdtempSync(join(tmpdir(), 'lz-oss-parts-'));
+  const file = join(dir, 'mutation.json');
+  const files = Object.fromEntries(
+    Object.entries(mutantLinesByFile).map(([name, lines]) => [
+      name,
+      {
+        mutants: lines.map((line) => ({
+          mutatorName: 'BooleanLiteral',
+          location: { start: { line, column: 1 }, end: { line, column: 5 } },
+          status: 'Killed',
+        })),
+      },
+    ]),
+  );
+
+  t.after(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+  writeFileSync(file, JSON.stringify({ files }));
+
+  return file;
+}
+
+describe('lzMutantsByLine', () => {
+  it('counts the mutants on each line of the file the report names exactly', (t) => {
+    const report = reportWith(t, { 'lib/utils/index.js': [9, 9], 'index.js': [1, 2, 2] });
+
+    assert.deepEqual(
+      lzMutantsByLine(report, 'index.js'),
+      new Map([
+        [1, 1],
+        [2, 2],
+      ]),
+    );
+  });
+
+  it('refuses a file the report does not have, and names those it has', (t) => {
+    const report = reportWith(t, { 'lib/index.js': [1] });
+
+    assert.throws(() => lzMutantsByLine(report, 'index.js'), {
+      message: `${report} has no file "index.js"; it has lib/index.js.`,
+    });
   });
 });

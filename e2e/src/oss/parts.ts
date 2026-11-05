@@ -9,14 +9,13 @@ export function lzPartRanges(
   file: string,
   source: string,
   parts: number,
-  mutantsByLine?: ReadonlyMap<number, number>,
+  weightOf: (line: number) => number = () => 1,
 ): string[] {
   if (!Number.isInteger(parts) || parts < 1) {
     throw new Error(`parts is a positive integer; got ${parts}.`);
   }
 
-  const lineCount = source.split('\n').length;
-  const weightOf = (line: number): number => (mutantsByLine === undefined ? 1 : (mutantsByLine.get(line) ?? 0));
+  const { lineCount, candidates } = statementStarts(file, source);
   const weightBefore: number[] = [0];
 
   for (let line = 1; line <= lineCount; line++) {
@@ -24,7 +23,6 @@ export function lzPartRanges(
   }
 
   const total = weightBefore[lineCount] ?? 0;
-  const candidates = linesStartingANewStatement(file, source);
   const cuts: number[] = [];
 
   for (let part = 1; part < parts; part++) {
@@ -49,36 +47,40 @@ export function lzPartRanges(
   return starts.map((start, index) => `${file}:${start}-${(starts[index + 1] ?? lineCount + 1) - 1}`);
 }
 
-function linesStartingANewStatement(file: string, source: string): number[] {
+/** Line numbers as Babel counts them, which Stryker's locations use: U+2028 and a lone CR end a line too. */
+function statementStarts(file: string, source: string): { lineCount: number; candidates: number[] } {
   const ast = parseSync(source, { filename: file, configFile: false, babelrc: false, sourceType: 'unambiguous' });
+  const lineCount = ast?.program.loc?.end.line;
 
-  if (ast === null) {
+  if (ast === null || lineCount === undefined) {
     throw new Error(`${file} did not parse.`);
   }
 
   const statements = [...ast.program.directives, ...ast.program.body];
-
-  return statements.flatMap((statement, index) => {
+  const candidates = statements.flatMap((statement, index) => {
     const previous = statements[index - 1];
     const start = statement.loc?.start.line;
     const previousEnd = previous?.loc?.end.line;
 
     return start !== undefined && previousEnd !== undefined && previousEnd < start ? [start] : [];
   });
+
+  return { lineCount, candidates };
 }
 
 export function lzMutantsByLine(reportFile: string, file: string): Map<number, number> {
   const report = lzParseReport(readFileSync(reportFile, 'utf8'));
-  const counts = new Map<number, number>();
-  const key = [...report.keys()].find((name) => endsWithPath(name, file));
+  const mutants = report.get(file);
 
-  for (const { line } of key === undefined ? [] : (report.get(key) ?? [])) {
+  if (mutants === undefined) {
+    throw new Error(`${reportFile} has no file "${file}"; it has ${[...report.keys()].join(', ')}.`);
+  }
+
+  const counts = new Map<number, number>();
+
+  for (const { line } of mutants) {
     counts.set(line, (counts.get(line) ?? 0) + 1);
   }
 
   return counts;
-}
-
-function endsWithPath(reportPath: string, file: string): boolean {
-  return reportPath.replaceAll('\\', '/').endsWith(file);
 }
