@@ -68,6 +68,12 @@ describe('lzParseOptions', () => {
     });
   }
 
+  it('refuses an --npm-before in the future', () => {
+    assert.throws(() => lzParseOptions([...required.slice(0, -2), '--npm-before', '2999-01-01']), {
+      message: /--npm-before is in the past: a later date installs whatever is newest when the run starts\.$/,
+    });
+  });
+
   it('reads an --npm-before UTC time', () => {
     const { npmBefore } = lzParseOptions([...required.slice(0, -2), '--npm-before', '2026-11-04T12:30:00Z']);
 

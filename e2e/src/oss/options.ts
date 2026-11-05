@@ -279,6 +279,12 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     );
   }
 
+  if (before > Date.now()) {
+    throw new Error(
+      `${lzOssUsage}\n--npm-before is in the past: a later date installs whatever is newest when the run starts.`,
+    );
+  }
+
   const side = lzSides.find((known) => known === values.side);
 
   if (values.side !== undefined && side === undefined) {
