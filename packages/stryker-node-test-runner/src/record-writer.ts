@@ -93,9 +93,9 @@ export function lzPersistRecord(
 
     try {
       deps.writeRecord(path, current);
-    } catch {
-      // A process the tests started exits as it would without the hook when its record cannot be written, as when the
-      // run that reads it is over.
+    } catch (error) {
+      // A process the tests started exits as it would without the hook once the run that reads its record is over.
+      throwUnlessRunOver(error);
     }
   });
 
@@ -135,10 +135,18 @@ function writeOnNewHits(
 
     try {
       write(current);
-    } catch {
-      // The run that reads the record can be over, with its directory removed, while the process still runs.
+    } catch (error) {
+      // The run that reads the record can be over while the process still runs.
+      throwUnlessRunOver(error);
     }
   }, recordIntervalMs);
+}
+
+/** The run that reads a record removes its directory when it is over, so a write there fails with ENOENT. */
+function throwUnlessRunOver(error: unknown): void {
+  if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
+    throw error;
+  }
 }
 
 /** How many listeners signal-exit has for each signal, which leave how the process ends to any other listener. */

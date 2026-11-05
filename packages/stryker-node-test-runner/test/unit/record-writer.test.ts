@@ -185,32 +185,43 @@ describe('lzPersistRecord, for a process that a signal ends', () => {
   });
 });
 
+/** The error of a failed record write, with Node.js's `code`: ENOENT once the run's directory is gone. */
+function writeError(code: 'ENOENT' | 'EPERM'): Error {
+  return Object.assign(new Error(`${code}: record write failed`), { code });
+}
+
 describe('lzPersistRecord, at exit', () => {
-  /** A process whose record writes fail, counting them. */
-  function failingWrites(options: { readonly main: boolean; readonly dryRun: boolean }) {
+  /** A process whose record writes fail with `code`, counting them. */
+  function failingWrites(options: { readonly main: boolean; readonly dryRun: boolean }, code: 'ENOENT' | 'EPERM') {
     let writes = 0;
     const { exit } = persisted(options, {
       writeRecord: () => {
         writes += 1;
-        throw new Error('EPERM: operation not permitted, rename');
+        throw writeError(code);
       },
     });
 
     return { exit, writes: () => writes };
   }
 
-  it('exits without an error when the record of a process the tests started cannot be written', () => {
-    const { exit, writes } = failingWrites({ main: false, dryRun: false });
+  it('exits without an error when the record of a process the tests started can no longer be written, as the run is over', () => {
+    const { exit, writes } = failingWrites({ main: false, dryRun: false }, 'ENOENT');
 
     exit();
 
     assert.equal(writes(), 1);
   });
 
-  it("lets the error through when the test file's own record cannot be written", () => {
-    const { exit } = failingWrites({ main: true, dryRun: false });
+  it('lets the error through when the record of a process the tests started cannot be written while the run goes on', () => {
+    const { exit } = failingWrites({ main: false, dryRun: false }, 'EPERM');
 
     assert.throws(exit, /EPERM/);
+  });
+
+  it("lets the error through when the test file's own record cannot be written", () => {
+    const { exit } = failingWrites({ main: true, dryRun: false }, 'ENOENT');
+
+    assert.throws(exit, /ENOENT/);
   });
 
   it('lets the error through when the record of a process the tests started cannot be built', () => {
@@ -275,18 +286,43 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
     assert.deepEqual(intervals, []);
   });
 
-  it('keeps the process running when its record can no longer be written, as when the run is over', () => {
+  /**
+   * A process whose record writes fail with `code`. `write` makes the one write it makes while it runs once a hit has
+   * grown its coverage; `attempts` counts the writes.
+   */
+  function writeWhileRunning(code: 'ENOENT' | 'EPERM') {
+    let attempts = 0;
     const p = persisted(descendant, {
       writeRecord: () => {
-        throw new Error('ENOENT: no such file or directory');
+        attempts += 1;
+        throw writeError(code);
       },
     });
-    p.hit('1');
+    const [only, ...more] = p.intervals;
+    assert.ok(only, 'the process writes no record while it runs');
+    assert.equal(more.length, 0);
 
-    p.intervals.forEach(({ fire }) => {
-      fire();
-    });
+    return {
+      write: () => {
+        p.hit('1');
+        only.fire();
+      },
+      attempts: () => attempts,
+    };
+  }
 
-    assert.equal(p.intervals.length, 1);
+  it('keeps the process running and its record following the coverage when the record can no longer be written, as when the run is over', () => {
+    const { write, attempts } = writeWhileRunning('ENOENT');
+
+    write();
+    write();
+
+    assert.equal(attempts(), 2);
+  });
+
+  it('lets the error through when its record cannot be written while the run goes on', () => {
+    const { write } = writeWhileRunning('EPERM');
+
+    assert.throws(write, /EPERM/);
   });
 });
