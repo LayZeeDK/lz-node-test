@@ -217,7 +217,7 @@ describe('lzParseOptions', () => {
 
   it('names --side and --merge in the usage', () => {
     assert.match(lzOssUsage, /\[--side <lz\|command>\]/);
-    assert.match(lzOssUsage, /--merge <result\.json>\.\.\. --out <folder>/);
+    assert.match(lzOssUsage, /--merge <result\.json> \[--merge <result\.json>\]\.\.\. --out <folder>/);
   });
 
   it('names --mutate in the usage, with the column to widen a range by on each side', () => {

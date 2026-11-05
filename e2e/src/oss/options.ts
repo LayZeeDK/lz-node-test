@@ -144,7 +144,7 @@ export const lzOssUsage =
   'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
   '[--side <lz|command>] [--mutate <pattern>]... [--tarballs <folder>] [--prepare-only] ' +
   '[--time-limit-minutes <n>, default 15] [--mutant-timeout-ms <n>] [--help]\n' +
-  '       node e2e/src/oss/main.ts --merge <result.json>... --out <folder>\n' +
+  '       node e2e/src/oss/main.ts --merge <result.json> [--merge <result.json>]... --out <folder>\n' +
   '  --side    runs that side only and compares nothing; without it both sides run and are compared.\n' +
   "  --mutate  replaces the project's mutate set for this run; passed to stryker run as --mutate. To select the\n" +
   '            mutant at a mutation.json position, widen the range by one column on each side:\n' +
