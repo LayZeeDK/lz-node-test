@@ -41,18 +41,15 @@ function isInsideTeardown(path: NodePath): boolean {
 
 function isTestContext(path: NodePath, name: string): boolean {
   const callback = path.scope.getBinding(name)?.path.parentPath;
-  const callee = callback?.isFunction() === true ? nodeTestCallee(callback) : undefined;
 
-  return callee !== undefined && (!callee.onContext || callee.name === 'test');
+  return callback?.isFunction() === true && nodeTestCallee(callback) !== undefined;
 }
 
 /**
  * The node:test function that `callback` is passed to: an import, by its imported name (undefined for the default
  * export), or a method of a test context.
  */
-function nodeTestCallee(
-  callback: NodePath,
-): { readonly name: string | undefined; readonly onContext: boolean } | undefined {
+function nodeTestCallee(callback: NodePath): { readonly name: string | undefined } | undefined {
   const call = callback.parentPath;
 
   if (call.node.type !== 'CallExpression') {
@@ -64,12 +61,12 @@ function nodeTestCallee(
   if (callee.type === 'Identifier') {
     const from = lzImportOf(call, callee.name);
 
-    return from !== undefined && nodeTest.has(from.source) ? { name: from.imported, onContext: false } : undefined;
+    return from !== undefined && nodeTest.has(from.source) ? { name: from.imported } : undefined;
   }
 
   return callee.type === 'MemberExpression' &&
     callee.object.type === 'Identifier' &&
     isTestContext(call, callee.object.name)
-    ? { name: lzPropertyName(callee), onContext: true }
+    ? { name: lzPropertyName(callee) }
     : undefined;
 }
