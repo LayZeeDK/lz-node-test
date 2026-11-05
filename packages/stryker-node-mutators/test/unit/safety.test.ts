@@ -95,20 +95,11 @@ describe('safety', () => {
       [['process.kill']],
     ],
     [
-      "the first design of LzNodeTestAssertCall's arrow body, which fails through node:assert",
-      "import assert from 'node:assert/strict';\n[1].forEach((n) => assert.ok(n));",
-      (t: Parameters<LzOperator['mutate']>[1]) =>
-        t.callExpression(
-          t.memberExpression(
-            t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('getBuiltinModule')), [
-              t.stringLiteral('node:assert'),
-            ]),
-            t.identifier('fail'),
-          ),
-          [t.stringLiteral('Stryker: assertion reached')],
-        ),
-      (path: NodePath) => path.isCallExpression() && path.parent.type === 'ArrowFunctionExpression',
-      [['process.getBuiltinModule', 'fail']],
+      'an operator that only throws an Error',
+      'f();',
+      (t: Parameters<LzOperator['mutate']>[1]) => t.newExpression(t.identifier('Error'), []),
+      (path: NodePath) => path.isCallExpression(),
+      [[]],
     ],
   ])('reports %s', async (_title, source, replacement, where, expected) => {
     const unsafe: LzOperator = {

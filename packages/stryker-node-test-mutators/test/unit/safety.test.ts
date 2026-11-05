@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
+import type { NodePath } from '@babel/core';
 import type { Location } from '@stryker-mutator/api/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
@@ -75,6 +76,55 @@ describe('safety', () => {
       assert.ok(found.flat().length > 0, `${operator.name} made no mutant in the corpus`);
     },
   );
+
+  lzTestEach([
+    [
+      'an operator that signals a process',
+      'f();',
+      (t: Parameters<LzOperator['mutate']>[1]) =>
+        t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('kill')), [
+          t.memberExpression(t.identifier('process'), t.identifier('pid')),
+          t.stringLiteral('SIGKILL'),
+        ]),
+      (path: NodePath) => path.isCallExpression(),
+      [['process.kill']],
+    ],
+    [
+      "the first design of LzNodeTestAssertCall's arrow body, which fails through node:assert",
+      "import assert from 'node:assert/strict';\n[1].forEach((n) => assert.ok(n));",
+      (t: Parameters<LzOperator['mutate']>[1]) =>
+        t.callExpression(
+          t.memberExpression(
+            t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('getBuiltinModule')), [
+              t.stringLiteral('node:assert'),
+            ]),
+            t.identifier('fail'),
+          ),
+          [t.stringLiteral('Stryker: assertion reached')],
+        ),
+      (path: NodePath) => path.isCallExpression() && path.parent.type === 'ArrowFunctionExpression',
+      [['process.getBuiltinModule', 'fail']],
+    ],
+    [
+      'an operator that only throws an Error',
+      'f();',
+      (t: Parameters<LzOperator['mutate']>[1]) => t.newExpression(t.identifier('Error'), []),
+      (path: NodePath) => path.isCallExpression(),
+      [[]],
+    ],
+  ])('reports %s', async (_title, source, replacement, where, expected) => {
+    const unsafe: LzOperator = {
+      name: 'Unsafe',
+      sample: '',
+      *mutate(path, t) {
+        if (where(path)) {
+          yield replacement(t);
+        }
+      },
+    };
+
+    assert.deepEqual(await newCallees(unsafe, source), expected);
+  });
 
   lzTestEach(
     testOperators.flatMap((operator) =>
