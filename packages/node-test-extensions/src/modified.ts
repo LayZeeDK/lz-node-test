@@ -2,8 +2,8 @@ import type { Flags, Register } from './register.ts';
 
 /**
  * A table function with its modifiers, chained before the table. `skip`, `only`, `todo` and `fails` each turn their
- * flag on, so they compose in any order. `skipIf` and `runIf` set `skip` to true or false, as in Vitest, so they
- * override a `skip` before them and are overridden by one after them.
+ * flag on, so they compose in any order. `skipIf` and `runIf` turn `skip` on when their condition asks for it and
+ * otherwise leave it as it is, as in Vitest, so a `skip` before or after them always holds.
  */
 export type LzTestModified<TFunction> = TFunction & {
   readonly skip: LzTestModified<TFunction>;
@@ -24,9 +24,10 @@ export function modified<TCallback>(
   const table: Table<TCallback> = (rows, ...values) =>
     cases(flags, values.length > 0 ? templateRows(rows, values) : rows);
   const flag = (key: keyof Flags) => () => modified(cases, { ...flags, [key]: true });
+  const skipWhen = (skip: boolean) => modified(cases, skip ? { ...flags, skip } : flags);
   const withConditions = Object.assign(table, {
-    skipIf: (condition: unknown) => modified(cases, { ...flags, skip: Boolean(condition) }),
-    runIf: (condition: unknown) => modified(cases, { ...flags, skip: !condition }),
+    skipIf: (condition: unknown) => skipWhen(Boolean(condition)),
+    runIf: (condition: unknown) => skipWhen(!condition),
   });
 
   // The modifiers are getters, as assigning them would build every chain of modifiers at once, without end.

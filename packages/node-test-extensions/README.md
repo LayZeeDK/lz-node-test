@@ -122,7 +122,8 @@ The package exports a type for each value its functions take or return:
 ### Modifiers
 
 Chain modifiers before the table, in any order: `lzTestEach.skip`, `.only`, `.todo` and `.fails` turn their flag on.
-`.skipIf(condition)` and `.runIf(condition)` set `skip`, as in Vitest, and override a `skip` before them.
+`.skipIf(condition)` turns `skip` on when the condition is truthy, and `.runIf(condition)` when it is falsy. As in
+Vitest, neither turns off a `skip` chained before it.
 
 ```ts
 lzTestEach.skipIf(process.platform === 'win32')([['/tmp']])('reads %s', (dir) => {

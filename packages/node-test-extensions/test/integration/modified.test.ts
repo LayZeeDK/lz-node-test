@@ -28,18 +28,24 @@ describe('the modifiers of lzTestEach and lzTestFor', () => {
     ]);
   });
 
-  it('skips with skipIf a truthy condition and with runIf a falsy one, overriding an earlier skip', async (t) => {
+  it('skips with skipIf a truthy condition and with runIf a falsy one, keeping a skip on either side', async (t) => {
     await t.assert.reports(() => {
       lzTestEach.skipIf(1)([1])('skipIf truthy %s', () => {});
-      lzTestEach.skip.skipIf(0)([1])('skipIf falsy %s', () => {});
+      lzTestEach.skipIf(0)([1])('skipIf falsy %s', () => {});
       lzTestFor.runIf('')([1])('runIf falsy %s', () => {});
-      lzTestFor.skip.runIf('yes')([1])('runIf truthy %s', () => {});
+      lzTestFor.runIf('yes')([1])('runIf truthy %s', () => {});
+      lzTestEach.skip.skipIf(0)([1])('skip then skipIf falsy %s', () => {});
+      lzTestFor.skip.runIf('yes')([1])('skip then runIf truthy %s', () => {});
+      lzTestEach.skipIf(0).skip([1])('skipIf falsy then skip %s', () => {});
       lzTestEach.skipIf(0).fails([1])('then fails %s', report);
     }, [
       { name: 'skipIf truthy 1', outcome: 'pass', skip: true },
       { name: 'skipIf falsy 1', outcome: 'pass' },
       { name: 'runIf falsy 1', outcome: 'pass', skip: true },
       { name: 'runIf truthy 1', outcome: 'pass' },
+      { name: 'skip then skipIf falsy 1', outcome: 'pass', skip: true },
+      { name: 'skip then runIf truthy 1', outcome: 'pass', skip: true },
+      { name: 'skipIf falsy then skip 1', outcome: 'pass', skip: true },
       { name: 'then fails 1', outcome: 'pass' },
     ]);
   });
