@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
   lzConcurrency,
+  lzConsumerEnv,
   lzMutant,
   lzMutants,
   lzRemoveDeadRunDirs,
@@ -15,6 +16,17 @@ import {
   type LzStrykerRun,
 } from '../../src/fixture.ts';
 import type { LzMutantDetail } from '../../src/report.ts';
+
+describe('lzConsumerEnv', () => {
+  it("puts this Node.js first on PATH, so the command side's `node` is the one the result records", () => {
+    const paths = Object.entries(lzConsumerEnv(tmpdir())).filter(([key]) => key.toUpperCase() === 'PATH');
+
+    assert.deepEqual(
+      paths.map(([, value]) => value?.split(delimiter)[0]),
+      [dirname(process.execPath)],
+    );
+  });
+});
 
 describe('lzConcurrency', () => {
   it('reads a positive integer', () => {

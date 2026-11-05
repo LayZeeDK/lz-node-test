@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 
 import { lzExec } from './exec.ts';
 import { lzIsRecord, lzMutantLine, lzParseReport, type LzMutantDetail, type LzReport } from './report.ts';
@@ -179,7 +179,7 @@ export async function lzStryker(
       ...(logFile === undefined ? [] : ['progress-append-only']),
       ...reporters,
     ]),
-    { cwd: dir, env: consumerEnv(tmp), timeoutMs, logFile },
+    { cwd: dir, env: lzConsumerEnv(tmp), timeoutMs, logFile },
   );
   const outcome: LzStrykerOutcome = {
     exitCode,
@@ -195,13 +195,19 @@ export async function lzStryker(
     : { ...outcome, reported: false };
 }
 
-/** Drops what the suite's own `node --test` sets and a consumer's Stryker runs without. */
-function consumerEnv(tmp: string): NodeJS.ProcessEnv {
+/**
+ * Drops what the suite's own `node --test` sets and a consumer's Stryker runs without, and puts this Node.js first on
+ * PATH, so the `node` that Stryker's command runner finds is the one that runs Stryker.
+ */
+export function lzConsumerEnv(tmp: string): NodeJS.ProcessEnv {
   const inherited = Object.entries(process.env).filter(
     ([key]) => key !== 'NODE_OPTIONS' && key !== 'NODE_TEST_CONTEXT',
   );
+  // Windows spells it Path.
+  const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
+  const path = [dirname(process.execPath), process.env[pathKey] ?? ''].join(delimiter);
 
-  return { ...Object.fromEntries(inherited), TMPDIR: tmp, TEMP: tmp, TMP: tmp };
+  return { ...Object.fromEntries(inherited), [pathKey]: path, TMPDIR: tmp, TEMP: tmp, TMP: tmp };
 }
 
 /** Packs each workspace package from its built `dist` into `into`, and returns the tarballs' paths. */
