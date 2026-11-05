@@ -106,7 +106,7 @@ describe('the runner module in a process whose parent never loads it', () => {
 });
 
 describe("the runner module in Stryker's main process", () => {
-  it("keeps a forked worker's dry-run peaks and start-up times under its own pid and removes them when it ends", (t) => {
+  it("keeps a forked worker's dry-run files, peaks and start-up times under its own pid and removes them when it ends", (t) => {
     const { tmp, project } = projectIn(t);
 
     const child = spawnSync(
@@ -114,7 +114,11 @@ describe("the runner module in Stryker's main process", () => {
       ['--conditions=@layzee/source', '--input-type=module', '--eval', strykerMainWithWorker],
       { cwd: project, env: ownEnv(tmp), encoding: 'utf8', windowsHide: true },
     );
-    assert.equal(child.stdout, 'complete lz-node-test-dry-run-<main>-store <file>.peak <file>.start-up', child.stderr);
+    assert.equal(
+      child.stdout,
+      'complete lz-node-test-dry-run-<main>-store <file>.files <file>.peak <file>.start-up',
+      child.stderr,
+    );
     assert.deepEqual(storesIn(tmp), []);
   });
 

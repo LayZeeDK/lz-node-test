@@ -7,8 +7,8 @@ import { lzDirPrefix, ownDir } from './dirs.ts';
 import { envNames } from './record.ts';
 
 /**
- * Where the runners of one Stryker run keep what the dry run measured of each test file: its memory peak and its
- * start-up. Stryker runs the dry run in one worker and the mutants in all of them, each a process it forks and may
+ * Where the runners of one Stryker run keep which test files the dry run ran and what it measured of each: its memory
+ * peak and its start-up. Stryker runs the dry run in one worker and the mutants in all of them, each a process it forks and may
  * replace, so the directory is named after the process that owns it (see `lzOwnDryRun`).
  */
 export function lzDryRunDir(ownerPid: number): string {
@@ -40,8 +40,8 @@ export function lzOwnDryRun(): number {
   return process.pid;
 }
 
-/** What the dry run keeps of a test file, each in a file of its own. */
-export type LzDryRunKind = 'peak' | 'start-up';
+/** What the dry run keeps of a test file, each in a file of its own, and, as `files`, the test files it ran. */
+export type LzDryRunKind = 'peak' | 'start-up' | 'files';
 
 export interface LzDryRunStore {
   /** Creates the directory for this user alone, or empties the one that exists. */

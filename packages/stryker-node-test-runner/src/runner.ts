@@ -352,6 +352,16 @@ function dryRunErrorElseTimeout(run: LzRunOptions, errorMessage: string, reason:
   return run.dryRun ? errorEnd(errorMessage) : { end: { status: DryRunStatus.Timeout, reason } };
 }
 
+function storedFiles(content: string | undefined): string[] | undefined {
+  try {
+    const files: unknown = JSON.parse(content ?? '');
+
+    return isStrings(files) ? files : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function lzFilesFor(testFiles: string[], testFilter: readonly string[] | undefined): string[] {
   if (!testFilter) {
     return testFiles;
@@ -493,6 +503,13 @@ export class LzNodeTestTestRunner implements TestRunner {
 
   #testFiles: string[] = [];
   /**
+   * The test files the dry run ran, which every runner's mutant runs run. Stryker gives the dry run sandbox copies of
+   * its --testFiles, which an absolute pattern of `#patterns` finds outside the sandbox.
+   */
+  #dryRunFiles?: string[] | undefined;
+  /** Under which the dry-run store keeps the files the dry run ran, apart from runners of other projects or patterns. */
+  readonly #dryRunFilesKey: string;
+  /**
    * Every process compiles the hook and its imports; Node's compile cache makes that a one-time cost per runner.
    * The directory is this runner's own, because the cache keeps an entry for every file a process loads, including
    * the throwaway fixtures of the tests, and Node's default directory would grow with every run.
@@ -515,6 +532,7 @@ export class LzNodeTestTestRunner implements TestRunner {
     const patterns = lzNodeTest.testFiles ?? defaults.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
     this.#patterns = [...patterns, ...options.testFiles];
+    this.#dryRunFilesKey = JSON.stringify([process.cwd(), ...this.#patterns]);
     this.#nodeArgs = withoutReporters(lzNodeTest.nodeArgs ?? defaults.nodeArgs.default);
     this.#dryRunConcurrency = lzTestRunnerConcurrency(
       options.concurrency,
@@ -592,6 +610,8 @@ export class LzNodeTestTestRunner implements TestRunner {
     } satisfies LzRunOptions;
     const memoryLimitMB = this.#memoryLimits.forDryRun();
     this.#dryRunStore.start();
+    this.#dryRunStore.write(this.#dryRunFilesKey, 'files', JSON.stringify(files));
+    this.#dryRunFiles = files;
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
@@ -640,7 +660,8 @@ export class LzNodeTestTestRunner implements TestRunner {
       hitLimit: options.hitLimit,
       testFilter: options.testFilter,
     } satisfies LzRunOptions;
-    const files = lzFilesFor(this.#testFiles, options.testFilter);
+    this.#dryRunFiles ??= storedFiles(this.#dryRunStore.read(this.#dryRunFilesKey, 'files'));
+    const files = lzFilesFor(this.#dryRunFiles ?? this.#testFiles, options.testFilter);
     // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
     const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
     const deadline = AbortSignal.timeout(deadlineMs);

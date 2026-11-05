@@ -362,7 +362,7 @@ When the test files run under Node.js's permission model (`--permission`), give 
 ## Temporary files
 
 The runner keeps its run directories in `os.tmpdir()`, named `lz-node-test-*`, and removes them when the run
-ends. What the dry run measured of each test file, its memory peak and its start-up, is kept in
+ends. Which test files the dry run ran, and what it measured of each, its memory peak and its start-up, is kept in
 `lz-node-test-dry-run-<pid>-store` and stays until Stryker's own process exits, as the mutant runs read it.
 When Stryker is killed instead, the next run removes it, as it removes any directory that a crashed run left behind.
 With `maxMemoryMB` set, the runner records no peaks.
