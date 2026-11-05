@@ -2,31 +2,35 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "tags": ["type:tool"],
+  "namedInputs": {
+    "workspaceConfigs": [
+      "{workspaceRoot}/packages/*/stryker*.config.mjs",
+      "{workspaceRoot}/eslint.config.mjs",
+      "{workspaceRoot}/packages/*/eslint.config.mjs",
+      {
+        "externalDependencies": [
+          "eslint",
+          "@nx/eslint-plugin",
+          "typescript-eslint",
+          "eslint-plugin-n",
+          "eslint-node-test",
+          "@eslint-community/eslint-plugin-eslint-comments"
+        ]
+      }
+    ]
+  },
   "targets": {
     "test": {
       "command": "node --conditions=@layzee/source --test \"*.test.ts\"",
       "options": { "cwd": "{projectRoot}" },
-      "inputs": [
-        "default",
-        "^production",
-        "mutation",
-        "{workspaceRoot}/packages/*/stryker*.config.mjs",
-        "{workspaceRoot}/eslint.config.mjs",
-        "{workspaceRoot}/packages/*/eslint.config.mjs",
-        {
-          "externalDependencies": [
-            "eslint",
-            "@nx/eslint-plugin",
-            "typescript-eslint",
-            "eslint-plugin-n",
-            "eslint-node-test",
-            "@eslint-community/eslint-plugin-eslint-comments"
-          ]
-        }
-      ]
+      "inputs": ["default", "^production", "mutation", "workspaceConfigs"]
     },
     "mutate": {},
-    "mutate-src": {},
-    "mutate-test-code": {}
+    "mutate-src": {
+      "inputs": ["default", "^production", "mutation", "workspaceConfigs"]
+    },
+    "mutate-test-code": {
+      "inputs": ["default", "^production", "mutation", "workspaceConfigs"]
+    }
   }
 }
