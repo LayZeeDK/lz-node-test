@@ -195,8 +195,8 @@ async function runSide(
         return lzStartCheckpoint(checkpoint, checkpointKey);
       });
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
-  const sampler = lzStartSampler();
-  const excluded = new Set([sampler.pid]);
+  const sampler = await settled('Sampler start', () => lzStartSampler());
+  const excluded = new Set(sampler.ok ? [sampler.value.pid] : []);
   const started = performance.now();
   const run = await settled('Stryker run', () =>
     lzStryker(dir, configFile(side), options.concurrency, {
@@ -208,8 +208,14 @@ async function runSide(
     }),
   );
   const wallMs = Math.round(performance.now() - started);
-  const stopped = await settled('Sampler', () => sampler.stop());
-  const samples = stopped.ok ? stopped.value.map((sample) => lzDescendants(sample, process.pid, excluded)) : [];
+  const stopped = sampler.ok ? await settled('Sampler', () => sampler.value.stop()) : undefined;
+  const samples = stopped?.ok
+    ? stopped.value.samples.map((sample) => lzDescendants(sample, process.pid, excluded))
+    : [];
+
+  if (stopped?.ok && stopped.value.error !== null) {
+    errors.push(`Sampler: ${stopped.value.error}`);
+  }
 
   await timers.setTimeout(settleMs);
   // One fresh snapshot just before the endings, so a pair that ended or whose id was reused meanwhile is skipped.

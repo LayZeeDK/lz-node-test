@@ -4,13 +4,19 @@ import { once } from 'node:events';
 import { lzExec } from '../exec.ts';
 import { lzParseProcSamples, lzParseSamples, type LzProcessRow } from './processes.ts';
 
-export interface LzSampler {
-  readonly pid: number;
-  /** Ends the sampler and returns every complete sample it took, each a list of every process on the machine. */
-  stop(): Promise<LzProcessRow[][]>;
+export interface LzSamples {
+  /** Every complete sample, each a list of every process on the machine. */
+  readonly samples: readonly (readonly LzProcessRow[])[];
+  /** Why sampling stopped short or wrote an error; the samples taken before it still count. */
+  readonly error: string | null;
 }
 
-interface LzProcessReader {
+export interface LzSampler {
+  readonly pid: number;
+  stop(): Promise<LzSamples>;
+}
+
+export interface LzProcessReader {
   readonly command: string;
   readonly args: readonly string[];
   readonly sample: string;
@@ -44,9 +50,11 @@ const linuxReader: LzProcessReader = {
 };
 
 /** Samples every process once a second, in one shell process, until `stop`. */
-export function lzStartSampler(): LzSampler {
-  const { command, args, loop, parse } = reader();
+export async function lzStartSampler({ command, args, loop, parse } = reader()): Promise<LzSampler> {
   const child = spawn(command, [...args, loop], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+
+  await once(child, 'spawn');
+
   const chunks: string[] = [];
   const errors: string[] = [];
   const closed = once(child, 'close');
@@ -61,25 +69,28 @@ export function lzStartSampler(): LzSampler {
   return {
     pid: child.pid,
     async stop() {
-      child.kill();
+      child.kill('SIGTERM');
       await closed;
 
-      if (errors.length > 0) {
-        throw new Error(`The process sampler failed:\n${errors.join('')}`);
-      }
+      const endedByStop = child.signalCode === 'SIGTERM';
+      const error =
+        errors.length > 0
+          ? `The process sampler failed:\n${errors.join('')}`
+          : endedByStop
+            ? null
+            : `The process sampler ended early, with ${child.signalCode ?? `exit code ${String(child.exitCode)}`}.`;
 
-      return parse(chunks.join(''));
+      return { samples: parse(chunks.join('')), error };
     },
   };
 }
 
 /** One sample of every process on the machine. */
-export async function lzSnapshot(): Promise<LzProcessRow[]> {
-  const { command, args, sample: script, parse } = reader();
+export async function lzSnapshot({ command, args, sample: script, parse } = reader()): Promise<LzProcessRow[]> {
   const { exitCode, stdout, stderr } = await lzExec(command, [...args, script], { cwd: process.cwd() });
   const [sample] = parse(stdout);
 
-  if (exitCode !== 0 || sample === undefined) {
+  if (exitCode !== 0 || stderr !== '' || sample === undefined) {
     throw new Error(`The process snapshot failed with exit code ${exitCode}:\n${stderr}`);
   }
 
