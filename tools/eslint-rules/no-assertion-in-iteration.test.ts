@@ -39,6 +39,11 @@ describe('no-assertion-in-iteration', () => {
       'a call named like an assertion but imported from elsewhere',
       "import { ok } from './ok.ts';\nfor (const x of xs) { ok(x); }",
     ],
+    [
+      'an assertion in a callback passed to a from method of another object',
+      `${strict}other.from(xs, (x) => { assert.ok(x); });`,
+    ],
+    ['an assertion in the first argument of Array.from', `${strict}Array.from((x) => { assert.ok(x); });`],
   ])('accepts %s', (_, code) => {
     tester().run('no-assertion-in-iteration', rule, { valid: [code], invalid: [] });
   });
@@ -76,6 +81,25 @@ describe('no-assertion-in-iteration', () => {
     ['a t.assert assertion in a for...of body', 'for (const x of xs) { t.assert.ok(x); }', 'loop'],
     ['a t.assert assertion in a forEach callback', 'xs.forEach((x) => { t.assert.ok(x); });', 'callback'],
     ['an assertion in a reduce callback', `${strict}xs.reduce((a, x) => { assert.ok(x); return a; }, 0);`, 'callback'],
+    [
+      'an assertion in a reduceRight callback',
+      `${strict}xs.reduceRight((a, x) => { assert.ok(x); return a; }, 0);`,
+      'callback',
+    ],
+    ['an assertion in a findLast callback', `${strict}xs.findLast((x) => { assert.ok(x); });`, 'callback'],
+    ['an assertion in a findLastIndex callback', `${strict}xs.findLastIndex((x) => { assert.ok(x); });`, 'callback'],
+    ['an assertion in an Array.from callback', `${strict}Array.from(xs, (x) => { assert.ok(x); });`, 'callback'],
+    [
+      'an assertion in an Array.fromAsync callback',
+      `${strict}Array.fromAsync(xs, (x) => { assert.ok(x); });`,
+      'callback',
+    ],
+    ['an assert import in a loop body', "import assert from 'assert';\nfor (const x of xs) { assert.ok(x); }", 'loop'],
+    [
+      'an assert/strict import in a loop body',
+      "import assert from 'assert/strict';\nfor (const x of xs) { assert.ok(x); }",
+      'loop',
+    ],
   ])('reports %s', (_, code, messageId) => {
     tester().run('no-assertion-in-iteration', rule, { valid: [], invalid: [{ code, errors: [{ messageId }] }] });
   });

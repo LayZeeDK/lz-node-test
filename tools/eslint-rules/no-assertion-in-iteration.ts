@@ -1,9 +1,9 @@
 import type { Rule } from 'eslint';
-import type { CallExpression, Node } from 'estree';
+import type { Node } from 'estree';
 
 const loops = new Set(['ForStatement', 'ForInStatement', 'ForOfStatement', 'WhileStatement', 'DoWhileStatement']);
 const functions = new Set(['ArrowFunctionExpression', 'FunctionExpression']);
-const assertModules = new Set(['node:assert', 'node:assert/strict']);
+const assertModules = new Set(['assert', 'assert/strict', 'node:assert', 'node:assert/strict']);
 const iterationMethods = new Set([
   'forEach',
   'map',
@@ -13,8 +13,13 @@ const iterationMethods = new Set([
   'filter',
   'find',
   'findIndex',
+  'findLast',
+  'findLastIndex',
   'reduce',
+  'reduceRight',
 ]);
+// Their second argument maps each element.
+const arrayFactories = new Set(['from', 'fromAsync']);
 
 /** `assert(x)`, `ok(x)` and `assert.ok(x)` through a node:assert import, or `t.assert.ok(x)` on a test context. */
 function isAssertion(callee: Node, imported: ReadonlySet<string>): boolean {
@@ -33,13 +38,22 @@ function isAssertion(callee: Node, imported: ReadonlySet<string>): boolean {
     : object.type === 'MemberExpression' && object.property.type === 'Identifier' && object.property.name === 'assert';
 }
 
-function isIterationCall(node: Node): node is CallExpression {
-  return (
-    node.type === 'CallExpression' &&
-    node.callee.type === 'MemberExpression' &&
-    node.callee.property.type === 'Identifier' &&
-    iterationMethods.has(node.callee.property.name)
-  );
+function isIterationCallback(node: Node, callback: Node): boolean {
+  if (
+    node.type !== 'CallExpression' ||
+    node.callee.type !== 'MemberExpression' ||
+    node.callee.property.type !== 'Identifier'
+  ) {
+    return false;
+  }
+
+  const { object, property } = node.callee;
+
+  if (object.type === 'Identifier' && object.name === 'Array' && arrayFactories.has(property.name)) {
+    return node.arguments[1] === callback;
+  }
+
+  return iterationMethods.has(property.name) && node.arguments.some((argument) => argument === callback);
 }
 
 const rule: Rule.RuleModule = {
@@ -77,11 +91,7 @@ const rule: Rule.RuleModule = {
 
         if (loops.has(boundary.type)) {
           context.report({ node, messageId: 'loop' });
-        } else if (
-          ancestors.some(
-            (ancestor) => isIterationCall(ancestor) && ancestor.arguments.some((argument) => argument === boundary),
-          )
-        ) {
+        } else if (ancestors.some((ancestor) => isIterationCallback(ancestor, boundary))) {
           context.report({ node, messageId: 'callback' });
         }
       },
