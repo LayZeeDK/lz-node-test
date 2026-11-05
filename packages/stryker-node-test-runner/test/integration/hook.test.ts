@@ -938,18 +938,26 @@ describe('hook, in a test file whose runner is gone', () => {
         stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
         windowsHide: true,
       });
+      const started: number[] = [];
+      t.after(() => {
+        runner.kill('SIGKILL');
+        started
+          .filter((pid) => isRunning(pid))
+          .forEach((pid) => {
+            process.kill(pid, 'SIGKILL');
+          });
+      });
       const received: unknown[] = await once(runner, 'message');
       const group = -Number(received[0]);
-      t.after(() => {
-        if (isRunning(group)) {
-          process.kill(group, 'SIGKILL');
-        }
-      });
+      started.push(group);
+      const startBy = performance.now() + 5_000;
 
-      while (!existsSync(join(dir, 'started'))) {
+      while (!existsSync(join(dir, 'started')) && performance.now() < startBy) {
         await timers.setTimeout(20);
       }
 
+      // Stryker disable next-line LzNodeTestAssertCall: ends the test only when the fixture never starts its test
+      assert.ok(existsSync(join(dir, 'started')), 'the test file started its test');
       const exited = once(runner, 'exit');
       runner.kill('SIGKILL');
       await exited;
