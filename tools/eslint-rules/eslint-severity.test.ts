@@ -4,6 +4,7 @@ import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
 import { ESLint, type Linter } from 'eslint';
+import { lzIsRecord } from './stryker-report.ts';
 
 const workspaceRoot = join(import.meta.dirname, '..', '..');
 
@@ -33,10 +34,6 @@ const samples = [
   'packages/stryker-node-test-runner/package.json',
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 const warnSettings: readonly Linter.RuleSeverity[] = ['warn', 1];
 const warnSeverities = new Set<unknown>(warnSettings);
 
@@ -49,9 +46,9 @@ function isWarn(entry: unknown): boolean {
 
 async function rulesAtWarn(file: string, eslint = new ESLint({ cwd: workspaceRoot })): Promise<readonly string[]> {
   const config: unknown = await eslint.calculateConfigForFile(join(workspaceRoot, file));
-  assert.ok(isRecord(config), `ESLint computed no config for ${file}`);
+  assert.ok(lzIsRecord(config), `ESLint computed no config for ${file}`);
   const rules = config['rules'];
-  assert.ok(isRecord(rules), `${file} has no rules`);
+  assert.ok(lzIsRecord(rules), `${file} has no rules`);
 
   return Object.entries(rules)
     .filter(([, entry]) => isWarn(entry))

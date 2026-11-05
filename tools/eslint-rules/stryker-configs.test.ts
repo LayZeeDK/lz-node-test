@@ -4,6 +4,7 @@ import { describe } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
+import { lzIsRecord } from './stryker-report.ts';
 
 const workspaceRoot = join(import.meta.dirname, '..', '..');
 
@@ -49,14 +50,10 @@ const reportNames: readonly (readonly [file: string, name: string])[] = [
   ['tools/eslint-rules/stryker.test-code.config.mjs', '@layzee/eslint-rules.test-code'],
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 async function loadConfig(file: string): Promise<Record<string, unknown>> {
   const module: unknown = await import(pathToFileURL(join(workspaceRoot, file)).href);
-  const config = isRecord(module) ? module['default'] : undefined;
-  assert.ok(isRecord(config), `${file} has no default export object`);
+  const config = lzIsRecord(module) ? module['default'] : undefined;
+  assert.ok(lzIsRecord(config), `${file} has no default export object`);
 
   return config;
 }
