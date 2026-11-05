@@ -129,10 +129,9 @@ function writeOnNewHits(
       return;
     }
 
-    writtenHits = hits;
-
     try {
       write(current);
+      writtenHits = hits;
     } catch (error) {
       // The run that reads the record can be over while the process still runs.
       throwUnlessRunOver(error, platform);

@@ -368,6 +368,31 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
     assert.equal(attempts(), 2);
   });
 
+  it('writes the record again on Windows after a write that failed with EPERM, though the coverage has not grown since', () => {
+    const written: number[] = [];
+    let failures = 1;
+    const p = persisted(descendant, {
+      platform: 'win32',
+      writeRecord: (_to, record) => {
+        if (failures > 0) {
+          failures -= 1;
+          throw writeError('EPERM');
+        }
+
+        written.push(lzHits(record.mutantCoverage));
+      },
+    });
+    const [only] = p.intervals;
+    assert.ok(only, 'the process writes no record while it runs');
+
+    p.hit('1');
+    only.fire();
+    only.fire();
+    only.fire();
+
+    assert.deepEqual(written, [1]);
+  });
+
   it('lets any other error through on Windows while the process runs', () => {
     const { write } = writeWhileRunning('EACCES', 'win32');
 
