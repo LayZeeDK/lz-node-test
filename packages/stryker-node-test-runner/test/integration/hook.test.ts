@@ -956,7 +956,7 @@ describe('hook, in a test file whose runner is gone', () => {
         await timers.setTimeout(20);
       }
 
-      // Stryker disable next-line LzNodeTestAssertCall: ends the test only when the fixture never starts its test
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.ok(existsSync(join(dir, 'started')), 'the test file started its test');
       const exited = once(runner, 'exit');
       runner.kill('SIGKILL');
