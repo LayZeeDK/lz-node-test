@@ -30,7 +30,7 @@ export interface LzOperator<TName extends string = string> {
   readonly name: TName;
   /** A TypeScript module in which the operator makes a mutant; the install's self-check instruments it. */
   readonly sample: string;
-  mutate(path: NodePath, t: LzBabelTypes): Iterable<types.Node>;
+  readonly mutate: (path: NodePath, t: LzBabelTypes) => Iterable<types.Node>;
   /**
    * Stryker's mutator filter: once the instrumenter leaves a node this operator mutated, it passes every mutant made in
    * that node, and `false` drops this operator's mutants of the node.
