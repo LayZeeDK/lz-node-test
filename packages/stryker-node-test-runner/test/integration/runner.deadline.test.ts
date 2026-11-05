@@ -56,6 +56,9 @@ const lateClose = fixture(
   '});',
 );
 
+/** A test that never settles, with a timer that keeps its file's event loop busy. */
+const hangs = fixture("it('hangs', () => new Promise(() => { setInterval(() => {}, 1000); }));");
+
 /** With LZ_FIXTURE_PENDING set, its test waits on nothing that could settle it: `callback` or `promise`. */
 const pending = fixture(
   "it('waits', (t, done) => {",
@@ -120,7 +123,7 @@ describe('LzNodeTestTestRunner deadline', () => {
   it('reports the tests that failed before the deadline ended a later file as killing the mutant, with bail disabled', async (t) => {
     const dir = project(t, {
       'a.test.mjs': failing,
-      'b.test.mjs': fixture("it('hangs', () => new Promise(() => { setInterval(() => {}, 1000); }));"),
+      'b.test.mjs': hangs,
     });
     const runner = await initRunner(['*.test.mjs']);
     const a = join(dir, 'a.test.mjs');
@@ -132,6 +135,24 @@ describe('LzNodeTestTestRunner deadline', () => {
       failureMessage: 'expected failure',
       nrOfTests: 1,
     });
+  });
+
+  it('reports a mutant run whose later file timed out after earlier files passed as timed out, with bail disabled', async (t) => {
+    project(t, { 'a.test.mjs': passing, 'b.test.mjs': hangs });
+    const runner = await initRunner(['*.test.mjs']);
+
+    const result = await settle(runner.mutantRun(mutantRunOptions({ timeout: 4000, disableBail: true })));
+
+    assert.strictEqual(result.status, MutantRunStatus.Timeout, JSON.stringify(result));
+  });
+
+  it('reports the error of a later file over the tests that failed before it, with bail disabled', async (t) => {
+    project(t, { 'a.test.mjs': failing, 'b.test.mjs': fixture("throw new Error('load failure');") });
+    const runner = await initRunner(['*.test.mjs']);
+
+    const result = await settle(runner.mutantRun(mutantRunOptions({ disableBail: true })));
+
+    assert.strictEqual(result.status, MutantRunStatus.Error, JSON.stringify(result));
   });
 
   it('reports a dry run whose later file timed out as timed out, though an earlier file failed, with bail disabled', async (t) => {
