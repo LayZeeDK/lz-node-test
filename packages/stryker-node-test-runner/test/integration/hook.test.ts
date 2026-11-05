@@ -239,7 +239,7 @@ describe('hook', () => {
     assert.equal(listeners.filter((listener) => listener === write).length, 1);
   });
 
-  it('starts the memory watchdog, survives its failure, and records the peak memory, when the runner asks', async (t) => {
+  it('starts the memory watchdog, survives its failure with a line on stderr, and records the peak memory, when the runner asks', async (t) => {
     const outDir = tempDir(t);
     const global: GlobalSlots = globalThis;
     const unref = t.mock.method(Worker.prototype, 'unref');
@@ -253,7 +253,14 @@ describe('hook', () => {
       unref.mock.calls.map((call) => call.this),
       [watching],
     );
+    const stderr = t.mock.method(process.stderr, 'write', () => true);
     watching.emit('error', new Error('preload failed'));
+    stderr.mock.restore();
+
+    assert.deepEqual(
+      stderr.mock.calls.map((call) => call.arguments),
+      [['lz-node-test: the memory watchdog failed, so no memory limit guards this process: preload failed\n']],
+    );
 
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);
     added.exit[0]?.(0);

@@ -75,8 +75,11 @@ install({
   watchMemory: (options) => {
     // Stryker disable next-line ArrayDeclaration: equivalent, as hook-core always passes execArgv: []
     const worker = new Worker(watchdog, { eval: true, ...options, execArgv: [...options.execArgv] });
-    worker.on('error', () => {
-      // Listening keeps a watchdog error from ending the process.
+    // Listening keeps a watchdog error from ending the process; the line reaches the runner's stderr tail.
+    worker.on('error', (error) => {
+      process.stderr.write(
+        `lz-node-test: the memory watchdog failed, so no memory limit guards this process: ${error.message}\n`,
+      );
     });
     worker.unref();
 
