@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
 import type { LzOperator } from '../../src/operator.ts';
-import { lzSelectOperators, type LzOperatorSets } from '../../src/select.ts';
+import { lzAllOperators, lzSelectOperators, type LzOperatorSets } from '../../src/select.ts';
 
 const packageName = 'lz-sample-mutators';
 
@@ -44,6 +44,16 @@ describe('lzSelectOperators', () => {
     ],
     ['no experimental mutator by name', { experimental: {} }, ['LzDefaultA', 'LzDefaultB']],
     [
+      'no mutator for options left undefined',
+      { LzOptInA: undefined, extended: undefined, experimental: { LzExperimentalA: undefined } },
+      ['LzDefaultA', 'LzDefaultB'],
+    ],
+    [
+      'no experimental mutator for experimental left undefined',
+      { experimental: undefined },
+      ['LzDefaultA', 'LzDefaultB'],
+    ],
+    [
       'opt-in and experimental mutators, in the order of the sets',
       { experimental: { LzExperimentalB: true }, LzOptInB: true, extended: true },
       ['LzDefaultA', 'LzDefaultB', 'LzOptInA', 'LzOptInB', 'LzExperimentalB'],
@@ -56,9 +66,18 @@ describe('lzSelectOperators', () => {
     [
       'options that are not an object',
       'extended',
-      'lz-sample-mutators: the options must be an object, not "extended".',
+      "lz-sample-mutators: the options must be an object, not 'extended'.",
     ],
-    ['options that are an array', ['LzOptInA'], 'lz-sample-mutators: the options must be an object, not ["LzOptInA"].'],
+    [
+      'options that are an array',
+      ['LzOptInA'],
+      "lz-sample-mutators: the options must be an object, not [ 'LzOptInA' ].",
+    ],
+    [
+      'a value JSON cannot print',
+      { LzOptInA: 1n },
+      "lz-sample-mutators: LzOptInA takes only true, not 1n; Stryker's mutator.excludedMutations turns mutators off.",
+    ],
     [
       'false for a mutator',
       { LzOptInA: false },
@@ -78,7 +97,14 @@ describe('lzSelectOperators', () => {
     [
       'false for every experimental mutator',
       { experimental: false },
-      'lz-sample-mutators: experimental must be an object, not false.',
+      'lz-sample-mutators: experimental takes only true or an object of names, not false; ' +
+        "Stryker's mutator.excludedMutations turns mutators off.",
+    ],
+    [
+      'an array of experimental names',
+      { experimental: ['LzExperimentalA'] },
+      "lz-sample-mutators: experimental takes only true or an object of names, not [ 'LzExperimentalA' ]; " +
+        "Stryker's mutator.excludedMutations turns mutators off.",
     ],
     [
       'an unknown name',
@@ -107,6 +133,13 @@ describe('lzSelectOperators', () => {
     ],
   ])('throws on %s', (_title, options, message) => {
     assert.throws(() => namesFor(options), { message });
+  });
+
+  it('lists every operator, the defaults first', () => {
+    assert.deepEqual(
+      lzAllOperators(sets).map(({ name }) => name),
+      ['LzDefaultA', 'LzDefaultB', 'LzOptInA', 'LzOptInB', 'LzExperimentalA', 'LzExperimentalB'],
+    );
   });
 
   it('names no mutators when a set is empty', () => {

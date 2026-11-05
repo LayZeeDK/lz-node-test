@@ -1,3 +1,5 @@
+import { inspect } from 'node:util';
+
 import { isObject } from './guards.ts';
 import type { LzOperator } from './operator.ts';
 
@@ -20,89 +22,81 @@ export type LzMutatorOptions<TOptIn extends string, TExperimental extends string
   readonly experimental?: true | { readonly [TName in TExperimental]?: true };
 };
 
+type LzTier = keyof LzOperatorSets;
+
+const tiers: readonly LzTier[] = ['defaults', 'optIn', 'experimental'];
+const tierNames: Record<LzTier, string> = { defaults: 'default', optIn: 'opt-in', experimental: 'experimental' };
+const whereTiersGo: Record<LzTier, string> = {
+  defaults: 'it runs by default',
+  optIn: 'it is opt-in, so it goes outside experimental',
+  experimental: 'it is experimental, so it goes inside experimental',
+};
+
+/** Every operator of `sets`, defaults first. */
+export function lzAllOperators(sets: LzOperatorSets): readonly LzOperator[] {
+  return tiers.flatMap((tier) => sets[tier]);
+}
+
 /**
  * The defaults and the operators that `options` turns on, in the order of `sets`. Throws, starting with
  * `packageName`, on options it does not take, as a config file in JavaScript has no type check.
  */
 export function lzSelectOperators(packageName: string, sets: LzOperatorSets, options: unknown): readonly LzOperator[] {
-  const selected = new Set<LzOperator>(sets.defaults);
+  const tierOf = new Map(tiers.flatMap((tier) => sets[tier].map(({ name }): [string, LzTier] => [name, tier])));
+  const named = (tier: LzTier, name: string): readonly LzOperator[] => {
+    const found = tierOf.get(name);
 
-  for (const [key, value] of entriesOf(packageName, 'the options', options ?? {})) {
-    if (key === 'experimental') {
-      selectExperimental(packageName, sets, value).forEach((operator) => selected.add(operator));
-      continue;
+    if (found === tier) {
+      return sets[tier].filter((operator) => operator.name === name);
+    }
+
+    const names = sets[tier].map((operator) => operator.name).join(', ');
+    const hint = found === undefined ? `the names are ${names || 'none'}` : whereTiersGo[found];
+
+    throw new Error(`${packageName}: no ${tierNames[tier]} mutator is named ${name}; ${hint}.`);
+  };
+  const selected = entriesOf(packageName, 'the options', options ?? {}).flatMap(([key, value]) => {
+    if (key === 'experimental' && isRecord(value)) {
+      return entriesOf(packageName, key, value).flatMap(([name, member]) => {
+        onlyTrue(packageName, `experimental.${name}`, member);
+
+        return named('experimental', name);
+      });
     }
 
     onlyTrue(packageName, key, value);
-    (key === 'extended' ? sets.optIn : [named(packageName, sets, 'optIn', key)]).forEach((operator) => {
-      selected.add(operator);
-    });
-  }
 
-  return [...sets.defaults, ...sets.optIn, ...sets.experimental].filter((operator) => selected.has(operator));
+    if (key === 'experimental') {
+      return sets.experimental;
+    }
+
+    return key === 'extended' ? sets.optIn : named('optIn', key);
+  });
+
+  return lzAllOperators(sets).filter((operator) => sets.defaults.includes(operator) || selected.includes(operator));
 }
 
-function selectExperimental(packageName: string, sets: LzOperatorSets, value: unknown): readonly LzOperator[] {
-  if (value === true) {
-    return sets.experimental;
-  }
-
-  return entriesOf(packageName, 'experimental', value).map(([key, member]) => {
-    onlyTrue(packageName, `experimental.${key}`, member);
-
-    return named(packageName, sets, 'experimental', key);
-  });
+function isRecord(value: unknown): value is object {
+  return isObject(value) && !Array.isArray(value);
 }
 
 function entriesOf(packageName: string, what: string, value: unknown): [string, unknown][] {
-  if (!isObject(value) || Array.isArray(value)) {
-    throw new Error(`${packageName}: ${what} must be an object, not ${JSON.stringify(value)}.`);
+  if (!isRecord(value)) {
+    throw new Error(`${packageName}: ${what} must be an object, not ${inspect(value)}.`);
   }
 
-  return Object.keys(value).map((key) => {
+  return Object.keys(value).flatMap((key): [string, unknown][] => {
     const member: unknown = Reflect.get(value, key);
 
-    return [key, member];
+    return member === undefined ? [] : [[key, member]];
   });
 }
 
 function onlyTrue(packageName: string, key: string, value: unknown): void {
   if (value !== true) {
     throw new Error(
-      `${packageName}: ${key} takes only true, not ${JSON.stringify(value)}; Stryker's mutator.excludedMutations ` +
-        'turns mutators off.',
+      `${packageName}: ${key} takes only true${key === 'experimental' ? ' or an object of names' : ''}, not ` +
+        `${inspect(value)}; Stryker's mutator.excludedMutations turns mutators off.`,
     );
   }
-}
-
-/** The operator of `set` named `name`; throws with where the name belongs, or which names there are, when none is. */
-function named(packageName: string, sets: LzOperatorSets, set: 'optIn' | 'experimental', name: string): LzOperator {
-  const found = sets[set].find((operator) => operator.name === name);
-
-  if (found !== undefined) {
-    return found;
-  }
-
-  throw new Error(
-    `${packageName}: no ${set === 'optIn' ? 'opt-in' : 'experimental'} mutator is named ${name}; ` +
-      `${whereNamed(sets, set, name)}.`,
-  );
-}
-
-function whereNamed(sets: LzOperatorSets, set: 'optIn' | 'experimental', name: string): string {
-  const has = (operators: readonly LzOperator[]) => operators.some((operator) => operator.name === name);
-
-  if (has(sets.defaults)) {
-    return 'it runs by default';
-  }
-
-  if (set === 'optIn' && has(sets.experimental)) {
-    return 'it is experimental, so it goes inside experimental';
-  }
-
-  if (set === 'experimental' && has(sets.optIn)) {
-    return 'it is opt-in, so it goes outside experimental';
-  }
-
-  return `the names are ${sets[set].map((operator) => operator.name).join(', ') || 'none'}`;
 }

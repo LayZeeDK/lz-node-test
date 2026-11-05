@@ -37,5 +37,24 @@ instrumenter's list of mutators through two files that `@stryker-mutator/instrum
 `dist/src/mutators/mutate.js` and `dist/src/transformers/babel-transformer.js`. A Stryker release that moves or changes
 them stops the run with an error that names the file.
 
+### Opt-in and experimental operators
+
+A package with operators that run only when a user turns them on groups them as `LzOperatorSets`: `defaults`, `optIn`
+and `experimental`. `lzSelectOperators(packageName, sets, options)` returns the defaults and the operators that the
+user's options turn on, in the order of the sets, and `lzAllOperators(sets)` returns them all. `LzMutatorOptions` types
+the options: an opt-in name or `extended` for every opt-in operator, and `experimental` with `true` or an object of
+experimental names. Each takes only `true`, and the call throws on a name it does not know or a name in the wrong place.
+
+```js
+export async function myMutators(options) {
+  await lzInstall({
+    packageName: 'my-mutators',
+    corePeerRange: '^10.1.1',
+    mode: 'add',
+    operators: lzSelectOperators('my-mutators', sets, options),
+  });
+}
+```
+
 Every mutator that `lzInstall` puts into the list carries the symbol `Symbol.for('@layzee/stryker-mutator-core')`, with
 the name of the package that installed it, and `lzIsOwn` tells such a mutator from one of Stryker's.

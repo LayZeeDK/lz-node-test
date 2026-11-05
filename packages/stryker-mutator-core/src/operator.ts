@@ -22,12 +22,12 @@ export const operatorBuilders = Object.freeze([
 export type LzBabelTypes = Pick<typeof types, (typeof operatorBuilders)[number]>;
 
 /** A mutation operator, free of Stryker: it maps a Babel path to replacement nodes. */
-export interface LzOperator {
+export interface LzOperator<TName extends string = string> {
   /**
    * Letters only, as Stryker's directives match no other character; PascalCase, like Stryker's own mutators. Reports
    * show it, and `excludedMutations` and `// Stryker disable` comments select the operator by it.
    */
-  readonly name: string;
+  readonly name: TName;
   /** A TypeScript module in which the operator makes a mutant; the install's self-check instruments it. */
   readonly sample: string;
   mutate(path: NodePath, t: LzBabelTypes): Iterable<types.Node>;
