@@ -59,7 +59,7 @@ jobs:
       - run: npx nx run-many -t e2e
 
   mutation:
-    name: Mutation testing (${{ matrix.project }}:mutate-${{ matrix.config }})
+    name: Mutation testing (${{ matrix.project }}:mutate-${{ matrix.config }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-latest
     # Sized for a full run, which main does on every push.
     timeout-minutes: ${{ matrix.timeout }}
@@ -68,7 +68,8 @@ jobs:
       matrix:
         # `slug` names the report artifact, as an artifact name cannot hold the slash of a project name. `mutated`
         # lists, as exclusions, the files the config mutates. Stryker's incremental mode sees changes to those and to
-        # the test files; every other input goes into the cache key below.
+        # the test files; every other input goes into the cache key below. A `shard` mutates only the files its
+        # `mutate` names, and its last shard takes the rest, so a new file lands in it.
         include:
           - project: '@layzee/eslint-rules'
             slug: eslint-rules
@@ -134,8 +135,28 @@ jobs:
             slug: stryker-node-test-runner
             root: packages/stryker-node-test-runner
             config: src
+            shard: a
+            mutate: packages/stryker-node-test-runner/src/runner.ts,packages/stryker-node-test-runner/src/wrap.ts
             mutated: '!packages/stryker-node-test-runner/src/**'
-            timeout: 180
+            timeout: 90
+          - project: '@layzee/stryker-node-test-runner'
+            slug: stryker-node-test-runner
+            root: packages/stryker-node-test-runner
+            config: src
+            shard: b
+            mutate: packages/stryker-node-test-runner/src/hook-core.ts,packages/stryker-node-test-runner/src/record.ts
+            mutated: '!packages/stryker-node-test-runner/src/**'
+            timeout: 90
+          - project: '@layzee/stryker-node-test-runner'
+            slug: stryker-node-test-runner
+            root: packages/stryker-node-test-runner
+            config: src
+            shard: c
+            mutate: "packages/stryker-node-test-runner/src/**/*.ts,!packages/stryker-node-test-runner/src/runner.ts,\
+              !packages/stryker-node-test-runner/src/wrap.ts,!packages/stryker-node-test-runner/src/hook-core.ts,\
+              !packages/stryker-node-test-runner/src/record.ts"
+            mutated: '!packages/stryker-node-test-runner/src/**'
+            timeout: 90
           - project: '@layzee/stryker-node-test-runner'
             slug: stryker-node-test-runner
             root: packages/stryker-node-test-runner
@@ -143,7 +164,9 @@ jobs:
             mutated: '!packages/stryker-node-test-runner/test/**/*.test.ts'
             timeout: 30
     env:
-      INCREMENTAL_FILE: reports/stryker-incremental/${{ matrix.project }}.${{ matrix.config }}.json
+      RUN: ${{ matrix.project }}.${{ matrix.config }}${{ matrix.shard && format('.{0}', matrix.shard) || '' }}
+      INCREMENTAL_FILE: reports/stryker-incremental/${{ matrix.project }}.${{ matrix.config }}${{ matrix.shard &&
+        format('.{0}', matrix.shard) || '' }}.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -160,7 +183,7 @@ jobs:
       - name: Key the incremental file
         id: key
         run: >-
-          echo "prefix=stryker-inc-${{ matrix.project }}.${{ matrix.config }}-${{ runner.os }}-node-${{
+          echo "prefix=stryker-inc-${{ env.RUN }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
           'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**', 'packages/*/stryker*.config.mjs',
           'eslint.config.mjs', 'packages/*/eslint.config.mjs', format('{0}/**', matrix.root),
@@ -175,13 +198,16 @@ jobs:
       # incremental run can reuse a static mutant's Survived result after a test that kills it was added.
       - run: >-
           npx nx run ${{ matrix.project }}:mutate-${{ matrix.config }} --incremental
-          ${{ github.event_name == 'push' && '--force' || '' }}
+          ${{ github.event_name == 'push' && '--force' || '' }} --incrementalFile="$INCREMENTAL_FILE"
+          ${MUTATE:+--mutate="$MUTATE"}
+        env:
+          MUTATE: ${{ matrix.mutate }}
       # Also when the run fails its threshold: the job summary shows the score and the mutants per status.
       - name: Summarize the mutation score
         if: always()
         env:
           REPORT: reports/mutation/${{ matrix.project }}.${{ matrix.config }}.json
-          TITLE: ${{ matrix.project }}:mutate-${{ matrix.config }}
+          TITLE: ${{ matrix.project }}:mutate-${{ matrix.config }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }}
         run: |
           if [ ! -f "$REPORT" ]; then
             echo "::warning::Stryker wrote no $REPORT, so the job summary has no mutation score for $TITLE."
@@ -199,5 +225,5 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: mutation-report-${{ matrix.slug }}.${{ matrix.config }}
+          name: mutation-report-${{ matrix.slug }}.${{ matrix.config }}${{ matrix.shard && format('.{0}', matrix.shard) || '' }}
           path: reports/mutation/${{ matrix.project }}.${{ matrix.config }}.html
