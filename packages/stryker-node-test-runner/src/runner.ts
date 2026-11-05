@@ -750,7 +750,7 @@ export class LzNodeTestTestRunner implements TestRunner {
       const child = spawn(process.execPath, args, {
         env,
         // stdin an open pipe that never ends, as node --test gives each test file: on an ended stdin, a test that hands
-        // process.stdin to a subprocess waits forever.
+        // process.stdin to a subprocess can wait forever.
         stdio: ['pipe', 'ignore', 'pipe'],
         ...groupOptions(process.platform),
       });
