@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
+import { lzIsRecord, lzIsStrings, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
 import { lzDecidingFields, lzParseOssResult, type LzDecidingFields, type LzMergeResult } from './result.ts';
 import { lzBySide, lzComparison, lzMutantKey, lzReportScore } from './verdicts.ts';
@@ -19,7 +19,6 @@ interface LzBatch {
 interface LzRun {
   readonly project: string;
   readonly deciding: ReadonlyMap<keyof LzDecidingFields, unknown>;
-  readonly installedVersions: readonly string[] | undefined;
   readonly reports: readonly LzBatch[];
 }
 
@@ -45,10 +44,13 @@ export function lzMerge(files: readonly string[], out: string): string {
     const distinct = json.flatMap((text, index) => (json.indexOf(text) === index ? [values[index]] : []));
 
     if (distinct.length !== 1) {
-      const versions = field === 'installedDigest' ? versionsNotInEveryRun(runs) : undefined;
-      const named = versions === undefined ? '' : ` Installed by some runs only: ${versions.join(', ')}.`;
+      const lists = values.filter((value) => lzIsStrings(value));
+      const found =
+        lists.length === values.length
+          ? `some runs only have ${entriesNotInEvery(lists).join(', ')}`
+          : `found ${distinct.map(shown).join(' and ')}`;
 
-      throw new Error(`--merge takes runs of one ${field}; found ${distinct.map(shown).join(' and ')}.${named}`);
+      throw new Error(`--merge takes runs of one ${field}; ${found}.`);
     }
   });
 
@@ -72,10 +74,7 @@ export function lzMerge(files: readonly string[], out: string): string {
 }
 
 function readRun(file: string): LzRun {
-  const { project, deciding, installedVersions, sides } = lzParseOssResult(
-    file,
-    JSON.parse(readFileSync(file, 'utf8')),
-  );
+  const { project, deciding, sides } = lzParseOssResult(file, JSON.parse(readFileSync(file, 'utf8')));
   const ran = lzSides.filter((side) => side in sides);
 
   if (ran.length === 0) {
@@ -85,7 +84,6 @@ function readRun(file: string): LzRun {
   return {
     project,
     deciding,
-    installedVersions,
     reports: ran.map((side) => {
       const entry = sides[side];
       const reportFile = `${side}.mutation.json`;
@@ -111,14 +109,8 @@ function readRun(file: string): LzRun {
   };
 }
 
-function versionsNotInEveryRun(runs: readonly LzRun[]): string[] | undefined {
-  const lists = runs.flatMap(({ installedVersions }) => (installedVersions === undefined ? [] : [installedVersions]));
-
-  if (lists.length !== runs.length) {
-    return undefined;
-  }
-
-  return [...new Set(lists.flat())].filter((version) => !lists.every((list) => list.includes(version))).sort();
+function entriesNotInEvery(lists: readonly (readonly string[])[]): string[] {
+  return [...new Set(lists.flat())].filter((entry) => !lists.every((list) => list.includes(entry))).sort();
 }
 
 /** For a refusal only, which names a commit or version plainly; the match itself compares JSON. */

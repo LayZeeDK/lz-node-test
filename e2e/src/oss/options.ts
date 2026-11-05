@@ -164,8 +164,9 @@ export const lzOssUsage =
   '            it. Batches of one side merge into one; a mutant in two batches is refused. A merged result.json\n' +
   '            is refused: merges do not compose, so merge the runs it lists in mergedFrom. A side that wrote no\n' +
   "            report is refused; a run removes its sides' earlier reports and logs from --out first. Runs that\n" +
-  "            differ in any of result.json's project, sourceCommit, node, platform, mutantTimeoutMs, installedDigest,\n" +
-  '            tarballDigests and projectSetup are refused, naming the field, as are a result.json that lacks one,\n' +
+  "            differ in any of result.json's project, sourceCommit, node, platform, mutantTimeoutMs,\n" +
+  '            installedVersions, tarballDigests and projectSetup are refused, naming the field and, for a list, the\n' +
+  '            entries that not every run has, as are a result.json that lacks one,\n' +
   '            runs of one side whose strykerConfig differs, and a side that records none; the workspace commit may\n' +
   '            differ. A result.json given twice is refused, however its path is spelt.';
 const positiveInteger = /^[1-9]\d*$/;

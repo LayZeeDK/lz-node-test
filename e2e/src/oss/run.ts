@@ -114,7 +114,6 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     writeFileSync(join(dir, configFile(side)), lzStrykerConfig(side, options.project));
   });
 
-  const installedVersions = lzInstalledVersions(readFileSync(join(dir, 'node_modules', '.package-lock.json'), 'utf8'));
   const header: LzOssHeader = {
     project: options.project.name,
     source: options.source,
@@ -125,12 +124,11 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     concurrency: options.concurrency,
     timeLimitMinutes: options.timeLimitMinutes,
     mutantTimeoutMs: options.mutantTimeoutMs ?? null,
-    installedDigest: sha256(installedVersions.join('\n')),
+    installedVersions: lzInstalledVersions(readFileSync(join(dir, 'node_modules', '.package-lock.json'), 'utf8')),
     tarballDigests: tarballs.map((tarball) => sha256(readFileSync(tarball))).sort(),
     projectSetup: { mutate: options.project.mutate, testFiles, patches },
     mutate: options.mutate,
     tarballs: tarballs.map((tarball) => basename(tarball)),
-    installedVersions,
     npmBefore: options.npmBefore,
     startedAt: new Date().toISOString(),
   };

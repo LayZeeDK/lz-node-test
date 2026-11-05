@@ -19,7 +19,7 @@ const header = {
   node: 'v24.18.1',
   platform: 'win32-arm64',
   mutantTimeoutMs: 30000,
-  installedDigest: 'i1',
+  installedVersions: ['node_modules/a@1.0.0', 'node_modules/b@2.0.0'],
   tarballDigests: ['d1', 'd2'],
   projectSetup: { mutate: ['index.js'], testFiles: ['test/*.test.js'], patches: [] },
   tarballs: ['a-1.0.0.tgz', 'b-1.0.0.tgz'],
@@ -39,7 +39,7 @@ function setup(t: TestContext) {
       name: string,
       project: string,
       mutantsBySide: Partial<Record<LzSide, readonly LzFakeMutant[]>>,
-      headerOverrides: Partial<Record<keyof typeof header | 'installedVersions', unknown>> = {},
+      headerOverrides: Partial<Record<keyof typeof header, unknown>> = {},
       configs: Partial<Record<LzSide, string>> = {},
     ): string => {
       const runDir = join(dir, name);
@@ -198,62 +198,38 @@ describe('lzMerge', () => {
     const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { tarballDigests: ['d1', 'd3'] })];
 
     assert.throws(() => lzMerge(runs, out), {
-      message: '--merge takes runs of one tarballDigests; found ["d1","d2"] and ["d1","d3"].',
+      message: '--merge takes runs of one tarballDigests; some runs only have d2, d3.',
     });
   });
 
-  it('refuses runs that installed different dependency versions', (t) => {
-    const { run, out } = setup(t);
-    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { installedDigest: 'i2' })];
-
-    assert.throws(() => lzMerge(runs, out), {
-      message: '--merge takes runs of one installedDigest; found i1 and i2.',
-    });
-  });
-
-  it('names the installed versions that not every run has when the installed versions differ', (t) => {
+  it('refuses runs that installed different dependency versions, naming those not every run has', (t) => {
     const { run, out } = setup(t);
     const runs = [
-      run('a', 'p', { lz: [] }, { installedVersions: ['node_modules/a@1.0.0', 'node_modules/b@2.0.0'] }),
+      run('a', 'p', { lz: [] }),
       run(
         'b',
         'p',
         { command: [] },
-        {
-          installedDigest: 'i2',
-          installedVersions: ['node_modules/a@1.0.0', 'node_modules/b@2.1.0', 'node_modules/c@3.0.0'],
-        },
+        { installedVersions: ['node_modules/a@1.0.0', 'node_modules/b@2.1.0', 'node_modules/c@3.0.0'] },
       ),
     ];
 
     assert.throws(() => lzMerge(runs, out), {
       message:
-        '--merge takes runs of one installedDigest; found i1 and i2. Installed by some runs only: ' +
+        '--merge takes runs of one installedVersions; some runs only have ' +
         'node_modules/b@2.0.0, node_modules/b@2.1.0, node_modules/c@3.0.0.',
-    });
-  });
-
-  it('names no versions when a run of an older driver recorded none', (t) => {
-    const { run, out } = setup(t);
-    const runs = [
-      run('a', 'p', { lz: [] }, { installedVersions: ['node_modules/a@1.0.0'] }),
-      run('b', 'p', { command: [] }, { installedDigest: 'i2' }),
-    ];
-
-    assert.throws(() => lzMerge(runs, out), {
-      message: '--merge takes runs of one installedDigest; found i1 and i2.',
     });
   });
 
   it('refuses the result.json of an older driver, naming the field it lacks', (t) => {
     const { run, out } = setup(t);
     const file = run('a', 'p', { lz: [] });
-    const older = Object.fromEntries(Object.entries(header).filter(([field]) => field !== 'installedDigest'));
+    const older = Object.fromEntries(Object.entries(header).filter(([field]) => field !== 'installedVersions'));
 
     writeFileSync(file, JSON.stringify({ project: 'p', ...older, sides: { lz: { stryker: { reported: true } } } }));
 
     assert.throws(() => lzMerge([file], out), {
-      message: `${file} is not the result.json of a driver run that a merge can read: it lacks installedDigest.`,
+      message: `${file} is not the result.json of a driver run that a merge can read: it lacks installedVersions.`,
     });
   });
 

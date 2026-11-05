@@ -1,4 +1,4 @@
-import { lzIsRecord, lzIsStrings } from '../report.ts';
+import { lzIsRecord } from '../report.ts';
 import type { LzOssPatch } from './options.ts';
 import type { LzProcessPeaks } from './processes.ts';
 import type { LzBySide, LzComparison, LzMutantsScore } from './verdicts.ts';
@@ -21,8 +21,8 @@ export interface LzDecidingFields {
   readonly platform: string;
   /** Stryker's `timeoutMS` from `--mutant-timeout-ms`; null for Stryker's default. */
   readonly mutantTimeoutMs: number | null;
-  /** sha256 of lzInstalledVersions of the copy: a clone without a lockfile can install newer dependencies on a rerun. */
-  readonly installedDigest: string;
+  /** lzInstalledVersions of the copy: a clone without a lockfile can install newer dependencies on a rerun. */
+  readonly installedVersions: readonly string[];
   /** sha256 of each tarball, sorted: every package is version 0.0.0, so the names cannot tell builds apart. */
   readonly tarballDigests: readonly string[];
   readonly projectSetup: LzProjectSetup;
@@ -35,7 +35,7 @@ const decidingFieldSet: Readonly<Record<keyof LzDecidingFields, null>> = {
   node: null,
   platform: null,
   mutantTimeoutMs: null,
-  installedDigest: null,
+  installedVersions: null,
   tarballDigests: null,
   projectSetup: null,
 };
@@ -52,7 +52,6 @@ export interface LzOssHeader extends LzDecidingFields {
   /** The `--mutate` patterns; empty when the run mutated the project's whole set. */
   readonly mutate: readonly string[];
   readonly tarballs: readonly string[];
-  readonly installedVersions: readonly string[];
   readonly npmBefore: string;
   readonly startedAt: string;
 }
@@ -97,7 +96,6 @@ export type LzOssResult = LzOssHeader &
 export interface LzParsedOssResult {
   readonly project: string;
   readonly deciding: ReadonlyMap<keyof LzDecidingFields, unknown>;
-  readonly installedVersions: readonly string[] | undefined;
   readonly sides: Readonly<Record<string, unknown>>;
 }
 
@@ -116,13 +114,12 @@ export function lzParseOssResult(file: string, value: unknown): LzParsedOssResul
       throw new Error(`${file} is not the result.json of a driver run that a merge can read: it lacks ${missing}.`);
     }
 
-    const { project, sides, installedVersions } = value;
+    const { project, sides } = value;
 
     if (typeof project === 'string' && lzIsRecord(sides)) {
       return {
         project,
         deciding: new Map(lzDecidingFields.map((field) => [field, value[field]])),
-        installedVersions: lzIsStrings(installedVersions) ? installedVersions : undefined,
         sides,
       };
     }
