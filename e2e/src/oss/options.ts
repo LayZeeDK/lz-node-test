@@ -147,10 +147,11 @@ export const lzOssUsage =
   '--npm-before <date> [--side <lz|command>] [--mutate <pattern>]... [--tarballs <folder>] [--prepare-only] ' +
   '[--time-limit-minutes <n>, default 15] [--mutant-timeout-ms <n>] [--help]\n' +
   '       node e2e/src/oss/main.ts --merge <result.json> [--merge <result.json>]... --out <folder>\n' +
-  '  --npm-before  passed to npm install as --before: the copy gets the newest versions published before that date or\n' +
-  '            UTC time, which must come after the workspace pins of Stryker, TypeScript and @types/node were\n' +
-  '            published. Give every part of one merge, and every Node.js version compared, the same one: otherwise\n' +
-  "            npm 11 follows a project's own min-release-age as the clock moves, and npm 10 ignores it.\n" +
+  '  --npm-before\n' +
+  '            passed to npm install as --before: the copy gets the newest versions published before that past\n' +
+  '            date or UTC time, which must come after the workspace pins of Stryker, TypeScript and @types/node\n' +
+  '            were published. Give every part of one merge, and every Node.js version compared, the same one:\n' +
+  "            otherwise npm 11 follows a project's own min-release-age as the clock moves, and npm 10 ignores it.\n" +
   '  --side    runs that side only and compares nothing; without it both sides run and are compared.\n' +
   "  --mutate  replaces the project's mutate set for this run; passed to stryker run as --mutate. To select the\n" +
   '            mutant at a mutation.json position, widen the range by one column on each side:\n' +

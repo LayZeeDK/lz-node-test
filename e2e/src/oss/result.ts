@@ -117,11 +117,7 @@ export function lzParseOssResult(file: string, value: unknown): LzParsedOssResul
     const { project, sides } = value;
 
     if (typeof project === 'string' && lzIsRecord(sides)) {
-      return {
-        project,
-        deciding: new Map(lzDecidingFields.map((field) => [field, value[field]])),
-        sides,
-      };
+      return { project, deciding: new Map(lzDecidingFields.map((field) => [field, value[field]])), sides };
     }
   }
 

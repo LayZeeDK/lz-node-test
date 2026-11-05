@@ -11,11 +11,12 @@ if (path === undefined || file === undefined || parts === undefined) {
 }
 
 const counts = reportFile === undefined ? undefined : lzMutantsByLine(reportFile, file);
-const ranges = lzPartRanges(
-  file,
-  readFileSync(path, 'utf8'),
-  Number(parts),
-  counts === undefined ? undefined : (line) => counts.get(line) ?? 0,
+const ranges = lzPartRanges(file, readFileSync(path, 'utf8'), Number(parts), (line) =>
+  counts === undefined ? 1 : (counts.get(line) ?? 0),
 );
+
+if (ranges.length < Number(parts)) {
+  process.stderr.write(`${file} has only ${ranges.length} parts between its top-level statements.\n`);
+}
 
 process.stdout.write(`${ranges.map((range) => `--mutate ${range}`).join('\n')}\n`);
