@@ -109,7 +109,7 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
   mkdirSync(runTmp);
   const tarballs = options.tarballs === undefined ? await lzPack(join(root, 'tarballs')) : given(options.tarballs);
 
-  await lzInstall(dir, tarballs);
+  await lzInstall(dir, tarballs, options.npmBefore);
   lzSides.forEach((side) => {
     writeFileSync(join(dir, configFile(side)), lzStrykerConfig(side, options.project));
   });
@@ -131,6 +131,7 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     mutate: options.mutate,
     tarballs: tarballs.map((tarball) => basename(tarball)),
     installedVersions,
+    npmBefore: options.npmBefore,
     startedAt: new Date().toISOString(),
   };
 

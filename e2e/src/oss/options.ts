@@ -39,6 +39,11 @@ export interface LzOssOptions {
   readonly timeLimitMinutes: number;
   /** Stryker's `timeoutMS`, added to each mutant's limit; Stryker's default without `--mutant-timeout-ms`. */
   readonly mutantTimeoutMs: number | undefined;
+  /**
+   * npm's `before`, as an ISO time: the copy gets the newest versions published before it. A project's own
+   * `min-release-age`, which npm 11 reads and npm 10 ignores, would otherwise move the tree as the run's clock moves.
+   */
+  readonly npmBefore: string;
 }
 
 export type LzStrykerOptions =
@@ -142,9 +147,12 @@ export interface LzMergeOptions {
 
 export const lzOssUsage =
   'Usage: node e2e/src/oss/main.ts --project <name> --source <clone> --out <folder> --concurrency <n> ' +
-  '[--side <lz|command>] [--mutate <pattern>]... [--tarballs <folder>] [--prepare-only] ' +
+  '--npm-before <date> [--side <lz|command>] [--mutate <pattern>]... [--tarballs <folder>] [--prepare-only] ' +
   '[--time-limit-minutes <n>, default 15] [--mutant-timeout-ms <n>] [--help]\n' +
   '       node e2e/src/oss/main.ts --merge <result.json> [--merge <result.json>]... --out <folder>\n' +
+  '  --npm-before  passed to npm install as --before: the copy gets the newest versions published before that date or\n' +
+  '            time. Give every part of one merge, and every Node.js version compared, the same one: otherwise npm 11\n' +
+  "            follows a project's own min-release-age as the clock moves, and npm 10 ignores it.\n" +
   '  --side    runs that side only and compares nothing; without it both sides run and are compared.\n' +
   "  --mutate  replaces the project's mutate set for this run; passed to stryker run as --mutate. To select the\n" +
   '            mutant at a mutation.json position, widen the range by one column on each side:\n' +
@@ -220,6 +228,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
       'prepare-only': { type: 'boolean', default: false },
       'time-limit-minutes': { type: 'string', default: '15' },
       'mutant-timeout-ms': { type: 'string' },
+      'npm-before': { type: 'string' },
     },
     strict: true,
     allowPositionals: false,
@@ -231,6 +240,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     tarballs,
     'time-limit-minutes': timeLimitMinutes,
     'mutant-timeout-ms': mutantTimeoutMs,
+    'npm-before': npmBefore,
   } = values;
   const project = projects.find(({ name }) => name === values.project);
 
@@ -254,6 +264,18 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     throw new Error(`${lzOssUsage}\n--mutant-timeout-ms is a positive integer.`);
   }
 
+  if (npmBefore === undefined) {
+    throw new Error(
+      `${lzOssUsage}\n--npm-before is required: npm installs the newest versions published before it, so runs that share it install one tree.`,
+    );
+  }
+
+  const before = Date.parse(npmBefore);
+
+  if (Number.isNaN(before)) {
+    throw new Error(`${lzOssUsage}\n--npm-before is a date or time such as 2026-11-04 or 2026-11-04T12:00:00Z.`);
+  }
+
   const side = lzSides.find((known) => known === values.side);
 
   if (values.side !== undefined && side === undefined) {
@@ -275,6 +297,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     prepareOnly: values['prepare-only'],
     timeLimitMinutes: Number(timeLimitMinutes),
     mutantTimeoutMs: mutantTimeoutMs === undefined ? undefined : Number(mutantTimeoutMs),
+    npmBefore: new Date(before).toISOString(),
   };
 }
 

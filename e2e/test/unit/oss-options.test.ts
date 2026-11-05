@@ -39,9 +39,33 @@ describe('run folder prefixes', () => {
   });
 });
 
-const required = ['--project', 'env-schema', '--source', 'D:/clone', '--out', 'D:/out', '--concurrency', '5'];
+const required = [
+  '--project',
+  'env-schema',
+  '--source',
+  'D:/clone',
+  '--out',
+  'D:/out',
+  '--concurrency',
+  '5',
+  '--npm-before',
+  '2026-11-04',
+];
 
 describe('lzParseOptions', () => {
+  it('refuses a run without --npm-before', () => {
+    assert.throws(() => lzParseOptions(required.slice(0, -2)), {
+      message:
+        /--npm-before is required: npm installs the newest versions published before it, so runs that share it install one tree\.$/,
+    });
+  });
+
+  it('refuses an --npm-before that is no date', () => {
+    assert.throws(() => lzParseOptions([...required.slice(0, -2), '--npm-before', 'yesterday']), {
+      message: /--npm-before is a date or time such as 2026-11-04 or 2026-11-04T12:00:00Z\.$/,
+    });
+  });
+
   it('reads the options and looks the project up', () => {
     const options = lzParseOptions(required);
 
@@ -58,6 +82,7 @@ describe('lzParseOptions', () => {
         prepareOnly: false,
         timeLimitMinutes: 15,
         mutantTimeoutMs: undefined,
+        npmBefore: '2026-11-04T00:00:00.000Z',
       },
     );
   });

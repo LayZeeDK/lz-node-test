@@ -50,8 +50,11 @@ export async function lzFixture(name: string): Promise<LzFixture> {
   return { stryker: (configFile = 'stryker.config.mjs') => lzStryker(dir, configFile, concurrency) };
 }
 
-/** Installs the packed packages and the workspace's pinned Stryker, TypeScript and Node.js types into `dir`. */
-export async function lzInstall(dir: string, tarballs: readonly string[]): Promise<void> {
+/**
+ * Installs the packed packages and the workspace's pinned Stryker, TypeScript and Node.js types into `dir`, from the
+ * versions published before `before` (npm's `--before`) when it is given.
+ */
+export async function lzInstall(dir: string, tarballs: readonly string[], before?: string): Promise<void> {
   // npx and npm exec hand npm_config_prefix and npm_config_local_prefix (the workspace) on to this process.
   await npm(dir, [
     'install',
@@ -61,6 +64,7 @@ export async function lzInstall(dir: string, tarballs: readonly string[]): Promi
     dir,
     '--no-audit',
     '--no-fund',
+    ...(before === undefined ? [] : ['--before', before]),
     ...tarballs,
     ...pinned(),
   ]);
