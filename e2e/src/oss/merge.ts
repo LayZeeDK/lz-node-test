@@ -47,6 +47,7 @@ export function lzMerge(files: readonly string[], out: string): string {
       throw new Error(`--merge takes runs of one ${field}; found ${distinct.map(shown).join(' and ')}.`);
     }
   });
+
   const { project } = first;
   const reports = runs.flatMap((run) => run.reports);
   const merged = lzSides
