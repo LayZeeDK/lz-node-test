@@ -20,7 +20,7 @@ const strictTypeChecked = Object.assign({}, ...tseslint.configs.strictTypeChecke
 
 const declared = ':matches(TSInterfaceDeclaration, TSTypeAliasDeclaration)';
 // Every block that sets no-restricted-syntax spreads these: a later block replaces the rule's options.
-export const readonlyMembers = [
+const readonlyMembers = [
   {
     selector: `${declared} TSPropertySignature:not([readonly=true])`,
     message: 'Mark the member readonly.',
@@ -36,7 +36,7 @@ export const readonlyMembers = [
 ];
 
 // Spread into every block that sets no-restricted-syntax for src or tests, for the same reason.
-export const noTypeAssertions = [
+const noTypeAssertions = [
   {
     // Also `as const`, which consistent-type-assertions allows.
     selector: 'TSAsExpression, TSTypeAssertion',
@@ -46,7 +46,7 @@ export const noTypeAssertions = [
 ];
 
 // Spread beside noTypeAssertions. Runtime-private # members replace the TypeScript modifier.
-export const noPrivateModifier = [
+const noPrivateModifier = [
   {
     selector:
       ':matches(PropertyDefinition, MethodDefinition, TSParameterProperty, AccessorProperty, TSAbstractPropertyDefinition, TSAbstractMethodDefinition)[accessibility="private"]',
@@ -213,16 +213,15 @@ export default [
       // The tests' empty functions are no-op test doubles.
       '@typescript-eslint/no-empty-function': 'off',
       '@nx/workspace-no-assertion-in-iteration': 'error',
-      'no-restricted-syntax': [
+      'no-restricted-properties': [
         'error',
-        {
-          selector: 'CallExpression > MemberExpression.callee[object.name=/^test(Each|For)$/][property.name="only"]',
+        ...['lzTestEach', 'lzTestFor'].map((object) => ({
+          object,
+          property: 'only',
           message: 'Remove .only before committing: it makes node:test --test-only skip every other test.',
-        },
-        ...noTypeAssertions,
-        ...noPrivateModifier,
-        ...readonlyMembers,
+        })),
       ],
+      'no-restricted-syntax': ['error', ...noTypeAssertions, ...noPrivateModifier, ...readonlyMembers],
     },
   },
   {

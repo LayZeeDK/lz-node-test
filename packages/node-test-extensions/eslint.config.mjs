@@ -1,4 +1,4 @@
-import baseConfig, { noPrivateModifier, noTypeAssertions, readonlyMembers } from '../../eslint.config.mjs';
+import baseConfig from '../../eslint.config.mjs';
 
 export default [
   ...baseConfig,
@@ -17,9 +17,9 @@ export default [
     },
   },
   {
-    // The modifier tests run lzTestEach.only and lzTestFor.only on purpose, so only the .only selector goes.
-    files: ['test/**/*.ts'],
-    rules: { 'no-restricted-syntax': ['error', ...noTypeAssertions, ...noPrivateModifier, ...readonlyMembers] },
+    // The modifier tests run lzTestEach.only on purpose.
+    files: ['test/integration/modified.test.ts'],
+    rules: { 'no-restricted-properties': 'off' },
   },
   {
     ignores: ['**/out-tsc'],
