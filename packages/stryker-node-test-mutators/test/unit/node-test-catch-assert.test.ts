@@ -78,6 +78,10 @@ describe('LzNodeTestCatchAssert', () => {
       'a try block that ends in a throw',
       `${strict}try {\n  parse('');\n  throw new Error('should throw');\n} catch (error) {\n  assert.ok(error);\n}`,
     ],
+    [
+      'a try block of several calls that ends in a fail',
+      `${strict}try {\n  parse('');\n  parse('{');\n  assert.fail('should throw');\n} catch (error) {\n  assert.ok(error);\n}`,
+    ],
     ['a try without a catch', `${strict}try {\n  parse('');\n} finally {\n  assert.ok(true);\n}`],
     [
       'an assertion in the try block',
