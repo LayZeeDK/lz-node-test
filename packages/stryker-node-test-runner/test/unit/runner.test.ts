@@ -537,6 +537,13 @@ describe('lzRunEnv', () => {
     );
   });
 
+  it("passes on only the filter's ids within the test file", () => {
+    const testFilter = [`${file} > test`, `${file}x > test`, `${file}-other > test`, file];
+    const env = envOf({ run: { dryRun: false, disableBail: true, testFilter } });
+
+    assert.equal(env[envNames.filter], JSON.stringify([`${file} > test`, file]));
+  });
+
   it('activates the mutant from the start of the process, or for the hook to activate once the tests start', () => {
     const run = { dryRun: false, disableBail: false, activeMutant: '12' } satisfies LzRunOptions;
     const active = (mutantActivation: 'runtime' | 'static') => {
