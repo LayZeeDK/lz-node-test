@@ -148,8 +148,9 @@ export const lzOssUsage =
   '[--time-limit-minutes <n>, default 15] [--mutant-timeout-ms <n>] [--help]\n' +
   '       node e2e/src/oss/main.ts --merge <result.json> [--merge <result.json>]... --out <folder>\n' +
   '  --npm-before  passed to npm install as --before: the copy gets the newest versions published before that date or\n' +
-  '            time. Give every part of one merge, and every Node.js version compared, the same one: otherwise npm 11\n' +
-  "            follows a project's own min-release-age as the clock moves, and npm 10 ignores it.\n" +
+  '            UTC time, which must come after the workspace pins of Stryker, TypeScript and @types/node were\n' +
+  '            published. Give every part of one merge, and every Node.js version compared, the same one: otherwise\n' +
+  "            npm 11 follows a project's own min-release-age as the clock moves, and npm 10 ignores it.\n" +
   '  --side    runs that side only and compares nothing; without it both sides run and are compared.\n' +
   "  --mutate  replaces the project's mutate set for this run; passed to stryker run as --mutate. To select the\n" +
   '            mutant at a mutation.json position, widen the range by one column on each side:\n' +
@@ -267,10 +268,14 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     );
   }
 
-  const before = Date.parse(npmBefore);
+  const before = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z)?$/.test(npmBefore)
+    ? Date.parse(npmBefore)
+    : Number.NaN;
 
-  if (Number.isNaN(before)) {
-    throw new Error(`${lzOssUsage}\n--npm-before is a date or time such as 2026-11-04 or 2026-11-04T12:00:00Z.`);
+  if (Number.isNaN(before) || !new Date(before).toISOString().startsWith(npmBefore.slice(0, 10))) {
+    throw new Error(
+      `${lzOssUsage}\n--npm-before is a date such as 2026-11-04 or a UTC time such as 2026-11-04T12:00:00Z.`,
+    );
   }
 
   const side = lzSides.find((known) => known === values.side);

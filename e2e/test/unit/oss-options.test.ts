@@ -60,10 +60,18 @@ describe('lzParseOptions', () => {
     });
   });
 
-  it('refuses an --npm-before that is no date', () => {
-    assert.throws(() => lzParseOptions([...required.slice(0, -2), '--npm-before', 'yesterday']), {
-      message: /--npm-before is a date or time such as 2026-11-04 or 2026-11-04T12:00:00Z\.$/,
+  for (const value of ['yesterday', '11/04', '2026-02-30', '2026-11-04T12:00']) {
+    it(`refuses ${value} as --npm-before: no date, no day of its month, or a time without a zone`, () => {
+      assert.throws(() => lzParseOptions([...required.slice(0, -2), '--npm-before', value]), {
+        message: /--npm-before is a date such as 2026-11-04 or a UTC time such as 2026-11-04T12:00:00Z\.$/,
+      });
     });
+  }
+
+  it('reads an --npm-before UTC time', () => {
+    const { npmBefore } = lzParseOptions([...required.slice(0, -2), '--npm-before', '2026-11-04T12:30:00Z']);
+
+    assert.equal(npmBefore, '2026-11-04T12:30:00.000Z');
   });
 
   it('reads the options and looks the project up', () => {
