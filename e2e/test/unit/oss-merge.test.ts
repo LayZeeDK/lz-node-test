@@ -295,6 +295,17 @@ describe('lzMerge', () => {
     });
   });
 
+  it('refuses an --out that holds one of the runs, and leaves that run as it was', (t) => {
+    const { run } = setup(t);
+    const file = run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] });
+    const before = readFileSync(file, 'utf8');
+
+    assert.throws(() => lzMerge([file], join(dirname(file), '.')), {
+      message: `--out holds ${file}, one of the runs being merged; give --out another folder.`,
+    });
+    assert.equal(readFileSync(file, 'utf8'), before);
+  });
+
   it('merges batches of one side into one before it compares', (t) => {
     const { run, out } = setup(t);
     const batches = [

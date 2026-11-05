@@ -31,6 +31,12 @@ export function lzMerge(files: readonly string[], out: string): string {
     throw new Error(`--merge got ${repeated} more than once; give each result.json once.`);
   }
 
+  const file = resolve(out, 'result.json');
+
+  if (resolved.includes(file)) {
+    throw new Error(`--out holds ${file}, one of the runs being merged; give --out another folder.`);
+  }
+
   const runs = files.map(readRun);
   const [first] = runs;
 
@@ -58,7 +64,6 @@ export function lzMerge(files: readonly string[], out: string): string {
   const merged = lzSides
     .filter((side) => reports.some((report) => report.side === side))
     .map((side) => ({ side, report: reportOf(reports, side) }));
-  const file = join(out, 'result.json');
   const result: LzMergeResult = {
     project,
     mergedFrom: files,
