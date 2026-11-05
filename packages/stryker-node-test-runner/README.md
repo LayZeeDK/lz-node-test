@@ -353,8 +353,11 @@ To fix it, close what the tests open in an `after` hook. If you cannot, pass `--
 
 ## Run under the permission model
 
-When the test files run under Node.js's permission model (`--permission`), give them two permissions:
+When the test files run under Node.js's permission model (`--permission`), give them three permissions:
 
+- `--allow-fs-read` for the runner package's `dist` folder, beside the files that the tests read. Each process loads
+  the runner's hook from there through `--import`. Without read access, every test file fails as it starts.
+  `--allow-fs-read=*` covers it.
 - `--allow-fs-write` for the runner's run directories, `lz-node-test-*` in `os.tmpdir()`. Each process
   writes its results there. Without write access, every test file ends with "Missing test results".
 - `--allow-worker`. Each process watches its memory from a worker thread. Without it, no memory limit applies, and
