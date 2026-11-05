@@ -483,17 +483,21 @@ export function recordEvents(
     }
 
     const startPosition = positions.get(id);
+    const base = { id, timeSpentMs, ...(startPosition && { startPosition }) };
     // node:test runs a todo test but ignores its outcome.
     const skipped = data.skip !== undefined || data.todo !== undefined;
-    const failure = !skipped && error;
 
+    if (skipped || !error) {
+      tests.push({ ...base, status: skipped ? 'skipped' : 'passed' });
+
+      return;
+    }
+
+    // The cause is what the test or hook threw; a timeout, a cancellation or an unmet expectFailure has a message only.
     tests.push({
-      id,
-      status: skipped ? 'skipped' : failure ? 'failed' : 'passed',
-      timeSpentMs,
-      ...(startPosition && { startPosition }),
-      // The cause is what the test or hook threw; a timeout, a cancellation or an unmet expectFailure has a message only.
-      ...(failure && { failureMessage: failure.cause instanceof Error ? failure.cause.message : failure.message }),
+      ...base,
+      status: 'failed',
+      failureMessage: error.cause instanceof Error ? error.cause.message : error.message,
     });
   };
 }

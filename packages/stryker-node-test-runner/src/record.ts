@@ -44,14 +44,15 @@ export function lzNamesFile(testFilter: readonly string[] | undefined, file: str
   return testFilter?.includes(file) === true;
 }
 
-export interface RecordedTest {
+export type RecordedTest = {
   readonly id: string;
-  /** Skipped tests include todo tests, which run but whose outcome node:test ignores. */
-  readonly status: 'passed' | 'failed' | 'skipped';
-  readonly failureMessage?: string;
   readonly timeSpentMs: number;
   readonly startPosition?: Position;
-}
+} & (
+  | { readonly status: 'failed'; readonly failureMessage?: string }
+  /** Skipped tests include todo tests, which run but whose outcome node:test ignores. */
+  | { readonly status: 'passed' | 'skipped'; readonly failureMessage?: undefined }
+);
 
 /** The time a file's run, `fileMs`, spent outside its outermost tests, whose time includes their subtests'. */
 export function lzOutsideMs(tests: readonly RecordedTest[], fileMs: number): number {
@@ -274,13 +275,25 @@ function parseTest(value: unknown, path: string): RecordedTest {
     notARecord(`${path}.timeSpentMs`);
   }
 
-  return {
+  const base = {
     id,
-    status,
     timeSpentMs,
-    ...optional('failureMessage', failureMessage, isString, notARecord, `${path}.failureMessage`),
     ...optional('startPosition', startPosition, isPosition, notARecord, `${path}.startPosition`),
   };
+
+  if (status === 'failed') {
+    return {
+      ...base,
+      status,
+      ...optional('failureMessage', failureMessage, isString, notARecord, `${path}.failureMessage`),
+    };
+  }
+
+  if (failureMessage !== undefined) {
+    notARecord(`${path}.failureMessage`);
+  }
+
+  return { ...base, status };
 }
 
 export function lzParseRecord(json: string): ProcessRecord {
