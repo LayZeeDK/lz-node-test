@@ -21,4 +21,9 @@ describe('lzNodeMutators', () => {
       [true, true, true, false, false],
     );
   });
+
+  it('names this package in the error for a mutator its options cannot turn on there', async () => {
+    // @ts-expect-error -- LzNodeByteLength is experimental, so it goes inside `experimental`
+    await assert.rejects(lzNodeMutators({ LzNodeByteLength: true }), /^Error: stryker-node-mutators: /);
+  });
 });

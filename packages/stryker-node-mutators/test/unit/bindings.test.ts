@@ -29,6 +29,10 @@ describe('lzAssertMethod', () => {
     ['a computed method', "import assert from 'node:assert';\nassert['equal'](x, 1);", []],
     ['another module', "import assert from 'other';\nassert.equal(x, 1);", []],
     ['a function of its own', 'function assert(x: unknown) {}\nassert(x);', []],
+    ["a context's assert called itself", 'function check(t: any) {\n  t.assert(x);\n}', []],
+    ["a context's member other than assert", 'function check(t: any) {\n  t.other.match(x, /y/);\n}', []],
+    ['an assert under another member', 'function check(t: any) {\n  t.inner.assert.match(x, /y/);\n}', []],
+    ['an assert of a value that is no parameter', 'const t: any = {};\nt.assert.match(x, /y/);', []],
   ])('finds the method of %s', async (_title, source, expected) => {
     assert.deepEqual(await mutantsOf(probe, source), expected);
   });
