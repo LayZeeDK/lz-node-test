@@ -43,9 +43,16 @@ A package with operators that run only when a user turns them on groups them as 
 and `experimental`. `lzSelectOperators(packageName, sets, options)` returns the defaults and the operators that the
 user's options turn on, in the order of the sets, and `lzAllOperators(sets)` returns them all. `LzMutatorOptions` types
 the options: an opt-in name or `extended` for every opt-in operator, and `experimental` with `true` or an object of
-experimental names. Each takes only `true`, and the call throws on a name it does not know or a name in the wrong place.
+experimental names. A name and `extended` take only `true`; `experimental` takes `true` or an object whose values are
+`true`. The call throws on a name it does not know or a name in the wrong place.
 
 ```js
+import { lzInstall, lzSelectOperators } from '@layzee/stryker-mutator-core';
+
+import { defaults, experimental, optIn } from './operators.js';
+
+const sets = { defaults, optIn, experimental };
+
 export async function myMutators(options) {
   await lzInstall({
     packageName: 'my-mutators',

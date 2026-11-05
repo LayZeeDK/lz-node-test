@@ -10,7 +10,7 @@ mutate test files, use [`@layzee/stryker-node-test-mutators`](../stryker-node-te
 npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/stryker-node-mutators
 ```
 
-`@stryker-mutator/core` and `@babel/core` are peer dependencies, and `@stryker-mutator/api` is a peer dependency of
+`@stryker-mutator/core` and `@babel/core` 8.0 (Stryker 10's Babel) are peer dependencies, and `@stryker-mutator/api` is a peer dependency of
 `@layzee/stryker-mutator-core`, the package it installs its mutators through. The package adds its mutators
 to the instrumenter of the Stryker that runs it. It accepts Stryker 10.1.1 or a later 10.x version and is tested with
 10.1.1. The install checks that the instrumenter

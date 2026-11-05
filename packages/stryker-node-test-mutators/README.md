@@ -10,7 +10,7 @@ To mutate production code, use [`@layzee/stryker-node-mutators`](../stryker-node
 npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/stryker-node-test-mutators
 ```
 
-`@stryker-mutator/core` and `@babel/core` are peer dependencies, and `@stryker-mutator/api` is a peer dependency of
+`@stryker-mutator/core` and `@babel/core` 8.0 (Stryker 10's Babel) are peer dependencies, and `@stryker-mutator/api` is a peer dependency of
 `@layzee/stryker-mutator-core`, the package it installs its mutators through. The package puts its mutators into the
 instrumenter of the Stryker that runs it. It accepts Stryker 10.1.1 or a later 10.x version and is tested with
 10.1.1. The install checks that the instrumenter makes a mutant of each mutator from a sample, and stops the run with
@@ -34,9 +34,14 @@ await lzNodeTestMutators();
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   mutate: ['test/**/*.test.js'],
+  testRunner: 'lz-node-test',
+  appendPlugins: ['@layzee/stryker-node-test-runner'],
+  lzNodeTest: { testFiles: ['test/**/*.test.js'] },
   // ...the rest of your configuration
 };
 ```
+
+The mutated test files are also the files the test runner runs, so a mutant in a test is run by that test.
 
 Call it in the configuration file, not through `plugins`. Stryker only warns when a module in `plugins` fails to
 load, while a failed call stops the run.

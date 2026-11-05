@@ -254,8 +254,8 @@ the runner with small test files:
 With `coverageAnalysis: 'perTest'`, Stryker's default, a mutant runs only the test files whose tests reach it.
 
 Two open-source projects, each run 5 times a side at concurrency 5, against Stryker's `command` runner with
-`node --test`. The restartable times come from a runner version before the deadline that the fastify-cookie paragraph
-below describes.
+`node --test`. The restartable times were measured without the deadline that the fastify-cookie paragraph below
+describes.
 
 | Project               | Mutants | This runner, median | `command` runner, median |
 | --------------------- | ------- | ------------------- | ------------------------ |
@@ -311,8 +311,7 @@ These cases cost time but give the same results:
   code under test, such as `[30, isAdult(30)]`, puts that code's result in the title. Such code runs while the test
   file registers its tests, so its mutants are static and run every test. The test still runs and still kills the
   mutant, but under a name the stored results lack. Stryker's Vitest runner names tests by their titles too and does
-  the same. In the configuration above, before its tests stopped titling their cases with the title formatter they
-  test, 14 such mutants made an incremental run on an unchanged tree take 32 s instead of 7.5 s.
+  the same. In one project, 14 such mutants made an incremental run on an unchanged tree take 32 s instead of 7.5 s.
 - A test file that the configuration also mutates. After any change to it, the mutants that its tests cover run again,
   as [What the runner does](#what-the-runner-does) describes.
 
