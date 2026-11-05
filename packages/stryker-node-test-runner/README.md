@@ -149,6 +149,8 @@ once per run as under `node --test`.
     its last write: in the dry run, each such process writes its coverage every 250 ms.
   - Lost: what such a process covered in its last 250 ms, what a process that SIGKILL ends covered since its last
     write, and what a process whose event loop is busy when it is ended covered since its last write.
+    A lost hit can make a mutant that another test also reaches come out Survived, as Stryker then runs only that
+    other test.
   - When a test file's process exits, the runner ends the processes its tests left running. On Linux and macOS, it
     sends them SIGTERM and, when any is still running 200 ms later, SIGKILL. On Windows, the processes that the test
     file's process started directly end with it.
