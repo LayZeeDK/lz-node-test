@@ -246,7 +246,7 @@ export default [
       curly: ['error', 'all'],
       '@typescript-eslint/naming-convention': [
         'error',
-        // Environment variable names are strings, so they keep UPPER_SNAKE_CASE.
+        // Applies to variables only; environment variable names are string keys and keep UPPER_SNAKE_CASE.
         {
           selector: 'variable',
           format: ['camelCase', 'PascalCase'],
