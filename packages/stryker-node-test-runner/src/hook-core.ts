@@ -15,6 +15,7 @@ import {
   type RecordedTest,
 } from './record.ts';
 import { lzTestOnly } from './node-options.ts';
+import { groupOptions } from './process-end.ts';
 import { lzPersistRecord, type LzRecordDependencies } from './record-writer.ts';
 import type { WatchdogData } from './watchdog.ts';
 import { lzCurrentTests, settling, wrapNodeTest, type Body, type NodeTestModule, type NodeTestTarget } from './wrap.ts';
@@ -95,7 +96,14 @@ export interface HookDependencies extends LzRecordDependencies {
   readonly global: { -readonly [TKey in keyof GlobalSlots]: GlobalSlots[TKey] };
   /** The clock of every `LzTimeWindow`. */
   readonly now: () => number;
+  readonly platform: NodeJS.Platform;
+  /** `process.ppid`, read anew on each call. */
+  readonly parentPid: () => number;
+  readonly kill: (pid: number, signal: NodeJS.Signals) => void;
 }
+
+/** How often a test file's process asks whether its parent, the runner's process, is still there. */
+const parentPollMs = 1_000;
 
 /**
  * How many calls of the stack the hook reads to find where the test file declares a suite or test. getCallSites reads
@@ -227,6 +235,17 @@ export function install(deps: HookDependencies): boolean {
     });
     deps.global[wrappedNodeTest] = wrapped;
     deps.registerHooks(redirectNodeTest(Object.keys(wrapped)));
+
+    // The group of its own gets no Ctrl+C, and nothing ends it when Stryker ends the runner's process, which leaves a
+    // test that never settles running in a removed sandbox.
+    if (groupOptions(deps.platform).detached) {
+      const parent = deps.parentPid();
+      deps.every(() => {
+        if (deps.parentPid() !== parent) {
+          deps.kill(-deps.pid, 'SIGKILL');
+        }
+      }, parentPollMs);
+    }
   }
 
   if (!deps.canWriteRecords) {

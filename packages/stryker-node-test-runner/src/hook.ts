@@ -85,4 +85,7 @@ install({
   callSites: getCallSites,
   now,
   signals: lzSignals(process.platform),
+  platform: process.platform,
+  parentPid: () => process.ppid,
+  kill: (pid, signal) => process.kill(pid, signal),
 });

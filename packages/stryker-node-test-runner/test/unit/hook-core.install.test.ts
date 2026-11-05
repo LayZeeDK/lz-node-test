@@ -968,6 +968,60 @@ describe('install', () => {
   });
 });
 
+describe('a test file whose parent process is gone', () => {
+  const watched = (platform: NodeJS.Platform, overrides: Partial<HookDependencies> = {}) => {
+    let parent = 100;
+    const killed: string[] = [];
+    const polls: (() => void)[] = [];
+    installedHarness(fileEnv(), {
+      platform,
+      parentPid: () => parent,
+      kill: (pid, signal) => {
+        killed.push(`${pid} ${signal}`);
+      },
+      every: (poll) => {
+        polls.push(poll);
+      },
+      ...overrides,
+    });
+    const poll = () => {
+      const [only, ...more] = polls;
+      assert.ok(only, 'the hook watches its parent process');
+      assert.equal(more.length, 0);
+      only();
+    };
+
+    return {
+      killed,
+      polls,
+      poll,
+      orphan: () => {
+        parent = 1;
+      },
+    };
+  };
+
+  it('ends its process group once its parent process changes, on POSIX', () => {
+    const { killed, poll, orphan } = watched('linux');
+    poll();
+
+    assert.deepEqual(killed, []);
+
+    orphan();
+    poll();
+
+    assert.deepEqual(killed, ['-4321 SIGKILL']);
+  });
+
+  it('watches no parent on Windows, where the job object ends the process with its parent', () => {
+    assert.deepEqual(watched('win32').polls, []);
+  });
+
+  it('watches no parent in a process that the test file started, which leads no group', () => {
+    assert.deepEqual(watched('linux', { mainFile: '/repo/child.mjs' }).polls, []);
+  });
+});
+
 describe('passing `done` as node:test does', () => {
   /** node:test passes a `done` callback only to a function whose length is exactly 2. */
   const callAsNodeTest = (fn: Fn | undefined, context: unknown): unknown => {

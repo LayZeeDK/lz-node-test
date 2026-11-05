@@ -255,6 +255,11 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
     callSites: () => [],
     now: () => 0,
     signals: undefined,
+    platform: 'win32',
+    parentPid: () => 1000,
+    kill: () => {
+      assert.fail('the hook ended a process group');
+    },
     ...overrides,
   };
 
