@@ -21,6 +21,7 @@ import {
   type LzRunEnvInput,
   lzRunInPool,
   type LzRunOptions,
+  lzStoredFiles,
   lzTestRunnerConcurrency,
   lzToTestResults,
 } from '../../src/runner.ts';
@@ -255,6 +256,24 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
     ['only skipped tests', 'perTest', { static: {}, perTest: {} }, 'skipped'],
   ])('does not warn about coverage with %s', async (_title, coverageAnalysis, mutantCoverage, status) => {
     assert.deepEqual(await dryRunWarnings(coverageAnalysis, mutantCoverage, status), []);
+  });
+});
+
+describe('lzStoredFiles', () => {
+  const key = JSON.stringify(['/repo', '*.test.mjs']);
+
+  it('returns no files when the dry run stored none', () => {
+    assert.equal(lzStoredFiles(key, undefined), undefined);
+  });
+
+  it('returns the test files the dry run stored', () => {
+    assert.deepEqual(lzStoredFiles(key, JSON.stringify([file])), [file]);
+  });
+
+  lzTestFor(['', '[', '{}', '[1]', 'null'])('throws, naming the store entry, for content %j', (content) => {
+    assert.throws(() => lzStoredFiles(key, content), {
+      message: `The dry-run store's files entry ${key} is no JSON array of test files: ${content}`,
+    });
   });
 });
 

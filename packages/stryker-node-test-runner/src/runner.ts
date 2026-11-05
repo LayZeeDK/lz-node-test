@@ -362,14 +362,26 @@ function dryRunErrorElseTimeout(run: LzRunOptions, errorMessage: string, reason:
   return run.dryRun ? errorEnd(errorMessage) : { end: { status: DryRunStatus.Timeout, reason } };
 }
 
-function storedFiles(content: string | undefined): string[] | undefined {
-  try {
-    const files: unknown = JSON.parse(content ?? '');
-
-    return isStrings(files) ? files : undefined;
-  } catch {
+/** The test files that the dry run stored under `key`, or undefined when it stored none. */
+export function lzStoredFiles(key: string, content: string | undefined): string[] | undefined {
+  if (content === undefined) {
     return undefined;
   }
+
+  const message = `The dry-run store's files entry ${key} is no JSON array of test files: ${content}`;
+  let files: unknown;
+
+  try {
+    files = JSON.parse(content);
+  } catch (error) {
+    throw new Error(message, { cause: error });
+  }
+
+  if (!isStrings(files)) {
+    throw new Error(message);
+  }
+
+  return files;
 }
 
 export function lzFilesFor(testFiles: string[], testFilter: readonly string[] | undefined): string[] {
@@ -662,7 +674,7 @@ export class LzNodeTestTestRunner implements TestRunner {
 
   async mutantRun(options: MutantRunOptions): Promise<MutantRunResult> {
     const started = performance.now();
-    this.#dryRunFiles ??= storedFiles(this.#dryRunStore.read(this.#dryRunFilesKey, 'files'));
+    this.#dryRunFiles ??= lzStoredFiles(this.#dryRunFilesKey, this.#dryRunStore.read(this.#dryRunFilesKey, 'files'));
     const files = lzFilesFor(this.#dryRunFiles ?? this.#testFiles, options.testFilter);
     // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
     const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
