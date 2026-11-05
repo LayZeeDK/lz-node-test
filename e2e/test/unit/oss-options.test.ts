@@ -400,10 +400,13 @@ describe('lzStrykerOptions', () => {
 });
 
 describe('lzStrykerConfig', () => {
-  it('imports the operators and exports the options on either side', () => {
+  it('installs the operators and exports the options on either side', () => {
     const config = lzStrykerConfig('command', project);
 
-    assert.match(config, /^import '@layzee\/stryker-node-mutators';\n\nexport default \{\n/);
+    assert.match(
+      config,
+      /^import \{ lzNodeMutators \} from '@layzee\/stryker-node-mutators';\n\nawait lzNodeMutators\(\);\n\nexport default \{\n/,
+    );
     assert.match(config, /"testRunner": "command"/);
   });
 });

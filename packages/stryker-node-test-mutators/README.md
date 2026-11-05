@@ -23,11 +23,13 @@ list of mutators.
 
 ## Mutate test files
 
-To check that your tests' assertions can fail, mutate the test files in a configuration of their own. Import the
-package at the top of it. It replaces Stryker's mutators with these:
+To check that your tests' assertions can fail, mutate the test files in a configuration of their own. Call
+`lzNodeTestMutators` at the top of it. It replaces Stryker's mutators with the default mutators below:
 
 ```js
-import '@layzee/stryker-node-test-mutators';
+import { lzNodeTestMutators } from '@layzee/stryker-node-test-mutators';
+
+await lzNodeTestMutators();
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
@@ -36,8 +38,15 @@ export default {
 };
 ```
 
-Import it in the configuration file, not through `plugins`. Stryker only warns when a module in `plugins` fails to
-load, while a failed import stops the run.
+Call it in the configuration file, not through `plugins`. Stryker only warns when a module in `plugins` fails to
+load, while a failed call stops the run.
+
+Experimental mutators run only when the options turn them on: all of them with `experimental: true`, or one by its
+name, as in `await lzNodeTestMutators({ experimental: { LzNodeTestCatchAssert: true } })`. The options work as in
+[`@layzee/stryker-node-mutators`](../stryker-node-mutators/README.md#opt-in-and-experimental-mutators); this package
+has no opt-in mutators yet.
+
+### Default mutators
 
 | Mutator                     | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -50,5 +59,15 @@ An example mutant of each:
 | --------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
 | `LzNodeTestAssertCall`      | `assert.equal(total, 3);`                 | `{ assert.equal(total, 3); throw new Error("Stryker: assertion reached"); }` |
 | `LzNodeTestAssertValidator` | `assert.throws(() => parse(''), /empty/)` | `assert.throws(() => { throw new Error("Stryker"); }, /empty/)`              |
+
+### Experimental mutators
+
+| Mutator                 | What it changes                                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LzNodeTestCatchAssert` | Empties the `try` block of a `try`/`catch` whose `catch` asserts and throws nothing. A survivor is a test that passes when the code under test stops throwing; `assert.throws`, `assert.rejects` or a plan would catch it. Assertions are found by name, so a `require`d `assert` counts, and functions inside the `catch` are not searched. |
+
+| Mutator                 | Original                                                 | Mutated                                      |
+| ----------------------- | -------------------------------------------------------- | -------------------------------------------- |
+| `LzNodeTestCatchAssert` | `try { parse(''); } catch (error) { assert.ok(error); }` | `try {} catch (error) { assert.ok(error); }` |
 
 The mutators' names work in Stryker's disable comments like Stryker's own mutators.

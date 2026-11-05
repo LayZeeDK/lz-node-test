@@ -381,7 +381,7 @@ export function lzStrykerOptions(side: LzSide, project: LzOssProject): LzStryker
 
 export function lzStrykerConfig(side: LzSide, project: LzOssProject): string {
   return (
-    "import '@layzee/stryker-node-mutators';\n\n" +
+    "import { lzNodeMutators } from '@layzee/stryker-node-mutators';\n\nawait lzNodeMutators();\n\n" +
     `export default ${JSON.stringify(lzStrykerOptions(side, project), null, 2)};\n`
   );
 }

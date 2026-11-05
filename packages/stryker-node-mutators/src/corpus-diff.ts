@@ -3,6 +3,6 @@
 //
 //   node packages/stryker-node-mutators/src/corpus-diff.ts <file.ts>...
 import { corpusDiff } from './mutant-diff.ts';
-import { productionOperators } from './operators.ts';
+import { nodeOperators } from './operators.ts';
 
-console.log(await corpusDiff(process.argv.slice(2), () => productionOperators));
+console.log(await corpusDiff(process.argv.slice(2), () => nodeOperators));

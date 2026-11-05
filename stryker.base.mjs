@@ -5,14 +5,16 @@
 export const source = '--conditions=@layzee/source';
 
 /**
- * A package's config for its production code: `config` with the production operators added to Stryker's mutators.
+ * A package's config for its production code: `config` with the production operators added to Stryker's mutators,
+ * LzNodeAssertStatement included, as these packages assert their invariants with node:assert.
  * The installs live here and not in the packages' configs, as an import there would make each package depend on the
  * mutator packages, which depend on some of them.
  *
  * @param {import('@stryker-mutator/api/core').PartialStrykerOptions} config
  */
 export async function production(config) {
-  await import('@layzee/stryker-node-mutators');
+  const { lzNodeMutators } = await import('@layzee/stryker-node-mutators');
+  await lzNodeMutators({ LzNodeAssertStatement: true });
 
   return config;
 }
@@ -24,7 +26,8 @@ export async function production(config) {
  * @param {import('@stryker-mutator/api/core').PartialStrykerOptions} config
  */
 export async function testCode(config) {
-  await import('@layzee/stryker-node-test-mutators');
+  const { lzNodeTestMutators } = await import('@layzee/stryker-node-test-mutators');
+  await lzNodeTestMutators();
 
   return config;
 }

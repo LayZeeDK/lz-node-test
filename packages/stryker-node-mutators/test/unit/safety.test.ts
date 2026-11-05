@@ -7,10 +7,14 @@ import type { Location } from '@stryker-mutator/api/core';
 import { lzTestEach } from '@layzee/node-test-extensions';
 import type { LzOperator } from '@layzee/stryker-mutator-core';
 import { instrumentWith, mutantsOf } from '../mutants-of.fixtures.ts';
-import { productionOperators } from '../../src/operators.ts';
+import { nodeOperators } from '../../src/operators.ts';
 
-const operators = productionOperators;
+const operators = nodeOperators;
 const allowed: ReadonlySet<string> = new Set(['Error', 'Promise.reject']);
+const listenerSwaps: ReadonlyMap<string, string> = new Map([
+  ['on', 'once'],
+  ['once', 'on'],
+]);
 const keywords: ReadonlySet<string> = new Set([
   'catch',
   'for',
@@ -67,8 +71,18 @@ async function newCallees(operator: LzOperator, source: string): Promise<string[
   return mutants.map(({ location, replacement }) => {
     const before = callees(textAt(source, location));
 
-    return [...callees(replacement)].filter((name) => !before.has(name) && !allowed.has(name));
+    return [...callees(replacement)].filter(
+      (name) => !before.has(name) && !allowed.has(name) && !isListenerSwap(name, before),
+    );
   });
+}
+
+/** `emitter.once` where the code called `emitter.on`, or the reverse: the same receiver's other listener method. */
+function isListenerSwap(name: string, before: ReadonlySet<string>): boolean {
+  const dot = name.lastIndexOf('.');
+  const other = listenerSwaps.get(name.slice(dot + 1));
+
+  return dot !== -1 && other !== undefined && before.has(`${name.slice(0, dot)}.${other}`);
 }
 
 describe('safety', () => {
