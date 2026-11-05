@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 import timers from 'node:timers/promises';
 
-import { MutantRunStatus } from '@stryker-mutator/api/test-runner';
+import { DryRunStatus, MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import { isRunning } from '../../src/dirs.ts';
 import {
@@ -132,6 +132,19 @@ describe('LzNodeTestTestRunner deadline', () => {
       failureMessage: 'expected failure',
       nrOfTests: 1,
     });
+  });
+
+  it('reports a dry run whose later file timed out as timed out, though an earlier file failed, with bail disabled', async (t) => {
+    const dir = project(t, { 'a.test.mjs': failing, 'b.test.mjs': passing });
+    const runner = await initRunner(['*.test.mjs']);
+    const runFile = runner.runFile.bind(runner);
+    // The dry run has no deadline of its own; this one has passed before b starts.
+    runner.runFile = (file, run, memoryLimitMB) =>
+      runFile(file, run, memoryLimitMB, file === join(dir, 'b.test.mjs') ? AbortSignal.abort() : undefined);
+
+    const result = await settle(runner.dryRun({ ...dryRun, disableBail: true }));
+
+    assert.strictEqual(result.status, DryRunStatus.Timeout, JSON.stringify(result));
   });
 
   it('reports the result of a mutant run whose deadline passed without ending any file process', async (t) => {

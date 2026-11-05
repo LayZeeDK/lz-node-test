@@ -717,7 +717,9 @@ export class LzNodeTestTestRunner implements TestRunner {
       if ('end' in outcome) {
         // With bail disabled, the tests that failed before a later file timed out still kill the mutant.
         const killedBefore =
-          outcome.end.status === DryRunStatus.Timeout && tests.some((test) => test.status === TestStatus.Failed);
+          !run.dryRun &&
+          outcome.end.status === DryRunStatus.Timeout &&
+          tests.some((test) => test.status === TestStatus.Failed);
 
         if (!killedBefore) {
           return outcome.end;
