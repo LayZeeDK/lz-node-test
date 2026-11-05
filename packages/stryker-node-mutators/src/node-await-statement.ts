@@ -39,6 +39,7 @@ function isInsideTeardown(path: NodePath): boolean {
   return path.findParent((parent) => parent.isFunction() && teardowns.has(nodeTestCallee(parent)?.name)) !== null;
 }
 
+/** Narrower than any parameter, as bindings.ts takes for `t.assert`: a fastify plugin's `app` parameter has `after` too. */
 function isTestContext(path: NodePath, name: string): boolean {
   const callback = path.scope.getBinding(name)?.path.parentPath;
 
@@ -47,7 +48,7 @@ function isTestContext(path: NodePath, name: string): boolean {
 
 /**
  * The node:test function that `callback` is passed to: an import, by its imported name (undefined for the default
- * export), or a method of a test context.
+ * export), or a method of a node:test import or of a test context.
  */
 function nodeTestCallee(callback: NodePath): { readonly name: string | undefined } | undefined {
   const call = callback.parentPath;
@@ -64,9 +65,12 @@ function nodeTestCallee(callback: NodePath): { readonly name: string | undefined
     return from !== undefined && nodeTest.has(from.source) ? { name: from.imported } : undefined;
   }
 
-  return callee.type === 'MemberExpression' &&
-    callee.object.type === 'Identifier' &&
-    isTestContext(call, callee.object.name)
-    ? { name: lzPropertyName(callee) }
-    : undefined;
+  if (callee.type !== 'MemberExpression' || callee.object.type !== 'Identifier') {
+    return undefined;
+  }
+
+  const from = lzImportOf(call, callee.object.name);
+  const onNodeTest = from === undefined ? isTestContext(call, callee.object.name) : nodeTest.has(from.source);
+
+  return onNodeTest ? { name: lzPropertyName(callee) } : undefined;
 }

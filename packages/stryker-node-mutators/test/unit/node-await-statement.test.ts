@@ -54,6 +54,14 @@ describe('LzNodeAwaitStatement', () => {
       "import { test } from 'node:test';\ntest('outer', async (t) => {\n  t.test('inner', async (s) => {\n    s.afterEach(async () => {\n      await app.close();\n    });\n  });\n});",
     ],
     [
+      "an awaited call in an after callback of node:test's default export",
+      "import test from 'node:test';\ntest.after(async () => {\n  await server.close();\n});",
+    ],
+    [
+      'an awaited call in an afterEach callback of a node:test namespace import',
+      "import * as nt from 'node:test';\nnt.afterEach(async () => {\n  await server.close();\n});",
+    ],
+    [
       'an awaited call nested in a function inside a node:test after callback',
       "import { after } from 'node:test';\nafter(() => Promise.all(servers.map(async (server) => {\n  await server.close();\n})));",
     ],
