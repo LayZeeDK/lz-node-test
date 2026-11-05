@@ -275,6 +275,13 @@ describe('lzStoredFiles', () => {
       message: `The dry-run store's files entry ${key} is no JSON array of test files: ${content}`,
     });
   });
+
+  lzTestFor(['', '['])('keeps the parse error of content %j as the cause', (content) => {
+    assert.throws(
+      () => lzStoredFiles(key, content),
+      (error) => error instanceof Error && error.cause instanceof SyntaxError,
+    );
+  });
 });
 
 describe('lzFilesFor', () => {

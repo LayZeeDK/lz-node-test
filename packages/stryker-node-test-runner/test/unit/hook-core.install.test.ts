@@ -1061,6 +1061,10 @@ describe('a test file whose parent process is gone', () => {
     assert.deepEqual(watched('linux', {}, { env: fileEnv() }).polls, []);
   });
 
+  lzTestEach(['', '0', 'runner'])("watches no parent when the runner's pid is %j, which names no process", (pid) => {
+    assert.deepEqual(watched('linux', {}, { env: { ...fileEnv(), [envNames.runner]: pid } }).polls, []);
+  });
+
   it('watches no parent on Windows, where the job object ends the process with its parent', () => {
     assert.deepEqual(watched('win32').polls, []);
   });
