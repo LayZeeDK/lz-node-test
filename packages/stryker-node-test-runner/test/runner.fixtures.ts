@@ -20,6 +20,7 @@ import {
   type TestResult,
 } from '@stryker-mutator/api/test-runner';
 
+import { lzDirPrefix } from '../src/dirs.ts';
 import { lzShortenHeldOpen, LzNodeTestTestRunner, type LzNodeTestOptions } from '../src/runner.ts';
 
 export const activeMutant = INSTRUMENTER_CONSTANTS.ACTIVE_MUTANT_ENV_VARIABLE;
@@ -228,7 +229,7 @@ const stalledExitDelayMs = 10_000;
 
 export function ownCacheDirs(): string[] {
   return readdirSync(tmpdir())
-    .filter((name) => name.startsWith(`lz-node-test-cache-${process.pid}-`))
+    .filter((name) => name.startsWith(lzDirPrefix('cache', process.pid)))
     .sort();
 }
 
