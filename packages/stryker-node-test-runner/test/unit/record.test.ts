@@ -18,11 +18,24 @@ import {
   recordName,
   testId,
   uniqueIds,
+  envNames,
 } from '../../src/record.ts';
 
 const file = join('/repo', 'a.test.mjs');
 // Fixed, as the record-name tests carry it in their names, which Stryker selects a mutant's tests by.
 const nonce = 'c2563c34-4f2f-439d-962d-51e1663f0dcd';
+
+describe('envNames', () => {
+  it("names each variable once, with the runner's prefix, as a POSIX shell can set it", () => {
+    const names = Object.values(envNames);
+
+    assert.deepEqual(
+      names.filter((name) => !/^LZ_STRYKER_NODE_TEST_[A-Z_]+$/.test(name)),
+      [],
+    );
+    assert.equal(new Set(names).size, names.length);
+  });
+});
 
 describe('testId', () => {
   lzTestFor<readonly [string, string]>([
