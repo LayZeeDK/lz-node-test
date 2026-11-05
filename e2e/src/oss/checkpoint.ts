@@ -130,8 +130,8 @@ export function lzCheckpointKey(inputs: LzCheckpointKeyInputs): string {
   return JSON.stringify([...lzDecidingFields.map((field) => inputs[field]), inputs.mutate, inputs.strykerConfig]);
 }
 
-/** Each installed package's path and version from npm's `node_modules/.package-lock.json`, one per line, sorted. */
-export function lzInstalledVersions(hiddenLockfile: string): string {
+/** Each installed package's path and version from npm's `node_modules/.package-lock.json`, as `path@version`, sorted. */
+export function lzInstalledVersions(hiddenLockfile: string): string[] {
   const lockfile: unknown = JSON.parse(hiddenLockfile);
   const packages = lzIsRecord(lockfile) ? lockfile['packages'] : undefined;
 
@@ -143,8 +143,7 @@ export function lzInstalledVersions(hiddenLockfile: string): string {
     .map(
       ([path, entry]) => `${path}@${lzIsRecord(entry) && typeof entry['version'] === 'string' ? entry['version'] : ''}`,
     )
-    .sort()
-    .join('\n');
+    .sort();
 }
 
 /** The arguments that have Stryker resume from `file`, keep it up to date through this module, and overwrite it at the end. */

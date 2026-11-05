@@ -1,4 +1,4 @@
-import { lzIsRecord } from '../report.ts';
+import { lzIsRecord, lzIsStrings } from '../report.ts';
 import type { LzOssPatch } from './options.ts';
 import type { LzProcessPeaks } from './processes.ts';
 import type { LzBySide, LzComparison, LzMutantsScore } from './verdicts.ts';
@@ -52,6 +52,8 @@ export interface LzOssHeader extends LzDecidingFields {
   /** The `--mutate` patterns; empty when the run mutated the project's whole set. */
   readonly mutate: readonly string[];
   readonly tarballs: readonly string[];
+  /** What installedDigest hashes, so a merge that refuses two digests can name the packages that differ. */
+  readonly installedVersions: readonly string[];
   readonly startedAt: string;
 }
 
@@ -95,6 +97,8 @@ export type LzOssResult = LzOssHeader &
 export interface LzParsedOssResult {
   readonly project: string;
   readonly deciding: ReadonlyMap<keyof LzDecidingFields, unknown>;
+  /** Undefined for a run of a driver that did not record them. */
+  readonly installedVersions: readonly string[] | undefined;
   readonly sides: Readonly<Record<string, unknown>>;
 }
 
@@ -113,10 +117,15 @@ export function lzParseOssResult(file: string, value: unknown): LzParsedOssResul
       throw new Error(`${file} is not the result.json of a driver run that a merge can read: it lacks ${missing}.`);
     }
 
-    const { project, sides } = value;
+    const { project, sides, installedVersions } = value;
 
     if (typeof project === 'string' && lzIsRecord(sides)) {
-      return { project, deciding: new Map(lzDecidingFields.map((field) => [field, value[field]])), sides };
+      return {
+        project,
+        deciding: new Map(lzDecidingFields.map((field) => [field, value[field]])),
+        installedVersions: lzIsStrings(installedVersions) ? installedVersions : undefined,
+        sides,
+      };
     }
   }
 

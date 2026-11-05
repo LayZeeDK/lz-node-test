@@ -19,6 +19,7 @@ interface LzBatch {
 interface LzRun {
   readonly project: string;
   readonly deciding: ReadonlyMap<keyof LzDecidingFields, unknown>;
+  readonly installedVersions: readonly string[] | undefined;
   readonly reports: readonly LzBatch[];
 }
 
@@ -44,7 +45,9 @@ export function lzMerge(files: readonly string[], out: string): string {
     const distinct = json.flatMap((text, index) => (json.indexOf(text) === index ? [values[index]] : []));
 
     if (distinct.length !== 1) {
-      throw new Error(`--merge takes runs of one ${field}; found ${distinct.map(shown).join(' and ')}.`);
+      const differing = field === 'installedDigest' ? installedBySome(runs) : '';
+
+      throw new Error(`--merge takes runs of one ${field}; found ${distinct.map(shown).join(' and ')}.${differing}`);
     }
   });
 
@@ -68,7 +71,10 @@ export function lzMerge(files: readonly string[], out: string): string {
 }
 
 function readRun(file: string): LzRun {
-  const { project, deciding, sides } = lzParseOssResult(file, JSON.parse(readFileSync(file, 'utf8')));
+  const { project, deciding, installedVersions, sides } = lzParseOssResult(
+    file,
+    JSON.parse(readFileSync(file, 'utf8')),
+  );
   const ran = lzSides.filter((side) => side in sides);
 
   if (ran.length === 0) {
@@ -78,6 +84,7 @@ function readRun(file: string): LzRun {
   return {
     project,
     deciding,
+    installedVersions,
     reports: ran.map((side) => {
       const entry = sides[side];
       const reportFile = `${side}.mutation.json`;
@@ -104,6 +111,19 @@ function readRun(file: string): LzRun {
 }
 
 /** For a refusal only, which names a commit or version plainly; the match itself compares JSON. */
+/** The installed versions that not every run has, when every run recorded its versions; empty otherwise. */
+function installedBySome(runs: readonly LzRun[]): string {
+  const lists = runs.flatMap(({ installedVersions }) => (installedVersions === undefined ? [] : [installedVersions]));
+
+  if (lists.length !== runs.length) {
+    return '';
+  }
+
+  const some = [...new Set(lists.flat())].filter((version) => !lists.every((list) => list.includes(version))).sort();
+
+  return ` Installed by some runs only: ${some.join(', ')}.`;
+}
+
 function shown(value: unknown): string {
   return typeof value === 'string' ? value : JSON.stringify(value);
 }

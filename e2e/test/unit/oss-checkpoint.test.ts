@@ -264,7 +264,7 @@ describe('lzInstalledVersions', () => {
       packages: { 'node_modules/b': { version: '2.0.0' }, 'node_modules/a': { version: '1.0.0', dev: true } },
     });
 
-    assert.equal(lzInstalledVersions(lockfile), 'node_modules/a@1.0.0\nnode_modules/b@2.0.0');
+    assert.deepEqual(lzInstalledVersions(lockfile), ['node_modules/a@1.0.0', 'node_modules/b@2.0.0']);
   });
 
   it('refuses a file that lists no packages', () => {

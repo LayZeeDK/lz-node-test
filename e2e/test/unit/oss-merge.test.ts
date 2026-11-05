@@ -39,7 +39,7 @@ function setup(t: TestContext) {
       name: string,
       project: string,
       mutantsBySide: Partial<Record<LzSide, readonly LzFakeMutant[]>>,
-      headerOverrides: Partial<Record<keyof typeof header, unknown>> = {},
+      headerOverrides: Partial<Record<keyof typeof header | 'installedVersions', unknown>> = {},
       configs: Partial<Record<LzSide, string>> = {},
     ): string => {
       const runDir = join(dir, name);
@@ -205,6 +205,40 @@ describe('lzMerge', () => {
   it('refuses runs that installed different dependency versions', (t) => {
     const { run, out } = setup(t);
     const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { installedDigest: 'i2' })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one installedDigest; found i1 and i2.',
+    });
+  });
+
+  it('names the installed versions that not every run has when the installed versions differ', (t) => {
+    const { run, out } = setup(t);
+    const runs = [
+      run('a', 'p', { lz: [] }, { installedVersions: ['node_modules/a@1.0.0', 'node_modules/b@2.0.0'] }),
+      run(
+        'b',
+        'p',
+        { command: [] },
+        {
+          installedDigest: 'i2',
+          installedVersions: ['node_modules/a@1.0.0', 'node_modules/b@2.1.0', 'node_modules/c@3.0.0'],
+        },
+      ),
+    ];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message:
+        '--merge takes runs of one installedDigest; found i1 and i2. Installed by some runs only: ' +
+        'node_modules/b@2.0.0, node_modules/b@2.1.0, node_modules/c@3.0.0.',
+    });
+  });
+
+  it('names no versions when a run of an older driver recorded none', (t) => {
+    const { run, out } = setup(t);
+    const runs = [
+      run('a', 'p', { lz: [] }, { installedVersions: ['node_modules/a@1.0.0'] }),
+      run('b', 'p', { command: [] }, { installedDigest: 'i2' }),
+    ];
 
     assert.throws(() => lzMerge(runs, out), {
       message: '--merge takes runs of one installedDigest; found i1 and i2.',

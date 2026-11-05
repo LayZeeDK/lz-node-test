@@ -125,11 +125,11 @@ function parseMutant(mutant: unknown, path: string): LzMutantDetail {
     notAReport(`${path}.statusReason`);
   }
 
-  if (!isStrings(killedBy)) {
+  if (!lzIsStrings(killedBy)) {
     notAReport(`${path}.killedBy`);
   }
 
-  if (!isStrings(coveredBy)) {
+  if (!lzIsStrings(coveredBy)) {
     notAReport(`${path}.coveredBy`);
   }
 
@@ -167,7 +167,7 @@ function isStatus(value: unknown): value is LzMutantStatus {
   return statuses.some((status) => status === value);
 }
 
-function isStrings(value: unknown): value is string[] {
+export function lzIsStrings(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
