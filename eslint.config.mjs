@@ -242,6 +242,8 @@ export default [
   {
     files: ['**/*.ts', '**/*.mjs'],
     rules: {
+      // eslint-config-prettier turns it off, but 'all' never conflicts with Prettier.
+      curly: ['error', 'all'],
       '@typescript-eslint/naming-convention': [
         'error',
         // Environment variable names are strings, so they keep UPPER_SNAKE_CASE.
