@@ -134,6 +134,48 @@ const projects: readonly LzOssProject[] = [
     patches: [],
   },
   { name: 'borp', mutate: ['borp.js', 'lib/**/*.js'], testFiles: ['test/*.test.js'], nodeTestFlags: [], patches: [] },
+  {
+    name: 'execa',
+    mutate: ['index.js', 'lib/**/*.js'],
+    // Leaves out test/verbose, whose files fail on Windows with every subtest passing, arguments/encoding-option.js,
+    // which fails the same way, and methods/node.js, whose nodePath tests download a Node.js 16 that has no Windows
+    // arm64 build.
+    testFiles: [
+      'test/convert/*.js',
+      'test/io/*.js',
+      'test/ipc/*.js',
+      'test/pipe/*.js',
+      'test/resolve/*.js',
+      'test/return/*.js',
+      'test/stdio/*.js',
+      'test/terminate/*.js',
+      'test/transform/*.js',
+      'test/arguments/command-resolution.js',
+      'test/arguments/cwd.js',
+      'test/arguments/env.js',
+      'test/arguments/escape-no-icu.js',
+      'test/arguments/escape.js',
+      'test/arguments/fd-options.js',
+      'test/arguments/local.js',
+      'test/arguments/prototype-pollution.js',
+      'test/arguments/shell.js',
+      'test/arguments/specific.js',
+      'test/methods/bind.js',
+      'test/methods/command.js',
+      'test/methods/create.js',
+      'test/methods/main-async.js',
+      'test/methods/override-promise.js',
+      'test/methods/parameters-args.js',
+      'test/methods/parameters-command.js',
+      'test/methods/parameters-options.js',
+      'test/methods/promise.js',
+      'test/methods/script.js',
+      'test/methods/template.js',
+    ],
+    // The suite's own flags: its tests spawn subprocesses and share fixture folders.
+    nodeTestFlags: ['--test-concurrency=1', '--test-timeout=240000'],
+    patches: [],
+  },
 ];
 
 export interface LzMergeOptions {
