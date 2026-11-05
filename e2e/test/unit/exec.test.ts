@@ -58,4 +58,32 @@ describe('lzExec', () => {
     );
     assert.equal((await logOnceItHas(logFile, ['late\n'])).length, 'early\nwarn\nlate\n'.length);
   });
+
+  it('ends a process that outlives its timeout, and names the signal that ended it', async () => {
+    const result = await lzExec(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      cwd: tmpdir(),
+      timeoutMs: 300,
+    });
+
+    assert.deepEqual(
+      { exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut },
+      { exitCode: 1, signal: 'SIGTERM', timedOut: true },
+    );
+  });
+
+  it('records a timeout even when the process exits with its own code on SIGTERM, as Stryker does on Linux', async () => {
+    const stryker = "process.on('SIGTERM', () => process.exit(143)); setInterval(() => {}, 1000);";
+    const result = await lzExec(process.execPath, ['-e', stryker], { cwd: tmpdir(), timeoutMs: 300 });
+
+    assert.equal(result.timedOut, true);
+  });
+
+  it('records no timeout or signal for a process that exits with an error code before its timeout', async () => {
+    const result = await lzExec(process.execPath, ['-e', 'process.exit(3)'], { cwd: tmpdir(), timeoutMs: 60_000 });
+
+    assert.deepEqual(
+      { exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut },
+      { exitCode: 3, signal: null, timedOut: false },
+    );
+  });
 });

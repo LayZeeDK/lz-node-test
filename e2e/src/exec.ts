@@ -4,9 +4,12 @@ import { closeSync, openSync, writeSync } from 'node:fs';
 import type { Readable } from 'node:stream';
 
 export interface LzExecResult {
+  /** 1 when a signal ended the process. */
   readonly exitCode: number;
+  readonly signal: NodeJS.Signals | null;
   readonly stdout: string;
   readonly stderr: string;
+  /** Set by the timer, as a process that handles the signal, such as Stryker on Linux, exits with its own code. */
   readonly timedOut: boolean;
 }
 
@@ -24,16 +27,16 @@ export async function lzExec(
   args: readonly string[],
   { cwd, env = process.env, timeoutMs = 0, logFile }: LzExecOptions,
 ): Promise<LzExecResult> {
-  const timeoutSignal = 'SIGTERM';
-  const child = spawn(file, args, {
-    cwd,
-    env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: timeoutMs,
-    killSignal: timeoutSignal,
-    windowsHide: true,
-  });
-  const closed: Promise<unknown[]> = once(child, 'close');
+  const child = spawn(file, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  const closed = once(child, 'close');
+  let timedOut = false;
+  const timer =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          child.kill('SIGTERM');
+        }, timeoutMs)
+      : undefined;
   const log = logFile === undefined ? undefined : openSync(logFile, 'w');
   const collect = (stream: Readable): string[] => {
     const chunks: string[] = [];
@@ -50,16 +53,22 @@ export async function lzExec(
   };
   const out = collect(child.stdout);
   const err = collect(child.stderr);
-  const [code, signal] = await closed;
+
+  try {
+    await closed;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (log !== undefined) {
     closeSync(log);
   }
 
   return {
-    exitCode: typeof code === 'number' ? code : 1,
+    exitCode: child.exitCode ?? 1,
+    signal: child.signalCode,
     stdout: out.join(''),
     stderr: err.join(''),
-    timedOut: timeoutMs > 0 && signal === timeoutSignal,
+    timedOut,
   };
 }
