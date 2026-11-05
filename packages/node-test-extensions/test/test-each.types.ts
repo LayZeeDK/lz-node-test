@@ -36,6 +36,15 @@ lzTestEach([1, 2])('extra', (_n, _extra: string) => {});
 lzTestEach`a | b ${1} | ${2}`('template', (_row) => {
   true satisfies IsAny<typeof _row>;
 });
+abstract class Shape {
+  abstract area(): number;
+}
+
+lzTestEach([1])(Date, () => {});
+lzTestEach([1])(Shape, () => {});
+lzTestEach([1])(Math.max, () => {});
+// @ts-expect-error A name is a string, a function or a class.
+lzTestEach([1])({ name: 'x' }, () => {});
 lzTestEach([1])('timeout', () => {}, 100);
 lzTestEach([1])('options', { timeout: 100, fails: true, skip: 'reason' }, () => {});
 lzTestEach([1])('todo');
