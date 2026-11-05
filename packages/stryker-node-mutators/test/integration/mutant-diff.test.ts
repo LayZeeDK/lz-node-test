@@ -16,7 +16,7 @@ describe('corpusDiff', () => {
 
     const output = execFileSync(
       process.execPath,
-      [join(import.meta.dirname, '..', '..', 'src', 'corpus-diff.ts'), file],
+      ['--conditions=@layzee/source', join(import.meta.dirname, '..', '..', 'src', 'corpus-diff.ts'), file],
       {
         encoding: 'utf8',
         windowsHide: true,
