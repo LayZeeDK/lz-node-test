@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { LzNodeTestExperimentalMutator } from '../../src/index.ts';
-import { testOperatorSets } from '../../src/operators.ts';
-
-const experimental: readonly LzNodeTestExperimentalMutator[] = ['LzNodeTestCatchAssert'];
+import { testOperators, testOperatorSets } from '../../src/operators.ts';
 
 describe('testOperatorSets', () => {
   it('names the default test-code operators', () => {
@@ -18,10 +15,20 @@ describe('testOperatorSets', () => {
     assert.deepEqual(testOperatorSets.optIn, []);
   });
 
-  it('names the experimental test-code operators as the options type does', () => {
+  it('names the experimental test-code operators', () => {
     assert.deepEqual(
       testOperatorSets.experimental.map(({ name }) => name),
-      experimental,
+      ['LzNodeTestCatchAssert'],
     );
+  });
+});
+
+describe('testOperators', () => {
+  it('lists every operator of the sets', () => {
+    assert.deepEqual(testOperators, [
+      ...testOperatorSets.defaults,
+      ...testOperatorSets.optIn,
+      ...testOperatorSets.experimental,
+    ]);
   });
 });

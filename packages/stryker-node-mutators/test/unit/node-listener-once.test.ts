@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { mutantsOf } from '../mutants-of.fixtures.ts';
 import { nodeListenerOnce } from '../../src/node-listener-once.ts';
+import { mutantsOf } from '../mutants-of.fixtures.ts';
 
 const oneShotEvents = [
   'close',
@@ -25,17 +25,18 @@ const oneShotEvents = [
 
 describe('LzNodeListenerOnce', () => {
   lzTestEach([
-    ['on', "emitter.on('data', f);", "emitter.once('data', f)"],
-    ['once', "emitter.once('data', f);", "emitter.on('data', f)"],
-    ["an error's on", "stream.on('error', f);", "stream.once('error', f)"],
+    ['on', "emitter.on('data', f);", 'once'],
+    ['once', "emitter.once('data', f);", 'on'],
+    ["an error's on", "stream.on('error', f);", 'once'],
     // sonic-boom/index.js:335
-    ["this's on", "this.on('newListener', f);", "this.once('newListener', f)"],
+    ["this's on", "this.on('newListener', f);", 'once'],
     // restartable/index.js:45
-    ['a once of a request', "server.once('request', handler);", "server.on('request', handler)"],
-    ['the on of a member', "fastify.server.on('upgrade', f);", "fastify.server.once('upgrade', f)"],
-    ["the process's on", "process.on('SIGINT', f);", "process.once('SIGINT', f)"],
-    ['an on whose value is used', "const self = emitter.on('data', f);", "emitter.once('data', f)"],
-    ['an on with more arguments', "emitter.on('data', f, extra);", "emitter.once('data', f, extra)"],
+    ['a once of a request', "server.once('request', handler);", 'on'],
+    ['the on of a member', "fastify.server.on('upgrade', f);", 'once'],
+    ["the process's on", "process.on('SIGINT', f);", 'once'],
+    ['an on whose value is used', "const self = emitter.on('data', f);", 'once'],
+    ['an on with more arguments', "emitter.on('data', f, extra);", 'once'],
+    ['an on with a type argument', "emitter.on<string>('data', f);", 'once'],
   ])('swaps %s', async (_title, source, expected) => {
     assert.deepEqual(await mutantsOf(nodeListenerOnce, source), [expected]);
   });

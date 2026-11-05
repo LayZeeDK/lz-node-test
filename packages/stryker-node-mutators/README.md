@@ -47,23 +47,30 @@ or `stryker.config.js` in a package with `"type": "module"`, as a JSON configura
 
 ### Opt-in and experimental mutators
 
-The default mutators always run. Two more kinds run only when the options turn them on:
+The default mutators run unless Stryker's `mutator.excludedMutations` leaves them out. Two more kinds run only when the
+options turn them on:
 
 - An opt-in mutator works as described but makes few mutants or many equivalent ones in typical code. Turn one on by
   its name, or all of them with `extended`.
 - An experimental mutator has been measured on too few projects to run by default, and may change or go in a minor
   release. Turn one on by its name inside `experimental`, or all of them with `experimental: true`.
 
+Call it once. This call turns on one opt-in and one experimental mutator:
+
 ```js
 await lzNodeMutators({
   LzNodeAssertStatement: true,
   experimental: { LzNodeByteLength: true },
 });
+```
 
+This call turns on every opt-in and every experimental mutator:
+
+```js
 await lzNodeMutators({ extended: true, experimental: true });
 ```
 
-Each option takes only `true`. Turn a mutator off with Stryker's `mutator.excludedMutations`, or with a disable comment
+Each option takes only `true`; an option left `undefined` counts as absent. Turn a mutator off with Stryker's `mutator.excludedMutations`, or with a disable comment
 as below. The call throws on a name it does not know, on another value than `true`, and on a name in the wrong place,
 such as an experimental mutator outside `experimental`; the message says where the name belongs. A mutator keeps its
 name when it moves from experimental to opt-in or to the defaults; its option then throws, saying where it went.

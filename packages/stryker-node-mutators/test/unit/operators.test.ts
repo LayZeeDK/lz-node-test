@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { LzNodeExperimentalMutator, LzNodeOptInMutator } from '../../src/index.ts';
-import { nodeOperatorSets } from '../../src/operators.ts';
-
-const optIn: readonly LzNodeOptInMutator[] = ['LzNodeAssertStatement', 'LzNodeListenerOnce'];
-const experimental: readonly LzNodeExperimentalMutator[] = ['LzNodeByteLength', 'LzNodeCallbackError'];
+import { nodeOperators, nodeOperatorSets } from '../../src/operators.ts';
 
 describe('nodeOperatorSets', () => {
   it('names the default operators', () => {
@@ -15,17 +11,27 @@ describe('nodeOperatorSets', () => {
     );
   });
 
-  it('names the opt-in operators as the options type does', () => {
+  it('names the opt-in operators', () => {
     assert.deepEqual(
       nodeOperatorSets.optIn.map(({ name }) => name),
-      optIn,
+      ['LzNodeAssertStatement', 'LzNodeListenerOnce'],
     );
   });
 
-  it('names the experimental operators as the options type does', () => {
+  it('names the experimental operators', () => {
     assert.deepEqual(
       nodeOperatorSets.experimental.map(({ name }) => name),
-      experimental,
+      ['LzNodeByteLength', 'LzNodeCallbackError'],
     );
+  });
+});
+
+describe('nodeOperators', () => {
+  it('lists every operator of the sets', () => {
+    assert.deepEqual(nodeOperators, [
+      ...nodeOperatorSets.defaults,
+      ...nodeOperatorSets.optIn,
+      ...nodeOperatorSets.experimental,
+    ]);
   });
 });

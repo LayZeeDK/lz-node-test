@@ -1,4 +1,4 @@
-import type { LzOperatorSets } from '@layzee/stryker-mutator-core';
+import { lzAllOperators, type LzOperatorSets } from '@layzee/stryker-mutator-core';
 import { nodeAssertStatement } from './node-assert-statement.ts';
 import { nodeAwaitStatement } from './node-await-statement.ts';
 import { nodeByteLength } from './node-byte-length.ts';
@@ -9,14 +9,10 @@ import { nodeListenerOnce } from './node-listener-once.ts';
 import { nodeReturnAwait } from './node-return-await.ts';
 import { nodeTimerDelay } from './node-timer-delay.ts';
 
-export const nodeOperatorSets: LzOperatorSets = {
+export const nodeOperatorSets = {
   defaults: [nodeTimerDelay, nodeEventName, nodeAwaitStatement, nodeReturnAwait, nodeExitCode],
   optIn: [nodeAssertStatement, nodeListenerOnce],
   experimental: [nodeByteLength, nodeCallbackError],
-};
+} satisfies LzOperatorSets;
 
-export const nodeOperators = [
-  ...nodeOperatorSets.defaults,
-  ...nodeOperatorSets.optIn,
-  ...nodeOperatorSets.experimental,
-];
+export const nodeOperators = lzAllOperators(nodeOperatorSets);

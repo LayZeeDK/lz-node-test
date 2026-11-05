@@ -5,8 +5,8 @@
 export const source = '--conditions=@layzee/source';
 
 /**
- * A package's config for its production code: `config` with the production operators added to Stryker's mutators,
- * LzNodeAssertStatement included, as these packages assert their invariants with node:assert.
+ * A package's config for its production code: `config` with the default node mutators added to Stryker's, and the
+ * opt-in LzNodeAssertStatement, as these packages assert their invariants with node:assert.
  * The installs live here and not in the packages' configs, as an import there would make each package depend on the
  * mutator packages, which depend on some of them.
  *

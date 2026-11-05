@@ -5,10 +5,11 @@ import { lzCalleeRoot, lzPropertyName, type LzOperator } from '@layzee/stryker-m
 /**
  * Empties the `try` block of a `try`/`catch` whose `catch` asserts and does not throw, so a survivor is a test that
  * passes when the code under test stops throwing; `assert.throws` or a plan would catch it. Assertions are matched by
- * syntax, so CommonJS `require` of node:assert counts: any method other than `fail` of a callee rooted at `assert`,
- * any method of an `assert` member, and a call of `assert` itself. Functions inside the `catch` are not searched.
+ * syntax, so CommonJS `require` of node:assert counts, unlike in LzNodeTestAssertCall, which follows the import: any
+ * method other than `fail` of a callee rooted at `assert` or of an `assert` member, and a call of `assert` itself.
+ * Functions inside the `catch` are not searched.
  */
-export const nodeTestCatchAssert: LzOperator = {
+export const nodeTestCatchAssert: LzOperator<'LzNodeTestCatchAssert'> = {
   name: 'LzNodeTestCatchAssert',
   sample: "try {\n  JSON.parse('');\n} catch (error) {\n  assert.ok(error);\n}\n",
   *mutate(path, t) {
@@ -34,8 +35,9 @@ function assertsWithoutThrow(body: NodePath<types.BlockStatement>): boolean {
   const found = { asserts: false, throws: false };
 
   body.traverse({
-    ThrowStatement() {
+    ThrowStatement(statement) {
       found.throws = true;
+      statement.stop();
     },
     CallExpression(call) {
       if (isAssertion(call.node.callee)) {

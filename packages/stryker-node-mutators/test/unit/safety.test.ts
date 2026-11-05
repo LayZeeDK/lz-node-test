@@ -11,10 +11,6 @@ import { nodeOperators } from '../../src/operators.ts';
 
 const operators = nodeOperators;
 const allowed: ReadonlySet<string> = new Set(['Error', 'Promise.reject']);
-const listenerSwaps: ReadonlyMap<string, string> = new Map([
-  ['on', 'once'],
-  ['once', 'on'],
-]);
 const keywords: ReadonlySet<string> = new Set([
   'catch',
   'for',
@@ -71,18 +67,8 @@ async function newCallees(operator: LzOperator, source: string): Promise<string[
   return mutants.map(({ location, replacement }) => {
     const before = callees(textAt(source, location));
 
-    return [...callees(replacement)].filter(
-      (name) => !before.has(name) && !allowed.has(name) && !isListenerSwap(name, before),
-    );
+    return [...callees(replacement)].filter((name) => !before.has(name) && !allowed.has(name));
   });
-}
-
-/** `emitter.once` where the code called `emitter.on`, or the reverse: the same receiver's other listener method. */
-function isListenerSwap(name: string, before: ReadonlySet<string>): boolean {
-  const dot = name.lastIndexOf('.');
-  const other = listenerSwaps.get(name.slice(dot + 1));
-
-  return dot !== -1 && other !== undefined && before.has(`${name.slice(0, dot)}.${other}`);
 }
 
 describe('safety', () => {

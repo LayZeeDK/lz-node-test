@@ -3,10 +3,10 @@ import { nodeOperatorSets } from './operators.ts';
 import { lzCorePeerRange, lzPackageName } from './package-name.ts';
 
 /** The mutators that run only when a config turns them on, by name or all with `extended`. */
-export type LzNodeOptInMutator = 'LzNodeAssertStatement' | 'LzNodeListenerOnce';
+export type LzNodeOptInMutator = (typeof nodeOperatorSets.optIn)[number]['name'];
 
 /** The mutators measured on too few projects to run by default, turned on inside `experimental`. */
-export type LzNodeExperimentalMutator = 'LzNodeByteLength' | 'LzNodeCallbackError';
+export type LzNodeExperimentalMutator = (typeof nodeOperatorSets.experimental)[number]['name'];
 
 export type LzNodeMutatorOptions = LzMutatorOptions<LzNodeOptInMutator, LzNodeExperimentalMutator>;
 

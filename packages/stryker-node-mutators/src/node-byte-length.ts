@@ -2,20 +2,25 @@ import type { NodePath, types } from '@babel/core';
 
 import { lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
 
-const byteLength: ReadonlySet<string | undefined> = new Set(['byteLength']);
-const bufferResults: ReadonlySet<string | undefined> = new Set(['from', 'alloc', 'concat']);
+const bufferResults: ReadonlySet<string | undefined> = new Set([
+  'from',
+  'alloc',
+  'allocUnsafe',
+  'allocUnsafeSlow',
+  'concat',
+]);
 const utf8: ReadonlySet<string> = new Set(['utf8', 'utf-8']);
 
 /**
  * `Buffer.byteLength(text)` becomes `text.length`, the mistake of counting a string's characters as its bytes. A
- * `'utf8'` encoding counts too. A Buffer's length is its byte length, so a `Buffer.from`, `Buffer.alloc` or
- * `Buffer.concat` result is left out.
+ * `'utf8'` encoding counts too. A Buffer's length is its byte length, so the result of a Buffer factory such as
+ * `Buffer.from` is left out.
  */
-export const nodeByteLength: LzOperator = {
+export const nodeByteLength: LzOperator<'LzNodeByteLength'> = {
   name: 'LzNodeByteLength',
   sample: 'export const size = Buffer.byteLength(text);\n',
   *mutate(path, t) {
-    if (!path.isCallExpression() || !isBufferCall(path, path.node, byteLength)) {
+    if (!path.isCallExpression() || bufferMethod(path) !== 'byteLength') {
       return;
     }
 
@@ -24,7 +29,7 @@ export const nodeByteLength: LzOperator = {
     if (
       text === undefined ||
       !text.isExpression() ||
-      (text.isCallExpression() && isBufferCall(text, text.node, bufferResults)) ||
+      (text.isCallExpression() && bufferResults.has(bufferMethod(text))) ||
       (encoding !== undefined && !(encoding.isStringLiteral() && utf8.has(encoding.node.value)))
     ) {
       return;
@@ -34,15 +39,18 @@ export const nodeByteLength: LzOperator = {
   },
 };
 
-/** A call of one of `methods` on the global `Buffer`. */
-function isBufferCall(path: NodePath, call: types.CallExpression, methods: ReadonlySet<string | undefined>): boolean {
-  const { callee } = call;
+/** The method of the global `Buffer` that `call` calls, if any. */
+function bufferMethod(call: NodePath<types.CallExpression>): string | undefined {
+  const { callee } = call.node;
 
-  return (
-    callee.type === 'MemberExpression' &&
-    methods.has(lzPropertyName(callee)) &&
-    callee.object.type === 'Identifier' &&
-    callee.object.name === 'Buffer' &&
-    !path.scope.hasBinding('Buffer')
-  );
+  if (
+    callee.type !== 'MemberExpression' ||
+    callee.object.type !== 'Identifier' ||
+    callee.object.name !== 'Buffer' ||
+    call.scope.hasBinding('Buffer')
+  ) {
+    return undefined;
+  }
+
+  return lzPropertyName(callee);
 }

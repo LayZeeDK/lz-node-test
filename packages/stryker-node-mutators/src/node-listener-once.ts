@@ -28,33 +28,35 @@ const swaps: ReadonlyMap<string | undefined, string> = new Map([
  * every event misses the ones after the first. It matches the method name on any receiver, and leaves events that fire
  * at most once and `once('error')`; `on('error')` still becomes `once('error')`.
  */
-export const nodeListenerOnce: LzOperator = {
+export const nodeListenerOnce: LzOperator<'LzNodeListenerOnce'> = {
   name: 'LzNodeListenerOnce',
   sample: "emitter.on('data', () => {});\n",
   *mutate(path, t) {
-    if (!path.isCallExpression()) {
+    if (!path.isIdentifier() || path.key !== 'property') {
       return;
     }
 
-    const {
-      callee,
-      arguments: [event, listener],
-    } = path.node;
+    const callee = path.parentPath;
+    const call = callee.parentPath;
 
-    if (callee.type !== 'MemberExpression' || event?.type !== 'StringLiteral' || listener === undefined) {
+    if (!callee.isMemberExpression() || callee.key !== 'callee' || !call.isCallExpression()) {
       return;
     }
 
-    const method = lzPropertyName(callee);
+    const [event, listener] = call.node.arguments;
+    const method = lzPropertyName(callee.node);
     const swap = swaps.get(method);
 
-    if (swap === undefined || oneShot.has(event.value) || (method === 'once' && event.value === 'error')) {
+    if (
+      event?.type !== 'StringLiteral' ||
+      listener === undefined ||
+      swap === undefined ||
+      oneShot.has(event.value) ||
+      (method === 'once' && event.value === 'error')
+    ) {
       return;
     }
 
-    yield t.callExpression(
-      t.memberExpression(t.cloneNode(callee.object), t.identifier(swap)),
-      path.node.arguments.map((argument) => t.cloneNode(argument)),
-    );
+    yield t.identifier(swap);
   },
 };

@@ -8,7 +8,7 @@ const errors: ReadonlySet<string> = new Set(['err', 'error', 'e', 'er']);
  * it was handed is dropped. The names decide: a callee named `cb`, `callback`, `done` or `next`, or any `destroy`
  * method, called with one argument named `err`, `error`, `e` or `er`.
  */
-export const nodeCallbackError: LzOperator = {
+export const nodeCallbackError: LzOperator<'LzNodeCallbackError'> = {
   name: 'LzNodeCallbackError',
   sample: 'export function end(err: Error, cb: (error?: Error) => void) {\n  cb(err);\n}\n',
   *mutate(path, t) {

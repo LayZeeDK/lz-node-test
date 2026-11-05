@@ -3,7 +3,7 @@ import { testOperatorSets } from './operators.ts';
 import { lzCorePeerRange, lzPackageName } from './package-name.ts';
 
 /** The mutators measured on too few projects to run by default, turned on inside `experimental`. */
-export type LzNodeTestExperimentalMutator = 'LzNodeTestCatchAssert';
+export type LzNodeTestExperimentalMutator = (typeof testOperatorSets.experimental)[number]['name'];
 
 export type LzNodeTestMutatorOptions = LzMutatorOptions<never, LzNodeTestExperimentalMutator>;
 

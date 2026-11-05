@@ -44,7 +44,7 @@ load, while a failed call stops the run.
 Experimental mutators run only when the options turn them on: all of them with `experimental: true`, or one by its
 name, as in `await lzNodeTestMutators({ experimental: { LzNodeTestCatchAssert: true } })`. The options work as in
 [`@layzee/stryker-node-mutators`](../stryker-node-mutators/README.md#opt-in-and-experimental-mutators); this package
-has no opt-in mutators yet.
+has no opt-in mutators yet, so `extended: true` turns on nothing.
 
 ### Default mutators
 
