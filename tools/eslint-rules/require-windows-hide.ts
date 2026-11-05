@@ -7,7 +7,9 @@ const windowsHideInText = /windowsHide['"]?\s*:\s*true/;
 
 function isNamed(key: Node, computed: boolean, name: string): boolean {
   return (
-    (key.type === 'Identifier' && !computed && key.name === name) || (key.type === 'Literal' && key.value === name)
+    (key.type === 'Identifier' && !computed && key.name === name) ||
+    (key.type === 'Literal' && key.value === name) ||
+    (key.type === 'TemplateLiteral' && key.expressions.length === 0 && key.quasis[0]?.value.cooked === name)
   );
 }
 
@@ -45,7 +47,8 @@ function mayShowWindow(node: Node): boolean {
 
   return unwrapped.type === 'Literal'
     ? unwrapped.value !== true
-    : unwrapped.type === 'Identifier' && unwrapped.name === 'undefined';
+    : (unwrapped.type === 'Identifier' && unwrapped.name === 'undefined') ||
+        (unwrapped.type === 'UnaryExpression' && unwrapped.operator === 'void');
 }
 
 const rule: Rule.RuleModule = {
