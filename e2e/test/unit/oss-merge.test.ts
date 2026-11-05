@@ -12,13 +12,16 @@ interface LzFakeMutant {
   readonly status: string;
 }
 
-/** The header fields a merge requires to match across its runs, and one it does not. */
+/** The header fields a merge requires to match across its runs, and two it does not. */
 const header = {
   workspaceCommit: 'abc123',
   sourceCommit: 'f00d',
   node: 'v24.18.1',
   platform: 'win32-arm64',
   mutantTimeoutMs: 30000,
+  installedDigest: 'i1',
+  tarballDigests: ['d1', 'd2'],
+  projectSetup: { mutate: ['index.js'], testFiles: ['test/*.test.js'], patches: [] },
   tarballs: ['a-1.0.0.tgz', 'b-1.0.0.tgz'],
 };
 
@@ -37,7 +40,7 @@ function setup(t: TestContext) {
       project: string,
       mutantsBySide: Partial<Record<LzSide, readonly LzFakeMutant[]>>,
       headerOverrides: Partial<Record<keyof typeof header, unknown>> = {},
-      setups: Partial<Record<LzSide, string>> = {},
+      configs: Partial<Record<LzSide, string>> = {},
     ): string => {
       const runDir = join(dir, name);
 
@@ -67,7 +70,7 @@ function setup(t: TestContext) {
           sides: Object.fromEntries(
             lzSides
               .filter((side) => side in mutantsBySide)
-              .map((side) => [side, { stryker: { reported: true }, setup: setups[side] ?? `${side} setup` }]),
+              .map((side) => [side, { stryker: { reported: true }, strykerConfig: configs[side] ?? `${side} config` }]),
           ),
         }),
       );
@@ -139,7 +142,7 @@ describe('lzMerge', () => {
     });
   });
 
-  it('merges runs of two workspace commits whose sides ran the same setup', (t) => {
+  it('merges runs of two workspace commits whose sides ran the same Stryker configuration', (t) => {
     const { run, out } = setup(t);
     const runs = [
       run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] }),
@@ -159,24 +162,64 @@ describe('lzMerge', () => {
     });
   });
 
-  it('refuses runs of one side with two setups, and names both', (t) => {
+  it('refuses runs of one side with two Stryker configurations, and names both', (t) => {
     const { run, out } = setup(t);
     const first = run('a', 'p', { command: [] }, {}, { command: 'node --test --test-concurrency=1' });
     const second = run('b', 'p', { command: [] }, {}, { command: 'node --test --test-isolation=none' });
 
     assert.throws(() => lzMerge([first, second], out), {
-      message: `--merge takes runs of one setup per side; the command side of ${first} and ${second} differ.`,
+      message: `--merge takes runs of one Stryker configuration per side; the command sides of ${first} and ${second} ran different ones.`,
     });
   });
 
-  it('refuses a side that records no setup, such as a run of an older driver', (t) => {
+  it('refuses a side that records no Stryker configuration', (t) => {
     const { run, out } = setup(t);
     const file = run('a', 'p', { lz: [] });
 
     writeFileSync(file, JSON.stringify({ project: 'p', ...header, sides: { lz: { stryker: { reported: true } } } }));
 
     assert.throws(() => lzMerge([file], out), {
-      message: `The lz side of ${file} records no setup, so a merge cannot tell what it ran.`,
+      message: `The lz side of ${file} records no strykerConfig, so a merge cannot tell what it ran.`,
+    });
+  });
+
+  it('refuses an lz run and a command run whose shared project setup differs, such as their patches', (t) => {
+    const { run, out } = setup(t);
+    const patched = { ...header.projectSetup, patches: [{ file: 'test/a.test.js', from: 'a', to: 'b' }] };
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { projectSetup: patched })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: /^--merge takes runs of one projectSetup; found \{"mutate".+ and \{"mutate".+"from":"a".+\.$/,
+    });
+  });
+
+  it('refuses runs whose tarballs differ in content under the same names', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { tarballDigests: ['d1', 'd3'] })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one tarballDigests; found ["d1","d2"] and ["d1","d3"].',
+    });
+  });
+
+  it('refuses runs that installed different dependency versions', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { installedDigest: 'i2' })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one installedDigest; found i1 and i2.',
+    });
+  });
+
+  it('refuses the result.json of an older driver, naming the field it lacks', (t) => {
+    const { run, out } = setup(t);
+    const file = run('a', 'p', { lz: [] });
+    const older = Object.fromEntries(Object.entries(header).filter(([field]) => field !== 'installedDigest'));
+
+    writeFileSync(file, JSON.stringify({ project: 'p', ...older, sides: { lz: { stryker: { reported: true } } } }));
+
+    assert.throws(() => lzMerge([file], out), {
+      message: `${file} is not the result.json of a driver run that a merge can read: it lacks installedDigest.`,
     });
   });
 
@@ -213,15 +256,6 @@ describe('lzMerge', () => {
 
     assert.throws(() => lzMerge(runs, out), {
       message: '--merge takes runs of one node; found v24.18.1 and v22.23.1.',
-    });
-  });
-
-  it('refuses runs of two sets of tarballs', (t) => {
-    const { run, out } = setup(t);
-    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { tarballs: ['a-1.0.1.tgz'] })];
-
-    assert.throws(() => lzMerge(runs, out), {
-      message: '--merge takes runs of one tarballs; found [a-1.0.0.tgz, b-1.0.0.tgz] and [a-1.0.1.tgz].',
     });
   });
 

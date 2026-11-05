@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { lzIsRecord, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
-import { lzParseOssResult, type LzMergeResult } from './result.ts';
+import { lzDecidingFields, lzParseOssResult, type LzDecidingFields, type LzMergeResult } from './result.ts';
 import { lzBySide, lzComparison, lzMutantKey, lzReportScore } from './verdicts.ts';
 
 /** One side's report from one run. */
@@ -11,20 +11,14 @@ interface LzBatch {
   /** The result.json it came from. */
   readonly file: string;
   readonly side: LzSide;
-  /** What the side ran; batches of one side must share it, whichever workspace commit wrote them. */
-  readonly setup: string;
+  /** Batches of one side must share it, whichever workspace commit wrote them. */
+  readonly strykerConfig: string;
   readonly report: LzReport;
 }
 
-/** The header fields that must match across a merge's runs, beside the project and each side's setup. */
-type LzMatchedField = 'sourceCommit' | 'node' | 'platform' | 'mutantTimeoutMs' | 'tarballs';
-
-const matchedFields: readonly LzMatchedField[] = ['sourceCommit', 'node', 'platform', 'mutantTimeoutMs', 'tarballs'];
-
 interface LzRun {
   readonly project: string;
-  /** Each matched field as the refusal shows it. */
-  readonly matched: Readonly<Record<LzMatchedField, string>>;
+  readonly deciding: ReadonlyMap<keyof LzDecidingFields, unknown>;
   readonly reports: readonly LzBatch[];
 }
 
@@ -45,8 +39,8 @@ export function lzMerge(files: readonly string[], out: string): string {
     throw new Error(`--merge takes runs of one project; found ${projects.join(' and ')}.`);
   }
 
-  matchedFields.forEach((field) => {
-    const found = [...new Set(runs.map(({ matched }) => matched[field]))];
+  lzDecidingFields.forEach((field) => {
+    const found = [...new Set(runs.map(({ deciding }) => shown(deciding.get(field))))];
 
     if (found.length !== 1) {
       throw new Error(`--merge takes runs of one ${field}; found ${found.join(' and ')}.`);
@@ -71,10 +65,7 @@ export function lzMerge(files: readonly string[], out: string): string {
 }
 
 function readRun(file: string): LzRun {
-  const { project, sourceCommit, node, platform, mutantTimeoutMs, tarballs, sides } = lzParseOssResult(
-    file,
-    JSON.parse(readFileSync(file, 'utf8')),
-  );
+  const { project, deciding, sides } = lzParseOssResult(file, JSON.parse(readFileSync(file, 'utf8')));
   const ran = lzSides.filter((side) => side in sides);
 
   if (ran.length === 0) {
@@ -83,13 +74,7 @@ function readRun(file: string): LzRun {
 
   return {
     project,
-    matched: {
-      sourceCommit,
-      node,
-      platform,
-      mutantTimeoutMs: String(mutantTimeoutMs),
-      tarballs: `[${tarballs.join(', ')}]`,
-    },
+    deciding,
     reports: ran.map((side) => {
       const entry = sides[side];
       const reportFile = `${side}.mutation.json`;
@@ -98,10 +83,10 @@ function readRun(file: string): LzRun {
         throw new Error(`The ${side} side of ${file} wrote no report, so its ${reportFile} is not this run's.`);
       }
 
-      const setup = entry['setup'];
+      const strykerConfig = entry['strykerConfig'];
 
-      if (typeof setup !== 'string') {
-        throw new Error(`The ${side} side of ${file} records no setup, so a merge cannot tell what it ran.`);
+      if (typeof strykerConfig !== 'string') {
+        throw new Error(`The ${side} side of ${file} records no strykerConfig, so a merge cannot tell what it ran.`);
       }
 
       const reportPath = join(dirname(file), reportFile);
@@ -110,20 +95,25 @@ function readRun(file: string): LzRun {
         throw new Error(`The ${side} side of ${file} has no ${reportFile} beside it.`);
       }
 
-      return { file, side, setup, report: lzParseReport(readFileSync(reportPath, 'utf8')) };
+      return { file, side, strykerConfig, report: lzParseReport(readFileSync(reportPath, 'utf8')) };
     }),
   };
+}
+
+/** A string as written, so a refusal names a commit or version plainly; anything else as JSON. */
+function shown(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
 /** One report of all the side's batches. */
 function reportOf(reports: readonly LzBatch[], side: LzSide): LzReport {
   const ofSide = reports.filter((report) => report.side === side);
   const [first] = ofSide;
-  const other = ofSide.find(({ setup }) => setup !== first?.setup);
+  const other = ofSide.find(({ strykerConfig }) => strykerConfig !== first?.strykerConfig);
 
   if (first !== undefined && other !== undefined) {
     throw new Error(
-      `--merge takes runs of one setup per side; the ${side} side of ${first.file} and ${other.file} differ.`,
+      `--merge takes runs of one Stryker configuration per side; the ${side} sides of ${first.file} and ${other.file} ran different ones.`,
     );
   }
 

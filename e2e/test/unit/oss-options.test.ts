@@ -15,7 +15,6 @@ import {
   lzParseMergeOptions,
   lzParseOptions,
   lzStrykerArgs,
-  lzSideSetup,
   lzStrykerConfig,
   lzStrykerOptions,
   type LzOssProject,
@@ -234,11 +233,14 @@ describe('lzParseOptions', () => {
   });
 
   it('says in the usage which header fields the runs of a merge must share', () => {
-    assert.match(lzOssUsage, /project, sourceCommit, node, platform, mutantTimeoutMs and tarballs/);
+    assert.match(
+      lzOssUsage,
+      /project, sourceCommit, node, platform, mutantTimeoutMs, installedDigest,\s+tarballDigests and projectSetup/,
+    );
   });
 
-  it("says in the usage that a merge matches each side's setup, not the workspace commit", () => {
-    assert.match(lzOssUsage, /runs of one side whose setup[\s\S]+differs[\s\S]+the workspace commit may differ/);
+  it("says in the usage that a merge matches each side's Stryker configuration, not the workspace commit", () => {
+    assert.match(lzOssUsage, /runs of one side whose strykerConfig differs[\s\S]+the workspace commit may\s+differ/);
   });
 
   it('says in the usage that a result.json given twice is refused', () => {
@@ -363,23 +365,5 @@ describe('lzStrykerConfig', () => {
 
     assert.match(config, /^import '@layzee\/stryker-node-mutators';\n\nexport default \{\n/);
     assert.match(config, /"testRunner": "command"/);
-  });
-});
-
-describe('lzSideSetup', () => {
-  const flagged = { ...project, nodeTestFlags: ['--test-concurrency=1'] };
-  const patched = { ...project, patches: [{ file: 'test/a.test.js', from: 'a', to: 'b' }] };
-
-  it('changes on the command side with the node --test flags, which only that side runs', () => {
-    assert.notEqual(lzSideSetup('command', flagged), lzSideSetup('command', project));
-  });
-
-  it('stays the same on the lz side when only the node --test flags change', () => {
-    assert.equal(lzSideSetup('lz', flagged), lzSideSetup('lz', project));
-  });
-
-  it("changes on either side with the project's patches", () => {
-    assert.notEqual(lzSideSetup('lz', patched), lzSideSetup('lz', project));
-    assert.notEqual(lzSideSetup('command', patched), lzSideSetup('command', project));
   });
 });

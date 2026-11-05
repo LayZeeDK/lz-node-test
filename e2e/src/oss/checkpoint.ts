@@ -7,7 +7,7 @@ import type { DryRunCompletedEvent, Reporter } from '@stryker-mutator/api/report
 import type { TestResult } from '@stryker-mutator/api/test-runner';
 
 import { lzIsRecord, lzParseReport } from '../report.ts';
-import type { LzOssProject } from './options.ts';
+import { lzDecidingFields, type LzDecidingFields } from './result.ts';
 
 /** The name the driver adds to Stryker's `--reporters`. */
 export const lzCheckpointReporterName = 'lz-checkpoint';
@@ -120,23 +120,14 @@ export function lzCheckpointReport(
 }
 
 /** What decides a side's mutant results beyond the code Stryker diffs itself, so a run that differs starts afresh. */
-export interface LzCheckpointKeyInputs {
-  /** The whole definition: its patches, test files and flags decide results that Stryker's diff cannot see. */
-  readonly project: LzOssProject;
-  readonly sourceCommit: string;
-  readonly node: string;
-  readonly platform: string;
-  /** lzInstalledVersions of the copy: a clone without a lockfile can install newer dependencies on a rerun. */
-  readonly installed: string;
+export interface LzCheckpointKeyInputs extends LzDecidingFields {
   readonly mutate: readonly string[];
-  readonly mutantTimeoutMs: number | null;
-  /** The side's generated Stryker configuration. */
-  readonly config: string;
-  readonly tarballDigests: readonly string[];
+  readonly strykerConfig: string;
 }
 
+/** Of the named fields only, so a header passed whole adds none of its others, such as its start time. */
 export function lzCheckpointKey(inputs: LzCheckpointKeyInputs): string {
-  return JSON.stringify({ ...inputs, tarballDigests: [...inputs.tarballDigests].sort() });
+  return JSON.stringify([...lzDecidingFields.map((field) => inputs[field]), inputs.mutate, inputs.strykerConfig]);
 }
 
 /** Each installed package's path and version from npm's `node_modules/.package-lock.json`, one per line, sorted. */

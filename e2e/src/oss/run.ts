@@ -39,7 +39,6 @@ import {
   lzOssRunPrefix,
   lzSides,
   lzStrykerArgs,
-  lzSideSetup,
   lzStrykerConfig,
   type LzOssOptions,
   type LzSide,
@@ -125,6 +124,9 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     concurrency: options.concurrency,
     timeLimitMinutes: options.timeLimitMinutes,
     mutantTimeoutMs: options.mutantTimeoutMs ?? null,
+    installedDigest: sha256(lzInstalledVersions(readFileSync(join(dir, 'node_modules', '.package-lock.json'), 'utf8'))),
+    tarballDigests: tarballs.map((tarball) => sha256(readFileSync(tarball))).sort(),
+    projectSetup: { mutate: options.project.mutate, testFiles, patches },
     mutate: options.mutate,
     tarballs: tarballs.map((tarball) => basename(tarball)),
     startedAt: new Date().toISOString(),
@@ -137,20 +139,8 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     return;
   }
 
-  const tarballDigests = tarballs.map((tarball) => createHash('sha256').update(readFileSync(tarball)).digest('hex'));
-  const installed = lzInstalledVersions(readFileSync(join(dir, 'node_modules', '.package-lock.json'), 'utf8'));
   const checkpointKey = (side: LzSide): string =>
-    lzCheckpointKey({
-      project: options.project,
-      sourceCommit: header.sourceCommit,
-      node: header.node,
-      platform: header.platform,
-      installed,
-      mutate: header.mutate,
-      mutantTimeoutMs: header.mutantTimeoutMs,
-      config: lzStrykerConfig(side, options.project),
-      tarballDigests,
-    });
+    lzCheckpointKey({ ...header, strykerConfig: lzStrykerConfig(side, options.project) });
   // One side after the other, so that the two never share the machine.
   const runs = await options.sides.reduce<Promise<readonly LzSideRun[]>>(
     async (earlier, side) => [...(await earlier), await runSide(side, context, checkpointKey(side))],
@@ -250,7 +240,7 @@ async function runSide(
       errors,
       wallMs,
       resumedMutants: resumed.ok ? resumed.value : 0,
-      setup: lzSideSetup(side, options.project),
+      strykerConfig: lzStrykerConfig(side, options.project),
       processes: {
         ...lzPeaks(samples),
         leftover: ended.map(({ leftover: { pid, name }, ending }) => ({
@@ -317,6 +307,10 @@ function given(folder: string): string[] {
   }
 
   return found;
+}
+
+function sha256(data: string | Buffer): string {
+  return createHash('sha256').update(data).digest('hex');
 }
 
 async function commitOf(cwd: string): Promise<string> {

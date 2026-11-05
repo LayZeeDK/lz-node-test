@@ -1,18 +1,54 @@
 import { lzIsRecord } from '../report.ts';
+import type { LzOssPatch } from './options.ts';
 import type { LzProcessPeaks } from './processes.ts';
 import type { LzBySide, LzComparison, LzMutantsScore } from './verdicts.ts';
 
-export interface LzOssHeader {
+/** What the project's copy ran with on both sides; the command side's `node --test` flags are in its strykerConfig. */
+export interface LzProjectSetup {
+  readonly mutate: readonly string[];
+  readonly testFiles: readonly string[];
+  readonly patches: readonly LzOssPatch[];
+}
+
+/**
+ * The header fields that decide a run's verdicts beyond its sides' Stryker configurations: a merge matches them across
+ * its runs, and a checkpoint is kept only under the same ones.
+ */
+export interface LzDecidingFields {
   readonly project: string;
-  readonly source: string;
   readonly sourceCommit: string;
-  readonly workspaceCommit: string;
   readonly node: string;
   readonly platform: string;
-  readonly concurrency: number;
-  readonly timeLimitMinutes: number;
   /** Stryker's `timeoutMS` from `--mutant-timeout-ms`; null for Stryker's default. */
   readonly mutantTimeoutMs: number | null;
+  /** sha256 of lzInstalledVersions of the copy: a clone without a lockfile can install newer dependencies on a rerun. */
+  readonly installedDigest: string;
+  /** sha256 of each tarball, sorted: every package is version 0.0.0, so the names cannot tell builds apart. */
+  readonly tarballDigests: readonly string[];
+  readonly projectSetup: LzProjectSetup;
+}
+
+/** Keyed by the interface, so the compiler refuses a field added there and missing here. */
+const decidingFieldSet: Readonly<Record<keyof LzDecidingFields, null>> = {
+  project: null,
+  sourceCommit: null,
+  node: null,
+  platform: null,
+  mutantTimeoutMs: null,
+  installedDigest: null,
+  tarballDigests: null,
+  projectSetup: null,
+};
+
+export const lzDecidingFields: readonly (keyof LzDecidingFields)[] = Object.keys(decidingFieldSet).filter(
+  (field): field is keyof LzDecidingFields => field in decidingFieldSet,
+);
+
+export interface LzOssHeader extends LzDecidingFields {
+  readonly source: string;
+  readonly workspaceCommit: string;
+  readonly concurrency: number;
+  readonly timeLimitMinutes: number;
   /** The `--mutate` patterns; empty when the run mutated the project's whole set. */
   readonly mutate: readonly string[];
   readonly tarballs: readonly string[];
@@ -44,8 +80,8 @@ export interface LzSideResult {
    * retests those whose code or tests changed.
    */
   readonly resumedMutants: number;
-  /** lzSideSetup of the run, which a merge matches across its runs in place of the workspace commit. */
-  readonly setup: string;
+  /** lzStrykerConfig of the side, which a merge matches across its batches of the side. */
+  readonly strykerConfig: string;
   readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
   readonly newInOsTmp: readonly string[];
   readonly leftoverStrykerTmp: readonly string[];
@@ -55,14 +91,10 @@ export interface LzSideResult {
 export type LzOssResult = LzOssHeader &
   ({ readonly preparedIn: string } | ({ readonly sides: LzBySide<LzSideResult> } & LzComparison));
 
-/** What a merge needs of a run's result.json: the header fields it matches, and each side's entry as written. */
+/** What a merge needs of a run's result.json: the deciding fields as written, and each side's entry as written. */
 export interface LzParsedOssResult {
   readonly project: string;
-  readonly sourceCommit: string;
-  readonly node: string;
-  readonly platform: string;
-  readonly mutantTimeoutMs: number | null;
-  readonly tarballs: readonly string[];
+  readonly deciding: ReadonlyMap<keyof LzDecidingFields, unknown>;
   readonly sides: Readonly<Record<string, unknown>>;
 }
 
@@ -75,26 +107,20 @@ export function lzParseOssResult(file: string, value: unknown): LzParsedOssResul
   }
 
   if (lzIsRecord(value)) {
-    const { project, sourceCommit, node, platform, mutantTimeoutMs, tarballs, sides } = value;
+    const missing = lzDecidingFields.find((field) => !(field in value));
 
-    if (
-      typeof project === 'string' &&
-      typeof sourceCommit === 'string' &&
-      typeof node === 'string' &&
-      typeof platform === 'string' &&
-      (typeof mutantTimeoutMs === 'number' || mutantTimeoutMs === null) &&
-      isStrings(tarballs) &&
-      lzIsRecord(sides)
-    ) {
-      return { project, sourceCommit, node, platform, mutantTimeoutMs, tarballs, sides };
+    if (missing !== undefined) {
+      throw new Error(`${file} is not the result.json of a driver run that a merge can read: it lacks ${missing}.`);
+    }
+
+    const { project, sides } = value;
+
+    if (typeof project === 'string' && lzIsRecord(sides)) {
+      return { project, deciding: new Map(lzDecidingFields.map((field) => [field, value[field]])), sides };
     }
   }
 
   throw new Error(`${file} is not the result.json of a driver run.`);
-}
-
-function isStrings(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item: unknown) => typeof item === 'string');
 }
 
 /** The result.json of a merge, which writes no `<side>.mutation.json`. */

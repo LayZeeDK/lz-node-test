@@ -151,17 +151,17 @@ export const lzOssUsage =
   '            file.js:12:4-12:20 for a mutant at 12:5-12:19.\n' +
   '  A side that ends before its report, such as at --time-limit-minutes, leaves <side>.checkpoint.json in --out\n' +
   '  with the mutants it tested, and <side>.checkpoint.json.key naming what it ran with. A rerun into the same --out\n' +
-  '  with the same project definition, source commit, Node.js, --mutate, --mutant-timeout-ms and tarballs tests only\n' +
-  '  the rest; any other rerun discards the checkpoint and says so. A clone with uncommitted changes is not told\n' +
-  '  apart from its commit.\n' +
+  "  with the same fields a merge matches (below), --mutate and the side's Stryker configuration tests only the\n" +
+  '  rest; any other rerun discards the checkpoint and says so. A clone with uncommitted changes is not told apart\n' +
+  '  from its commit.\n' +
   "  --merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside\n" +
   '            it. Batches of one side merge into one; a mutant in two batches is refused. A merged result.json\n' +
   '            is refused: merges do not compose, so merge the runs it lists in mergedFrom. A side that wrote no\n' +
   "            report is refused; a run removes its sides' earlier reports and logs from --out first. Runs that\n" +
-  "            differ in any of result.json's project, sourceCommit, node, platform, mutantTimeoutMs and tarballs\n" +
-  '            are refused, naming the field, as are runs of one side whose setup (the Stryker configuration and\n' +
-  '            patches it ran) differs, or a side that records none; the workspace commit may differ. A result.json\n' +
-  '            given twice is refused, however its path is spelt.';
+  "            differ in any of result.json's project, sourceCommit, node, platform, mutantTimeoutMs, installedDigest,\n" +
+  '            tarballDigests and projectSetup are refused, naming the field, as are a result.json that lacks one,\n' +
+  '            runs of one side whose strykerConfig differs, and a side that records none; the workspace commit may\n' +
+  '            differ. A result.json given twice is refused, however its path is spelt.';
 const positiveInteger = /^[1-9]\d*$/;
 
 export function lzParseMergeOptions(args: readonly string[]): LzMergeOptions {
@@ -309,9 +309,4 @@ export function lzStrykerConfig(side: LzSide, project: LzOssProject): string {
     "import '@layzee/stryker-node-mutators';\n\n" +
     `export default ${JSON.stringify(lzStrykerOptions(side, project), null, 2)};\n`
   );
-}
-
-/** What a side ran beside the run's header: its Stryker configuration and the patches made to the project's copy. */
-export function lzSideSetup(side: LzSide, project: LzOssProject): string {
-  return JSON.stringify({ config: lzStrykerConfig(side, project), patches: project.patches });
 }

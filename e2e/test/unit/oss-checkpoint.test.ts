@@ -274,37 +274,35 @@ describe('lzInstalledVersions', () => {
 
 describe('lzCheckpointKey', () => {
   const inputs: LzCheckpointKeyInputs = {
-    project: { name: 'p', mutate: ['index.js'], testFiles: ['test/*.js'], nodeTestFlags: [], patches: [] },
+    project: 'p',
     sourceCommit: 'c1',
     node: 'v22.23.1',
     platform: 'win32-arm64',
-    installed: 'node_modules/ajv@8.17.1',
-    mutate: ['index.js:1-10'],
     mutantTimeoutMs: 30_000,
-    config: 'export default {};\n',
+    installedDigest: 'i1',
     tarballDigests: ['a', 'b'],
+    projectSetup: { mutate: ['index.js'], testFiles: ['test/*.js'], patches: [] },
+    mutate: ['index.js:1-10'],
+    strykerConfig: 'export default {};\n',
   };
 
   it('differs when any input differs', () => {
     const changed: readonly LzCheckpointKeyInputs[] = [
-      { ...inputs, project: { ...inputs.project, nodeTestFlags: ['--test-concurrency=1'] } },
+      { ...inputs, project: 'q' },
       { ...inputs, sourceCommit: 'c2' },
       { ...inputs, node: 'v24.18.1' },
       { ...inputs, platform: 'linux-arm64' },
-      { ...inputs, installed: 'node_modules/ajv@8.17.2' },
-      { ...inputs, mutate: ['index.js:1-11'] },
       { ...inputs, mutantTimeoutMs: null },
-      { ...inputs, config: 'export default { a: 1 };\n' },
+      { ...inputs, installedDigest: 'i2' },
       { ...inputs, tarballDigests: ['a', 'c'] },
+      { ...inputs, projectSetup: { ...inputs.projectSetup, patches: [{ file: 'a.js', from: 'a', to: 'b' }] } },
+      { ...inputs, mutate: ['index.js:1-11'] },
+      { ...inputs, strykerConfig: 'export default { a: 1 };\n' },
     ];
 
     assert.deepEqual(
       changed.map((other) => lzCheckpointKey(other) === lzCheckpointKey(inputs)),
-      [false, false, false, false, false, false, false, false, false],
+      changed.map(() => false),
     );
-  });
-
-  it('does not depend on the order the tarballs were found in', () => {
-    assert.equal(lzCheckpointKey({ ...inputs, tarballDigests: ['b', 'a'] }), lzCheckpointKey(inputs));
   });
 });
