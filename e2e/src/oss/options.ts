@@ -133,6 +133,7 @@ const projects: readonly LzOssProject[] = [
     nodeTestFlags: ['--test-concurrency=1'],
     patches: [],
   },
+  { name: 'borp', mutate: ['borp.js', 'lib/**/*.js'], testFiles: ['test/*.test.js'], nodeTestFlags: [], patches: [] },
 ];
 
 export interface LzMergeOptions {

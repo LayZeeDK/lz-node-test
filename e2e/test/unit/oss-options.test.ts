@@ -145,7 +145,7 @@ describe('lzParseOptions', () => {
   it('refuses a project it has no settings for, and names those it has', () => {
     assert.throws(() => lzParseOptions(required.with(1, 'pino')), {
       message:
-        /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify, restartable, sonic-boom, pino-pretty\.$/,
+        /--project is one of env-schema, fastify-cookie, fast-json-stringify, fastify, restartable, sonic-boom, pino-pretty, borp\.$/,
     });
   });
 
