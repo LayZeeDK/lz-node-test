@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
 import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
-import { lzAssertMethod } from '@layzee/stryker-node-mutators/bindings';
+import { lzAssertMethod, lzNodeTest } from '@layzee/stryker-node-mutators/bindings';
 
 const message = 'Stryker';
 const testFunctions: ReadonlySet<string | undefined> = new Set(['it', 'test']);
@@ -140,7 +140,11 @@ function isNodeTest(path: NodePath, callee: types.Node): boolean {
 
 /** node:test's default or namespace import, or its `it` or `test`, which also carry the other test functions. */
 function isTestImport(from: ReturnType<typeof lzImportOf>): boolean {
-  return from?.source === 'node:test' && (from.imported === undefined || testFunctions.has(from.imported));
+  return (
+    from !== undefined &&
+    lzNodeTest.has(from.source) &&
+    (from.imported === undefined || testFunctions.has(from.imported))
+  );
 }
 
 /** A parameter, which node:test passes the test context in. */

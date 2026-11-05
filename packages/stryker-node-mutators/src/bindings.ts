@@ -11,6 +11,9 @@ export function lzBuiltin(...names: readonly string[]): ReadonlySet<string> {
 /** The module names of node:assert. */
 export const lzNodeAssert = lzBuiltin('assert', 'assert/strict');
 
+/** node:test's one module name: it exists only under the `node:` scheme, and the bare `test` is an npm package. */
+export const lzNodeTest: ReadonlySet<string> = new Set(['node:test']);
+
 /**
  * The node:assert method that a call of `callee` runs, `ok` for a call of the module itself, or `undefined` when the
  * call is no node:assert call. The `assert` of a node:test test context, a parameter, counts.

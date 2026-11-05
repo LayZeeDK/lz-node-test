@@ -21,6 +21,10 @@ describe('LzNodeAwaitStatement', () => {
       "import { after } from 'mocha';\nafter(async () => {\n  await server.close();\n});",
     ],
     [
+      "an awaited call in the after callback of the npm package named test, which node:test's scheme leaves out",
+      "import { after } from 'test';\nafter(async () => {\n  await server.close();\n});",
+    ],
+    [
       'an awaited call in a node:test before callback',
       "import { before } from 'node:test';\nbefore(async () => {\n  await server.listen();\n});",
     ],
@@ -43,7 +47,7 @@ describe('LzNodeAwaitStatement', () => {
     ],
     [
       'an awaited call in a node:test afterEach callback',
-      "import { afterEach as cleanUp } from 'test';\ncleanUp(async () => {\n  await server.close();\n});",
+      "import { afterEach as cleanUp } from 'node:test';\ncleanUp(async () => {\n  await server.close();\n});",
     ],
     [
       "an awaited call in a test context's after callback",

@@ -1,10 +1,9 @@
 import type { NodePath } from '@babel/core';
 
 import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
-import { lzBuiltin } from './bindings.ts';
+import { lzNodeTest as nodeTest } from './bindings.ts';
 import { isNodeAssertCall } from './node-bindings.ts';
 
-const nodeTest = lzBuiltin('test');
 const teardowns: ReadonlySet<string | undefined> = new Set(['after', 'afterEach']);
 
 /**
