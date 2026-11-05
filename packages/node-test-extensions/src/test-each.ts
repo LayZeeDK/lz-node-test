@@ -63,6 +63,12 @@ function eachCases(flags: Flags, cases: readonly unknown[]): Register<EachCallba
   return register<EachCallback>(flags, cases, (row) => {
     const items: readonly unknown[] = Array.isArray(row) ? row : [row];
 
-    return { items, run: (fn) => (spread ? fn(...items) : fn(row)) };
+    return {
+      items,
+      run: async (fn) => {
+        const result: unknown = Reflect.apply(fn, undefined, spread ? items : [row]);
+        await result;
+      },
+    };
   });
 }

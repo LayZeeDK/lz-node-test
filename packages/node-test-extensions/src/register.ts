@@ -15,8 +15,7 @@ export interface LzTestTableOptions extends TestOptions {
 }
 
 export type Flags = Pick<LzTestTableOptions, 'skip' | 'only' | 'todo' | 'fails'>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- unknown[] would reject a callback with typed parameters
-export type EachCallback = (...args: any[]) => void | Promise<void>;
+export type EachCallback = (...args: never) => void | Promise<void>;
 type Body = (t: TestContext) => void | Promise<void>;
 
 /** The typed function a table returns, with the callback type its table function gives `fn`. */
