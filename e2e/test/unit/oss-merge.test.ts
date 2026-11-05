@@ -250,6 +250,13 @@ describe('lzMerge', () => {
     });
   });
 
+  it('refuses a field written as a string in one run and a number in another', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { mutantTimeoutMs: '30000' })];
+
+    assert.throws(() => lzMerge(runs, out), { message: /^--merge takes runs of one mutantTimeoutMs; / });
+  });
+
   it('refuses runs of two Node.js versions', (t) => {
     const { run, out } = setup(t);
     const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { node: 'v22.23.1' })];

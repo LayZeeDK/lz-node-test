@@ -32,20 +32,22 @@ export function lzMerge(files: readonly string[], out: string): string {
   }
 
   const runs = files.map(readRun);
-  const projects = [...new Set(runs.map(({ project }) => project))];
-  const [project] = projects;
+  const [first] = runs;
 
-  if (project === undefined || projects.length !== 1) {
-    throw new Error(`--merge takes runs of one project; found ${projects.join(' and ')}.`);
+  if (first === undefined) {
+    throw new Error('--merge takes at least one result.json.');
   }
 
   lzDecidingFields.forEach((field) => {
-    const found = [...new Set(runs.map(({ deciding }) => shown(deciding.get(field))))];
+    const values = runs.map(({ deciding }) => deciding.get(field));
+    const json = values.map((value) => JSON.stringify(value));
+    const distinct = json.flatMap((text, index) => (json.indexOf(text) === index ? [values[index]] : []));
 
-    if (found.length !== 1) {
-      throw new Error(`--merge takes runs of one ${field}; found ${found.join(' and ')}.`);
+    if (distinct.length !== 1) {
+      throw new Error(`--merge takes runs of one ${field}; found ${distinct.map(shown).join(' and ')}.`);
     }
   });
+  const { project } = first;
   const reports = runs.flatMap((run) => run.reports);
   const merged = lzSides
     .filter((side) => reports.some((report) => report.side === side))
@@ -100,7 +102,7 @@ function readRun(file: string): LzRun {
   };
 }
 
-/** A string as written, so a refusal names a commit or version plainly; anything else as JSON. */
+/** For a refusal only, which names a commit or version plainly; the match itself compares JSON. */
 function shown(value: unknown): string {
   return typeof value === 'string' ? value : JSON.stringify(value);
 }

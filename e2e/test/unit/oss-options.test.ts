@@ -19,6 +19,7 @@ import {
   lzStrykerOptions,
   type LzOssProject,
 } from '../../src/oss/options.ts';
+import { lzDecidingFields } from '../../src/oss/result.ts';
 
 describe('run folder prefixes', () => {
   it("lets the dead-run sweep remove a dead run's folder and keep a dead prepared run's", (t) => {
@@ -232,10 +233,10 @@ describe('lzParseOptions', () => {
     assert.match(lzOssUsage, /A side that wrote no\s+report is refused/);
   });
 
-  it('says in the usage which header fields the runs of a merge must share', () => {
-    assert.match(
-      lzOssUsage,
-      /project, sourceCommit, node, platform, mutantTimeoutMs, installedDigest,\s+tarballDigests and projectSetup/,
+  it('names in the usage every header field the runs of a merge must share', () => {
+    assert.deepEqual(
+      lzDecidingFields.filter((field) => !lzOssUsage.includes(field)),
+      [],
     );
   });
 
