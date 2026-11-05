@@ -4,7 +4,14 @@ import type { LoadHookContext, ResolveHookContext } from 'node:module';
 import { join } from 'node:path';
 import { compileFunction } from 'node:vm';
 
-import { install, wrappedNodeTest, type HookDependencies, type ModuleHooks, type TestEvent } from '../src/hook-core.ts';
+import {
+  install,
+  reporting,
+  wrappedNodeTest,
+  type HookDependencies,
+  type ModuleHooks,
+  type TestEvent,
+} from '../src/hook-core.ts';
 import { envNames, lzParseRecord, lzRecordNonce, type ProcessRecord } from '../src/record.ts';
 import type { NodeTestModule } from '../src/wrap.ts';
 
@@ -346,4 +353,38 @@ export async function importRedirected(hooks: ModuleHooks, wrapped: unknown) {
   } finally {
     slots[wrappedNodeTest] = previous;
   }
+}
+
+/**
+ * The `after` hook registered with node:test at `index`, in order, which `callable` proves is there; the hook's own
+ * comes first.
+ */
+export function afterHook(fake: ReturnType<typeof fakeNodeTest>, index: number): Fn {
+  const [hook] = fake.registrations.filter(({ kind }) => kind === 'after')[index]?.rest ?? [];
+
+  return callable(hook);
+}
+
+/** A test file whose test, `name`, has run its body and been reported. */
+export async function ranAndReported(h: Harness, name: string, outcome: 'pass' | 'fail'): Promise<void> {
+  h.wrapped().it(name, () => {});
+  await bodyOf(h.fake.registrations, name)(testContext());
+  report(h.deps, name, outcome);
+}
+
+export function send(deps: HookDependencies, ...events: readonly TestEvent[]): void {
+  const recordEvent = deps.global[reporting];
+  assert.ok(recordEvent, 'the hook installed no reporting function');
+
+  for (const event of events) {
+    recordEvent(event);
+  }
+}
+
+export function report(deps: HookDependencies, name: string, outcome: 'pass' | 'fail'): void {
+  const error = { message: `${name} failed` };
+
+  const details: TestDetails = { type: 'test', duration_ms: 2, ...(outcome === 'fail' && { error }) };
+
+  send(deps, ...reported(name, 0, outcome, details));
 }
