@@ -8,8 +8,8 @@ import { envNames } from './record.ts';
 
 /**
  * Where the runners of one Stryker run keep which test files the dry run ran and what it measured of each: its memory
- * peak and its start-up. Stryker runs the dry run in one worker and the mutants in all of them, each a process it forks and may
- * replace, so the directory is named after the process that owns it (see `lzOwnDryRun`).
+ * peak and its start-up. Stryker runs the dry run in one worker and the mutants in all of them, each a process it forks
+ * and may replace, so the directory is named after the process that owns it (see `lzOwnDryRun`).
  */
 export function lzDryRunDir(ownerPid: number): string {
   return join(tmpdir(), `${lzDirPrefix('dryRun', ownerPid)}store`);

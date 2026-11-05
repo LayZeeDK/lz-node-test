@@ -257,11 +257,15 @@ describe('hook', () => {
     );
     const stderr = t.mock.method(process.stderr, 'write', () => true);
     watching.emit('error', new Error('preload failed'));
+    watching.emit('error', 'thrown string');
     stderr.mock.restore();
 
     assert.deepEqual(
       stderr.mock.calls.map((call) => call.arguments),
-      [['lz-node-test: the memory watchdog failed, so no memory limit guards this process: preload failed\n']],
+      [
+        ['lz-node-test: the memory watchdog failed, so no memory limit guards this process: preload failed\n'],
+        ["lz-node-test: the memory watchdog failed, so no memory limit guards this process: 'thrown string'\n"],
+      ],
     );
 
     const rssMB = Math.floor(process.memoryUsage.rss() / 1048576);

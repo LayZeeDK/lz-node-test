@@ -490,7 +490,8 @@ export function lzRunEnv({
     env[envNames.heldOpen] = String(heldOpenMs);
   }
 
-  // Linux refuses a variable longer than 128 KiB, and a widely covered mutant's whole filter can pass that.
+  // Linux refuses a variable longer than 128 KiB. The whole filter of a widely covered mutant can pass that, and so,
+  // less often, can the ids of one file's many covering tests.
   if (run.testFilter) {
     env[envNames.filter] = JSON.stringify(run.testFilter.filter((id) => within(id, file)));
   }

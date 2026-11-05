@@ -1,6 +1,6 @@
 import { registerHooks } from 'node:module';
 import { extname, resolve } from 'node:path';
-import { getCallSites } from 'node:util';
+import { getCallSites, inspect } from 'node:util';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 
 import { install, writesAllowed, type HookDependencies } from './hook-core.ts';
@@ -76,9 +76,10 @@ install({
     // Stryker disable next-line ArrayDeclaration: equivalent, as hook-core always passes execArgv: []
     const worker = new Worker(watchdog, { eval: true, ...options, execArgv: [...options.execArgv] });
     // Listening keeps a watchdog error from ending the process; the line reaches the runner's stderr tail.
-    worker.on('error', (error) => {
+    worker.on('error', (error: unknown) => {
+      const message = error instanceof Error ? error.message : inspect(error);
       process.stderr.write(
-        `lz-node-test: the memory watchdog failed, so no memory limit guards this process: ${error.message}\n`,
+        `lz-node-test: the memory watchdog failed, so no memory limit guards this process: ${message}\n`,
       );
     });
     worker.unref();
