@@ -11,8 +11,12 @@ const removeWaitMs = 2_000;
  * Creates `dir` for this user alone, or checks that the one that exists is this user's: in a temporary directory that
  * other users share, someone else could have made it first, with links in it, to read or plant what the dry run kept.
  */
-export function ownDir(dir: string, owned: (path: string) => boolean = isOwn): void {
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
+export function ownDir(
+  dir: string,
+  owned: (path: string) => boolean = isOwn,
+  makeDir: (path: string, options: { recursive: true; mode: number }) => unknown = mkdirSync,
+): void {
+  makeDir(dir, { recursive: true, mode: 0o700 });
 
   if (!owned(dir)) {
     throw new Error(`"${dir}" belongs to another user; remove it, or run Stryker as that user.`);

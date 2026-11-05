@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lstatSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
@@ -156,13 +156,28 @@ describe('isRunning', () => {
 });
 
 describe('ownDir', () => {
-  it("creates the directory, and keeps one that is this user's", (t) => {
+  it("creates the directory, and keeps one that is this user's with what it holds", (t) => {
     const dir = join(tempDirWith(t, 'own-dir-'), 'peaks');
 
     ownDir(dir, () => true);
+    writeFileSync(join(dir, 'kept'), '');
     ownDir(dir, () => true);
 
-    assert.ok(lstatSync(dir).isDirectory());
+    assert.deepEqual(readdirSync(dir), ['kept']);
+  });
+
+  it('creates the directory for this user alone', () => {
+    const made: unknown[] = [];
+
+    ownDir(
+      'peaks',
+      () => true,
+      (path, options) => {
+        made.push([path, options]);
+      },
+    );
+
+    assert.deepEqual(made, [['peaks', { recursive: true, mode: 0o700 }]]);
   });
 
   it("refuses a directory that is another user's, and names it", (t) => {
