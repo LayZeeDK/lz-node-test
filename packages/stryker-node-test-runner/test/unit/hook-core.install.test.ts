@@ -39,11 +39,22 @@ import {
 } from '../hook-core.fixtures.ts';
 import { member } from '../reflect.fixtures.ts';
 
-/** The `after` hooks registered with node:test, in order; the hook's own comes first. */
-function afterHooks(fake: ReturnType<typeof fakeNodeTest>): (Fn | undefined)[] {
-  return fake.registrations
-    .filter(({ kind }) => kind === 'after')
-    .map(({ rest: [hook] }) => (typeof hook === 'function' ? callable(hook) : undefined));
+/**
+ * The `after` hook registered with node:test at `index`, in order, which `callable` proves is there; the hook's own
+ * comes first.
+ */
+function afterHook(fake: ReturnType<typeof fakeNodeTest>, index: number): Fn {
+  const [hook] = fake.registrations.filter(({ kind }) => kind === 'after')[index]?.rest ?? [];
+
+  return callable(hook);
+}
+
+/** Fires the one timer the hook set. */
+function fireOnlyTimer(h: Harness): void {
+  const [only, ...more] = h.timers;
+  assert.ok(only, 'the hook set no timer');
+  assert.equal(more.length, 0);
+  only.fire();
 }
 
 /** A test file whose test, `name`, has run its body and been reported. */
@@ -173,7 +184,10 @@ describe('install', () => {
 
     assert.equal(deps.global.__stryker__?.hitLimit, undefined);
     assert.equal(deps.global.__stryker__?.hitCount, undefined);
-    assert.ok(!('hitCount' in (records[0]?.record ?? {})));
+    assert.deepEqual(
+      records.map(({ record }) => 'hitCount' in record),
+      [false],
+    );
   });
 
   it('attributes the process to the test that started it', () => {
@@ -521,7 +535,7 @@ describe('install', () => {
 
       assert.deepEqual(h.exits, []);
 
-      afterHooks(h.fake)[0]?.();
+      afterHook(h.fake, 0)();
       h.exit({ natural: false });
 
       assert.deepEqual(h.exits, [1]);
@@ -545,7 +559,7 @@ describe('install', () => {
       enqueue(h.deps, 'fails', 'suite');
       // node:test enqueues a suite's tests too, one level down.
       send(h.deps, { type: 'test:enqueue', data: { name: 'inner', nesting: 1 } });
-      afterHooks(h.fake)[0]?.();
+      afterHook(h.fake, 0)();
       report(h.deps, 'fails', 'fail');
       send(h.deps, {
         type: 'test:pass',
@@ -576,7 +590,7 @@ describe('install', () => {
       const h = installedHarness(fileEnv());
       h.wrapped().it('fails', () => {});
       h.wrapped().it('filtered out', () => {});
-      afterHooks(h.fake)[0]?.();
+      afterHook(h.fake, 0)();
       enqueue(h.deps, 'fails');
       report(h.deps, 'fails', 'fail');
 
@@ -586,7 +600,7 @@ describe('install', () => {
     it('ends no file whose tests all passed before the grace ends', async () => {
       const h = installedHarness(fileEnv());
       await ranAndReported(h, 'passes', 'pass');
-      afterHooks(h.fake)[0]?.();
+      afterHook(h.fake, 0)();
       report(h.deps, 'passes', 'pass');
 
       assert.deepEqual(h.exits, []);
@@ -603,7 +617,7 @@ describe('install', () => {
     ])('waits %s the held-open variable', ([, heldOpen, ms]) => {
       const h = installedHarness({ ...fileEnv(), [envNames.heldOpen]: heldOpen });
       h.wrapped().it('passes', () => {});
-      afterHooks(h.fake)[0]?.();
+      afterHook(h.fake, 0)();
 
       assert.deepEqual(
         h.timers.map((timer) => timer.ms),
@@ -626,9 +640,9 @@ describe('install', () => {
           report(h.deps, 'passes', 'pass');
         }
 
-        afterHooks(h.fake)[0]?.();
+        afterHook(h.fake, 0)();
         h.listResources(['PipeWrap', 'TCPServerWrap', 'PipeWrap']);
-        h.timers[0]?.fire();
+        fireOnlyTimer(h);
         h.exit({ natural: false });
 
         assert.deepEqual(h.exits, [undefined]);
@@ -655,7 +669,7 @@ describe('install', () => {
     it('ends a file with exit code 1 when no test result follows its emptied event loop within the stall time', () => {
       const h = stalling(300);
       h.emptied();
-      h.timers[0]?.fire();
+      fireOnlyTimer(h);
       h.exit({ natural: false });
 
       assert.deepEqual(h.exits, [1]);
@@ -691,7 +705,7 @@ describe('install', () => {
         [300],
       );
 
-      h.timers[0]?.fire();
+      fireOnlyTimer(h);
 
       assert.deepEqual(h.exits, []);
     });
@@ -728,9 +742,9 @@ describe('install', () => {
     it('names only what the tests opened, also when something the process had before is gone', () => {
       const h = installedHarness(fileEnv());
       h.wrapped().it('passes', () => {});
-      afterHooks(h.fake)[0]?.();
+      afterHook(h.fake, 0)();
       h.listResources(['TCPServerWrap', 'Timeout']);
-      h.timers[0]?.fire();
+      fireOnlyTimer(h);
       h.exit({ natural: false });
 
       assert.deepEqual(h.records[0]?.record.heldOpen, ['TCPServerWrap', 'Timeout']);
@@ -741,20 +755,22 @@ describe('install', () => {
       const { promise: firstSettles, resolve: resolveFirst }: PromiseWithResolvers<void> = Promise.withResolvers();
       h.wrapped().after(() => firstSettles);
       h.wrapped().after(() => {});
-      const [finished, first, second] = afterHooks(h.fake);
+      const finished = afterHook(h.fake, 0);
+      const first = afterHook(h.fake, 1);
+      const second = afterHook(h.fake, 2);
       await ranAndReported(h, 'fails', 'fail');
 
-      finished?.();
-      const firstDone: unknown = first?.();
+      finished();
+      const firstDone: unknown = first();
       h.wrapped().after(() => {});
-      const [, , , added] = afterHooks(h.fake);
+      const added = afterHook(h.fake, 3);
       resolveFirst();
       await firstDone;
-      await second?.();
+      await second();
 
       assert.deepEqual([h.timers.length, h.exits], [0, []]);
 
-      await added?.();
+      await added();
 
       assert.deepEqual([h.timers.length, h.exits], [1, [1]]);
     });
@@ -777,12 +793,13 @@ describe('install', () => {
       const h = installedHarness(fileEnv());
       h.wrapped().after(hook);
       h.wrapped().after(() => {});
-      const [finished, failing] = afterHooks(h.fake);
+      const finished = afterHook(h.fake, 0);
+      const failing = afterHook(h.fake, 1);
 
-      finished?.();
+      finished();
       await assert.rejects(
         async () => {
-          await failing?.();
+          await failing();
         },
         { message: 'after failed' },
       );
@@ -803,11 +820,12 @@ describe('install', () => {
         };
       });
       h.wrapped().after(() => {});
-      const [finished, callbackHook] = afterHooks(h.fake);
+      const finished = afterHook(h.fake, 0);
+      const callbackHook = afterHook(h.fake, 1);
 
-      assert.equal(callbackHook?.length, 2);
+      assert.equal(callbackHook.length, 2);
 
-      finished?.();
+      finished();
       callbackHook({}, (given: unknown) => passed.push(given));
 
       assert.equal(h.timers.length, 0);
@@ -820,12 +838,12 @@ describe('install', () => {
     it('starts the grace only once its own root `after` hook has run, as one added inside another hook runs earlier', async () => {
       const h = installedHarness(fileEnv());
       h.wrapped().after(() => {});
-      const [finished, early] = afterHooks(h.fake);
-      await early?.();
+      const finished = afterHook(h.fake, 0);
+      await afterHook(h.fake, 1)();
 
       assert.equal(h.timers.length, 0);
 
-      finished?.();
+      finished();
 
       assert.equal(h.timers.length, 1);
     });
@@ -855,9 +873,9 @@ describe('install', () => {
       ([, , event, timers]) => {
         const h = installedHarness(fileEnv());
         h.wrapped().after(() => new Promise(() => {}));
-        const [finished] = afterHooks(h.fake);
+        const finished = afterHook(h.fake, 0);
 
-        finished?.();
+        finished();
         send(h.deps, event);
 
         assert.equal(h.timers.length, timers);
@@ -867,10 +885,10 @@ describe('install', () => {
     it('does not start the grace at a root `after` hook that never settles when node:test reports the file failed before the tests finished, as node:test times out such a hook', () => {
       const h = installedHarness(fileEnv());
       h.wrapped().after(() => new Promise(() => {}));
-      const [finished] = afterHooks(h.fake);
+      const finished = afterHook(h.fake, 0);
 
       send(h.deps, fileFailure);
-      finished?.();
+      finished();
 
       assert.equal(h.timers.length, 0);
     });
@@ -881,14 +899,19 @@ describe('install', () => {
         throw new Error('after failed');
       });
       h.wrapped().after(() => {});
-      const [finished, failing, later] = afterHooks(h.fake);
+      const finished = afterHook(h.fake, 0);
+      const failing = afterHook(h.fake, 1);
+      const later = afterHook(h.fake, 2);
 
-      finished?.();
-      const thrown = failing?.();
-      assert.ok(thrown instanceof Promise);
-      await assert.rejects(thrown, { message: 'after failed' });
-      later?.();
-      finished?.();
+      finished();
+      await assert.rejects(
+        async () => {
+          await failing();
+        },
+        { message: 'after failed' },
+      );
+      later();
+      finished();
 
       assert.equal(h.timers.length, 1);
     });
@@ -899,7 +922,7 @@ describe('install', () => {
         h.wrapped().after(() => {});
       });
       h.wrapped().after();
-      afterHooks(h.fake)[0]?.();
+      afterHook(h.fake, 0)();
 
       assert.equal(h.timers.length, 1);
     });
@@ -1038,7 +1061,7 @@ describe('passing `done` as node:test does', () => {
     const seen: unknown[] = [];
     h.wrapped().after(threeParameters(seen));
 
-    await callAsNodeTest(afterHooks(h.fake)[1], {});
+    await callAsNodeTest(afterHook(h.fake, 1), {});
 
     assert.deepEqual(seen, [undefined]);
   });

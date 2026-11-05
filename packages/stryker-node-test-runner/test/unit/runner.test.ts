@@ -159,6 +159,16 @@ describe('lzFileError', () => {
 
 describe('LzNodeTestTestRunner options', () => {
   const runner = (lzNodeTest: unknown) => new LzNodeTestTestRunner({ ...strykerOptions(), lzNodeTest }, logger());
+  /** What the runner's constructor throws for `lzNodeTest`, or undefined when it takes them. */
+  const refusal = (lzNodeTest: unknown): unknown => {
+    try {
+      runner(lzNodeTest);
+
+      return undefined;
+    } catch (error) {
+      return error;
+    }
+  };
 
   it("takes Stryker's two constructor parameters only", () => {
     assert.equal(LzNodeTestTestRunner.length, 2);
@@ -169,7 +179,7 @@ describe('LzNodeTestTestRunner options', () => {
     ['empty options', {}],
     ['every option', { testFiles: ['a.test.ts'], nodeArgs: ['--enable-source-maps'], maxMemoryMB: 512 }],
   ])('takes %s', (_title, options) => {
-    assert.ok(runner(options) instanceof LzNodeTestTestRunner);
+    assert.equal(refusal(options), undefined);
   });
 
   lzTestFor([null, [], 'options'])('refuses %j, which is no options object', (options) => {
