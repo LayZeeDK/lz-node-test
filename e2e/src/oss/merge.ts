@@ -45,10 +45,9 @@ export function lzMerge(files: readonly string[], out: string): string {
 
     if (distinct.length !== 1) {
       const lists = values.filter((value) => lzIsStrings(value));
+      const entries = lists.length === values.length ? entriesNotInEvery(lists) : [];
       const found =
-        lists.length === values.length
-          ? `some runs only have ${entriesNotInEvery(lists).join(', ')}`
-          : `found ${distinct.map(shown).join(' and ')}`;
+        entries.length > 0 ? `some runs only have ${entries.join(', ')}` : `found ${distinct.map(shown).join(' and ')}`;
 
       throw new Error(`--merge takes runs of one ${field}; ${found}.`);
     }

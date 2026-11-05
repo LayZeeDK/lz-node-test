@@ -221,6 +221,15 @@ describe('lzMerge', () => {
     });
   });
 
+  it('shows both lists when they hold the same entries in another order', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { tarballDigests: ['d2', 'd1'] })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one tarballDigests; found ["d1","d2"] and ["d2","d1"].',
+    });
+  });
+
   it('refuses the result.json of an older driver, naming the field it lacks', (t) => {
     const { run, out } = setup(t);
     const file = run('a', 'p', { lz: [] });
