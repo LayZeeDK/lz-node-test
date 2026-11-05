@@ -305,6 +305,26 @@ describe('LzNodeTestTestRunner', () => {
     assert.equal(exitCode, 0);
   });
 
+  it('gives a test file a stdin that stays open, as node --test does', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "it('reads no end of stdin', async () => {",
+        '  const ended = await Promise.race([',
+        "    new Promise((resolve) => process.stdin.once('end', () => resolve(true)).resume()),",
+        '    new Promise((resolve) => setTimeout(() => resolve(false), 200)),',
+        '  ]);',
+        '  process.stdin.pause();',
+        '  assert.equal(ended, false);',
+        '});',
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+
+    const result = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(summary(result.tests), [passed(`${join(dir, 'a.test.mjs')} > reads no end of stdin`)]);
+  });
+
   it('ends a run soon after its test file exits, while a process the tests started keeps stderr open', async (t) => {
     let dir = '';
     // Registered ahead of the project's cleanup, which removes the file the daemon's id is in.
