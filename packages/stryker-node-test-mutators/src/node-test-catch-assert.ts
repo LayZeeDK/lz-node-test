@@ -74,7 +74,7 @@ function isAssertion(callee: types.Node): boolean {
 
 function assertMethod(callee: types.Node): string | undefined {
   if (callee.type === 'Identifier') {
-    return callee.name === 'assert' ? 'ok' : undefined;
+    return callee.name === 'assert' ? callee.name : undefined;
   }
 
   const method = lzPropertyName(callee);
