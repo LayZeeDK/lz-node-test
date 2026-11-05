@@ -55,6 +55,8 @@ describe('LzNodeListenerOnce', () => {
     ['a computed on', "emitter['on']('data', f);"],
     ['an on read from a variable', "emitter[on]('data', f);"],
     ['a function on of its own', "on('data', f);"],
+    ['an on passed as an argument', "register('data', emitter.on);"],
+    ['an optional on in parentheses', "(emitter?.on)('data', f);"],
     ['addListener', "emitter.addListener('data', f);"],
     ['prependListener', "emitter.prependListener('data', f);"],
     ['prependOnceListener', "emitter.prependOnceListener('data', f);"],

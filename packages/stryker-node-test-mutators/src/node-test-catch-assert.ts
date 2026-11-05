@@ -13,13 +13,13 @@ export const nodeTestCatchAssert: LzOperator<'LzNodeTestCatchAssert'> = {
   name: 'LzNodeTestCatchAssert',
   sample: "try {\n  JSON.parse('');\n} catch (error) {\n  assert.ok(error);\n}\n",
   *mutate(path, t) {
-    if (!path.isBlockStatement() || path.key !== 'block' || path.node.body.length === 0) {
+    if (!path.isBlockStatement() || path.node.body.length === 0) {
       return;
     }
 
     const { parentPath } = path;
 
-    if (!parentPath.isTryStatement()) {
+    if (!parentPath.isTryStatement() || parentPath.node.block !== path.node) {
       return;
     }
 
@@ -35,9 +35,8 @@ function assertsWithoutThrow(body: NodePath<types.BlockStatement>): boolean {
   const found = { asserts: false, throws: false };
 
   body.traverse({
-    ThrowStatement(statement) {
+    ThrowStatement() {
       found.throws = true;
-      statement.stop();
     },
     CallExpression(call) {
       if (isAssertion(call.node.callee)) {

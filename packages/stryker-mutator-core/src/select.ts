@@ -25,7 +25,9 @@ export type LzMutatorOptions<TOptIn extends string, TExperimental extends string
 type LzTier = keyof LzOperatorSets;
 
 const tiers: readonly LzTier[] = ['defaults', 'optIn', 'experimental'];
-const tierNames: Record<LzTier, string> = { defaults: 'default', optIn: 'opt-in', experimental: 'experimental' };
+type LzSelectableTier = Exclude<LzTier, 'defaults'>;
+
+const tierNames: Record<LzSelectableTier, string> = { optIn: 'opt-in', experimental: 'experimental' };
 const whereTiersGo: Record<LzTier, string> = {
   defaults: 'it runs by default',
   optIn: 'it is opt-in, so it goes outside experimental',
@@ -43,7 +45,7 @@ export function lzAllOperators(sets: LzOperatorSets): readonly LzOperator[] {
  */
 export function lzSelectOperators(packageName: string, sets: LzOperatorSets, options: unknown): readonly LzOperator[] {
   const tierOf = new Map(tiers.flatMap((tier) => sets[tier].map(({ name }): [string, LzTier] => [name, tier])));
-  const named = (tier: LzTier, name: string): readonly LzOperator[] => {
+  const named = (tier: LzSelectableTier, name: string): readonly LzOperator[] => {
     const found = tierOf.get(name);
 
     if (found === tier) {

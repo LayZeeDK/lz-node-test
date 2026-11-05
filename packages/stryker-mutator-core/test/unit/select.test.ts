@@ -84,6 +84,12 @@ describe('lzSelectOperators', () => {
       "lz-sample-mutators: LzOptInA takes only true, not false; Stryker's mutator.excludedMutations turns mutators off.",
     ],
     [
+      'an object for a mutator',
+      { LzOptInA: { LzExperimentalA: true } },
+      'lz-sample-mutators: LzOptInA takes only true, not { LzExperimentalA: true }; ' +
+        "Stryker's mutator.excludedMutations turns mutators off.",
+    ],
+    [
       'false for every opt-in mutator',
       { extended: false },
       "lz-sample-mutators: extended takes only true, not false; Stryker's mutator.excludedMutations turns mutators off.",
