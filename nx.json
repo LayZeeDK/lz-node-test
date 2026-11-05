@@ -12,6 +12,20 @@
     ],
     "sharedGlobals": [],
     "nodeVersion": [{ "runtime": "node -v" }],
+    "eslintPlugins": [
+      {
+        "externalDependencies": [
+          "eslint",
+          "@nx/eslint-plugin",
+          "typescript-eslint",
+          "eslint-plugin-n",
+          "eslint-node-test",
+          "@eslint-community/eslint-plugin-eslint-comments",
+          "eslint-config-prettier",
+          "jsonc-eslint-parser"
+        ]
+      }
+    ],
     "mutation": [
       "nodeVersion",
       "{workspaceRoot}/stryker.base.mjs",
@@ -26,6 +40,16 @@
     ]
   },
   "targetDefaults": {
+    "lint": {
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/eslint.config.mjs",
+        "{workspaceRoot}/tools/eslint-rules/**/*",
+        "{workspaceRoot}/tsconfig.base.json",
+        "eslintPlugins"
+      ]
+    },
     "test": {
       "cache": true,
       "inputs": ["default", "^production", "nodeVersion"]

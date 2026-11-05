@@ -5,11 +5,7 @@
       "command": "eslint *.mjs",
       "options": { "cwd": "{projectRoot}" },
       "cache": true,
-      "inputs": [
-        "{projectRoot}/*.mjs",
-        "{workspaceRoot}/tools/eslint-rules/**/*",
-        { "externalDependencies": ["eslint"] }
-      ]
+      "inputs": ["{projectRoot}/*.mjs", "{workspaceRoot}/tools/eslint-rules/**/*", "eslintPlugins"]
     }
   }
 }
