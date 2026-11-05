@@ -93,6 +93,15 @@ describe('lzCompareReports', () => {
     assert.deepEqual(lzCompareReports(first, second), ['src/grow.ts@2:10-2:15 StringLiteral: a b: Survived -> Killed']);
   });
 
+  it('refuses a report with two mutants at one place, mutator and replacement', () => {
+    const first = report({ 'src/grow.ts': [mutant('Killed'), mutant('Survived')] });
+
+    assert.throws(() => lzCompareReports(first, report({})), {
+      message:
+        'Two mutants share the key "src/grow.ts:2:10-2:15 StringLiteral "Stryker was here!""; the comparison would drop one.',
+    });
+  });
+
   it('prints a replacement that spans lines on one line', () => {
     const first = report({ 'src/grow.ts': [mutant('Survived', 2, 'items\n  .map(grow)')] });
     const second = report({ 'src/grow.ts': [mutant('Killed', 2, 'items\n  .map(grow)')] });

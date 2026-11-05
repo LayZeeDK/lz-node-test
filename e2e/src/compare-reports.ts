@@ -1,4 +1,4 @@
-import { lzOneLine, type LzMutantStatus, type LzReport } from './report.ts';
+import { lzMutantsByKey, lzOneLine, type LzMutantStatus, type LzReport } from './report.ts';
 
 interface Entry {
   readonly label: string;
@@ -30,12 +30,11 @@ export function lzCompareReports(first: LzReport, second: LzReport): string[] {
 
 function entriesByKey(report: LzReport): Map<string, Entry> {
   return new Map(
-    [...report].flatMap(([file, mutants]) =>
-      mutants.map(({ line, column, endLine, endColumn, mutator, replacement, status }) => {
-        const at = `${file}@${line}:${column}-${endLine}:${endColumn} ${mutator}: `;
+    [...lzMutantsByKey(report)].map(([key, { file, mutant }]): [string, Entry] => {
+      const { line, column, endLine, endColumn, mutator, replacement, status } = mutant;
+      const label = `${file}@${line}:${column}-${endLine}:${endColumn} ${mutator}: ${lzOneLine(replacement)}`;
 
-        return [`${at}${replacement}`, { label: `${at}${lzOneLine(replacement)}`, status }];
-      }),
-    ),
+      return [key, { label, status }];
+    }),
   );
 }

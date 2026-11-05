@@ -60,6 +60,42 @@ export function lzMutantLine({ line, column, mutator, replacement, status }: LzM
   return [`${line}:${column}`, mutator, lzOneLine(replacement), status].filter((part) => part !== '').join(' ');
 }
 
+/** As Stryker's incremental mode keys a mutant: file, location, mutator and the raw replacement. */
+export function lzMutantKey(file: string, mutant: LzMutantDetail): string {
+  return mutantAt(file, mutant, mutant.replacement);
+}
+
+/** The mutant's key on one line, for output; two mutants can share a label. */
+export function lzMutantLabel(file: string, mutant: LzMutantDetail): string {
+  return mutantAt(file, mutant, lzOneLine(mutant.replacement));
+}
+
+function mutantAt(file: string, { line, column, endLine, endColumn, mutator }: LzMutantDetail, text: string): string {
+  return `${file}:${line}:${column}-${endLine}:${endColumn} ${mutator} ${text}`;
+}
+
+export interface LzKeyedMutant {
+  readonly file: string;
+  readonly mutant: LzMutantDetail;
+}
+
+/** Each mutant by its key, refusing two at one key, which a comparison would drop. */
+export function lzMutantsByKey(report: LzReport): Map<string, LzKeyedMutant> {
+  const entries = [...report].flatMap(([file, mutants]) =>
+    mutants.map((mutant): [string, LzKeyedMutant] => [lzMutantKey(file, mutant), { file, mutant }]),
+  );
+  const byKey = new Map(entries);
+
+  if (byKey.size !== entries.length) {
+    const keys = entries.map(([key]) => key);
+    const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
+
+    throw new Error(`Two mutants share the key "${duplicate ?? ''}"; the comparison would drop one.`);
+  }
+
+  return byKey;
+}
+
 /** A replacement as one line, for output that a reader scans line by line. */
 export function lzOneLine(text: string): string {
   return text.replaceAll(/\s+/g, ' ');

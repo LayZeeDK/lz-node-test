@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import { lzIsRecord, lzIsStrings, lzParseReport, type LzReport } from '../report.ts';
+import { lzIsRecord, lzIsStrings, lzMutantKey, lzParseReport, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
 import { lzDecidingFields, lzParseOssResult, type LzDecidingFields, type LzMergeResult } from './result.ts';
-import { lzBySide, lzComparison, lzMutantKey, lzReportScore } from './verdicts.ts';
+import { lzBySide, lzComparison, lzReportScore } from './verdicts.ts';
 
 /** One side's report from one run. */
 interface LzBatch {

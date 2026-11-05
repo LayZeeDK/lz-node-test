@@ -57,6 +57,16 @@ describe('lzCompare', () => {
     });
   });
 
+  it('keeps apart two mutants whose replacements differ in whitespace only, as Stryker keys them', () => {
+    const lz = new Map([['index.js', [mutant(1, 'Survived', 'a  b'), mutant(1, 'Killed', 'a b')]]]);
+    const command = new Map([['index.js', [mutant(1, 'Killed', 'a  b'), mutant(1, 'Killed', 'a b')]]]);
+
+    assert.deepEqual(lzCompare(lz, command), [
+      { mutant: 'index.js:1:3-1:9 StringLiteral a b', lz: 'Survived', command: 'Killed' },
+      { mutant: 'index.js:1:3-1:9 StringLiteral a b', lz: 'Killed', command: 'Killed' },
+    ]);
+  });
+
   it('keeps apart two mutants that start at one place and end at two', () => {
     const lz = new Map([['index.js', [mutant(1, 'Killed', 'true', 20), mutant(1, 'Survived', 'true', 40)]]]);
     const command = new Map([['index.js', [mutant(1, 'Killed', 'true', 20), mutant(1, 'Killed', 'true', 40)]]]);

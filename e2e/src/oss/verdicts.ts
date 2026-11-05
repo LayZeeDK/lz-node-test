@@ -1,4 +1,4 @@
-import type { LzMutantDetail, LzMutantStatus, LzReport } from '../report.ts';
+import { lzMutantLabel, lzMutantsByKey, type LzMutantDetail, type LzMutantStatus, type LzReport } from '../report.ts';
 import { lzSides, type LzSide } from './options.ts';
 
 export interface LzScore {
@@ -60,38 +60,17 @@ export function lzMessageOf(error: unknown): string {
 }
 
 export function lzCompare(lz: LzReport, command: LzReport): LzVerdict[] {
-  const lzStatuses = statusesOf(lz);
-  const commandStatuses = statusesOf(command);
-  const mutants = [...new Set([...lzStatuses.keys(), ...commandStatuses.keys()])];
-
-  return mutants.map((mutant) => ({
-    mutant,
-    lz: lzStatuses.get(mutant) ?? null,
-    command: commandStatuses.get(mutant) ?? null,
-  }));
-}
-
-export function lzMutantKey(
-  file: string,
-  { line, column, endLine, endColumn, mutator, replacement }: LzMutantDetail,
-): string {
-  return `${file}:${line}:${column}-${endLine}:${endColumn} ${mutator} ${replacement.replaceAll(/\s+/g, ' ')}`;
-}
-
-function statusesOf(report: LzReport): Map<string, LzMutantStatus> {
-  const entries = [...report].flatMap(([file, mutants]) =>
-    mutants.map((mutant): [string, LzMutantStatus] => [lzMutantKey(file, mutant), mutant.status]),
+  const lzStatuses = lzMutantsByKey(lz);
+  const commandStatuses = lzMutantsByKey(command);
+  const labels = new Map(
+    [...lzStatuses, ...commandStatuses].map(([key, { file, mutant }]) => [key, lzMutantLabel(file, mutant)]),
   );
-  const statuses = new Map(entries);
 
-  if (statuses.size !== entries.length) {
-    const keys = entries.map(([key]) => key);
-    const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
-
-    throw new Error(`Two mutants share the key "${duplicate ?? ''}"; the comparison would drop one.`);
-  }
-
-  return statuses;
+  return [...labels].map(([key, label]) => ({
+    mutant: label,
+    lz: lzStatuses.get(key)?.mutant.status ?? null,
+    command: commandStatuses.get(key)?.mutant.status ?? null,
+  }));
 }
 
 /** Without a report on both sides there is nothing to compare, which an empty disagreement list would hide. */
