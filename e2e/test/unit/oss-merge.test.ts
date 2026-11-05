@@ -5,15 +5,22 @@ import { dirname, join, sep } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import { lzMerge } from '../../src/oss/merge.ts';
-import type { LzSide } from '../../src/oss/options.ts';
+import { lzSides, type LzSide } from '../../src/oss/options.ts';
 
 interface LzFakeMutant {
   readonly line: number;
   readonly status: string;
 }
 
-/** The header fields a merge requires to match across its runs. */
-const header = { workspaceCommit: 'abc123', node: 'v24.18.1', tarballs: ['a-1.0.0.tgz', 'b-1.0.0.tgz'] };
+/** The header fields a merge requires to match across its runs, and one it does not. */
+const header = {
+  workspaceCommit: 'abc123',
+  sourceCommit: 'f00d',
+  node: 'v24.18.1',
+  platform: 'win32-arm64',
+  mutantTimeoutMs: 30000,
+  tarballs: ['a-1.0.0.tgz', 'b-1.0.0.tgz'],
+};
 
 function setup(t: TestContext) {
   const dir = mkdtempSync(join(tmpdir(), 'lz-oss-merge-'));
@@ -29,7 +36,8 @@ function setup(t: TestContext) {
       name: string,
       project: string,
       mutantsBySide: Partial<Record<LzSide, readonly LzFakeMutant[]>>,
-      headerOverrides: Partial<typeof header> = {},
+      headerOverrides: Partial<Record<keyof typeof header, unknown>> = {},
+      setups: Partial<Record<LzSide, string>> = {},
     ): string => {
       const runDir = join(dir, name);
 
@@ -56,7 +64,11 @@ function setup(t: TestContext) {
           project,
           ...header,
           ...headerOverrides,
-          sides: Object.fromEntries(Object.keys(mutantsBySide).map((side) => [side, { stryker: { reported: true } }])),
+          sides: Object.fromEntries(
+            lzSides
+              .filter((side) => side in mutantsBySide)
+              .map((side) => [side, { stryker: { reported: true }, setup: setups[side] ?? `${side} setup` }]),
+          ),
         }),
       );
 
@@ -127,12 +139,71 @@ describe('lzMerge', () => {
     });
   });
 
-  it('refuses runs of two workspace commits', (t) => {
+  it('merges runs of two workspace commits whose sides ran the same setup', (t) => {
     const { run, out } = setup(t);
-    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { workspaceCommit: 'def456' })];
+    const runs = [
+      run('a', 'p', { lz: [{ line: 1, status: 'Killed' }] }),
+      run('b', 'p', { lz: [{ line: 2, status: 'Killed' }] }, { workspaceCommit: 'def456' }),
+    ];
+
+    lzMerge(runs, out);
+
+    const result: unknown = JSON.parse(readFileSync(join(out, 'result.json'), 'utf8'));
+
+    assert.deepEqual(result, {
+      project: 'p',
+      mergedFrom: runs,
+      scores: { lz: { counts: { Killed: 2 }, score: 100, mutants: 2 } },
+      compared: false,
+      reason: 'Only the lz side ran; merge its result.json with a command run with --merge.',
+    });
+  });
+
+  it('refuses runs of one side with two setups, and names both', (t) => {
+    const { run, out } = setup(t);
+    const first = run('a', 'p', { command: [] }, {}, { command: 'node --test --test-concurrency=1' });
+    const second = run('b', 'p', { command: [] }, {}, { command: 'node --test --test-isolation=none' });
+
+    assert.throws(() => lzMerge([first, second], out), {
+      message: `--merge takes runs of one setup per side; the command side of ${first} and ${second} differ.`,
+    });
+  });
+
+  it('refuses a side that records no setup, such as a run of an older driver', (t) => {
+    const { run, out } = setup(t);
+    const file = run('a', 'p', { lz: [] });
+
+    writeFileSync(file, JSON.stringify({ project: 'p', ...header, sides: { lz: { stryker: { reported: true } } } }));
+
+    assert.throws(() => lzMerge([file], out), {
+      message: `The lz side of ${file} records no setup, so a merge cannot tell what it ran.`,
+    });
+  });
+
+  it('refuses runs of two source commits', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { sourceCommit: 'beef' })];
 
     assert.throws(() => lzMerge(runs, out), {
-      message: '--merge takes runs of one workspaceCommit; found abc123 and def456.',
+      message: '--merge takes runs of one sourceCommit; found f00d and beef.',
+    });
+  });
+
+  it('refuses runs of two platforms', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { platform: 'linux-arm64' })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one platform; found win32-arm64 and linux-arm64.',
+    });
+  });
+
+  it("refuses runs of two mutant timeouts, Stryker's default among them", (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { mutantTimeoutMs: null })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one mutantTimeoutMs; found 30000 and null.',
     });
   });
 

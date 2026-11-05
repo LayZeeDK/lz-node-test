@@ -11,13 +11,15 @@ interface LzBatch {
   /** The result.json it came from. */
   readonly file: string;
   readonly side: LzSide;
+  /** What the side ran; batches of one side must share it, whichever workspace commit wrote them. */
+  readonly setup: string;
   readonly report: LzReport;
 }
 
-/** The header fields that must match across a merge's runs, beside the project. */
-type LzMatchedField = 'workspaceCommit' | 'node' | 'tarballs';
+/** The header fields that must match across a merge's runs, beside the project and each side's setup. */
+type LzMatchedField = 'sourceCommit' | 'node' | 'platform' | 'mutantTimeoutMs' | 'tarballs';
 
-const matchedFields: readonly LzMatchedField[] = ['workspaceCommit', 'node', 'tarballs'];
+const matchedFields: readonly LzMatchedField[] = ['sourceCommit', 'node', 'platform', 'mutantTimeoutMs', 'tarballs'];
 
 interface LzRun {
   readonly project: string;
@@ -69,7 +71,7 @@ export function lzMerge(files: readonly string[], out: string): string {
 }
 
 function readRun(file: string): LzRun {
-  const { project, workspaceCommit, node, tarballs, sides } = lzParseOssResult(
+  const { project, sourceCommit, node, platform, mutantTimeoutMs, tarballs, sides } = lzParseOssResult(
     file,
     JSON.parse(readFileSync(file, 'utf8')),
   );
@@ -81,7 +83,13 @@ function readRun(file: string): LzRun {
 
   return {
     project,
-    matched: { workspaceCommit, node, tarballs: `[${tarballs.join(', ')}]` },
+    matched: {
+      sourceCommit,
+      node,
+      platform,
+      mutantTimeoutMs: String(mutantTimeoutMs),
+      tarballs: `[${tarballs.join(', ')}]`,
+    },
     reports: ran.map((side) => {
       const entry = sides[side];
       const reportFile = `${side}.mutation.json`;
@@ -90,13 +98,19 @@ function readRun(file: string): LzRun {
         throw new Error(`The ${side} side of ${file} wrote no report, so its ${reportFile} is not this run's.`);
       }
 
+      const setup = entry['setup'];
+
+      if (typeof setup !== 'string') {
+        throw new Error(`The ${side} side of ${file} records no setup, so a merge cannot tell what it ran.`);
+      }
+
       const reportPath = join(dirname(file), reportFile);
 
       if (!existsSync(reportPath)) {
         throw new Error(`The ${side} side of ${file} has no ${reportFile} beside it.`);
       }
 
-      return { file, side, report: lzParseReport(readFileSync(reportPath, 'utf8')) };
+      return { file, side, setup, report: lzParseReport(readFileSync(reportPath, 'utf8')) };
     }),
   };
 }
@@ -104,6 +118,15 @@ function readRun(file: string): LzRun {
 /** One report of all the side's batches. */
 function reportOf(reports: readonly LzBatch[], side: LzSide): LzReport {
   const ofSide = reports.filter((report) => report.side === side);
+  const [first] = ofSide;
+  const other = ofSide.find(({ setup }) => setup !== first?.setup);
+
+  if (first !== undefined && other !== undefined) {
+    throw new Error(
+      `--merge takes runs of one setup per side; the ${side} side of ${first.file} and ${other.file} differ.`,
+    );
+  }
+
   const holders = new Map<string, string>();
 
   ofSide.forEach(({ file, report }) => {

@@ -39,6 +39,7 @@ import {
   lzOssRunPrefix,
   lzSides,
   lzStrykerArgs,
+  lzSideSetup,
   lzStrykerConfig,
   type LzOssOptions,
   type LzSide,
@@ -249,6 +250,7 @@ async function runSide(
       errors,
       wallMs,
       resumedMutants: resumed.ok ? resumed.value : 0,
+      setup: lzSideSetup(side, options.project),
       processes: {
         ...lzPeaks(samples),
         leftover: ended.map(({ leftover: { pid, name }, ending }) => ({

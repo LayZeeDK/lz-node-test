@@ -44,6 +44,8 @@ export interface LzSideResult {
    * retests those whose code or tests changed.
    */
   readonly resumedMutants: number;
+  /** lzSideSetup of the run, which a merge matches across its runs in place of the workspace commit. */
+  readonly setup: string;
   readonly processes: LzProcessPeaks & { readonly leftover: readonly LzLeftover[] };
   readonly newInOsTmp: readonly string[];
   readonly leftoverStrykerTmp: readonly string[];
@@ -56,8 +58,10 @@ export type LzOssResult = LzOssHeader &
 /** What a merge needs of a run's result.json: the header fields it matches, and each side's entry as written. */
 export interface LzParsedOssResult {
   readonly project: string;
-  readonly workspaceCommit: string;
+  readonly sourceCommit: string;
   readonly node: string;
+  readonly platform: string;
+  readonly mutantTimeoutMs: number | null;
   readonly tarballs: readonly string[];
   readonly sides: Readonly<Record<string, unknown>>;
 }
@@ -71,16 +75,18 @@ export function lzParseOssResult(file: string, value: unknown): LzParsedOssResul
   }
 
   if (lzIsRecord(value)) {
-    const { project, workspaceCommit, node, tarballs, sides } = value;
+    const { project, sourceCommit, node, platform, mutantTimeoutMs, tarballs, sides } = value;
 
     if (
       typeof project === 'string' &&
-      typeof workspaceCommit === 'string' &&
+      typeof sourceCommit === 'string' &&
       typeof node === 'string' &&
+      typeof platform === 'string' &&
+      (typeof mutantTimeoutMs === 'number' || mutantTimeoutMs === null) &&
       isStrings(tarballs) &&
       lzIsRecord(sides)
     ) {
-      return { project, workspaceCommit, node, tarballs, sides };
+      return { project, sourceCommit, node, platform, mutantTimeoutMs, tarballs, sides };
     }
   }
 
