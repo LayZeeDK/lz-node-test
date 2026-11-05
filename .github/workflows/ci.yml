@@ -26,6 +26,9 @@ jobs:
           node-version-file: ${{ !matrix.node-version && '.node-version' || '' }}
           cache: npm
       - run: npm ci
+      # Formatting does not vary by OS or Node.js version.
+      - if: matrix.os == 'ubuntu-latest' && !matrix.node-version
+        run: npx prettier --check .
       - run: npx nx run-many -t lint typecheck build test test-integration
 
   e2e:
