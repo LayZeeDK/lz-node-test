@@ -35,6 +35,7 @@ describe('LzNodeTimerDelay', () => {
     ['1, which a move down leaves at 1', 'setTimeout(f, 1);', ['1 + 1']],
     ['0, which either move leaves at 1', 'setTimeout(f, 0);', []],
     ['undefined, which is 1 already', 'setTimeout(f, undefined);', []],
+    ['-1, which either move leaves below 1', 'setTimeout(f, -1);', []],
     ['a spread', 'setTimeout(f, ...rest);', []],
   ])('moves a delay of %s only where it changes', async (_title, source, expected) => {
     assert.deepEqual(await mutantsOf(nodeTimerDelay, source), expected);

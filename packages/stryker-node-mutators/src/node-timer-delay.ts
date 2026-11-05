@@ -8,8 +8,8 @@ const nodeTimers = lzBuiltin('timers');
 const nodeTimersPromises = lzBuiltin('timers/promises');
 
 /**
- * Moves a timer's delay by 1 ms each way. Node.js runs a delay below 1 after 1 ms, so the moves of a literal 0 or 1
- * that leave the delay Node.js runs unchanged are left out. A string delay is left out too, as `+ 1` would append.
+ * Moves a timer's delay by 1 ms each way. Node.js runs a delay below 1 after 1 ms, so the moves of a literal 0, 1 or
+ * negative number that leave the delay Node.js runs unchanged are left out. A string delay is left out too, as `+ 1` would append.
  */
 export const nodeTimerDelay: LzOperator = {
   name: 'LzNodeTimerDelay',
@@ -20,6 +20,7 @@ export const nodeTimerDelay: LzOperator = {
       path.isIdentifier({ name: 'undefined' }) ||
       path.isStringLiteral() ||
       path.isTemplateLiteral() ||
+      (path.isUnaryExpression({ operator: '-' }) && path.get('argument').isNumericLiteral()) ||
       !isDelay(path)
     ) {
       return;
