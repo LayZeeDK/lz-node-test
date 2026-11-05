@@ -254,6 +254,16 @@ describe('lzResolveFromCore', () => {
     ['mutants that are no array', resolvingTo({ mutants: {} }), noMutants],
     ['a mutant with no mutator name', resolvingTo(located({ mutatorName: undefined })), noMutants],
     ['a mutant whose replacement is no string', resolvingTo(located({ replacement: 1 })), noMutants],
+    [
+      'a mutant with no mutator name after a whole one',
+      resolvingTo({
+        mutants: [
+          { mutatorName: 'Own', replacement: '""', location: sampleLocation },
+          { replacement: '""', location: sampleLocation },
+        ],
+      }),
+      noMutants,
+    ],
     ['a mutant with no location', resolvingTo(located({ location: undefined })), noMutants],
     ['a mutant with no start', resolvingTo(located({ location: { end: sampleLocation.end } })), noMutants],
     ['a mutant with no end', resolvingTo(located({ location: { start: sampleLocation.start } })), noMutants],
