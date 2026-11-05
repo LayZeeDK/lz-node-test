@@ -54,6 +54,18 @@ const noPrivateModifier = [
   },
 ];
 
+// A disable of one of these lets a cast, an any or an unchecked claim through; prove the type instead.
+const typeSafetyRules = [
+  '@typescript-eslint/no-explicit-any',
+  '@typescript-eslint/no-unsafe-*',
+  '@typescript-eslint/no-unsafe-function-type',
+  '@typescript-eslint/consistent-type-assertions',
+  '@typescript-eslint/no-non-null-assertion',
+  '@typescript-eslint/ban-ts-comment',
+  'no-restricted-syntax',
+  '@typescript-eslint/no-misused-promises',
+];
+
 export default [
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
@@ -72,6 +84,18 @@ export default [
       '@eslint-community/eslint-comments/no-unlimited-disable': 'error',
       // A file-level disable at the top of a file needs no matching enable.
       '@eslint-community/eslint-comments/disable-enable-pair': ['error', { allowWholeFile: true }],
+      '@eslint-community/eslint-comments/no-restricted-disable': ['error', ...typeSafetyRules],
+    },
+  },
+  {
+    // @types/node types an assert.register function as returning void, but node:test returns its promise to the
+    // caller, so this file's async reports assertion keeps its no-misused-promises disable.
+    files: ['**/test/reported.fixtures.ts'],
+    rules: {
+      '@eslint-community/eslint-comments/no-restricted-disable': [
+        'error',
+        ...typeSafetyRules.filter((rule) => rule !== '@typescript-eslint/no-misused-promises'),
+      ],
     },
   },
   {

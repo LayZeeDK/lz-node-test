@@ -31,6 +31,21 @@ describe('the .only guard', () => {
   });
 });
 
+describe('the type-safety disable guard', () => {
+  lzTestEach(['packages/node-test-extensions/src/title.ts', 'packages/node-test-extensions/test/reported.fixtures.ts'])(
+    'reports a disable of no-explicit-any in %s',
+    async (file) => {
+      const found = await reports(
+        '// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a reason\nexport const x: any = 1;\n',
+        file,
+        '@eslint-community/eslint-comments/no-restricted-disable',
+      );
+
+      assert.deepEqual(found, ["Disabling '@typescript-eslint/no-explicit-any' is not allowed."]);
+    },
+  );
+});
+
 describe('curly', () => {
   lzTestEach([
     'packages/node-test-extensions/src/title.ts',
