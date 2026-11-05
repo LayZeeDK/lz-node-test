@@ -458,6 +458,8 @@ export function lzRunEnv({
     [envNames.out]: outDir,
     [envNames.file]: file,
     [envNames.dryRun]: String(run.dryRun),
+    // The hook ends the file's process group once its parent is no longer this process.
+    [envNames.runner]: String(process.pid),
     // os.tmpdir() reads TMPDIR first on POSIX and TEMP first on Windows, then TMP.
     TMPDIR: tmpDir,
     TEMP: tmpDir,

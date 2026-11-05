@@ -178,6 +178,8 @@ export function install(deps: HookDependencies): boolean {
   Reflect.deleteProperty(deps.env, envNames.stall);
   const testFile = deps.env[envNames.file];
   Reflect.deleteProperty(deps.env, envNames.file);
+  const runnerPid = Number(deps.env[envNames.runner]);
+  Reflect.deleteProperty(deps.env, envNames.runner);
   const tests: RecordedTest[] = [];
   const currentTests = lzCurrentTests({ ns, env: deps.env, now: deps.now });
   const diagnostics: string[] = [];
@@ -238,10 +240,9 @@ export function install(deps: HookDependencies): boolean {
 
     // The group of its own gets no Ctrl+C, and nothing ends it when Stryker ends the runner's process, which leaves a
     // test that never settles running in a removed sandbox.
-    if (groupOptions(deps.platform).detached) {
-      const parent = deps.parentPid();
+    if (groupOptions(deps.platform).detached && runnerPid > 0) {
       deps.every(() => {
-        if (deps.parentPid() !== parent) {
+        if (deps.parentPid() !== runnerPid) {
           deps.kill(-deps.pid, 'SIGKILL');
         }
       }, parentPollMs);

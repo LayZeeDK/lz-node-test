@@ -121,6 +121,7 @@ export const envNames = Object.freeze({
   heldOpen: 'LZ_STRYKER_NODE_TEST_HELD_OPEN_MS',
   stall: 'LZ_STRYKER_NODE_TEST_STALL_MS',
   dryRunOwner: 'LZ_STRYKER_NODE_TEST_DRY_RUN_OWNER',
+  runner: 'LZ_STRYKER_NODE_TEST_RUNNER_PID',
 });
 
 /**

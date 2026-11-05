@@ -992,11 +992,18 @@ describe('install', () => {
 });
 
 describe('a test file whose parent process is gone', () => {
-  const watched = (platform: NodeJS.Platform, overrides: Partial<HookDependencies> = {}) => {
-    let parent = 100;
+  const watched = (
+    platform: NodeJS.Platform,
+    overrides: Partial<HookDependencies> = {},
+    {
+      env = { ...fileEnv(), [envNames.runner]: '100' },
+      ppid = 100,
+    }: { env?: Record<string, string>; ppid?: number } = {},
+  ) => {
+    let parent = ppid;
     const killed: string[] = [];
     const polls: (() => void)[] = [];
-    installedHarness(fileEnv(), {
+    installedHarness(env, {
       platform,
       parentPid: () => parent,
       kill: (pid, signal) => {
@@ -1034,6 +1041,24 @@ describe('a test file whose parent process is gone', () => {
     poll();
 
     assert.deepEqual(killed, ['-4321 SIGKILL']);
+  });
+
+  it('ends its process group at the first poll when the runner was gone before the hook installed, on POSIX', () => {
+    const { killed, poll } = watched('linux', {}, { ppid: 1 });
+    poll();
+
+    assert.deepEqual(killed, ['-4321 SIGKILL']);
+  });
+
+  it("takes the runner's pid out of the environment that the tests and the processes they start see", () => {
+    const env = { ...fileEnv(), [envNames.runner]: '100' };
+    watched('linux', {}, { env });
+
+    assert.ok(!(envNames.runner in env));
+  });
+
+  it("watches no parent without the runner's pid, as when the test file runs outside the runner", () => {
+    assert.deepEqual(watched('linux', {}, { env: fileEnv() }).polls, []);
   });
 
   it('watches no parent on Windows, where the job object ends the process with its parent', () => {
