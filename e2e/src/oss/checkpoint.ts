@@ -130,7 +130,6 @@ export function lzCheckpointKey(inputs: LzCheckpointKeyInputs): string {
   return JSON.stringify([...lzDecidingFields.map((field) => inputs[field]), inputs.mutate, inputs.strykerConfig]);
 }
 
-/** Each installed package's path and version from npm's `node_modules/.package-lock.json`, as `path@version`, sorted. */
 export function lzInstalledVersions(hiddenLockfile: string): string[] {
   const lockfile: unknown = JSON.parse(hiddenLockfile);
   const packages = lzIsRecord(lockfile) ? lockfile['packages'] : undefined;

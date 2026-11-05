@@ -45,9 +45,10 @@ export function lzMerge(files: readonly string[], out: string): string {
     const distinct = json.flatMap((text, index) => (json.indexOf(text) === index ? [values[index]] : []));
 
     if (distinct.length !== 1) {
-      const differing = field === 'installedDigest' ? installedBySome(runs) : '';
+      const versions = field === 'installedDigest' ? versionsNotInEveryRun(runs) : undefined;
+      const named = versions === undefined ? '' : ` Installed by some runs only: ${versions.join(', ')}.`;
 
-      throw new Error(`--merge takes runs of one ${field}; found ${distinct.map(shown).join(' and ')}.${differing}`);
+      throw new Error(`--merge takes runs of one ${field}; found ${distinct.map(shown).join(' and ')}.${named}`);
     }
   });
 
@@ -110,20 +111,17 @@ function readRun(file: string): LzRun {
   };
 }
 
-/** For a refusal only, which names a commit or version plainly; the match itself compares JSON. */
-/** The installed versions that not every run has, when every run recorded its versions; empty otherwise. */
-function installedBySome(runs: readonly LzRun[]): string {
+function versionsNotInEveryRun(runs: readonly LzRun[]): string[] | undefined {
   const lists = runs.flatMap(({ installedVersions }) => (installedVersions === undefined ? [] : [installedVersions]));
 
   if (lists.length !== runs.length) {
-    return '';
+    return undefined;
   }
 
-  const some = [...new Set(lists.flat())].filter((version) => !lists.every((list) => list.includes(version))).sort();
-
-  return ` Installed by some runs only: ${some.join(', ')}.`;
+  return [...new Set(lists.flat())].filter((version) => !lists.every((list) => list.includes(version))).sort();
 }
 
+/** For a refusal only, which names a commit or version plainly; the match itself compares JSON. */
 function shown(value: unknown): string {
   return typeof value === 'string' ? value : JSON.stringify(value);
 }

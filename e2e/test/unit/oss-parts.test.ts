@@ -4,17 +4,17 @@ import { describe, it } from 'node:test';
 import { lzPartRanges } from '../../src/oss/parts.ts';
 
 const source = [
-  "'use strict'", // 1
-  '', // 2
-  'function a () {', // 3
-  '  return 1', // 4
-  '}', // 5
-  '', // 6
-  'function b () {', // 7
-  '  return 2', // 8
-  '}', // 9
-  'const c = 3; const d = 4', // 10
-  'module.exports = { a, b, c, d }', // 11
+  "'use strict'",
+  '',
+  'function a () {',
+  '  return 1',
+  '}',
+  '',
+  'function b () {',
+  '  return 2',
+  '}',
+  'const c = 3; const d = 4',
+  'module.exports = { a, b, c, d }',
 ].join('\n');
 
 describe('lzPartRanges', () => {

@@ -39,10 +39,6 @@ export interface LzOssOptions {
   readonly timeLimitMinutes: number;
   /** Stryker's `timeoutMS`, added to each mutant's limit; Stryker's default without `--mutant-timeout-ms`. */
   readonly mutantTimeoutMs: number | undefined;
-  /**
-   * npm's `before`, as an ISO time: the copy gets the newest versions published before it. A project's own
-   * `min-release-age`, which npm 11 reads and npm 10 ignores, would otherwise move the tree as the run's clock moves.
-   */
   readonly npmBefore: string;
 }
 

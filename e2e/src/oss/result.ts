@@ -52,9 +52,7 @@ export interface LzOssHeader extends LzDecidingFields {
   /** The `--mutate` patterns; empty when the run mutated the project's whole set. */
   readonly mutate: readonly string[];
   readonly tarballs: readonly string[];
-  /** What installedDigest hashes, so a merge that refuses two digests can name the packages that differ. */
   readonly installedVersions: readonly string[];
-  /** The `--npm-before` the copy installed under; installedDigest is what decides, this says how to repeat it. */
   readonly npmBefore: string;
   readonly startedAt: string;
 }
@@ -99,7 +97,6 @@ export type LzOssResult = LzOssHeader &
 export interface LzParsedOssResult {
   readonly project: string;
   readonly deciding: ReadonlyMap<keyof LzDecidingFields, unknown>;
-  /** Undefined for a run of a driver that did not record them. */
   readonly installedVersions: readonly string[] | undefined;
   readonly sides: Readonly<Record<string, unknown>>;
 }
