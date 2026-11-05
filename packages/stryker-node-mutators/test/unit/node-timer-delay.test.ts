@@ -63,6 +63,8 @@ describe('LzNodeTimerDelay', () => {
     ['a computed timer of node:timers', "import timers from 'node:timers';\ntimers['setTimeout'](f, 5);"],
     ['a timer of node:timers read from a variable', "import timers from 'node:timers';\ntimers[setTimeout](f, 5);"],
     ['a timer constructed with new', 'new setTimeout(f, 5);'],
+    ["a string delay, which + 1 would make '1001'", "setTimeout(f, '100');"],
+    ['a template literal delay', 'setTimeout(f, `${ms}`);'],
     // fastify/test/helper.js:9
     [
       'a timer promisified into a function of its own',

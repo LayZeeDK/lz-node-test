@@ -70,16 +70,23 @@ This call turns on every opt-in and every experimental mutator:
 await lzNodeMutators({ extended: true, experimental: true });
 ```
 
-Each option takes only `true`; an option left `undefined` counts as absent. Turn a mutator off with Stryker's `mutator.excludedMutations`, or with a disable comment
-as below. The call throws on a name it does not know, on another value than `true`, and on a name in the wrong place,
-such as an experimental mutator outside `experimental`; the message says where the name belongs. A mutator keeps its
-name when it moves from experimental to opt-in or to the defaults; its option then throws, saying where it went.
+Each option takes only `true`; an option left `undefined` counts as absent. Turn a mutator off with Stryker's
+`mutator.excludedMutations`, or with a disable comment as below. The call throws on a name it does not know, on
+another value than `true`, and on a name in the wrong place, such as an experimental mutator outside `experimental`;
+the message says where the name belongs. A mutator keeps its name when it moves from experimental to opt-in or to the
+defaults; its option then throws, saying where it went.
+
+### ES modules only
+
+A mutator that checks which module a function comes from, such as `node:timers`, `node:events`, `node:assert` or
+`node:test`, follows an ES module `import`. It does not follow a CommonJS `require`, so a CommonJS file gets no
+mutant from it, and `LzNodeAwaitStatement` there also removes awaits in node:test teardown callbacks.
 
 ### Default mutators
 
 | Mutator                | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LzNodeTimerDelay`     | Moves the delay of `setTimeout` and `setInterval`, from the globals, `node:timers` or `node:timers/promises`, by 1 ms each way. For a number literal, moves that leave a delay of 0 or 1 are left out, because Node.js runs a delay below 1 after 1 ms. A delay in a variable gets both moves, so a variable that holds 0 or 1 gives equivalent mutants: disable them with a reason.                                                                                                                                                                                                    |
+| `LzNodeTimerDelay`     | Moves the delay of `setTimeout` and `setInterval`, from the globals, `node:timers` or `node:timers/promises`, by 1 ms each way. Node.js runs a delay below 1 after 1 ms, so a literal `0` gets no move and a literal `1` only `1 + 1`. A delay in a variable gets both moves, so a variable that holds 0 or 1 gives equivalent mutants: disable them with a reason. A string or template literal delay gets no move, as `+ 1` would append a digit.                                                                                                                                     |
 | `LzNodeEventName`      | Swaps a lifecycle event that a listener waits for with one that fires at another time, such as a child process's `exit` and `close`, or a stream's `finish`, `end` and `close`.                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `LzNodeAwaitStatement` | Removes a statement that only awaits a call, such as `await flush();`. Stryker removes a call statement but not an awaited one, so a lint rule that adds `await` to a floating promise would hide the call from mutation testing. As Stryker does for a call statement, it leaves a statement with another mutant inside it, such as `await flush('x');`. It also leaves statements inside a `node:test` `after` or `afterEach` callback, including a test context's `t.after`, where removing a teardown such as `await app.close()` is seen by no assertion and often hangs the test. |
 | `LzNodeReturnAwait`    | Turns `return await x` into `return x` inside a `try` block, where the `catch` and `finally` then no longer wait for `x`, and inside a `catch` block that a `finally` block follows. A survivor is a rejection or a cleanup whose timing no test sees. When `x` is never a promise, `return x` behaves the same, and the mutant is equivalent.                                                                                                                                                                                                                                          |
