@@ -6,6 +6,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
+import timers from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
@@ -18,6 +19,7 @@ import {
   type TestEvent,
   watchdog,
 } from '../../src/hook-core.ts';
+import { isRunning } from '../../src/dirs.ts';
 import { fixture, grows, hookUrl, reporterArg, shareCompileCache } from '../runner.fixtures.ts';
 import { envNames, lzParseRecord, lzParseRecordName, type LzRecordName, type ProcessRecord } from '../../src/record.ts';
 import { lzEndingSignals } from '../../src/record-writer.ts';
@@ -896,6 +898,65 @@ describe('hook, in a process that a signal ends', () => {
 
       // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
       assert.deepEqual([code, signalCode], [null, 'SIGTERM']);
+    },
+  );
+});
+
+describe('hook, in a test file whose runner is gone', () => {
+  const noGroups = process.platform === 'win32' && 'Windows has no process groups; a job object ends the test file';
+
+  it(
+    "ends the test file's process group once the process that started it is gone",
+    // eslint-disable-next-line node-test/no-skip-test -- POSIX only, with the reason as its value
+    { skip: noGroups, timeout: 15_000 },
+    async (t) => {
+      const dir = tempDir(t);
+      const testFile = join(dir, 'fixture.test.mjs');
+      writeFileSync(
+        testFile,
+        fixture(
+          "import { writeFileSync } from 'node:fs';",
+          "it('never settles', () => new Promise(() => { writeFileSync('started', ''); setInterval(() => {}, 1_000); }));",
+        ),
+      );
+      // Starts the test file as the runner does, in a group of its own with the runner's pid, and sends its pid.
+      const script = [
+        "const { spawn } = require('node:child_process');",
+        `const env = { ...process.env, ${JSON.stringify(envNames.runner)}: String(process.pid) };`,
+        "const options = { detached: true, windowsHide: true, stdio: 'ignore', env };",
+        `const child = spawn(process.execPath, ${JSON.stringify(['--import', hookUrl, reporterArg, testFile])}, options);`,
+        'process.send(child.pid);',
+        'setInterval(() => {}, 1_000);',
+      ].join(' ');
+      const runner = spawn(process.execPath, ['-e', script], {
+        cwd: dir,
+        env: hookedEnv({ [envNames.out]: tempDir(t), [envNames.file]: testFile }),
+        stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+        windowsHide: true,
+      });
+      const received: unknown[] = await once(runner, 'message');
+      const group = -Number(received[0]);
+      t.after(() => {
+        if (isRunning(group)) {
+          process.kill(group, 'SIGKILL');
+        }
+      });
+
+      while (!existsSync(join(dir, 'started'))) {
+        await timers.setTimeout(20);
+      }
+
+      const exited = once(runner, 'exit');
+      runner.kill('SIGKILL');
+      await exited;
+      const deadline = performance.now() + 5_000;
+
+      while (isRunning(group) && performance.now() < deadline) {
+        await timers.setTimeout(50);
+      }
+
+      // Stryker disable next-line LzNodeTestAssertCall: runs on POSIX only, where the Linux run of this test checks it
+      assert.equal(isRunning(group), false);
     },
   );
 });
