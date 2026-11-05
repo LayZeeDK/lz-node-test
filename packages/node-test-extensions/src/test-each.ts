@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- the types copy Vitest's test.each, whose any lets TypeScript infer each row's arguments */
 import { modified, type LzTestModified } from './modified.ts';
 import { register, type EachCallback, type Flags, type LzTestTableReturn, type Register } from './register.ts';
 
 /** The arguments of a `lzTestEach` callback for a readonly tuple row of up to 10 values, as in Vitest and Jest. */
-export type LzTestEachCallbackArgs<T extends ReadonlyArray<any>> = {
+export type LzTestEachCallbackArgs<T extends ReadonlyArray<unknown>> = {
   readonly 1: [T[0]];
   readonly 2: [T[0], T[1]];
   readonly 3: [T[0], T[1], T[2]];
@@ -14,46 +13,52 @@ export type LzTestEachCallbackArgs<T extends ReadonlyArray<any>> = {
   readonly 8: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7]];
   readonly 9: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8]];
   readonly 10: [T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9]];
-  readonly fallback: ReadonlyArray<T extends ReadonlyArray<infer U> ? U : any>;
-}[T extends Readonly<[any]>
+  readonly fallback: ReadonlyArray<T extends ReadonlyArray<infer U> ? U : unknown>;
+}[T extends Readonly<[unknown]>
   ? 1
-  : T extends Readonly<[any, any]>
+  : T extends Readonly<[unknown, unknown]>
     ? 2
-    : T extends Readonly<[any, any, any]>
+    : T extends Readonly<[unknown, unknown, unknown]>
       ? 3
-      : T extends Readonly<[any, any, any, any]>
+      : T extends Readonly<[unknown, unknown, unknown, unknown]>
         ? 4
-        : T extends Readonly<[any, any, any, any, any]>
+        : T extends Readonly<[unknown, unknown, unknown, unknown, unknown]>
           ? 5
-          : T extends Readonly<[any, any, any, any, any, any]>
+          : T extends Readonly<[unknown, unknown, unknown, unknown, unknown, unknown]>
             ? 6
-            : T extends Readonly<[any, any, any, any, any, any, any]>
+            : T extends Readonly<[unknown, unknown, unknown, unknown, unknown, unknown, unknown]>
               ? 7
-              : T extends Readonly<[any, any, any, any, any, any, any, any]>
+              : T extends Readonly<[unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown]>
                 ? 8
-                : T extends Readonly<[any, any, any, any, any, any, any, any, any]>
+                : T extends Readonly<[unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown]>
                   ? 9
-                  : T extends Readonly<[any, any, any, any, any, any, any, any, any, any]>
+                  : T extends Readonly<
+                        [unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown]
+                      >
                     ? 10
                     : 'fallback'];
 
 /** Registers the tests of a `lzTestEach` table. Without `fn`, each test is a todo test. */
-export type LzTestEachFunctionReturn<T extends readonly any[]> = LzTestTableReturn<
+export type LzTestEachFunctionReturn<T extends readonly unknown[]> = LzTestTableReturn<
   (...args: T) => void | Promise<void>
 >;
 
 export interface LzTestEachFunction {
-  <T extends any[] | [any]>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T>;
-  <T extends ReadonlyArray<any>>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<LzTestEachCallbackArgs<T>>;
+  <T extends unknown[] | [unknown]>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T>;
+  <T extends ReadonlyArray<unknown>>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<LzTestEachCallbackArgs<T>>;
   <T>(cases: ReadonlyArray<T>): LzTestEachFunctionReturn<T[]>;
-  (...args: [TemplateStringsArray, ...any]): LzTestEachFunctionReturn<any[]>;
+  (
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): LzTestEachFunctionReturn<[Readonly<Record<string, unknown>>]>;
 }
 
 /**
  * Registers one node:test `it` test per case of the table. A case that is an array is spread into `fn`'s arguments
  * when every case is an array; any other case is passed whole. `fn` gets no test context; use `lzTestFor` for that.
- * A template literal table names its columns in its first line and gives `fn` one object per row. The name formats
- * the case as in Vitest's `test.each`: `%s %d %i %f %j %o %O %c`, `%#`, `%$`, `%%` and `$` paths.
+ * A template literal table names its columns in its first line and gives `fn` one object per row, whose columns are
+ * `unknown`. The name formats the case as in Vitest's `test.each`: `%s %d %i %f %j %o %O %c`, `%#`, `%$`, `%%` and `$`
+ * paths.
  */
 export const lzTestEach: LzTestModified<LzTestEachFunction> = modified(eachCases, {});
 

@@ -71,7 +71,9 @@ titles.
 Registers one test per case. When every case is an array, a case is spread into `fn`'s arguments; otherwise `fn` gets
 the case whole. `fn` gets no test context; use `lzTestFor` for that. Without `fn`, each test is a todo test.
 
-A template literal table names its columns in its first line and gives `fn` one object per row:
+A template literal table, as in Vitest, names its columns in its first line and gives `fn` one object per row. The
+types cannot read the columns from the table, so a row is typed `Readonly<Record<string, unknown>>` and each column is
+`unknown`. Check or parse a column before using it:
 
 ```ts
 lzTestEach`
@@ -79,9 +81,13 @@ lzTestEach`
   ${1} | ${1} | ${2}
   ${2} | ${3} | ${5}
 `('adds $a and $b to $sum', ({ a, b, sum }) => {
+  assert.ok(typeof a === 'number');
+  assert.ok(typeof b === 'number');
   assert.equal(a + b, sum);
 });
 ```
+
+An array of objects, such as `[{ a: 1, b: 1, sum: 2 }]`, types each column.
 
 A last row with fewer values than the table has columns is dropped.
 

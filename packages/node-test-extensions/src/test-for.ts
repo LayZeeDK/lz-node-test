@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- the types copy Vitest's test.for, whose any lets TypeScript infer each row's type */
 import type { TestContext } from 'node:test';
 
 import { modified, type LzTestModified } from './modified.ts';
@@ -11,7 +10,10 @@ export type LzTestForFunctionReturn<TArg> = LzTestTableReturn<
 
 export interface LzTestForFunction {
   <T>(cases: ReadonlyArray<T>): LzTestForFunctionReturn<T>;
-  (strings: TemplateStringsArray, ...values: any[]): LzTestForFunctionReturn<any>;
+  (
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): LzTestForFunctionReturn<Readonly<Record<string, unknown>>>;
 }
 
 type ForCallback = (row: never, t: TestContext) => void | Promise<void>;

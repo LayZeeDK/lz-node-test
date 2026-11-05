@@ -4,7 +4,11 @@ import type { TestContext } from 'node:test';
 
 import { lzTestEach } from '../src/test-each.ts';
 
-type IsAny<T> = 0 extends 1 & T ? true : false;
+type Equal<TActual, TExpected> = 0 extends 1 & TActual
+  ? false
+  : [TActual, TExpected] extends [TExpected, TActual]
+    ? true
+    : false;
 
 const tupleRows: readonly [readonly [1, 'a'], readonly [2, 'b']] = [
   [1, 'a'],
@@ -33,8 +37,11 @@ lzTestEach([1, 2])('scalar', (n) => {
 });
 // @ts-expect-error Every argument is a value of the case.
 lzTestEach([1, 2])('extra', (_n, _extra: string) => {});
-lzTestEach`a | b ${1} | ${2}`('template', (_row) => {
-  true satisfies IsAny<typeof _row>;
+lzTestEach`a | b ${1} | ${2}`('template', (row) => {
+  true satisfies Equal<typeof row, Readonly<Record<string, unknown>>>;
+  const { a, b } = row;
+  // @ts-expect-error A template table's columns are unknown until the test checks them.
+  (a - b) satisfies number;
 });
 abstract class Shape {
   abstract area(): number;
