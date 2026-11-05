@@ -31,7 +31,7 @@ const configs: readonly (readonly [file: string, mutate: readonly string[]])[] =
   ['tools/eslint-rules/stryker.test-code.config.mjs', ['tools/eslint-rules/*.test.ts']],
 ];
 
-const ignorePatterns = ['/.claude', '/.nx', '/plans', '/e2e', '/reports'];
+const ignorePatterns = ['/.claude', '/.nx', '/.scratch', '/e2e', '/reports'];
 
 // Each config's reports, named as the mutate-src and mutate-test-code targets read them.
 const reportNames: readonly (readonly [file: string, name: string])[] = [

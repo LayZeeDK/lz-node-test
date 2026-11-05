@@ -45,7 +45,7 @@ export default {
   // The progress reporter prints nothing without a terminal, as in CI.
   reporters: ['clear-text', process.env.CI ? 'progress-append-only' : 'progress', 'html', 'json'],
   thresholds: { high: 100, low: 100, break: 100 },
-  ignorePatterns: ['/.claude', '/.nx', '/plans', '/e2e', '/reports'],
+  ignorePatterns: ['/.claude', '/.nx', '/.scratch', '/e2e', '/reports'],
 };
 
 /**
