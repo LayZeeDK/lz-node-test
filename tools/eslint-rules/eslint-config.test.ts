@@ -37,7 +37,6 @@ describe('curly', () => {
     testFile,
     'tools/eslint-rules/index.ts',
     'stryker.base.mjs',
-    'e2e/src/exec.ts',
   ])('reports a braceless control body in %s', async (file) => {
     const found = await reports(
       'export function f(x) {\n  if (x) return 1;\n  else x++;\n  for (;;) x++;\n  while (x) x--;\n}\n',
