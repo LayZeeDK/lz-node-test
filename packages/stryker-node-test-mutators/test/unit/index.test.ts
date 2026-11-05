@@ -12,4 +12,9 @@ describe('lzNodeTestMutators', () => {
 
     assert.deepEqual(names, ['LzNodeTestAssertCall', 'LzNodeTestAssertValidator', 'LzNodeTestCatchAssert']);
   });
+
+  it('names this package in the error for a mutator its options cannot turn on there', async () => {
+    // @ts-expect-error -- LzNodeTestCatchAssert is experimental, so it goes inside `experimental`
+    await assert.rejects(lzNodeTestMutators({ LzNodeTestCatchAssert: true }), /^Error: stryker-node-test-mutators: /);
+  });
 });
