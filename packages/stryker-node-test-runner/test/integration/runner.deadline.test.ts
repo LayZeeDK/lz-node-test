@@ -79,6 +79,9 @@ const unrefWait = fixture(
 
 const nodeMajor = Number.parseInt(process.versions.node, 10);
 
+/** A deadline that passed before the run started. */
+const passed = { signal: AbortSignal.abort(), reason: 'Passed the deadline' };
+
 /** Resolves once the process whose pid `path` holds has exited. */
 async function processExit(path: string): Promise<void> {
   while (!existsSync(path) || isRunning(Number(readFileSync(path, 'utf8')))) {
@@ -161,11 +164,11 @@ describe('LzNodeTestTestRunner deadline', () => {
     const runFile = runner.runFile.bind(runner);
     // The dry run has no deadline of its own; this one has passed before b starts.
     runner.runFile = (file, run, memoryLimitMB) =>
-      runFile(file, run, memoryLimitMB, file === join(dir, 'b.test.mjs') ? AbortSignal.abort() : undefined);
+      runFile(file, run, memoryLimitMB, file === join(dir, 'b.test.mjs') ? passed : undefined);
 
     const result = await settle(runner.dryRun({ ...dryRun, disableBail: true }));
 
-    assert.strictEqual(result.status, DryRunStatus.Timeout, JSON.stringify(result));
+    assert.deepEqual(result, { status: DryRunStatus.Timeout, reason: passed.reason });
   });
 
   it('reports the result of a mutant run whose deadline passed without ending any file process', async (t) => {
@@ -186,12 +189,10 @@ describe('LzNodeTestTestRunner deadline', () => {
     const dir = project(t, { 'a.test.mjs': lateClose });
     const runner = await initRunner(['a.test.mjs']);
     const deadline = new AbortController();
-    const running = runner.runFile(
-      join(dir, 'a.test.mjs'),
-      { dryRun: false, disableBail: false },
-      undefined,
-      deadline.signal,
-    );
+    const running = runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }, undefined, {
+      signal: deadline.signal,
+      reason: 'deadline',
+    });
 
     await processExit(join(dir, 'file.pid'));
     // The runner learns of the exit a moment later, and settles the file for 1500 ms or more.
@@ -209,7 +210,10 @@ describe('LzNodeTestTestRunner deadline', () => {
     const deadline = new AbortController();
 
     await settle(
-      runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }, undefined, deadline.signal),
+      runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }, undefined, {
+        signal: deadline.signal,
+        reason: 'deadline',
+      }),
     );
 
     assert.deepEqual(getEventListeners(deadline.signal, 'abort'), []);
@@ -221,12 +225,12 @@ describe('LzNodeTestTestRunner deadline', () => {
     hang(t);
 
     const { records, killedByDeadline } = await settle(
-      runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }, undefined, AbortSignal.abort()),
+      runner.runFile(join(dir, 'a.test.mjs'), { dryRun: false, disableBail: false }, undefined, passed),
       5_000,
     );
 
     assert.deepEqual(records, []);
-    assert.equal(killedByDeadline, true);
+    assert.equal(killedByDeadline, passed.reason);
   });
 
   it('runs the next mutant in the same runner after its deadline passed', async (t) => {

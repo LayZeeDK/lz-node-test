@@ -79,7 +79,6 @@ export type LzRunOptions =
       readonly mutantActivation?: undefined;
       readonly hitLimit?: undefined;
       readonly testFilter?: undefined;
-      readonly deadlineReason?: undefined;
     }
   | {
       readonly dryRun: false;
@@ -91,9 +90,13 @@ export type LzRunOptions =
       // undefined as Stryker's MutantRunOptions give them: no hit limit, every test.
       readonly hitLimit?: number | undefined;
       readonly testFilter?: readonly string[] | undefined;
-      /** Why a file that the run's deadline ended timed out. */
-      readonly deadlineReason?: string;
     };
+
+/** A mutant run's deadline, which ends a file's process once `signal` aborts, as a timeout for `reason`. */
+interface LzDeadline {
+  readonly signal: AbortSignal;
+  readonly reason: string;
+}
 
 interface LzFileRun {
   readonly records: readonly ProcessRecord[];
@@ -104,8 +107,8 @@ interface LzFileRun {
   /** The consumer's NODE_OPTIONS that the test file ran with, as `lzConsumerNodeOptions` gives them. */
   readonly nodeOptions: readonly string[];
   readonly unreadable?: string;
-  /** Set when the deadline of a mutant run ended the file's process while it ran. */
-  readonly killedByDeadline?: true;
+  /** The deadline's reason, set when the deadline of a mutant run ended the file's process while it ran. */
+  readonly killedByDeadline?: string;
 }
 
 // .ts from the source, .js from the build.
@@ -260,8 +263,8 @@ export async function lzRunInPool<T, TResult>(
 function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRunOptions): FileOutcome {
   const { records, exitCode, unreadable } = fileRun;
 
-  if (fileRun.killedByDeadline) {
-    return { end: { status: DryRunStatus.Timeout, reason: run.deadlineReason ?? "Passed the runner's deadline" } };
+  if (fileRun.killedByDeadline !== undefined) {
+    return { end: { status: DryRunStatus.Timeout, reason: fileRun.killedByDeadline } };
   }
 
   const memoryLimitReached = records.find((record) => record.memoryLimitReached)?.memoryLimitReached;
@@ -663,7 +666,12 @@ export class LzNodeTestTestRunner implements TestRunner {
     const files = lzFilesFor(this.#dryRunFiles ?? this.#testFiles, options.testFilter);
     // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
     const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
-    const deadline = AbortSignal.timeout(deadlineMs);
+    const deadline = {
+      signal: AbortSignal.timeout(deadlineMs),
+      reason:
+        `Passed the runner's deadline of ${deadlineMs} ms, which counts each test file's start-up once ` +
+        `(Stryker's timeout: ${Math.round(options.timeout)} ms)`,
+    };
     const run = {
       dryRun: false,
       disableBail: options.disableBail,
@@ -671,9 +679,6 @@ export class LzNodeTestTestRunner implements TestRunner {
       mutantActivation: options.mutantActivation,
       hitLimit: options.hitLimit,
       testFilter: options.testFilter,
-      deadlineReason:
-        `Passed the runner's deadline of ${deadlineMs} ms, which counts each test file's start-up once ` +
-        `(Stryker's timeout: ${Math.round(options.timeout)} ms)`,
     } satisfies LzRunOptions;
     const result = await this.#run(files, run, 1, (file) =>
       this.runFile(file, run, this.#memoryLimits.forMutantRun(file), deadline),
@@ -743,7 +748,7 @@ export class LzNodeTestTestRunner implements TestRunner {
   }
 
   /** Ends the file's process, and what processEnd ends with it, once `deadline` aborts, also when it already has. */
-  async runFile(file: string, run: LzRunOptions, memoryLimitMB?: number, deadline?: AbortSignal): Promise<LzFileRun> {
+  async runFile(file: string, run: LzRunOptions, memoryLimitMB?: number, deadline?: LzDeadline): Promise<LzFileRun> {
     const runDir = mkdtempSync(join(tmpdir(), lzDirPrefix('run', process.pid)));
     const outDir = join(runDir, 'out');
     const tmpDir = join(runDir, 'tmp');
@@ -778,7 +783,7 @@ export class LzNodeTestTestRunner implements TestRunner {
         stdio: ['pipe', 'ignore', 'pipe'],
         ...groupOptions(process.platform),
       });
-      let killedByDeadline: true | undefined;
+      let killedByDeadline: string | undefined;
       let exited = false;
       child.once('exit', () => {
         exited = true;
@@ -786,18 +791,18 @@ export class LzNodeTestTestRunner implements TestRunner {
       const end = () => {
         // A process that already exited is settling, which the deadline cannot make longer.
         if (!exited) {
-          killedByDeadline = true;
+          killedByDeadline = deadline?.reason;
           child.kill('SIGKILL');
         }
       };
 
-      if (deadline?.aborted) {
+      if (deadline?.signal.aborted) {
         end();
       }
 
-      deadline?.addEventListener('abort', end);
+      deadline?.signal.addEventListener('abort', end);
       const { exitCode, stderr } = await processEnd(child, process.platform).finally(() => {
-        deadline?.removeEventListener('abort', end);
+        deadline?.signal.removeEventListener('abort', end);
       });
       let unreadable: string | undefined;
       const records = readdirSync(outDir)
