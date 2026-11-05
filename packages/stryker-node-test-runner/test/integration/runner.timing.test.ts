@@ -107,8 +107,7 @@ describe('LzNodeTestTestRunner timing', () => {
       MutantRunStatus.Survived,
       `expected a survived mutant, got ${JSON.stringify(result)}`,
     );
-    // eslint-disable-next-line node-test/prefer-equality-assertion -- notStrictEqual does not narrow result.duration
-    assert.ok(result.duration !== undefined, 'expected a duration');
+    assert.ok(result.duration, 'expected a duration');
     assert.ok(result.duration >= 300, `${result.duration} ms of ${elapsed} ms`);
     assert.ok(result.duration <= Math.ceil(elapsed), `${result.duration} ms of ${elapsed} ms`);
   });
