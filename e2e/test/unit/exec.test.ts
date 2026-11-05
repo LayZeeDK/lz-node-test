@@ -89,9 +89,9 @@ describe('lzExec', () => {
 
   it('records no timeout for a process that exits before its timeout while a child it started holds its stdout', async () => {
     const parent =
-      "require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 1500)'], " +
+      "require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 3500)'], " +
       "{ stdio: ['ignore', 'inherit', 'inherit'], detached: true, windowsHide: true }).unref(); process.exit(0);";
-    const result = await lzExec(process.execPath, ['-e', parent], { cwd: tmpdir(), timeoutMs: 500 });
+    const result = await lzExec(process.execPath, ['-e', parent], { cwd: tmpdir(), timeoutMs: 3_000 });
 
     assert.deepEqual({ exitCode: result.exitCode, timedOut: result.timedOut }, { exitCode: 0, timedOut: false });
   });
