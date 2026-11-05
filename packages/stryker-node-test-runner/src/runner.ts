@@ -841,7 +841,7 @@ export class LzNodeTestTestRunner implements TestRunner {
         fileArgs,
         nodeOptions,
         ...(unreadable && { unreadable }),
-        ...(killedByDeadline && { killedByDeadline }),
+        ...(killedByDeadline !== undefined && { killedByDeadline }),
       };
     } finally {
       await removeDir(runDir, this.#log);

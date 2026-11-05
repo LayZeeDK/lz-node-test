@@ -135,6 +135,13 @@ function parseFilter(json: string): Set<string> {
   return new Set(ids);
 }
 
+/** The pid in `value`, or undefined when it holds none. */
+function parsePid(value: string | undefined): number | undefined {
+  const pid = Number(value);
+
+  return pid > 0 ? pid : undefined;
+}
+
 export function install(deps: HookDependencies): boolean {
   const outDir = deps.env[envNames.out];
 
@@ -177,7 +184,7 @@ export function install(deps: HookDependencies): boolean {
   Reflect.deleteProperty(deps.env, envNames.stall);
   const testFile = deps.env[envNames.file];
   Reflect.deleteProperty(deps.env, envNames.file);
-  const runnerPid = Number(deps.env[envNames.runner]);
+  const runnerPid = parsePid(deps.env[envNames.runner]);
   Reflect.deleteProperty(deps.env, envNames.runner);
   const tests: RecordedTest[] = [];
   const currentTests = lzCurrentTests({ ns, env: deps.env, now: deps.now });
@@ -239,7 +246,7 @@ export function install(deps: HookDependencies): boolean {
 
     // The group of its own gets no Ctrl+C, and nothing ends it when Stryker ends the runner's process, which leaves a
     // test that never settles running in a removed sandbox.
-    if (groupOptions(deps.platform).detached && runnerPid > 0) {
+    if (groupOptions(deps.platform).detached && runnerPid !== undefined) {
       deps.every(() => {
         if (deps.parentPid() !== runnerPid) {
           deps.kill(-deps.pid, 'SIGKILL');
