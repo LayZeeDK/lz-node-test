@@ -70,7 +70,7 @@ describe('lzParseOptions', () => {
 
   it('refuses an --npm-before in the future', () => {
     assert.throws(() => lzParseOptions([...required.slice(0, -2), '--npm-before', '2999-01-01']), {
-      message: /--npm-before is in the past: a later date installs whatever is newest when the run starts\.$/,
+      message: /--npm-before must be in the past: a later date installs whatever is newest when the run starts\.$/,
     });
   });
 

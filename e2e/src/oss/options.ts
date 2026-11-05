@@ -282,7 +282,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
 
   if (before > Date.now()) {
     throw new Error(
-      `${lzOssUsage}\n--npm-before is in the past: a later date installs whatever is newest when the run starts.`,
+      `${lzOssUsage}\n--npm-before must be in the past: a later date installs whatever is newest when the run starts.`,
     );
   }
 
