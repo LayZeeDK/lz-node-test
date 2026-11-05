@@ -54,11 +54,11 @@ const noPrivateModifier = [
   },
 ];
 
-// A disable of one of these lets a cast, an any or an unchecked claim through; prove the type instead.
+// A disable of one of these lets a cast, an any or an unchecked claim through; prove the type instead. The list holds
+// no-restricted-syntax for its `as` ban, so its other bans cannot be disabled either.
 const typeSafetyRules = [
   '@typescript-eslint/no-explicit-any',
   '@typescript-eslint/no-unsafe-*',
-  '@typescript-eslint/no-unsafe-function-type',
   '@typescript-eslint/consistent-type-assertions',
   '@typescript-eslint/no-non-null-assertion',
   '@typescript-eslint/ban-ts-comment',
