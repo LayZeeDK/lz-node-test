@@ -63,7 +63,6 @@ export default {
   appendPlugins: ['@layzee/stryker-node-test-runner'],
   testRunner: 'lz-node-test',
   lzNodeTest: { testFiles: ['test/**/*.test.js'] },
-  reporters: ['clear-text', 'progress'],
 };
 ```
 
