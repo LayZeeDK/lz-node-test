@@ -198,7 +198,8 @@ once per run as under `node --test`.
   Stryker's `ignoreStatic: true`. `ignoreStatic` needs `coverageAnalysis: 'perTest'`. Stryker reports the skipped
   mutants as `Ignored` and leaves them out of the mutation score. With `ignoreStatic`, a static mutant that tests also
   reach is not skipped: it runs those tests.
-- **Bail.** Unless you set `disableBail`, a mutant run stops at the first failing test.
+- **Bail.** Unless you set `disableBail`, a mutant run stops at the first failing test. With `disableBail`, a mutant
+  whose tests failed in one test file is `Killed` by those tests also when a later file of its run times out.
 - **Incremental mode.** The runner reports each test with its file and its position in that file. That is the "Full"
   level of test reporting in Stryker's incremental mode: after a change to a test file, Stryker runs again only the
   mutants that the changed tests cover. For a test file that the configuration also mutates, the runner reports the

@@ -11,6 +11,7 @@ import { isRunning } from '../../src/dirs.ts';
 import {
   complete,
   dryRun,
+  failing,
   fixture,
   initRunner,
   logger,
@@ -114,6 +115,23 @@ describe('LzNodeTestTestRunner deadline', () => {
     );
     assert.ok(elapsed < timeout, `${elapsed} ms of Stryker's ${timeout} ms`);
     assert.equal(isRunning(Number(readFileSync(join(dir, 'child.pid'), 'utf8'))), false);
+  });
+
+  it('reports the tests that failed before the deadline ended a later file as killing the mutant, with bail disabled', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': failing,
+      'b.test.mjs': fixture("it('hangs', () => new Promise(() => { setInterval(() => {}, 1000); }));"),
+    });
+    const runner = await initRunner(['*.test.mjs']);
+    const a = join(dir, 'a.test.mjs');
+    const options = mutantRunOptions({ timeout: 4000, disableBail: true });
+
+    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(options))), {
+      status: MutantRunStatus.Killed,
+      killedBy: [`${a} > fails`],
+      failureMessage: 'expected failure',
+      nrOfTests: 1,
+    });
   });
 
   it('reports the result of a mutant run whose deadline passed without ending any file process', async (t) => {

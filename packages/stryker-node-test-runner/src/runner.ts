@@ -16,7 +16,6 @@ import { commonTokens, declareClassPlugin, PluginKind, tokens } from '@stryker-m
 import {
   determineHitLimitReached,
   DryRunStatus,
-  MutantRunStatus,
   TestStatus,
   toMutantRunResult,
   type DryRunOptions,
@@ -80,6 +79,7 @@ export type LzRunOptions =
       readonly mutantActivation?: undefined;
       readonly hitLimit?: undefined;
       readonly testFilter?: undefined;
+      readonly deadlineReason?: undefined;
     }
   | {
       readonly dryRun: false;
@@ -91,6 +91,8 @@ export type LzRunOptions =
       // undefined as Stryker's MutantRunOptions give them: no hit limit, every test.
       readonly hitLimit?: number | undefined;
       readonly testFilter?: readonly string[] | undefined;
+      /** Why a file that the run's deadline ended timed out. */
+      readonly deadlineReason?: string;
     };
 
 interface LzFileRun {
@@ -257,6 +259,11 @@ export async function lzRunInPool<T, TResult>(
 
 function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRunOptions): FileOutcome {
   const { records, exitCode, unreadable } = fileRun;
+
+  if (fileRun.killedByDeadline) {
+    return { end: { status: DryRunStatus.Timeout, reason: run.deadlineReason ?? "Passed the runner's deadline" } };
+  }
+
   const memoryLimitReached = records.find((record) => record.memoryLimitReached)?.memoryLimitReached;
 
   if (memoryLimitReached) {
@@ -652,6 +659,11 @@ export class LzNodeTestTestRunner implements TestRunner {
 
   async mutantRun(options: MutantRunOptions): Promise<MutantRunResult> {
     const started = performance.now();
+    this.#dryRunFiles ??= storedFiles(this.#dryRunStore.read(this.#dryRunFilesKey, 'files'));
+    const files = lzFilesFor(this.#dryRunFiles ?? this.#testFiles, options.testFilter);
+    // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
+    const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
+    const deadline = AbortSignal.timeout(deadlineMs);
     const run = {
       dryRun: false,
       disableBail: options.disableBail,
@@ -659,33 +671,13 @@ export class LzNodeTestTestRunner implements TestRunner {
       mutantActivation: options.mutantActivation,
       hitLimit: options.hitLimit,
       testFilter: options.testFilter,
+      deadlineReason:
+        `Passed the runner's deadline of ${deadlineMs} ms, which counts each test file's start-up once ` +
+        `(Stryker's timeout: ${Math.round(options.timeout)} ms)`,
     } satisfies LzRunOptions;
-    this.#dryRunFiles ??= storedFiles(this.#dryRunStore.read(this.#dryRunFilesKey, 'files'));
-    const files = lzFilesFor(this.#dryRunFiles ?? this.#testFiles, options.testFilter);
-    // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
-    const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
-    const deadline = AbortSignal.timeout(deadlineMs);
-    const killed: string[] = [];
-    const result = await this.#run(files, run, 1, async (file) => {
-      const fileRun = await this.runFile(file, run, this.#memoryLimits.forMutantRun(file), deadline);
-
-      if (fileRun.killedByDeadline) {
-        killed.push(file);
-      }
-
-      return fileRun;
-    });
-
-    // A deadline that passes after the last file's process ended, as the runner settles, changes no result.
-    if (killed.length > 0) {
-      return {
-        status: MutantRunStatus.Timeout,
-        reason:
-          `Passed the runner's deadline of ${deadlineMs} ms, which counts each test file's start-up once ` +
-          `(Stryker's timeout: ${Math.round(options.timeout)} ms)`,
-      };
-    }
-
+    const result = await this.#run(files, run, 1, (file) =>
+      this.runFile(file, run, this.#memoryLimits.forMutantRun(file), deadline),
+    );
     const mutantResult = toMutantRunResult(result);
 
     // toMutantRunResult sums the test times, which count each file's time outside its tests once per test. A mutant
@@ -723,7 +715,15 @@ export class LzNodeTestTestRunner implements TestRunner {
 
     for (const outcome of outcomes) {
       if ('end' in outcome) {
-        return outcome.end;
+        // With bail disabled, the tests that failed before a later file timed out still kill the mutant.
+        const killedBefore =
+          outcome.end.status === DryRunStatus.Timeout && tests.some((test) => test.status === TestStatus.Failed);
+
+        if (!killedBefore) {
+          return outcome.end;
+        }
+
+        break;
       }
 
       tests.push(...outcome.results);
