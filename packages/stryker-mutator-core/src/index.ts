@@ -8,3 +8,4 @@ export {
   type LzSourceFile,
 } from './instrumenter.ts';
 export { lzIsOwn, lzToNodeMutator, type LzBabelTypes, type LzNodeMutatorLike, type LzOperator } from './operator.ts';
+export { lzSelectOperators, type LzMutatorOptions, type LzOperatorSets } from './select.ts';
