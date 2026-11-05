@@ -35,6 +35,7 @@ export interface LzRecordDependencies {
    * SIGINT listener would keep Ctrl+C from ending the process.
    */
   readonly signals: LzProcessSignals | undefined;
+  readonly platform: NodeJS.Platform;
 }
 
 /** How often a process the tests started writes its record in the dry run, once its coverage has grown. */
@@ -92,7 +93,7 @@ export function lzPersistRecord(
       deps.writeRecord(path, current);
     } catch (error) {
       // A process the tests started exits as it would without the hook once the run that reads its record is over.
-      throwUnlessRunOver(error);
+      throwUnlessRunOver(error, deps.platform);
     }
   });
 
@@ -104,7 +105,7 @@ export function lzPersistRecord(
   // end it, so in the one run that reads coverage its record follows the coverage while it runs.
   if (dryRun) {
     writeOnNewHits(
-      deps.every,
+      deps,
       () => record(natural),
       (current) => {
         deps.writeRecord(path, current);
@@ -115,7 +116,7 @@ export function lzPersistRecord(
 
 /** Calls `write` every `recordIntervalMs` once the record counts more hits than at its last call. */
 function writeOnNewHits(
-  every: LzRecordDependencies['every'],
+  { every, platform }: Pick<LzRecordDependencies, 'every' | 'platform'>,
   record: () => ProcessRecord,
   write: (record: ProcessRecord) => void,
 ): void {
@@ -134,14 +135,20 @@ function writeOnNewHits(
       write(current);
     } catch (error) {
       // The run that reads the record can be over while the process still runs.
-      throwUnlessRunOver(error);
+      throwUnlessRunOver(error, platform);
     }
   }, recordIntervalMs);
 }
 
-/** The run that reads a record removes its directory when it is over, so a write there fails with ENOENT. */
-function throwUnlessRunOver(error: unknown): void {
-  if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
+/**
+ * The run that reads a record removes its directory when it is over, so a write there fails with ENOENT. On Windows the
+ * removal can surface as EPERM, and a rename that `lzWriteRecord` gave up retrying fails with EPERM or EBUSY.
+ */
+function throwUnlessRunOver(error: unknown, platform: NodeJS.Platform): void {
+  const code = error instanceof Error && 'code' in error ? error.code : undefined;
+  const runOver = code === 'ENOENT' || (platform === 'win32' && (code === 'EPERM' || code === 'EBUSY'));
+
+  if (!runOver) {
     throw error;
   }
 }

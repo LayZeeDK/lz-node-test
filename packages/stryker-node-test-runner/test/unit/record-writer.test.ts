@@ -43,6 +43,7 @@ function fakeProcess(overrides: Partial<LzRecordDependencies>) {
     every: (fire, ms) => {
       intervals.push({ ms, fire });
     },
+    platform: 'linux',
     signals: {
       on: (signal, listener) => {
         signalListeners.push({ signal, listener });
@@ -185,16 +186,24 @@ describe('lzPersistRecord, for a process that a signal ends', () => {
   });
 });
 
-/** The error of a failed record write, with Node.js's `code`: ENOENT once the run's directory is gone. */
-function writeError(code: 'ENOENT' | 'EPERM'): Error {
+/**
+ * The error of a failed record write, with Node.js's `code`: ENOENT once the run's directory is gone, and on Windows
+ * also EPERM or EBUSY.
+ */
+function writeError(code: string): Error {
   return Object.assign(new Error(`${code}: record write failed`), { code });
 }
 
 describe('lzPersistRecord, at exit', () => {
   /** A process whose record writes fail with `code`, counting them. */
-  function failingWrites(options: { readonly main: boolean; readonly dryRun: boolean }, code: 'ENOENT' | 'EPERM') {
+  function failingWrites(
+    options: { readonly main: boolean; readonly dryRun: boolean },
+    code: string,
+    platform: NodeJS.Platform = 'linux',
+  ) {
     let writes = 0;
     const { exit } = persisted(options, {
+      platform,
       writeRecord: () => {
         writes += 1;
         throw writeError(code);
@@ -203,6 +212,29 @@ describe('lzPersistRecord, at exit', () => {
 
     return { exit, writes: () => writes };
   }
+
+  lzTestFor(['EPERM', 'EBUSY'])(
+    'exits without an error on Windows when the record of a process the tests started fails with %s, as the run is over',
+    (code) => {
+      const { exit, writes } = failingWrites({ main: false, dryRun: false }, code, 'win32');
+
+      exit();
+
+      assert.equal(writes(), 1);
+    },
+  );
+
+  it('lets any other error through on Windows when the record of a process the tests started cannot be written', () => {
+    const { exit } = failingWrites({ main: false, dryRun: false }, 'EACCES', 'win32');
+
+    assert.throws(exit, /EACCES/);
+  });
+
+  it("lets the error through on Windows when the test file's own record fails with EPERM", () => {
+    const { exit } = failingWrites({ main: true, dryRun: false }, 'EPERM', 'win32');
+
+    assert.throws(exit, /EPERM/);
+  });
 
   it('exits without an error when the record of a process the tests started can no longer be written, as the run is over', () => {
     const { exit, writes } = failingWrites({ main: false, dryRun: false }, 'ENOENT');
@@ -290,9 +322,10 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
    * A process whose record writes fail with `code`. `write` makes the one write it makes while it runs once a hit has
    * grown its coverage; `attempts` counts the writes.
    */
-  function writeWhileRunning(code: 'ENOENT' | 'EPERM') {
+  function writeWhileRunning(code: string, platform: NodeJS.Platform = 'linux') {
     let attempts = 0;
     const p = persisted(descendant, {
+      platform,
       writeRecord: () => {
         attempts += 1;
         throw writeError(code);
@@ -324,5 +357,20 @@ describe('lzPersistRecord, in the dry run, for a process that ends without runni
     const { write } = writeWhileRunning('EPERM');
 
     assert.throws(write, /EPERM/);
+  });
+
+  lzTestFor(['EPERM', 'EBUSY'])('keeps the process running on Windows when its record write fails with %s', (code) => {
+    const { write, attempts } = writeWhileRunning(code, 'win32');
+
+    write();
+    write();
+
+    assert.equal(attempts(), 2);
+  });
+
+  it('lets any other error through on Windows while the process runs', () => {
+    const { write } = writeWhileRunning('EACCES', 'win32');
+
+    assert.throws(write, /EACCES/);
   });
 });

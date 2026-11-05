@@ -96,7 +96,6 @@ export interface HookDependencies extends LzRecordDependencies {
   readonly global: { -readonly [TKey in keyof GlobalSlots]: GlobalSlots[TKey] };
   /** The clock of every `LzTimeWindow`. */
   readonly now: () => number;
-  readonly platform: NodeJS.Platform;
   /** `process.ppid`, read anew on each call. */
   readonly parentPid: () => number;
   readonly kill: (pid: number, signal: NodeJS.Signals) => void;
