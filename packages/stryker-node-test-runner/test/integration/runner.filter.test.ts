@@ -47,6 +47,24 @@ describe('LzNodeTestTestRunner filter, bail and mutant activation', () => {
     });
   });
 
+  it('runs the subtests of a filtered test, so a subtest kills a mutant that only its parent covers', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "import test from 'node:test';",
+        "test('parent', async (t) => {",
+        `  const value = process.env.${activeMutant} || globalThis.__stryker__.activeMutant ? 4 : 3;`,
+        "  await t.test('child', () => { assert.equal(value, 3); });",
+        '});',
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+    const parent = `${join(dir, 'a.test.mjs')} > parent`;
+    const result = await settle(runner.mutantRun(mutantRunOptions({ testFilter: [parent] })));
+
+    assert.strictEqual(result.status, MutantRunStatus.Killed);
+    assert.ok(result.killedBy.includes(`${parent} > child`), result.killedBy.join(', '));
+  });
+
   it("runs the dry run's test files in another runner's mutant runs, though Stryker's testFiles name them by absolute path", async (t) => {
     const kills = fixture(`it('kills', () => { assert.equal(process.env.${activeMutant}, undefined); });`);
     // Stryker hands the dry run the sandbox copies of its absolute testFiles, and every runner the original paths.

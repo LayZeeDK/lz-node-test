@@ -431,6 +431,28 @@ describe('wrapNodeTest', () => {
     assert.deepEqual(seen, [`${testFile} > parent`, `${testFile} > parent > wanted`]);
   });
 
+  it('runs the subtests of a test the filter selects', async () => {
+    const { module, registrations, seen, see } = wrapped({ filter: [`${testFile} > parent`] });
+    module.it('parent', async (t: Subtests) => {
+      see();
+      t.test('child', see);
+      await bodyOf(registrations, 'child')(testContext());
+    });
+    module.it('sibling', see);
+
+    await bodyOf(registrations, 'parent')(testContext(registrations));
+
+    assert.deepEqual(
+      registrations.map(({ name, rest }) => [name, member(rest[0], 'skip')]),
+      [
+        ['parent', undefined],
+        ['sibling', true],
+        ['child', undefined],
+      ],
+    );
+    assert.deepEqual(seen, [`${testFile} > parent`, `${testFile} > parent > child`]);
+  });
+
   it('tells before each suite, test and hook goes to node:test', async () => {
     const { module, registrations, registering } = wrapped({ filter: [`${testFile} > runs`] });
     module.after(() => {});

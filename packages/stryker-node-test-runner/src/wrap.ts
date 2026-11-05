@@ -348,10 +348,11 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   const { only, withoutOnly, turnOffRunOnly, ignoringRunOnly } = lzOnlyRules(testOnly);
   const { makeCurrent, isActive } = currentTests;
   /**
-   * Whether the filter selects the test, or a subtest of it, which the test must run to register. Stryker names a
-   * whole test file in the filter when --testFiles limits the run.
+   * Whether the filter selects the test, a test it lies inside, or a subtest of it, which the test must run to
+   * register. A selected test runs whole, subtests included, as Stryker covers a subtest's assertions with its parent.
+   * Stryker names a whole test file in the filter when --testFiles limits the run.
    */
-  const selected = (id: string) => !filter || filter.has(testFile) || [...filter].some((test) => within(test, id));
+  const selected = (id: string) => !filter || [...filter].some((test) => within(test, id) || within(id, test));
   const activate = () => {
     if (activeMutant !== undefined) {
       ns.activeMutant = activeMutant;
