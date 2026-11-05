@@ -37,10 +37,7 @@ export interface LzRecordDependencies {
   readonly signals: LzProcessSignals | undefined;
 }
 
-/**
- * How often a process the tests started writes its record in the dry run. One write of a 500 KiB coverage map takes
- * about 10 ms, and counting its hits to see whether it changed about 2 ms.
- */
+/** How often a process the tests started writes its record in the dry run, once its coverage has grown. */
 const recordIntervalMs = 250;
 
 /** How many hits `coverage` counts; it only grows, as instrumented code adds mutants and counts up. */
