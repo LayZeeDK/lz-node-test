@@ -107,9 +107,7 @@ describe('endGroup', () => {
     assert.deepEqual(calls, []);
   });
 
-  it('neither waits nor kills when no group is left to ask', async (t) => {
-    // eslint-disable-next-line node-test/require-mock-timers-advance -- time stands still, so a wait would never end
-    t.mock.timers.enable({ apis: ['setTimeout'] });
+  it('neither waits nor kills when no group is left to ask', async () => {
     const { calls, end } = setup('linux', { error: gone });
 
     await end();
