@@ -229,11 +229,15 @@ describe('Stryker configs', () => {
 describe('CI mutation matrix', () => {
   it('runs each Stryker config once, counting the shards of a config as one', () => {
     assert.deepEqual([...matrixRuns.keys()].toSorted(), configs.map(runKey).toSorted());
-    assert.equal(
-      matrixRows.length,
-      matrixRows.filter(({ shard }) => shard !== undefined).length +
-        new Set(matrixRows.filter(({ shard }) => shard === undefined).map(runKey)).size,
-      'a config without shards has more than one row',
+  });
+
+  lzTestEach([...matrixRuns])('%s has one row without a shard, or one row per distinct shard', (key, rows) => {
+    const shards = rows.map(({ shard }) => shard);
+
+    assert.ok(
+      (rows.length === 1 && shards[0] === undefined) ||
+        (!shards.includes(undefined) && new Set(shards).size === shards.length),
+      `${key} runs more than once: its rows have the shards ${shards.map(String).join(', ')}`,
     );
   });
 
