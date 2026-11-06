@@ -57,19 +57,36 @@ interface LzSideRun {
   readonly result: LzSideResult;
 }
 
-const workspaceDir = resolve(import.meta.dirname, '..', '..', '..');
 /** How long processes that a run left get to end by themselves before they count as left behind. */
 const settleMs = 2_000;
+
+/** The steps that pack, install, run Stryker and watch processes, which a test replaces. */
+export interface LzRunSteps {
+  readonly pack: typeof lzPack;
+  readonly install: typeof lzInstall;
+  readonly stryker: typeof lzStryker;
+  readonly startSampler: typeof lzStartSampler;
+  readonly snapshot: typeof lzSnapshot;
+}
+
+export const lzRunSteps: LzRunSteps = {
+  pack: lzPack,
+  install: lzInstall,
+  stryker: lzStryker,
+  startSampler: lzStartSampler,
+  snapshot: lzSnapshot,
+};
 
 /** What one side's run needs: the options, `out`, `dir` for the project's copy and `runTmp` for Stryker's TMP. */
 interface LzRunContext {
   readonly options: LzOssOptions;
+  readonly steps: LzRunSteps;
   readonly out: string;
   readonly dir: string;
   readonly runTmp: string;
 }
 
-export async function lzRunDriver(options: LzOssOptions): Promise<void> {
+export async function lzRunDriver(options: LzOssOptions, steps = lzRunSteps): Promise<void> {
   const out = resolve(options.out);
 
   mkdirSync(out, { recursive: true });
@@ -79,7 +96,7 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     mkdtempSync(join(tmpdir(), `${options.prepareOnly ? lzOssPreparedPrefix : lzOssRunPrefix}${process.pid}-`)),
   );
   // Beside the copy, not in it, so that no folder of the project can collide with them.
-  const context: LzRunContext = { options, out, dir: join(root, 'project'), runTmp: join(root, 'tmp') };
+  const context: LzRunContext = { options, steps, out, dir: join(root, 'project'), runTmp: join(root, 'tmp') };
   const { dir, runTmp } = context;
 
   if (!options.prepareOnly) {
@@ -107,9 +124,9 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     );
   });
   mkdirSync(runTmp);
-  const tarballs = options.tarballs === undefined ? await lzPack(join(root, 'tarballs')) : given(options.tarballs);
+  const tarballs = options.tarballs === undefined ? await steps.pack(join(root, 'tarballs')) : given(options.tarballs);
 
-  await lzInstall(dir, tarballs, options.npmBefore);
+  await steps.install(dir, tarballs, options.npmBefore);
   lzSides.forEach((side) => {
     writeFileSync(join(dir, configFile(side)), lzStrykerConfig(side, options.project));
   });
@@ -118,7 +135,8 @@ export async function lzRunDriver(options: LzOssOptions): Promise<void> {
     project: options.project.name,
     source: options.source,
     sourceCommit: await commitOf(options.source),
-    workspaceCommit: await commitOf(workspaceDir),
+    // Any folder in the workspace gives its commit.
+    workspaceCommit: await commitOf(import.meta.dirname),
     node: process.version,
     platform: `${process.platform}-${process.arch}`,
     concurrency: options.concurrency,
@@ -173,7 +191,7 @@ export function lzClearSideFiles(out: string, side: LzSide): void {
  */
 async function runSide(
   side: LzSide,
-  { options, out, dir, runTmp }: LzRunContext,
+  { options, steps, out, dir, runTmp }: LzRunContext,
   checkpointKey: string,
 ): Promise<LzSideRun> {
   const errors: string[] = [];
@@ -195,11 +213,11 @@ async function runSide(
         return lzStartCheckpoint(checkpoint, checkpointKey);
       });
   const osTmpBefore = await settled('TMP listing before the run', () => readdirSync(tmpdir()));
-  const sampler = await settled('Sampler start', () => lzStartSampler());
+  const sampler = await settled('Sampler start', () => steps.startSampler());
   const excluded = new Set(sampler.ok ? [sampler.value.pid] : []);
   const started = performance.now();
   const run = await settled('Stryker run', () =>
-    lzStryker(dir, configFile(side), options.concurrency, {
+    steps.stryker(dir, configFile(side), options.concurrency, {
       tmp: runTmp,
       timeoutMs: options.timeLimitMinutes * 60_000,
       args: [...lzStrykerArgs(options), ...(resumed.ok ? lzCheckpointArgs(checkpoint) : [])],
@@ -220,7 +238,7 @@ async function runSide(
   await timers.setTimeout(settleMs);
   // One fresh snapshot just before the endings, so a pair that ended or whose id was reused meanwhile is skipped.
   // Ended once recorded, so that one side's leftovers cannot load the next side's run.
-  const found = await settled('Leftover snapshot', async () => lzLeftovers(samples.flat(), await lzSnapshot()));
+  const found = await settled('Leftover snapshot', async () => lzLeftovers(samples.flat(), await steps.snapshot()));
   const ended = await Promise.all(
     (found.ok ? found.value : []).map(async (leftover) => ({
       leftover,
