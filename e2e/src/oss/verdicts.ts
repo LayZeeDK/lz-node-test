@@ -83,9 +83,14 @@ export function lzComparison(bySide: LzBySide<LzSideReport>): LzComparison {
   }
 
   if (missing.length > 0) {
+    // Stryker disable next-line StringLiteral: equivalent, as of the two sides exactly one ran here, so no separator shows
+    const ranSides = ran.join(' and ');
+    // Stryker disable next-line StringLiteral: equivalent, as of the two sides exactly one is missing here, so no separator shows
+    const missingSides = missing.join(' and ');
+
     return {
       compared: false,
-      reason: `Only the ${ran.join(' and ')} side ran; merge its result.json with a ${missing.join(' and ')} run with --merge.`,
+      reason: `Only the ${ranSides} side ran; merge its result.json with a ${missingSides} run with --merge.`,
     };
   }
 

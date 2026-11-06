@@ -32,6 +32,12 @@ describe('lzScore', () => {
     });
   });
 
+  it('lists the counts by status in sorted order, whatever order the mutants have', () => {
+    const { counts } = lzScore([mutant(1, 'Survived'), mutant(2, 'Killed'), mutant(3, 'NoCoverage')]);
+
+    assert.deepEqual(Object.keys(counts), ['Killed', 'NoCoverage', 'Survived']);
+  });
+
   it('has no score without a valid mutant', () => {
     assert.equal(lzScore([mutant(1, 'CompileError')]).score, null);
   });
