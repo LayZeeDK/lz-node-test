@@ -244,11 +244,12 @@ describe('CI mutation matrix', () => {
   lzTestEach(matrixRows.map((row): [string, MatrixRow] => [`${runKey(row)} ${row.shard ?? ''}`.trimEnd(), row]))(
     '%s excludes the files its config mutates from the cache key',
     (_title, row) => {
-      const mutate = configs.find((config) => runKey(config) === runKey(row))?.mutate ?? [];
+      const config = configs.find((candidate) => runKey(candidate) === runKey(row));
+      assert.ok(config, `${runKey(row)} has no Stryker config`);
 
       assert.deepEqual(
         row.mutated,
-        mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
+        config.mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
       );
     },
   );
@@ -258,7 +259,11 @@ describe('CI mutation matrix', () => {
       .filter((config) => matrixRuns.get(runKey(config))?.some(({ shard }) => shard !== undefined))
       .map((config): [string, StrykerConfigRow] => [runKey(config), config]),
   )('the shards of %s mutate each file of its config once', (key, { mutate }) => {
-    const sharded = (matrixRuns.get(key) ?? []).flatMap((row) => expandGlobs(row.mutate ?? []));
+    const rows = matrixRuns.get(key);
+    assert.ok(rows, `${key} has no CI matrix rows`);
+    const shardMutates = rows.flatMap(({ mutate: patterns }) => (patterns === undefined ? [] : [patterns]));
+    assert.equal(shardMutates.length, rows.length, `a shard row of ${key} has no mutate`);
+    const sharded = shardMutates.flatMap((patterns) => expandGlobs(patterns));
 
     assert.deepEqual(sharded.toSorted(), expandGlobs(mutate).toSorted());
   });
