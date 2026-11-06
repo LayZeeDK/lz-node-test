@@ -1,4 +1,9 @@
+import { lzJsMutators } from '@layzee/stryker-js-mutators';
+
 import base, { production, reportFiles, source } from '../../stryker.base.mjs';
+
+// The shared production config installs none of this package's operators; the package's own code gets all of them.
+await lzJsMutators({ experimental: true });
 
 export default await production({
   ...base,
