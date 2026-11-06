@@ -17,6 +17,7 @@ export const operatorBuilders = Object.freeze([
   'parenthesizedExpression',
   'stringLiteral',
   'throwStatement',
+  'unaryExpression',
 ] satisfies (keyof typeof types)[]);
 
 export type LzBabelTypes = Pick<typeof types, (typeof operatorBuilders)[number]>;

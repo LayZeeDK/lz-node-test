@@ -162,6 +162,7 @@ describe('lzResolveFromCore', () => {
     ['no Babel types', babelFile, {}, 'types'],
     ['Babel types that are null', babelFile, { types: null }, 'types'],
     ['Babel types without a builder', babelFile, { types: { ...types, stringLiteral: undefined } }, 'types'],
+    ['Babel types without unaryExpression', babelFile, { types: { ...types, unaryExpression: undefined } }, 'types'],
   ])('refuses an instrumenter with %s', async (_title, file, module, key) => {
     const { load, replaced } = loadingWith(file, module);
     const resolving = lzResolveFromCore(corePackageJsons()[0], load);
