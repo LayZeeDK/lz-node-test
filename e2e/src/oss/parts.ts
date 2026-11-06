@@ -19,7 +19,10 @@ export function lzPartRanges(
   const weightBefore: number[] = [0];
 
   for (let line = 1; line <= lineCount; line++) {
-    weightBefore.push((weightBefore[line - 1] ?? 0) + weightOf(line));
+    const before = weightBefore[line - 1] ?? 0;
+
+    // Stryker disable next-line ArithmeticOperator: equivalent, as negating every sum negates the targets too, so every distance stays
+    weightBefore.push(before + weightOf(line));
   }
 
   const total = weightBefore[lineCount] ?? 0;
@@ -53,6 +56,7 @@ function statementStarts(file: string, source: string): { lineCount: number; can
   const lineCount = ast?.program.loc?.end.line;
 
   if (ast === null || lineCount === undefined) {
+    // Stryker disable next-line StringLiteral: unreachable, as with config files off nothing ignores the file, so Babel returns a program or throws
     throw new Error(`${file} did not parse.`);
   }
 

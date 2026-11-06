@@ -56,6 +56,25 @@ describe('lzPartRanges', () => {
     assert.deepEqual(ranges, ['index.js:1-2', 'index.js:3-3', 'index.js:4-4']);
   });
 
+  it('aims each cut at its own share of the weight, which shows with three parts or more', () => {
+    const oneLineStatements = Array.from({ length: 12 }, (_, index) => `const v${index} = ${index}`).join('\n');
+
+    assert.deepEqual(lzPartRanges('index.js', oneLineStatements, 3), ['index.js:1-4', 'index.js:5-8', 'index.js:9-12']);
+  });
+
+  it('cuts at the earlier of two statements equally near an even share', () => {
+    assert.deepEqual(lzPartRanges('index.js', 'const a = 1\nconst b = 2\nconst c = 3', 2), [
+      'index.js:1-1',
+      'index.js:2-3',
+    ]);
+  });
+
+  it('never cuts at a statement that starts on the line where a statement spanning lines ends', () => {
+    const ranges = lzPartRanges('index.js', 'function a () {\n  return 1\n} const b = 2\nconst c = 3', 2);
+
+    assert.deepEqual(ranges, ['index.js:1-3', 'index.js:4-4']);
+  });
+
   it('refuses a part count below 1', () => {
     assert.throws(() => lzPartRanges('index.js', source, 0), { message: 'parts is a positive integer; got 0.' });
   });
@@ -105,21 +124,41 @@ describe('lzMutantsByLine', () => {
       message: `${report} has no file "index.js"; it has lib/index.js.`,
     });
   });
+
+  it('names every file the report has, separated by commas', (t) => {
+    const report = reportWith(t, { 'lib/a.js': [1], 'lib/b.js': [1] });
+
+    assert.throws(() => lzMutantsByLine(report, 'index.js'), {
+      message: `${report} has no file "index.js"; it has lib/a.js, lib/b.js.`,
+    });
+  });
 });
 
-function partsMain(t: TestContext, args: readonly string[]) {
+/** Runs parts-main in a folder that holds index.js and `files`. */
+function partsMain(
+  t: TestContext,
+  args: readonly string[],
+  {
+    indexJs = source,
+    files = {},
+  }: { readonly indexJs?: string; readonly files?: Readonly<Record<string, string>> } = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), 'lz-oss-parts-main-'));
   const path = join(dir, 'index.js');
 
   t.after(() => {
     rmSync(dir, { recursive: true, force: true });
   });
-  writeFileSync(path, source);
+  writeFileSync(path, indexJs);
+  Object.entries(files).forEach(([name, content]) => {
+    writeFileSync(join(dir, name), content);
+  });
 
   return spawnSync(
     process.execPath,
     [join(import.meta.dirname, '..', '..', 'src', 'oss', 'parts-main.ts'), path, ...args],
     {
+      cwd: dir,
       encoding: 'utf8',
       windowsHide: true,
     },
@@ -148,6 +187,19 @@ describe('parts-main', () => {
           '--mutate index.js:11-11\n',
         stderr: 'index.js has only 5 parts between its top-level statements.\n',
       },
+    );
+  });
+
+  it('parses a script as a script, whatever Babel configuration the folder it runs in holds', (t) => {
+    const missingPlugin = JSON.stringify({ plugins: ['./missing-plugin.js'] });
+    const { status, stdout, stderr } = partsMain(t, ['index.js', '2'], {
+      indexJs: 'with (a) {}\nconst b = 1',
+      files: { 'babel.config.json': missingPlugin, '.babelrc': missingPlugin },
+    });
+
+    assert.deepEqual(
+      { status, stdout, stderr },
+      { status: 0, stdout: '--mutate index.js:1-1\n--mutate index.js:2-2\n', stderr: '' },
     );
   });
 
