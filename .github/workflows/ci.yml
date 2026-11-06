@@ -87,7 +87,7 @@ jobs:
             slug: node-test-extensions
             root: packages/node-test-extensions
             config: src
-            mutated: '!packages/node-test-extensions/src/**'
+            mutated: '!packages/node-test-extensions/src/**/*.ts'
             timeout: 30
           - project: '@layzee/node-test-extensions'
             slug: node-test-extensions
@@ -99,7 +99,7 @@ jobs:
             slug: stryker-mutator-core
             root: packages/stryker-mutator-core
             config: src
-            mutated: '!packages/stryker-mutator-core/src/**'
+            mutated: '!packages/stryker-mutator-core/src/**/*.ts'
             timeout: 30
           - project: '@layzee/stryker-mutator-core'
             slug: stryker-mutator-core
@@ -111,7 +111,7 @@ jobs:
             slug: stryker-node-mutators
             root: packages/stryker-node-mutators
             config: src
-            mutated: "!packages/stryker-node-mutators/src/**\n!packages/stryker-node-mutators/test/synthetic/node-apis.ts"
+            mutated: "!packages/stryker-node-mutators/src/**/*.ts\n!packages/stryker-node-mutators/test/synthetic/node-apis.ts"
             timeout: 45
           - project: '@layzee/stryker-node-mutators'
             slug: stryker-node-mutators
@@ -123,7 +123,7 @@ jobs:
             slug: stryker-node-test-mutators
             root: packages/stryker-node-test-mutators
             config: src
-            mutated: '!packages/stryker-node-test-mutators/src/**'
+            mutated: '!packages/stryker-node-test-mutators/src/**/*.ts'
             timeout: 30
           - project: '@layzee/stryker-node-test-mutators'
             slug: stryker-node-test-mutators
@@ -137,7 +137,7 @@ jobs:
             config: src
             shard: a
             mutate: packages/stryker-node-test-runner/src/runner.ts,packages/stryker-node-test-runner/src/wrap.ts
-            mutated: '!packages/stryker-node-test-runner/src/**'
+            mutated: '!packages/stryker-node-test-runner/src/**/*.ts'
             timeout: 90
           - project: '@layzee/stryker-node-test-runner'
             slug: stryker-node-test-runner
@@ -145,7 +145,7 @@ jobs:
             config: src
             shard: b
             mutate: packages/stryker-node-test-runner/src/hook-core.ts,packages/stryker-node-test-runner/src/record.ts
-            mutated: '!packages/stryker-node-test-runner/src/**'
+            mutated: '!packages/stryker-node-test-runner/src/**/*.ts'
             timeout: 90
           - project: '@layzee/stryker-node-test-runner'
             slug: stryker-node-test-runner
@@ -155,7 +155,7 @@ jobs:
             mutate: "packages/stryker-node-test-runner/src/**/*.ts,!packages/stryker-node-test-runner/src/runner.ts,\
               !packages/stryker-node-test-runner/src/wrap.ts,!packages/stryker-node-test-runner/src/hook-core.ts,\
               !packages/stryker-node-test-runner/src/record.ts"
-            mutated: '!packages/stryker-node-test-runner/src/**'
+            mutated: '!packages/stryker-node-test-runner/src/**/*.ts'
             timeout: 90
           - project: '@layzee/stryker-node-test-runner'
             slug: stryker-node-test-runner
@@ -185,8 +185,8 @@ jobs:
         run: >-
           echo "prefix=stryker-inc-${{ env.RUN }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
-          'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**', 'packages/*/stryker*.config.mjs',
-          'eslint.config.mjs', 'packages/*/eslint.config.mjs', format('{0}/**', matrix.root),
+          'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**/*.ts', 'packages/*/stryker*.config.mjs',
+          'eslint.config.mjs', 'packages/*/eslint.config.mjs', '.github/workflows/ci.yml', format('{0}/**', matrix.root),
           format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**', '!**/out-tsc/**', matrix.mutated)
           }}-" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

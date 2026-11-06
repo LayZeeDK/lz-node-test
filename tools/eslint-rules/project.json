@@ -7,6 +7,8 @@
       "{workspaceRoot}/packages/*/stryker*.config.mjs",
       "{workspaceRoot}/eslint.config.mjs",
       "{workspaceRoot}/packages/*/eslint.config.mjs",
+      "{workspaceRoot}/.github/workflows/ci.yml",
+      "{workspaceRoot}/packages/*/src/**/*.ts",
       "eslintPlugins"
     ]
   },

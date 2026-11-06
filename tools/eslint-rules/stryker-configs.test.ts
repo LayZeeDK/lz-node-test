@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { globSync } from 'node:fs';
-import { join } from 'node:path';
+import { globSync, readFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
+import { parse } from 'yaml';
 import { lzIsRecord } from './stryker-report.ts';
 
 const workspaceRoot = join(import.meta.dirname, '..', '..');
@@ -75,7 +76,74 @@ const configs: readonly (readonly [file: string, reportName: string, mutate: rea
 
 const ignorePatterns = ['/.claude', '/.nx', '/.scratch', '/e2e', '/reports'];
 
-const notWorkspaceConfigs = new Set(['node_modules', 'e2e', '.scratch', '.claude', '.nx', 'dist', 'reports']);
+const notWorkspaceConfigs = new Set(['node_modules', 'e2e/fixtures', '.scratch', '.claude', '.nx', 'dist', 'reports']);
+
+interface MatrixRow {
+  readonly project: string;
+  readonly config: string;
+  readonly shard: string | undefined;
+  readonly mutate: readonly string[] | undefined;
+  readonly mutated: readonly string[];
+}
+
+function readMatrix(): readonly MatrixRow[] {
+  const workflow: unknown = parse(readFileSync(join(workspaceRoot, '.github/workflows/ci.yml'), 'utf8'));
+  const jobs = lzIsRecord(workflow) ? workflow['jobs'] : undefined;
+  const job = lzIsRecord(jobs) ? jobs['mutation'] : undefined;
+  const strategy = lzIsRecord(job) ? job['strategy'] : undefined;
+  const matrix = lzIsRecord(strategy) ? strategy['matrix'] : undefined;
+  const include = lzIsRecord(matrix) ? matrix['include'] : undefined;
+  assert.ok(Array.isArray(include), 'ci.yml has no mutation matrix include list');
+  const rows = include.filter(isRawMatrixRow);
+  assert.equal(rows.length, include.length, 'a mutation matrix row lacks a project, config or mutated string');
+
+  return rows.map(({ project, config, shard, mutate, mutated }) => ({
+    project,
+    config,
+    shard,
+    mutate: mutate?.split(','),
+    mutated: mutated.split('\n'),
+  }));
+}
+
+function isRawMatrixRow(
+  row: unknown,
+): row is { project: string; config: string; shard?: string; mutate?: string; mutated: string } {
+  return (
+    lzIsRecord(row) &&
+    typeof row['project'] === 'string' &&
+    typeof row['config'] === 'string' &&
+    typeof row['mutated'] === 'string' &&
+    (row['shard'] === undefined || typeof row['shard'] === 'string') &&
+    (row['mutate'] === undefined || typeof row['mutate'] === 'string')
+  );
+}
+
+function matrixKey(file: string): string {
+  const folder = dirname(file);
+  const packageJson: unknown = JSON.parse(readFileSync(join(workspaceRoot, folder, 'package.json'), 'utf8'));
+  const project = lzIsRecord(packageJson) ? packageJson['name'] : undefined;
+
+  if (typeof project !== 'string') {
+    throw new TypeError(`${folder}/package.json has no name`);
+  }
+
+  return `${project} ${basename(file) === 'stryker.config.mjs' ? 'src' : 'test-code'}`;
+}
+
+function expandGlobs(patterns: readonly string[]): string[] {
+  const glob = (globs: readonly string[]): string[] =>
+    globSync(globs, { cwd: workspaceRoot }).map((file) => file.replaceAll('\\', '/'));
+  const excluded = new Set(
+    glob(patterns.filter((pattern) => pattern.startsWith('!')).map((pattern) => pattern.slice(1))),
+  );
+
+  return glob(patterns.filter((pattern) => !pattern.startsWith('!'))).filter((file) => !excluded.has(file));
+}
+
+const configsByKey = new Map(configs.map((config) => [matrixKey(config[0]), config]));
+
+const matrixRows = readMatrix();
 
 async function loadConfig(file: string): Promise<Record<string, unknown>> {
   const module: unknown = await import(pathToFileURL(join(workspaceRoot, file)).href);
@@ -89,7 +157,7 @@ describe('Stryker configs', () => {
   it('lists every Stryker config in the workspace', () => {
     const onDisk = globSync('**/stryker*.config.mjs', {
       cwd: workspaceRoot,
-      exclude: (name) => notWorkspaceConfigs.has(name),
+      exclude: (name) => notWorkspaceConfigs.has(name.replaceAll('\\', '/')),
     }).map((file) => file.replaceAll('\\', '/'));
 
     assert.deepEqual(onDisk.toSorted(), configs.map(([file]) => file).toSorted());
@@ -117,5 +185,45 @@ describe('Stryker configs', () => {
       { html: config['htmlReporter'], json: config['jsonReporter'] },
       { html: { fileName: `reports/mutation/${name}.html` }, json: { fileName: `reports/mutation/${name}.json` } },
     );
+  });
+});
+
+describe('CI mutation matrix', () => {
+  it('runs each Stryker config once, counting the shards of a config as one', () => {
+    const runs = new Set(matrixRows.map(({ project, config }) => `${project} ${config}`));
+
+    assert.deepEqual([...runs].toSorted(), [...configsByKey.keys()].toSorted());
+    assert.equal(
+      matrixRows.length,
+      matrixRows.filter(({ shard }) => shard !== undefined).length +
+        new Set(
+          matrixRows.filter(({ shard }) => shard === undefined).map(({ project, config }) => `${project} ${config}`),
+        ).size,
+      'a config without shards has more than one row',
+    );
+  });
+
+  lzTestEach(
+    matrixRows.map((row): [string, MatrixRow] => [
+      `${row.project}:mutate-${row.config} ${row.shard ?? ''}`.trimEnd(),
+      row,
+    ]),
+  )('%s excludes the files its config mutates from the cache key', (_title, { project, config, mutated }) => {
+    const mutate = configsByKey.get(`${project} ${config}`)?.[2] ?? [];
+
+    assert.deepEqual(
+      mutated,
+      mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
+    );
+  });
+
+  lzTestEach(
+    [...configsByKey].filter(([key]) => matrixRows.some((row) => `${row.project} ${row.config}` === key && row.shard)),
+  )('the shards of %s mutate each file of its config once', (key, [, , mutate]) => {
+    const sharded = matrixRows
+      .filter((row) => `${row.project} ${row.config}` === key)
+      .flatMap((row) => expandGlobs(row.mutate ?? []));
+
+    assert.deepEqual(sharded.toSorted(), expandGlobs(mutate).toSorted());
   });
 });
