@@ -220,7 +220,7 @@ jobs:
         if: always()
         env:
           REPORT: reports/mutation/${{ matrix.project }}.${{ matrix.config }}.json
-          TITLE: ${{ matrix.project }}:mutate-${{ matrix.config }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }}
+          TITLE: ${{ env.RUN }}
         run: |
           if [ ! -f "$REPORT" ]; then
             echo "::warning::Stryker wrote no $REPORT, so the job summary has no mutation score for $TITLE."
