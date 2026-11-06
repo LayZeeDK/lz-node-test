@@ -42,7 +42,7 @@ export function lzFileWriters(
   return new Map(
     files.flatMap((file): [string, string[]][] => {
       const calls = [...new Set(readFileSync(join(dir, file), 'utf8').match(fileWrite) ?? [])].map((call) =>
-        call.replace(/\s*\($/, ''),
+        call.slice(0, -1).trimEnd(),
       );
 
       return calls.length === 0 ? [] : [[file, calls.sort()]];
