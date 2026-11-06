@@ -27,6 +27,7 @@ export async function lzExec(
   args: readonly string[],
   { cwd, env = process.env, timeoutMs = 0, logFile }: LzExecOptions,
 ): Promise<LzExecResult> {
+  // Stryker disable next-line BooleanLiteral: equivalent for tests, as windowsHide only hides a console window that no test can see
   const child = spawn(file, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   const closed = once(child, 'close');
   let timedOut = false;
@@ -35,6 +36,7 @@ export async function lzExec(
       ? setTimeout(() => {
           timedOut = true;
           child.kill('SIGTERM');
+          // Stryker disable next-line LzNodeTimerDelay: equivalent, as no test can tell a timeout one millisecond apart
         }, timeoutMs)
       : undefined;
   // 'close' also waits for the processes the child started that still hold its stdout or stderr.

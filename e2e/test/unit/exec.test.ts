@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
@@ -94,5 +94,52 @@ describe('lzExec', () => {
     const result = await lzExec(process.execPath, ['-e', parent], { cwd: tmpdir(), timeoutMs: 3_000 });
 
     assert.deepEqual({ exitCode: result.exitCode, timedOut: result.timedOut }, { exitCode: 0, timedOut: false });
+  });
+
+  it('keeps what a process it started writes to the shared stdout and stderr after the process itself exits', async () => {
+    const late = "setTimeout(() => { process.stdout.write('late\\n'); process.stderr.write('late\\n'); }, 300);";
+    const parent =
+      `require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(late)}], ` +
+      "{ stdio: ['ignore', 'inherit', 'inherit'], detached: true, windowsHide: true }).unref(); " +
+      "process.stdout.write('early\\n'); process.stderr.write('early\\n'); process.exit(0);";
+    const result = await lzExec(process.execPath, ['-e', parent], { cwd: tmpdir(), timeoutMs: 10_000 });
+
+    assert.deepEqual(
+      { stdout: result.stdout, stderr: result.stderr, timedOut: result.timedOut },
+      { stdout: 'early\nlate\n', stderr: 'early\nlate\n', timedOut: false },
+    );
+  });
+
+  it('gives the process no input, so a process that reads stdin to its end goes on at once', async () => {
+    const reader = "process.stdin.on('end', () => process.stdout.write('ended')).resume();";
+    const result = await lzExec(process.execPath, ['-e', reader], { cwd: tmpdir(), timeoutMs: 10_000 });
+
+    assert.deepEqual({ stdout: result.stdout, timedOut: result.timedOut }, { stdout: 'ended', timedOut: false });
+  });
+
+  it('rejects for a file that cannot be started, and leaves no timeout timer running', async () => {
+    const timers = (): number => process.getActiveResourcesInfo().filter((resource) => resource === 'Timeout').length;
+    const before = timers();
+
+    await assert.rejects(lzExec('lz-exec-no-such-file', [], { cwd: tmpdir(), timeoutMs: 60_000 }), { code: 'ENOENT' });
+
+    assert.equal(timers(), before);
+  });
+
+  it('closes the log file once the process ends', async (t) => {
+    const dir = mkdtempSync(join(tmpdir(), 'lz-exec-'));
+
+    t.after(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const probe = join(dir, 'probe');
+    const free = openSync(probe, 'w');
+
+    closeSync(free);
+    await lzExec(process.execPath, ['-e', "process.stdout.write('x')"], { cwd: dir, logFile: join(dir, 'run.log') });
+    const next = openSync(probe, 'w');
+
+    closeSync(next);
+    assert.equal(next, free);
   });
 });
