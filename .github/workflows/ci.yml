@@ -190,17 +190,17 @@ jobs:
           cache: npm
       - run: npm ci
       # Every config loads the runner and the operators from source, so their source is an outside input unless the
-      # config mutates it; the eslint-rules tests also read every Stryker and ESLint config. A change to any outside
-      # input misses the cache and runs the config in full.
+      # config mutates it; the eslint-rules tests also read every Stryker and ESLint config and the synthetic test
+      # files, which ESLint ignores. A change to any outside input misses the cache and runs the config in full.
       - name: Key the incremental file
         id: key
         run: >-
           echo "prefix=stryker-inc-${{ env.RUN }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
-          'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**', 'packages/*/stryker*.config.mjs',
-          'e2e/stryker*.config.mjs', 'eslint.config.mjs', 'packages/*/eslint.config.mjs', '.github/workflows/ci.yml',
-          format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
-          '!**/out-tsc/**', matrix.mutated)
+          'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**', 'packages/*/test/synthetic/**',
+          'packages/*/stryker*.config.mjs', 'e2e/stryker*.config.mjs', 'eslint.config.mjs',
+          'packages/*/eslint.config.mjs', '.github/workflows/ci.yml', format('{0}/**', matrix.root),
+          format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**', '!**/out-tsc/**', matrix.mutated)
           }}-" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
