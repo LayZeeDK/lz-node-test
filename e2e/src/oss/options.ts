@@ -245,6 +245,7 @@ export type LzOssCommand =
 /** Help wins over everything; `--merge` picks the merge, whose strict parse refuses the options of a run. */
 export function lzParseCommand(args: readonly string[]): LzOssCommand {
   const { tokens } = parseArgs({ args: [...args], strict: false, tokens: true });
+  // Stryker disable next-line ArrayDeclaration: the name it adds is never help, h or merge, the only names read
   const names = new Set(tokens.flatMap((token) => (token.kind === 'option' ? [token.name] : [])));
 
   if (names.has('help') || names.has('h')) {

@@ -37,6 +37,10 @@ describe('run folder prefixes', () => {
 
     assert.deepEqual(readdirSync(dir), [`${lzOssPreparedPrefix}${deadPid}-a`]);
   });
+
+  it('names the folders as earlier runs did, so the sweep still finds theirs', () => {
+    assert.deepEqual([lzOssRunPrefix, lzOssPreparedPrefix], ['lz-oss-driver-', 'lz-oss-prepared-']);
+  });
 });
 
 const required = [
@@ -74,10 +78,28 @@ describe('lzParseOptions', () => {
     });
   });
 
+  it('refuses an --npm-before with anything before its year, such as the six-digit year -000001', () => {
+    assert.throws(() => lzParseOptions([...required.slice(0, -2), '--npm-before=-000001-01-01']), {
+      message: /--npm-before is a date such as 2026-11-04 or a UTC time such as 2026-11-04T12:00:00Z\.$/,
+    });
+  });
+
+  it('accepts an --npm-before of exactly now', (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-04T00:00:00Z') });
+
+    assert.equal(lzParseOptions(required).npmBefore, '2026-11-04T00:00:00.000Z');
+  });
+
   it('reads an --npm-before UTC time', () => {
     const { npmBefore } = lzParseOptions([...required.slice(0, -2), '--npm-before', '2026-11-04T12:30:00Z']);
 
     assert.equal(npmBefore, '2026-11-04T12:30:00.000Z');
+  });
+
+  it('reads an --npm-before UTC time with milliseconds', () => {
+    const { npmBefore } = lzParseOptions([...required.slice(0, -2), '--npm-before', '2026-11-04T12:30:00.123Z']);
+
+    assert.equal(npmBefore, '2026-11-04T12:30:00.123Z');
   });
 
   it('reads the options and looks the project up', () => {
@@ -239,8 +261,81 @@ describe('lzParseOptions', () => {
     });
   });
 
-  it('refuses a concurrency of 0', () => {
-    assert.throws(() => lzParseOptions(required.with(7, '0')), { message: /--concurrency is a positive integer/ });
+  for (const value of ['0', '05', '5x']) {
+    it(`refuses a concurrency of ${value}`, () => {
+      assert.throws(() => lzParseOptions(required.with(7, value)), { message: /--concurrency is a positive integer/ });
+    });
+  }
+
+  it('refuses a positional argument', () => {
+    assert.throws(() => lzParseOptions([...required, 'extra']), { code: 'ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL' });
+  });
+
+  const plainProjects: readonly (readonly [string, Omit<LzOssProject, 'name'>])[] = [
+    ['env-schema', { mutate: ['index.js'], testFiles: ['test/**/*.test.js'], nodeTestFlags: [], patches: [] }],
+    [
+      'fastify-cookie',
+      { mutate: ['index.js', 'signer.js'], testFiles: ['test/**/*.test.js'], nodeTestFlags: [], patches: [] },
+    ],
+    [
+      'fastify',
+      {
+        mutate: ['fastify.js', 'lib/**/*.js', '!lib/error-serializer.js', '!lib/config-validator.js'],
+        testFiles: ['test/**/*.test.js', 'test/**/*.test.mjs'],
+        nodeTestFlags: [],
+        patches: [],
+      },
+    ],
+    ['borp', { mutate: ['borp.js', 'lib/**/*.js'], testFiles: ['test/*.test.js'], nodeTestFlags: [], patches: [] }],
+  ];
+
+  for (const [name, settings] of plainProjects) {
+    it(`mutates ${name}'s sources and runs its test files with no flags or patches`, () => {
+      assert.deepEqual(lzParseOptions(required.with(1, name)).project, { name, ...settings });
+    });
+  }
+
+  it("mutates execa's sources, runs its test files but those that fail on Windows one at a time, with a 240 s test timeout", () => {
+    const { project } = lzParseOptions(required.with(1, 'execa'));
+
+    assert.deepEqual(project, {
+      name: 'execa',
+      mutate: ['index.js', 'lib/**/*.js'],
+      testFiles: [
+        'test/convert/*.js',
+        'test/io/*.js',
+        'test/ipc/*.js',
+        'test/pipe/*.js',
+        'test/resolve/*.js',
+        'test/return/*.js',
+        'test/stdio/*.js',
+        'test/terminate/*.js',
+        'test/transform/*.js',
+        'test/arguments/command-resolution.js',
+        'test/arguments/cwd.js',
+        'test/arguments/env.js',
+        'test/arguments/escape-no-icu.js',
+        'test/arguments/escape.js',
+        'test/arguments/fd-options.js',
+        'test/arguments/local.js',
+        'test/arguments/prototype-pollution.js',
+        'test/arguments/shell.js',
+        'test/arguments/specific.js',
+        'test/methods/bind.js',
+        'test/methods/command.js',
+        'test/methods/create.js',
+        'test/methods/main-async.js',
+        'test/methods/override-promise.js',
+        'test/methods/parameters-args.js',
+        'test/methods/parameters-command.js',
+        'test/methods/parameters-options.js',
+        'test/methods/promise.js',
+        'test/methods/script.js',
+        'test/methods/template.js',
+      ],
+      nodeTestFlags: ['--test-concurrency=1', '--test-timeout=240000'],
+      patches: [],
+    });
   });
 
   it('prints the usage and exits 0 on --help', () => {
@@ -285,6 +380,32 @@ describe('lzParseOptions', () => {
 
   it('says in the usage that a result.json given twice is refused', () => {
     assert.match(lzOssUsage, /A result\.json\s+given twice is refused/);
+  });
+
+  it('explains --npm-before, --side, --mutate, the checkpoint and --merge in the usage', () => {
+    const lines = [
+      '\n  --npm-before\n',
+      'passed to npm install as --before: the copy gets the newest versions published before that past',
+      'date or UTC time, which must come after the workspace pins of Stryker, TypeScript and @types/node',
+      'were published. Give every part of one merge, and every Node.js version compared, the same one:',
+      "otherwise npm 11 follows a project's own min-release-age as the clock moves, and npm 10 ignores it.",
+      '--side    runs that side only and compares nothing; without it both sides run and are compared.',
+      "--mutate  replaces the project's mutate set for this run; passed to stryker run as --mutate.",
+      'file.js:12:4-12:20 for a mutant at 12:5-12:19.',
+      'A side that ends before its report, such as at --time-limit-minutes, leaves <side>.checkpoint.json in --out',
+      'with the mutants it tested, and <side>.checkpoint.json.key naming what it ran with.',
+      "with the same fields a merge matches (below), --mutate and the side's Stryker configuration tests only the",
+      'rest; any other rerun discards the checkpoint and says so. A clone with uncommitted changes is not told apart',
+      '\n  from its commit.\n',
+      "--merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside",
+      'it. Batches of one side merge into one; a mutant in two batches is refused.',
+      'installedVersions, tarballDigests and projectSetup are refused, naming the field and, for a list, the',
+    ];
+
+    assert.deepEqual(
+      lines.filter((line) => !lzOssUsage.includes(line)),
+      [],
+    );
   });
 
   it('refuses an option it does not know', () => {
@@ -347,8 +468,18 @@ describe('lzParseMergeOptions', () => {
     });
   });
 
+  it('reads no runs without --merge', () => {
+    assert.deepEqual(lzParseMergeOptions(['--out', 'D:/out']), { merge: [], out: 'D:/out' });
+  });
+
   it('refuses a missing --out', () => {
     assert.throws(() => lzParseMergeOptions(['--merge', 'a/result.json']), { message: /--out is required\.$/ });
+  });
+
+  it('refuses a positional argument', () => {
+    assert.throws(() => lzParseMergeOptions(['a/result.json', '--out', 'o']), {
+      code: 'ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL',
+    });
   });
 
   it('refuses the options of a run, as a merge runs no Stryker', () => {
