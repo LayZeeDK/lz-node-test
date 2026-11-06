@@ -19,7 +19,7 @@ import type { LzMutantDetail } from '../../src/report.ts';
 
 describe('lzConsumerEnv', () => {
   it("puts this Node.js first on PATH, so the command side's `node` is the one the result records", () => {
-    const paths = Object.entries(lzConsumerEnv(tmpdir())).filter(([key]) => key.toUpperCase() === 'PATH');
+    const paths = Object.entries(lzConsumerEnv(tmpdir(), process.env)).filter(([key]) => key.toUpperCase() === 'PATH');
 
     assert.deepEqual(
       paths.map(([, value]) => value?.split(delimiter)[0]),

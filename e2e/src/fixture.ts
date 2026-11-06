@@ -63,7 +63,7 @@ export async function lzInstall(dir: string, tarballs: readonly string[], before
     '--no-fund',
     ...(before === undefined ? [] : ['--before', before]),
     ...tarballs,
-    ...pinned(),
+    ...lzPinned(JSON.parse(readFileSync(join(workspaceDir, 'package.json'), 'utf8'))),
   ]);
 }
 
@@ -179,7 +179,7 @@ export async function lzStryker(
       ...(logFile === undefined ? [] : ['progress-append-only']),
       ...reporters,
     ]),
-    { cwd: dir, env: lzConsumerEnv(tmp), timeoutMs, logFile },
+    { cwd: dir, env: lzConsumerEnv(tmp, process.env), timeoutMs, logFile },
   );
   const outcome: LzStrykerOutcome = {
     exitCode,
@@ -199,13 +199,11 @@ export async function lzStryker(
  * Drops what the suite's own `node --test` sets and a consumer's Stryker runs without, and puts this Node.js first on
  * PATH, so the `node` that Stryker's command runner finds is the one that runs Stryker.
  */
-export function lzConsumerEnv(tmp: string): NodeJS.ProcessEnv {
-  const inherited = Object.entries(process.env).filter(
-    ([key]) => key !== 'NODE_OPTIONS' && key !== 'NODE_TEST_CONTEXT',
-  );
+export function lzConsumerEnv(tmp: string, env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const inherited = Object.entries(env).filter(([key]) => key !== 'NODE_OPTIONS' && key !== 'NODE_TEST_CONTEXT');
   // Windows spells it Path.
-  const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
-  const path = [dirname(process.execPath), process.env[pathKey] ?? ''].join(delimiter);
+  const pathKey = Object.keys(env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
+  const path = [dirname(process.execPath), env[pathKey] ?? ''].join(delimiter);
 
   return { ...Object.fromEntries(inherited), [pathKey]: path, TMPDIR: tmp, TEMP: tmp, TMP: tmp };
 }
@@ -218,14 +216,14 @@ export async function lzPack(into: string): Promise<string[]> {
   for (const name of readdirSync(packagesDir)) {
     const stdout = await npm(workspaceDir, ['pack', '--json', '--pack-destination', into, join(packagesDir, name)]);
 
-    tarballs.push(join(into, packedFile(stdout)));
+    tarballs.push(join(into, lzPackedFile(stdout)));
   }
 
   return tarballs;
 }
 
 /** npm 11 prints an array of packed packages, npm 12 an object keyed by package name. */
-function packedFile(stdout: string): string {
+export function lzPackedFile(stdout: string): string {
   const packed: unknown = JSON.parse(stdout);
   const entries: readonly unknown[] = Array.isArray(packed) ? packed : lzIsRecord(packed) ? Object.values(packed) : [];
   const [entry] = entries;
@@ -237,8 +235,8 @@ function packedFile(stdout: string): string {
   return entry['filename'];
 }
 
-function pinned(): string[] {
-  const manifest: unknown = JSON.parse(readFileSync(join(workspaceDir, 'package.json'), 'utf8'));
+/** The `name@version` of each pinned package in the workspace's `package.json` `manifest`. */
+export function lzPinned(manifest: unknown): string[] {
   const devDependencies = lzIsRecord(manifest) ? manifest['devDependencies'] : undefined;
 
   return pinnedNames.map((name) => {
@@ -254,7 +252,13 @@ function pinned(): string[] {
 
 /** Runs npm as `node <npm-cli.js>`, so no shell and no `npm.cmd` on Windows. */
 async function npm(cwd: string, args: readonly string[]): Promise<string> {
-  const { exitCode, stdout, stderr } = await lzExec(process.execPath, [npmCli(), ...args], { cwd });
+  const { exitCode, stdout, stderr } = await lzExec(
+    process.execPath,
+    [lzNpmCli(process.env, process.execPath), ...args],
+    {
+      cwd,
+    },
+  );
 
   if (exitCode !== 0) {
     throw new Error(`npm ${args.join(' ')} ended with exit code ${exitCode}:\n${stdout}${stderr}`);
@@ -267,9 +271,9 @@ async function npm(cwd: string, args: readonly string[]): Promise<string> {
  * The npm that started this process (`npm_execpath`, which npm, npx and `npm exec` set to a file in npm's `bin`), else
  * the one installed beside the Node.js binary, in the Windows or the POSIX layout.
  */
-function npmCli(): string {
-  const started = process.env['npm_execpath'];
-  const nodeDir = dirname(process.execPath);
+export function lzNpmCli(env: NodeJS.ProcessEnv, execPath: string): string {
+  const started = env['npm_execpath'];
+  const nodeDir = dirname(execPath);
   const candidates = [
     ...(started === undefined ? [] : [join(dirname(started), 'npm-cli.js')]),
     join(nodeDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'),
@@ -289,11 +293,11 @@ export function lzRemoveDeadRunDirs(dir: string, prefix: string): void {
   const runDirPattern = new RegExp(`^${prefix}(\\d+)-`);
 
   for (const name of readdirSync(dir)) {
-    const pid = runDirPattern.exec(name)?.[1];
+    const match = runDirPattern.exec(name);
 
-    if (pid !== undefined && !isRunning(Number(pid))) {
+    if (match !== null && !isRunning(Number(match[1]))) {
       try {
-        rmSync(join(dir, name), { recursive: true, force: true });
+        rmSync(join(dir, name), { recursive: true });
       } catch {
         // A process the dead run started may still work in it; a later run tries again.
       }
