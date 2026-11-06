@@ -1,9 +1,9 @@
-import base, { e2eIgnorePatterns, reportFiles, source, testCode } from '../stryker.base.mjs';
+import base, { ignorePatternsKeepingE2e, reportFiles, source, testCode } from '../stryker.base.mjs';
 
 export default await testCode({
   ...base,
   mutate: ['e2e/test/unit/*.test.ts'],
-  ignorePatterns: e2eIgnorePatterns,
+  ignorePatterns: ignorePatternsKeepingE2e,
   tsconfigFile: 'e2e/tsconfig.stryker.json',
   incrementalFile: 'reports/stryker-incremental/e2e.test-code.json',
   ...reportFiles('e2e.test-code'),

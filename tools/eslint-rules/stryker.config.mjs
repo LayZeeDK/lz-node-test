@@ -1,9 +1,9 @@
-import base, { e2eIgnorePatterns, production, reportFiles, source } from '../../stryker.base.mjs';
+import base, { ignorePatternsKeepingE2e, production, reportFiles, source } from '../../stryker.base.mjs';
 
 export default await production({
   ...base,
   mutate: ['tools/eslint-rules/*.ts', '!tools/eslint-rules/*.test.ts', '!tools/eslint-rules/*.fixtures.ts'],
-  ignorePatterns: e2eIgnorePatterns,
+  ignorePatterns: ignorePatternsKeepingE2e,
   tsconfigFile: 'tools/eslint-rules/tsconfig.stryker.json',
   incrementalFile: 'reports/stryker-incremental/@layzee/eslint-rules.src.json',
   ...reportFiles('@layzee/eslint-rules.src'),

@@ -18,8 +18,8 @@ const ignorePatterns = (file: string): string[] => [
   '/.claude',
   '/.nx',
   '/.scratch',
-  file.startsWith('packages/') ? '/e2e' : '/e2e/fixtures',
   '/reports',
+  file.startsWith('packages/') ? '/e2e' : '/e2e/fixtures',
 ];
 
 const notWorkspaceConfigs = new Set(['node_modules', 'e2e/fixtures', '.scratch', '.claude', '.nx', 'dist', 'reports']);

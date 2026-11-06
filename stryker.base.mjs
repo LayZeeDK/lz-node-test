@@ -32,6 +32,8 @@ export async function testCode(config) {
   return config;
 }
 
+const ignoredEverywhere = ['/.claude', '/.nx', '/.scratch', '/reports'];
+
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   plugins: ['@stryker-mutator/*', '@layzee/stryker-node-test-runner'],
@@ -45,14 +47,14 @@ export default {
   // The progress reporter prints nothing without a terminal, as in CI.
   reporters: ['clear-text', process.env.CI ? 'progress-append-only' : 'progress', 'html', 'json'],
   thresholds: { high: 100, low: 100, break: 100 },
-  ignorePatterns: ['/.claude', '/.nx', '/.scratch', '/e2e', '/reports'],
+  ignorePatterns: [...ignoredEverywhere, '/e2e'],
 };
 
 /**
  * The ignore patterns of the configs whose runs read e2e/: the e2e project mutates it, and the eslint-rules tests
  * load its Stryker configs. Its consumer fixtures stay out of the sandbox.
  */
-export const e2eIgnorePatterns = ['/.claude', '/.nx', '/.scratch', '/e2e/fixtures', '/reports'];
+export const ignorePatternsKeepingE2e = [...ignoredEverywhere, '/e2e/fixtures'];
 
 /**
  * A config's HTML and JSON report files, so that the two configs of a project do not write the same file. The
