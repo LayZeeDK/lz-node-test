@@ -1,5 +1,16 @@
 import assert from 'node:assert/strict';
-import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  mkdtempSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
@@ -126,20 +137,52 @@ describe('lzExec', () => {
     assert.equal(timers(), before);
   });
 
-  it('closes the log file once the process ends', async (t) => {
-    const dir = mkdtempSync(join(tmpdir(), 'lz-exec-'));
+  it(
+    'closes the log file once the process ends, so Windows hands its descriptor out again',
+    // eslint-disable-next-line node-test/no-skip-test -- Windows only, with the reason as its value
+    { skip: process.platform !== 'win32' && 'Linux may free a lower descriptor during the run' },
+    async (t) => {
+      const dir = mkdtempSync(join(tmpdir(), 'lz-exec-'));
 
-    t.after(() => {
-      rmSync(dir, { recursive: true, force: true });
-    });
-    const probe = join(dir, 'probe');
-    const free = openSync(probe, 'w');
+      t.after(() => {
+        rmSync(dir, { recursive: true, force: true });
+      });
+      const probe = join(dir, 'probe');
+      const free = openSync(probe, 'w');
 
-    closeSync(free);
-    await lzExec(process.execPath, ['-e', "process.stdout.write('x')"], { cwd: dir, logFile: join(dir, 'run.log') });
-    const next = openSync(probe, 'w');
+      closeSync(free);
+      await lzExec(process.execPath, ['-e', "process.stdout.write('x')"], { cwd: dir, logFile: join(dir, 'run.log') });
+      const next = openSync(probe, 'w');
 
-    closeSync(next);
-    assert.equal(next, free);
-  });
+      closeSync(next);
+      // Stryker disable next-line LzNodeTestAssertCall: runs on Windows only, so the Linux mutation run cannot reach it
+      assert.equal(next, free);
+    },
+  );
+
+  it(
+    'closes the log file once the process ends, so no descriptor of this process points at it on Linux',
+    // eslint-disable-next-line node-test/no-skip-test -- Linux only, with the reason as its value
+    { skip: process.platform !== 'linux' && 'reads the open descriptors from /proc' },
+    async (t) => {
+      const dir = mkdtempSync(join(tmpdir(), 'lz-exec-'));
+
+      t.after(() => {
+        rmSync(dir, { recursive: true, force: true });
+      });
+      const logFile = join(dir, 'run.log');
+
+      await lzExec(process.execPath, ['-e', "process.stdout.write('x')"], { cwd: dir, logFile });
+      const targets = readdirSync('/proc/self/fd').map((fd) => {
+        try {
+          return readlinkSync(join('/proc/self/fd', fd));
+        } catch {
+          return '';
+        }
+      });
+
+      // Stryker disable next-line LzNodeTestAssertCall: runs on Linux only, so the Windows mutation run cannot reach it
+      assert.ok(!targets.includes(realpathSync(logFile)), `still open: ${realpathSync(logFile)}`);
+    },
+  );
 });
