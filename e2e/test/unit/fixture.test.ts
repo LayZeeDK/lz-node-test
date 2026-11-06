@@ -46,7 +46,7 @@ const fakeStryker = `
 const { mkdirSync, readdirSync, writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const args = process.argv.slice(2);
-for (const name of ['a', 'B', 'c', 'D', 'e', 'F', 'g', 'H', 'i', 'J', 'k', 'L']) {
+for (const name of ['a', 'B', 'c', 'D', 'e', 'F', 'g', 'H', 'i', 'J', 'k', 'L', '\\uFF61', '\\u{1F600}']) {
   writeFileSync(join(process.env.TMPDIR, name), '');
 }
 if (args.includes('--report')) {
@@ -234,7 +234,7 @@ describe('lzStryker', () => {
           tmp: join(dir, 'tmp'),
           files: ['node_modules', 'tmp'],
         },
-        leftover: ['B', 'D', 'F', 'H', 'J', 'L', 'a', 'c', 'e', 'g', 'i', 'k'],
+        leftover: ['B', 'D', 'F', 'H', 'J', 'L', 'a', 'c', 'e', 'g', 'i', 'k', '\u{1F600}', '｡'],
         timedOut: false,
         reported: false,
       },
