@@ -43,6 +43,7 @@
     "@layzee/stryker-mutator-core": "*"
   },
   "peerDependencies": {
+    "@babel/core": "~8.0.0",
     "@stryker-mutator/core": "^10.1.1"
   },
   "devDependencies": {

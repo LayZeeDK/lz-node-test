@@ -6,11 +6,14 @@ import { lzJsMutators } from '../../src/index.ts';
 
 describe('lzJsMutators', () => {
   it("installs the mutators its options turn on into Stryker's instrumenter", async () => {
-    await lzJsMutators({ experimental: { LzJsAssignmentStatement: true } });
+    await lzJsMutators({ experimental: { LzJsNumericLiteral: true } });
 
     const names = (await lzResolveFromCore()).allMutators.map(({ name }) => name);
 
-    assert.ok(names.includes('LzJsAssignmentStatement'));
+    assert.deepEqual(
+      ['LzJsNumericLiteral', 'LzJsAssignmentStatement'].map((name) => names.includes(name)),
+      [true, false],
+    );
   });
 
   it('names this package in the error for a mutator its options cannot turn on there', async () => {

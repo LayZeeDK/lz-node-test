@@ -23,6 +23,17 @@ export async function mutantsOf(operator: LzOperator, source: string): Promise<s
   return mutants.map(({ replacement }) => replacement.replace(/\s+/g, ' '));
 }
 
+/** The mutator name and replacement of each mutant that `operators` make together in `source`. */
+export async function mutantsOfAll(operators: readonly LzOperator[], source: string): Promise<string[][]> {
+  const instrumenter = await lzResolveFromCore();
+  const mutants = await instrumenter.instrument(
+    [{ name: 'sample.ts', content: source }],
+    operators.map((operator) => lzToNodeMutator(operator, instrumenter.types, lzPackageName)),
+  );
+
+  return mutants.map(({ mutatorName, replacement }) => [mutatorName, replacement]);
+}
+
 /** The mutator names of the statement removals in `source`: by Stryker's mutators alone, then with `operator` too. */
 export async function removalsNextToBuiltIns(operator: LzOperator, source: string): Promise<[string[], string[]]> {
   const instrumenter = await lzResolveFromCore();

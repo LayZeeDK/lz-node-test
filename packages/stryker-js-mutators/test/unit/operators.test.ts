@@ -21,7 +21,7 @@ describe('jsOperatorSets', () => {
   it('names the experimental operators', () => {
     assert.deepEqual(
       jsOperatorSets.experimental.map(({ name }) => name),
-      ['LzJsAssignmentStatement'],
+      ['LzJsAssignmentStatement', 'LzJsNumericLiteral'],
     );
   });
 });
