@@ -2,7 +2,8 @@
 
 Extra [StrykerJS](https://stryker-mutator.io/) mutators for any JavaScript or TypeScript code: statements and literals
 that Stryker's own mutators leave alone. It is ESM only, needs Node.js 22.18 or later, and is tested on Node.js 22
-and 24. It works with any Stryker test runner.
+and 24. It works with any Stryker test runner. For code that uses Node.js APIs, see
+[`@layzee/stryker-node-mutators`](../stryker-node-mutators/README.md).
 
 ## Install
 
@@ -11,5 +12,72 @@ npm install --save-dev @stryker-mutator/core@^10.1.1 @layzee/stryker-js-mutators
 ```
 
 `@stryker-mutator/core` and `@babel/core` 8.0 (Stryker 10's Babel) are peer dependencies, and `@stryker-mutator/api` is
-a peer dependency of `@layzee/stryker-mutator-core`, the package it installs its mutators through. It accepts Stryker
-10.1.1 or a later 10.x version and is tested with 10.1.1.
+a peer dependency of `@layzee/stryker-mutator-core`, the package it installs its mutators through. The package adds
+its mutators to the instrumenter of the Stryker that runs it. It accepts Stryker 10.1.1 or a later 10.x version and is
+tested with 10.1.1. The install checks that the instrumenter makes a mutant of each added mutator from a sample, and
+stops the run with an error if it does not.
+
+Stryker has no plugin kind for mutators, so this package is not a Stryker plugin. It changes the instrumenter's list of
+mutators the way `@layzee/stryker-node-mutators` does; its README explains the files involved and the warnings.
+
+## Mutate production code
+
+Call `lzJsMutators` at the top of your Stryker configuration file, an ES module such as `stryker.config.mjs`. Both
+mutators are experimental, so turn them on inside `experimental`:
+
+```js
+import { lzJsMutators } from '@layzee/stryker-js-mutators';
+
+await lzJsMutators({ experimental: true });
+
+/** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
+export default {
+  mutate: ['src/**/*.js'],
+  // ...the rest of your configuration
+};
+```
+
+This call turns on one of them:
+
+```js
+await lzJsMutators({ experimental: { LzJsAssignmentStatement: true } });
+```
+
+An experimental mutator has been measured on too few projects to run by default, and may change or go in a minor
+release. Each option takes only `true`. The call throws on a name it does not know, on another value than `true`, and
+on a name in the wrong place; the message says where the name belongs. Call it in the configuration file, not through
+`plugins`: Stryker only warns when a module in `plugins` fails to load, while a failed call stops the run.
+
+### Experimental mutators
+
+| Mutator                   | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LzJsAssignmentStatement` | Removes an assignment statement with `=`, such as `x = y;`, `obj.k = v;` or `arr[i] = v;`. Stryker's `AssignmentOperator` mutates only compound assignments such as `+=`. A survivor is a state write that no test observes. It leaves declarations, compound assignments, `i++;` and `delete` alone.                                                                                                                                                                                              |
+| `LzJsNumericLiteral`      | Moves an integer literal by 1 each way, including 0 and 1, as an off-by-one in a limit, an index or a count does. Stryker has no numeric mutator. A survivor is a constant that no test pins; a tuning value, such as a poll interval, gives survivors that need a disable comment with a reason. It leaves fractions, BigInts, types, enum members, property keys and the arguments of a call named `kill`, such as `process.kill(pid, 0)`, alone, as a mutant there would signal a real process. |
+
+An example mutant of each, in the form of Stryker's
+[Supported mutators](https://stryker-mutator.io/docs/mutation-testing-elements/supported-mutators/) page:
+
+| Mutator                   | Original            | Mutated                                  |
+| ------------------------- | ------------------- | ---------------------------------------- |
+| `LzJsAssignmentStatement` | `latest = id;`      | `;`                                      |
+| `LzJsNumericLiteral`      | `rows.slice(0, 40)` | `rows.slice(0, 41)`, `rows.slice(0, 39)` |
+
+## Turn a mutator off
+
+The mutators' names work in Stryker's disable comments like Stryker's own mutators:
+
+```js
+// Stryker disable next-line LzJsNumericLiteral: the interval only spaces out polls
+const pollMs = 100;
+```
+
+Both mutators step back where another mutant exists, so they add no mutant that another mutator already covers.
+`LzJsAssignmentStatement`, like Stryker's `CallExpression` removal of a call statement, removes a statement only when
+no other mutant shares it: `x = true;` keeps its `BooleanLiteral` mutant and gets no removal, while `x = f(a);` gets
+one. `LzJsNumericLiteral` drops its mutants of a literal that another mutator also mutates, so a mutator of a site,
+such as `LzNodeTimerDelay`'s delay of `setTimeout(f, 10)` or `LzNodeExitCode`'s `process.exitCode = 1`, takes
+precedence. An assigned number keeps the two `LzJsNumericLiteral` mutants, so `x = 1;` gets those and no removal.
+
+A disable comment that names only the other mutator ignores its mutants and brings this package's mutants back as new
+mutants. Name both mutators when no test can kill either.
