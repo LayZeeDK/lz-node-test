@@ -7,7 +7,7 @@ import type { LzBabelTypes, LzOperator } from '@layzee/stryker-mutator-core';
  * mutator mutates keeps only that mutator's mutants, so a mutator of a site, such as a timer's delay, takes precedence.
  * The arguments of a `kill` call are left alone: a mutant there would signal a real process.
  */
-export const jsNumericLiteral: LzOperator = {
+export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
   name: 'LzJsNumericLiteral',
   sample: 'const limit = 40;\n',
   *mutate(path, t) {
