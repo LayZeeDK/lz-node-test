@@ -88,9 +88,10 @@ export function lzMutantsByKey(report: LzReport): Map<string, LzKeyedMutant> {
 
   if (byKey.size !== entries.length) {
     const keys = entries.map(([key]) => key);
-    const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
+    // Stryker disable next-line StringLiteral: equivalent, as a map smaller than its entries always has a key that find returns
+    const duplicate = keys.find((key, index) => keys.indexOf(key) !== index) ?? '';
 
-    throw new Error(`Two mutants share the key "${duplicate ?? ''}"; the comparison would drop one.`);
+    throw new Error(`Two mutants share the key "${duplicate}"; the comparison would drop one.`);
   }
 
   return byKey;

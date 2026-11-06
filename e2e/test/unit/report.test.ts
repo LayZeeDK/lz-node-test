@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lzMutantLine, lzParseReport } from '../../src/report.ts';
+import { lzMutantLine, lzMutantsByKey, lzParseReport } from '../../src/report.ts';
+
+function failure(json: string): string {
+  try {
+    lzParseReport(json);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  return 'no error';
+}
 
 function reportOf(mutants: unknown[]): string {
   return JSON.stringify({
@@ -112,6 +122,104 @@ describe('lzParseReport', () => {
 
   it('refuses a report without files', () => {
     assert.throws(() => lzParseReport('{"schemaVersion":"2"}'), { message: 'not a mutation report: files' });
+  });
+
+  it('refuses JSON that is not an object without naming a field', () => {
+    assert.throws(() => lzParseReport('[]'), { message: 'not a mutation report' });
+  });
+
+  it('names each other field that does not fit', () => {
+    const fileWithoutMutants = JSON.stringify({ files: { 'src/grow.ts': { source: '' } } });
+    const misfits = [
+      { ...timeout, mutatorName: 7 },
+      { ...timeout, replacement: 7 },
+      { ...timeout, statusReason: 7 },
+      { ...timeout, killedBy: ['1', 2] },
+      { ...timeout, coveredBy: '1' },
+    ];
+
+    assert.deepEqual([fileWithoutMutants, ...misfits.map((misfit) => reportOf([misfit]))].map(failure), [
+      'not a mutation report: files["src/grow.ts"].mutants',
+      'not a mutation report: files["src/grow.ts"].mutants[0].mutatorName',
+      'not a mutation report: files["src/grow.ts"].mutants[0].replacement',
+      'not a mutation report: files["src/grow.ts"].mutants[0].statusReason',
+      'not a mutation report: files["src/grow.ts"].mutants[0].killedBy',
+      'not a mutation report: files["src/grow.ts"].mutants[0].coveredBy',
+    ]);
+  });
+
+  it('sorts by start position before mutator, and by mutator before replacement and end position', () => {
+    const report = lzParseReport(
+      reportOf([
+        {
+          ...timeout,
+          mutatorName: 'B',
+          replacement: 'b',
+          location: { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+        },
+        {
+          ...timeout,
+          mutatorName: 'A',
+          replacement: 'a',
+          location: { start: { line: 1, column: 1 }, end: { line: 9, column: 1 } },
+        },
+        {
+          ...timeout,
+          mutatorName: 'B',
+          replacement: 'a',
+          location: { start: { line: 3, column: 1 }, end: { line: 3, column: 1 } },
+        },
+        {
+          ...timeout,
+          mutatorName: 'A',
+          replacement: 'b',
+          location: { start: { line: 3, column: 1 }, end: { line: 3, column: 1 } },
+        },
+      ]),
+    );
+
+    assert.deepEqual(report.get('src/grow.ts')?.map(lzMutantLine), [
+      '1:1 A a Timeout',
+      '2:1 B b Timeout',
+      '3:1 A b Timeout',
+      '3:1 B a Timeout',
+    ]);
+  });
+
+  it('sorts mutants that differ only in their end by end line, then end column, whichever order the report has', () => {
+    const ending = (line: number, column: number) => ({
+      ...timeout,
+      location: { start: { line: 2, column: 10 }, end: { line, column } },
+    });
+    const ends = (mutants: unknown[]) =>
+      lzParseReport(reportOf(mutants))
+        .get('src/grow.ts')
+        ?.map(({ endLine, endColumn }) => `${endLine}:${endColumn}`);
+
+    assert.deepEqual(
+      [
+        ends([ending(5, 1), ending(3, 1)]),
+        ends([ending(3, 1), ending(5, 1)]),
+        ends([ending(3, 5), ending(3, 3)]),
+        ends([ending(3, 3), ending(3, 5)]),
+      ],
+      [
+        ['3:1', '5:1'],
+        ['3:1', '5:1'],
+        ['3:3', '3:5'],
+        ['3:3', '3:5'],
+      ],
+    );
+  });
+});
+
+describe('lzMutantsByKey', () => {
+  it('names the key that two mutants share', () => {
+    const report = lzParseReport(reportOf([compileError, timeout, timeout]));
+
+    assert.throws(() => lzMutantsByKey(report), {
+      message: 'Two mutants share the key "src/grow.ts:2:10-2:15 BooleanLiteral true"; the comparison would drop one.',
+    });
   });
 });
 
