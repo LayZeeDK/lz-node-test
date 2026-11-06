@@ -422,22 +422,27 @@ describe('lzRunDriver', () => {
 
     mkdirSync(out, { recursive: true });
     writeFileSync(join(out, 'lz.log'), 'an earlier run');
-    let ranMs = 0;
     const exitListeners = process.listenerCount('exit');
+    let clockMs = 1_000;
 
+    t.mock.method(performance, 'now', () => clockMs);
     await lzRunDriver(options, {
       ...driver.steps,
-      stryker: async (dir, configFile, concurrency, strykerOptions) => {
-        const started = performance.now();
-
+      stryker: (dir, configFile, concurrency, strykerOptions) => {
         strykerCalls.push({ dir, configFile, concurrency, options: strykerOptions });
         mkdirSync(join(dir, dirname(lzReportFile)), { recursive: true });
         writeFileSync(join(dir, lzReportFile), 'report');
         mkdirSync(newTmp);
-        await setTimeout(100);
-        ranMs = performance.now() - started;
+        clockMs = 1_250;
 
-        return { reported: true, report: new Map(), exitCode: 0, output: '', leftover: ['worker-1'], timedOut: false };
+        return Promise.resolve({
+          reported: true,
+          report: new Map(),
+          exitCode: 0,
+          output: '',
+          leftover: ['worker-1'],
+          timedOut: false,
+        });
       },
       startSampler: sampler(deadPid, () =>
         Promise.resolve({
@@ -445,41 +450,38 @@ describe('lzRunDriver', () => {
           error: null,
         }),
       ),
-      snapshot: () => Promise.resolve([leftover]),
+      snapshot: () => {
+        clockMs = 9_000;
+
+        return Promise.resolve([leftover]);
+      },
     });
 
     const side = sideOf(readResult(out));
     const root = dirname(defined(strykerCalls[0]).dir);
     const checkpoint = join(out, 'lz.checkpoint.json');
-    // Stryker's own run time alone, not the settling, sampling and listing around it.
-    const overMs = Number(side['wallMs']) - ranMs;
 
-    assert.ok(overMs >= -1, `${overMs} ms`);
-    assert.ok(overMs < 1_000, `${overMs} ms`);
-    assert.deepEqual(
-      { ...side, wallMs: 0 },
-      {
-        stryker: {
-          exitCode: 0,
-          timedOut: false,
-          reported: true,
-          ...lzReportScore(new Map()),
-          leftoverInRunTmp: ['worker-1'],
-        },
-        errors: [],
-        wallMs: 0,
-        resumedMutants: 0,
-        strykerConfig: lzStrykerConfig('lz', project),
-        processes: {
-          samples: 1,
-          peakCount: 1,
-          peakWorkingSetBytes: 500,
-          leftover: [{ pid: childPid, name: 'node', endedByDriver: true }],
-        },
-        newInOsTmp: [basename(newTmp)],
-        leftoverStrykerTmp: [],
+    assert.deepEqual(side, {
+      stryker: {
+        exitCode: 0,
+        timedOut: false,
+        reported: true,
+        ...lzReportScore(new Map()),
+        leftoverInRunTmp: ['worker-1'],
       },
-    );
+      errors: [],
+      wallMs: 250,
+      resumedMutants: 0,
+      strykerConfig: lzStrykerConfig('lz', project),
+      processes: {
+        samples: 1,
+        peakCount: 1,
+        peakWorkingSetBytes: 500,
+        leftover: [{ pid: childPid, name: 'node', endedByDriver: true }],
+      },
+      newInOsTmp: [basename(newTmp)],
+      leftoverStrykerTmp: [],
+    });
     assert.deepEqual(
       {
         root: basename(root).startsWith(`lz-oss-driver-${process.pid}-`),
@@ -512,6 +514,34 @@ describe('lzRunDriver', () => {
       },
     );
     await exited;
+  });
+
+  it('does not count a process that ends within the settle wait after Stryker as left behind', async (t) => {
+    const driver = await setupDriver(t);
+    const lingering = row(deadPid, 1, 'node');
+    let ended = false;
+
+    await lzRunDriver(driver.options, {
+      ...driver.steps,
+      stryker: () => {
+        void setTimeout(1_000).then(() => {
+          ended = true;
+        });
+
+        return notReported();
+      },
+      startSampler: sampler(deadPid - 4, () =>
+        Promise.resolve({ samples: [[row(process.pid, 1, 'node'), lingering]], error: null }),
+      ),
+      snapshot: () => Promise.resolve(ended ? [] : [lingering]),
+    });
+
+    assert.deepEqual(sideOf(readResult(driver.out))['processes'], {
+      samples: 1,
+      peakCount: 1,
+      peakWorkingSetBytes: 1,
+      leftover: [],
+    });
   });
 
   it('records each step that throws, goes on with the next and still writes the result', async (t) => {
