@@ -14,14 +14,14 @@ describe('jsOperatorSets', () => {
   it('names the opt-in operators', () => {
     assert.deepEqual(
       jsOperatorSets.optIn.map(({ name }) => name),
-      [],
+      ['LzJsNumericLiteral'],
     );
   });
 
   it('names the experimental operators', () => {
     assert.deepEqual(
       jsOperatorSets.experimental.map(({ name }) => name),
-      ['LzJsAssignmentStatement', 'LzJsNumericLiteral'],
+      ['LzJsAssignmentStatement'],
     );
   });
 });

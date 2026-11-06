@@ -4,8 +4,8 @@ import { jsNumericLiteral } from './js-numeric-literal.ts';
 
 export const jsOperatorSets = {
   defaults: [],
-  optIn: [],
-  experimental: [jsAssignmentStatement, jsNumericLiteral],
+  optIn: [jsNumericLiteral],
+  experimental: [jsAssignmentStatement],
 } satisfies LzOperatorSets;
 
 export const jsOperators = lzAllOperators(jsOperatorSets);

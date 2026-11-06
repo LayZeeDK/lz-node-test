@@ -22,13 +22,14 @@ mutators the way `@layzee/stryker-node-mutators` does; its README explains the f
 
 ## Mutate production code
 
-Call `lzJsMutators` at the top of your Stryker configuration file, an ES module such as `stryker.config.mjs`. Both
-mutators are experimental, so turn them on inside `experimental`:
+Call `lzJsMutators` at the top of your Stryker configuration file, an ES module such as `stryker.config.mjs`. No
+mutator runs by default yet: `LzJsNumericLiteral` is opt-in and `LzJsAssignmentStatement` is experimental. This call
+turns on both:
 
 ```js
 import { lzJsMutators } from '@layzee/stryker-js-mutators';
 
-await lzJsMutators({ experimental: true });
+await lzJsMutators({ LzJsNumericLiteral: true, experimental: { LzJsAssignmentStatement: true } });
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
@@ -37,23 +38,32 @@ export default {
 };
 ```
 
-This call turns on one of them:
+This call turns on every opt-in and every experimental mutator:
 
 ```js
-await lzJsMutators({ experimental: { LzJsAssignmentStatement: true } });
+await lzJsMutators({ extended: true, experimental: true });
 ```
 
-An experimental mutator has been measured on too few projects to run by default, and may change or go in a minor
-release. Each option takes only `true`. The call throws on a name it does not know, on another value than `true`, and
+- An opt-in mutator works as described but makes many mutants or many equivalent ones in typical code. Turn one on by
+  its name, or all of them with `extended`.
+- An experimental mutator has been measured on too few projects to run by default, and may change or go in a minor
+  release. Turn one on by its name inside `experimental`, or all of them with `experimental: true`.
+
+Each option takes only `true`. The call throws on a name it does not know, on another value than `true`, and
 on a name in the wrong place; the message says where the name belongs. Call it in the configuration file, not through
 `plugins`: Stryker only warns when a module in `plugins` fails to load, while a failed call stops the run.
 
+### Opt-in mutators
+
+| Mutator              | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LzJsNumericLiteral` | Moves an integer literal by 1 each way, including 0 and 1, as an off-by-one in a limit, an index or a count does. Stryker has no numeric mutator. A survivor is a constant that no test pins; a tuning value, such as a poll interval, gives survivors that need a disable comment with a reason. It leaves fractions, BigInts, types, enum members, property keys and the arguments of a call named `kill`, such as `process.kill(pid, 0)`, alone, as a mutant there would signal a real process. |
+
 ### Experimental mutators
 
-| Mutator                   | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LzJsAssignmentStatement` | Removes an assignment statement with `=`, such as `x = y;`, `obj.k = v;` or `arr[i] = v;`. Stryker's `AssignmentOperator` mutates only compound assignments such as `+=`. A survivor is a state write that no test observes. It leaves declarations, compound assignments, `i++;` and `delete` alone.                                                                                                                                                                                              |
-| `LzJsNumericLiteral`      | Moves an integer literal by 1 each way, including 0 and 1, as an off-by-one in a limit, an index or a count does. Stryker has no numeric mutator. A survivor is a constant that no test pins; a tuning value, such as a poll interval, gives survivors that need a disable comment with a reason. It leaves fractions, BigInts, types, enum members, property keys and the arguments of a call named `kill`, such as `process.kill(pid, 0)`, alone, as a mutant there would signal a real process. |
+| Mutator                   | What it changes                                                                                                                                                                                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LzJsAssignmentStatement` | Removes an assignment statement with `=`, such as `x = y;`, `obj.k = v;` or `arr[i] = v;`. Stryker's `AssignmentOperator` mutates only compound assignments such as `+=`. A survivor is a state write that no test observes. It leaves declarations, compound assignments, `i++;` and `delete` alone. |
 
 An example mutant of each, in the form of Stryker's
 [Supported mutators](https://stryker-mutator.io/docs/mutation-testing-elements/supported-mutators/) page:

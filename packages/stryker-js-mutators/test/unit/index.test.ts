@@ -6,7 +6,7 @@ import { lzJsMutators } from '../../src/index.ts';
 
 describe('lzJsMutators', () => {
   it("installs the mutators its options turn on into Stryker's instrumenter", async () => {
-    await lzJsMutators({ experimental: { LzJsNumericLiteral: true } });
+    await lzJsMutators({ LzJsNumericLiteral: true });
 
     const names = (await lzResolveFromCore()).allMutators.map(({ name }) => name);
 
