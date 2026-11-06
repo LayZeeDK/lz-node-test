@@ -119,11 +119,12 @@ Stryker runs `buildCommand` in its sandbox after it places the mutants in the co
 
 All options sit under `lzNodeTest`.
 
-| Option        | Type       | Default                               | Description                                                                                                                                                                                                                                                                                                      |
-| ------------- | ---------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `testFiles`   | `string[]` | `['**/?(*.)+(spec\|test).[jt]s?(x)']` | Glob patterns for the test files, relative to the working directory. `node_modules` is never searched. The default is Nx's test-file convention.                                                                                                                                                                 |
-| `nodeArgs`    | `string[]` | `[]`                                  | Arguments for `node` ahead of the test file, such as `--enable-source-maps` or `--test-only`. Options that add a `node:test` reporter or its destination are left out, because the runner uses its own reporter. Without `--test-only`, `only` tests and suites run with all the others, as under `node --test`. |
-| `maxMemoryMB` | `number`   | from the dry run                      | The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. The default is the most memory that a process of the test file held in the dry run, times 1.5, plus 1024.                                                                             |
+| Option                   | Type       | Default                               | Description                                                                                                                                                                                                                                                                                                      |
+| ------------------------ | ---------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `testFiles`              | `string[]` | `['**/?(*.)+(spec\|test).[jt]s?(x)']` | Glob patterns for the test files, relative to the working directory. `node_modules` is never searched. The default is Nx's test-file convention.                                                                                                                                                                 |
+| `nodeArgs`               | `string[]` | `[]`                                  | Arguments for `node` ahead of the test file, such as `--enable-source-maps` or `--test-only`. Options that add a `node:test` reporter or its destination are left out, because the runner uses its own reporter. Without `--test-only`, `only` tests and suites run with all the others, as under `node --test`. |
+| `maxMemoryMB`            | `number`   | from the dry run                      | The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. The default is the most memory that a process of the test file held in the dry run, times 1.5, plus 1024.                                                                             |
+| `experimentalWorkerCopy` | `boolean`  | `false`                               | Experimental. Each worker copies the sandbox once as it starts and runs its test files in that copy, so tests that write fixed paths inside the project no longer race other workers. See [Give each worker its own copy](#give-each-worker-its-own-copy-experimental).                                          |
 
 `nodeArgs` reach the process of each test file. Stryker's own `testRunnerNodeArgs` reach Stryker's worker process,
 which runs the runner but not the tests. To debug a test file, set `lzNodeTest.testFiles` to that file, run
@@ -342,6 +343,32 @@ mutant. These setups gave wrong statuses in open-source projects:
   From then on, the test failed without a mutant, so up to 27 later kills in that run may have come from that failure
   and not from the mutants. Stryker's sandbox does not stop a test from writing to an absolute path. For a path that
   must not exist, use one inside a temporary folder that the test creates, such as `join(dir, 'missing', 'file')`.
+
+### Give each worker its own copy (experimental)
+
+If you cannot change tests that write fixed paths inside the project, set `lzNodeTest.experimentalWorkerCopy` to
+`true`. Each worker then copies the sandbox once as it starts, into `lz-node-test-copy-<pid>-*` beside the sandbox,
+and runs its test files there with the copy as their working directory. Links in the sandbox, such as Stryker's
+`node_modules` link, are linked again, not copied. Test names, coverage and killing tests still name the sandbox's
+files, as they do without the option. The worker removes its copy when it ends, and the next worker
+removes copies that killed workers left.
+
+On fast-json-stringify, whose standalone-mode test writes into `test/fixtures`, 5 runs at concurrency 6 without the
+option each gave 0 to 2 mutants a status that differed from a run at concurrency 1, all of them kills by that test.
+With the option, no mutant differed in 5 runs. It cost:
+
+- about 5% wall clock: a median of 86.3 s against 82.2 s;
+- one copy of the sandbox without `node_modules` per worker, about 48 MB each there, and 158 to 323 ms to make it.
+  A worker that Stryker restarts makes a new copy.
+
+It does not cover:
+
+- Fixed ports and absolute paths. Workers still share them, as in the list above.
+- Test files that run together in the dry run. The dry run runs several test files of one worker at once, in that
+  worker's one copy, so they can still race each other.
+- Test files outside the sandbox. They run from their own path; only the working directory is the copy.
+- Paths in messages. A failure message, a stack trace and the command that the runner gives to reproduce a failure
+  name the copy's path, which is gone once the worker ends. Run that command in the sandbox instead.
 
 ## Close what your tests open
 
