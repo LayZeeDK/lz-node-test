@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -103,5 +104,62 @@ describe('lzMutantsByLine', () => {
     assert.throws(() => lzMutantsByLine(report, 'index.js'), {
       message: `${report} has no file "index.js"; it has lib/index.js.`,
     });
+  });
+});
+
+function partsMain(t: TestContext, args: readonly string[]) {
+  const dir = mkdtempSync(join(tmpdir(), 'lz-oss-parts-main-'));
+  const path = join(dir, 'index.js');
+
+  t.after(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+  writeFileSync(path, source);
+
+  return spawnSync(
+    process.execPath,
+    [join(import.meta.dirname, '..', '..', 'src', 'oss', 'parts-main.ts'), path, ...args],
+    {
+      encoding: 'utf8',
+      windowsHide: true,
+    },
+  );
+}
+
+describe('parts-main', () => {
+  it('prints a --mutate per part', (t) => {
+    const { status, stdout, stderr } = partsMain(t, ['index.js', '2']);
+
+    assert.deepEqual(
+      { status, stdout, stderr },
+      { status: 0, stdout: '--mutate index.js:1-6\n--mutate index.js:7-11\n', stderr: '' },
+    );
+  });
+
+  it('says so when the file has fewer parts than asked for', (t) => {
+    const { status, stdout, stderr } = partsMain(t, ['index.js', '6']);
+
+    assert.deepEqual(
+      { status, stdout, stderr },
+      {
+        status: 0,
+        stdout:
+          '--mutate index.js:1-2\n--mutate index.js:3-6\n--mutate index.js:7-9\n--mutate index.js:10-10\n' +
+          '--mutate index.js:11-11\n',
+        stderr: 'index.js has only 5 parts between its top-level statements.\n',
+      },
+    );
+  });
+
+  it('refuses a call without the part count and prints the usage', (t) => {
+    const { status, stdout, stderr } = partsMain(t, ['index.js']);
+
+    assert.deepEqual({ status, stdout }, { status: 1, stdout: '' });
+    assert.ok(
+      stderr.includes(
+        'Usage: node e2e/src/oss/parts-main.ts <path to the file> <file as --mutate names it> <parts> [<mutation.json>]',
+      ),
+      stderr,
+    );
   });
 });
