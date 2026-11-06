@@ -13,71 +13,101 @@ import { lzIsRecord } from './stryker-report.ts';
 
 const workspaceRoot = join(import.meta.dirname, '..', '..');
 
-// Each config's report name is the one the mutate-src and mutate-test-code targets read.
-const configs: readonly (readonly [file: string, reportName: string, mutate: readonly string[]])[] = [
-  [
-    'packages/node-test-extensions/stryker.config.mjs',
-    '@layzee/node-test-extensions.src',
-    ['packages/node-test-extensions/src/**/*.ts'],
-  ],
-  [
-    'packages/node-test-extensions/stryker.test-code.config.mjs',
-    '@layzee/node-test-extensions.test-code',
-    ['packages/node-test-extensions/test/**/*.test.ts'],
-  ],
-  [
-    'packages/stryker-mutator-core/stryker.config.mjs',
-    '@layzee/stryker-mutator-core.src',
-    ['packages/stryker-mutator-core/src/**/*.ts'],
-  ],
-  [
-    'packages/stryker-mutator-core/stryker.test-code.config.mjs',
-    '@layzee/stryker-mutator-core.test-code',
-    ['packages/stryker-mutator-core/test/**/*.test.ts'],
-  ],
-  [
-    'packages/stryker-node-mutators/stryker.config.mjs',
-    '@layzee/stryker-node-mutators.src',
-    ['packages/stryker-node-mutators/src/**/*.ts', 'packages/stryker-node-mutators/test/synthetic/node-apis.ts'],
-  ],
-  [
-    'packages/stryker-node-mutators/stryker.test-code.config.mjs',
-    '@layzee/stryker-node-mutators.test-code',
-    ['packages/stryker-node-mutators/test/**/*.test.ts'],
-  ],
-  [
-    'packages/stryker-node-test-mutators/stryker.config.mjs',
-    '@layzee/stryker-node-test-mutators.src',
-    ['packages/stryker-node-test-mutators/src/**/*.ts'],
-  ],
-  [
-    'packages/stryker-node-test-mutators/stryker.test-code.config.mjs',
-    '@layzee/stryker-node-test-mutators.test-code',
-    ['packages/stryker-node-test-mutators/test/**/*.test.ts'],
-  ],
-  [
-    'packages/stryker-node-test-runner/stryker.config.mjs',
-    '@layzee/stryker-node-test-runner.src',
-    ['packages/stryker-node-test-runner/src/**/*.ts'],
-  ],
-  [
-    'packages/stryker-node-test-runner/stryker.test-code.config.mjs',
-    '@layzee/stryker-node-test-runner.test-code',
-    ['packages/stryker-node-test-runner/test/**/*.test.ts'],
-  ],
-  ['e2e/stryker.config.mjs', 'e2e.src', ['e2e/src/**/*.ts']],
-  ['e2e/stryker.test-code.config.mjs', 'e2e.test-code', ['e2e/test/unit/*.test.ts']],
-  [
-    'tools/eslint-rules/stryker.config.mjs',
-    '@layzee/eslint-rules.src',
-    ['tools/eslint-rules/*.ts', '!tools/eslint-rules/*.test.ts'],
-  ],
-  [
-    'tools/eslint-rules/stryker.test-code.config.mjs',
-    '@layzee/eslint-rules.test-code',
-    ['tools/eslint-rules/*.test.ts'],
-  ],
+interface StrykerConfigRow {
+  readonly file: string;
+  readonly project: string;
+  readonly config: 'src' | 'test-code';
+  readonly mutate: readonly string[];
+}
+
+const configs: readonly StrykerConfigRow[] = [
+  {
+    file: 'packages/node-test-extensions/stryker.config.mjs',
+    project: '@layzee/node-test-extensions',
+    config: 'src',
+    mutate: ['packages/node-test-extensions/src/**/*.ts'],
+  },
+  {
+    file: 'packages/node-test-extensions/stryker.test-code.config.mjs',
+    project: '@layzee/node-test-extensions',
+    config: 'test-code',
+    mutate: ['packages/node-test-extensions/test/**/*.test.ts'],
+  },
+  {
+    file: 'packages/stryker-mutator-core/stryker.config.mjs',
+    project: '@layzee/stryker-mutator-core',
+    config: 'src',
+    mutate: ['packages/stryker-mutator-core/src/**/*.ts'],
+  },
+  {
+    file: 'packages/stryker-mutator-core/stryker.test-code.config.mjs',
+    project: '@layzee/stryker-mutator-core',
+    config: 'test-code',
+    mutate: ['packages/stryker-mutator-core/test/**/*.test.ts'],
+  },
+  {
+    file: 'packages/stryker-node-mutators/stryker.config.mjs',
+    project: '@layzee/stryker-node-mutators',
+    config: 'src',
+    mutate: [
+      'packages/stryker-node-mutators/src/**/*.ts',
+      'packages/stryker-node-mutators/test/synthetic/node-apis.ts',
+    ],
+  },
+  {
+    file: 'packages/stryker-node-mutators/stryker.test-code.config.mjs',
+    project: '@layzee/stryker-node-mutators',
+    config: 'test-code',
+    mutate: ['packages/stryker-node-mutators/test/**/*.test.ts'],
+  },
+  {
+    file: 'packages/stryker-node-test-mutators/stryker.config.mjs',
+    project: '@layzee/stryker-node-test-mutators',
+    config: 'src',
+    mutate: ['packages/stryker-node-test-mutators/src/**/*.ts'],
+  },
+  {
+    file: 'packages/stryker-node-test-mutators/stryker.test-code.config.mjs',
+    project: '@layzee/stryker-node-test-mutators',
+    config: 'test-code',
+    mutate: ['packages/stryker-node-test-mutators/test/**/*.test.ts'],
+  },
+  {
+    file: 'packages/stryker-node-test-runner/stryker.config.mjs',
+    project: '@layzee/stryker-node-test-runner',
+    config: 'src',
+    mutate: ['packages/stryker-node-test-runner/src/**/*.ts'],
+  },
+  {
+    file: 'packages/stryker-node-test-runner/stryker.test-code.config.mjs',
+    project: '@layzee/stryker-node-test-runner',
+    config: 'test-code',
+    mutate: ['packages/stryker-node-test-runner/test/**/*.test.ts'],
+  },
+  { file: 'e2e/stryker.config.mjs', project: 'e2e', config: 'src', mutate: ['e2e/src/**/*.ts'] },
+  {
+    file: 'e2e/stryker.test-code.config.mjs',
+    project: 'e2e',
+    config: 'test-code',
+    mutate: ['e2e/test/unit/*.test.ts'],
+  },
+  {
+    file: 'tools/eslint-rules/stryker.config.mjs',
+    project: '@layzee/eslint-rules',
+    config: 'src',
+    mutate: ['tools/eslint-rules/*.ts', '!tools/eslint-rules/*.test.ts'],
+  },
+  {
+    file: 'tools/eslint-rules/stryker.test-code.config.mjs',
+    project: '@layzee/eslint-rules',
+    config: 'test-code',
+    mutate: ['tools/eslint-rules/*.test.ts'],
+  },
 ];
+
+function runKey({ project, config }: { readonly project: string; readonly config: string }): string {
+  return `${project}:mutate-${config}`;
+}
 
 // The packages' runs never read e2e/; the e2e runs mutate it, and these tests load its Stryker configs.
 const ignorePatterns = (file: string): string[] => [
@@ -141,9 +171,8 @@ function expandGlobs(patterns: readonly string[]): string[] {
   return glob(patterns.filter((pattern) => !pattern.startsWith('!'))).filter((file) => !excluded.has(file));
 }
 
-const configsByKey = new Map(configs.map((config) => [config[1].replace(/\.(src|test-code)$/, ' $1'), config]));
-
 const matrixRows = readMatrix();
+const matrixRuns = Map.groupBy(matrixRows, runKey);
 
 async function loadConfig(file: string): Promise<Record<string, unknown>> {
   const module: unknown = await import(pathToFileURL(join(workspaceRoot, file)).href);
@@ -160,76 +189,79 @@ describe('Stryker configs', () => {
       exclude: (name) => notWorkspaceConfigs.has(name.replaceAll('\\', '/')),
     }).map((file) => file.replaceAll('\\', '/'));
 
-    assert.deepEqual(onDisk.toSorted(), configs.map(([file]) => file).toSorted());
+    assert.deepEqual(onDisk.toSorted(), configs.map(({ file }) => file).toSorted());
   });
 
-  lzTestEach(configs.map(([file]) => file))('%s fails the run below a mutation score of 100', async (file) => {
+  lzTestEach(configs.map(({ file }) => file))('%s fails the run below a mutation score of 100', async (file) => {
     const config = await loadConfig(file);
 
     assert.deepEqual(config['thresholds'], { high: 100, low: 100, break: 100 });
   });
 
-  lzTestEach(configs)('%s mutates only its listed files', async (file, _name, mutate) => {
-    const config = await loadConfig(file);
+  lzTestEach(configs.map((row): [string, StrykerConfigRow] => [row.file, row]))(
+    '%s mutates only its listed files',
+    async (file, { mutate }) => {
+      const config = await loadConfig(file);
 
-    assert.deepEqual(
-      { mutate: config['mutate'], ignorePatterns: config['ignorePatterns'] },
-      { mutate, ignorePatterns: ignorePatterns(file) },
-    );
-  });
+      assert.deepEqual(
+        { mutate: config['mutate'], ignorePatterns: config['ignorePatterns'] },
+        { mutate, ignorePatterns: ignorePatterns(file) },
+      );
+    },
+  );
 
-  lzTestEach(configs)('%s writes its HTML and JSON reports as reports/mutation/%s', async (file, name) => {
-    const config = await loadConfig(file);
+  lzTestEach(configs.map(({ file, project, config }): [string, string] => [file, `${project}.${config}`]))(
+    '%s writes its HTML and JSON reports as reports/mutation/%s',
+    async (file, reportName) => {
+      const config = await loadConfig(file);
 
-    assert.deepEqual(
-      { html: config['htmlReporter'], json: config['jsonReporter'] },
-      { html: { fileName: `reports/mutation/${name}.html` }, json: { fileName: `reports/mutation/${name}.json` } },
-    );
-  });
+      assert.deepEqual(
+        { html: config['htmlReporter'], json: config['jsonReporter'] },
+        {
+          html: { fileName: `reports/mutation/${reportName}.html` },
+          json: { fileName: `reports/mutation/${reportName}.json` },
+        },
+      );
+    },
+  );
 });
 
 describe('CI mutation matrix', () => {
   it('runs each Stryker config once, counting the shards of a config as one', () => {
-    const runs = new Set(matrixRows.map(({ project, config }) => `${project} ${config}`));
-
-    assert.deepEqual([...runs].toSorted(), [...configsByKey.keys()].toSorted());
+    assert.deepEqual([...matrixRuns.keys()].toSorted(), configs.map(runKey).toSorted());
     assert.equal(
       matrixRows.length,
       matrixRows.filter(({ shard }) => shard !== undefined).length +
-        new Set(
-          matrixRows.filter(({ shard }) => shard === undefined).map(({ project, config }) => `${project} ${config}`),
-        ).size,
+        new Set(matrixRows.filter(({ shard }) => shard === undefined).map(runKey)).size,
       'a config without shards has more than one row',
     );
   });
 
-  lzTestEach(
-    matrixRows.map((row): [string, MatrixRow] => [
-      `${row.project}:mutate-${row.config} ${row.shard ?? ''}`.trimEnd(),
-      row,
-    ]),
-  )('%s excludes the files its config mutates from the cache key', (_title, { project, config, mutated }) => {
-    const mutate = configsByKey.get(`${project} ${config}`)?.[2] ?? [];
+  lzTestEach(matrixRows.map((row): [string, MatrixRow] => [`${runKey(row)} ${row.shard ?? ''}`.trimEnd(), row]))(
+    '%s excludes the files its config mutates from the cache key',
+    (_title, row) => {
+      const mutate = configs.find((config) => runKey(config) === runKey(row))?.mutate ?? [];
 
-    assert.deepEqual(
-      mutated,
-      mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
-    );
-  });
+      assert.deepEqual(
+        row.mutated,
+        mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
+      );
+    },
+  );
 
   lzTestEach(
-    [...configsByKey].filter(([key]) => matrixRows.some((row) => `${row.project} ${row.config}` === key && row.shard)),
-  )('the shards of %s mutate each file of its config once', (key, [, , mutate]) => {
-    const sharded = matrixRows
-      .filter((row) => `${row.project} ${row.config}` === key)
-      .flatMap((row) => expandGlobs(row.mutate ?? []));
+    configs
+      .filter((config) => matrixRuns.get(runKey(config))?.some(({ shard }) => shard !== undefined))
+      .map((config): [string, StrykerConfigRow] => [runKey(config), config]),
+  )('the shards of %s mutate each file of its config once', (key, { mutate }) => {
+    const sharded = (matrixRuns.get(key) ?? []).flatMap((row) => expandGlobs(row.mutate ?? []));
 
     assert.deepEqual(sharded.toSorted(), expandGlobs(mutate).toSorted());
   });
 });
 
 const eslint = new ESLint({ cwd: workspaceRoot });
-const mutatedFiles = [...new Set(configs.flatMap(([, , mutate]) => expandGlobs(mutate)))];
+const mutatedFiles = [...new Set(configs.flatMap(({ mutate }) => expandGlobs(mutate)))];
 const unlinted: string[] = [];
 
 for (const file of mutatedFiles) {
