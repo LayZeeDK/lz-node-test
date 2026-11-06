@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { lzCheckRuntimeErrors, lzUnrecordedRuntimeErrors } from './runtime-errors.ts';
+import { lzCheckRuntimeErrors, lzScoresAnyMutant, lzUnrecordedRuntimeErrors } from './runtime-errors.ts';
 
 const file = 'packages/a/src/watch.ts';
 const reason = 'node exited with code 1 outside any test.';
@@ -126,6 +126,34 @@ async function writeJson(dir: string, name: string, value: unknown): Promise<str
   return path;
 }
 
+describe('lzScoresAnyMutant', () => {
+  lzTestEach(['Killed', 'Timeout', 'Survived', 'NoCoverage'])('counts a %s mutant toward the score', (status) => {
+    assert.equal(lzScoresAnyMutant(reportOf([mutant('Ignored'), mutant(status)])), true);
+  });
+
+  lzTestEach(['RuntimeError', 'CompileError', 'Ignored', 'Pending'])(
+    'counts no %s mutant toward the score',
+    (status) => {
+      assert.equal(lzScoresAnyMutant(reportOf([mutant(status)])), false);
+    },
+  );
+
+  it('finds a scored mutant in any file of the report', () => {
+    const report = {
+      files: {
+        [file]: { mutants: [mutant('Ignored')] },
+        'packages/a/src/b.ts': { mutants: [mutant('Killed')] },
+      },
+    };
+
+    assert.equal(lzScoresAnyMutant(report), true);
+  });
+
+  it('scores nothing in a report without files, as Stryker writes for a run that mutated nothing', () => {
+    assert.equal(lzScoresAnyMutant({ schemaVersion: '1.0', files: {} }), false);
+  });
+});
+
 describe('lzCheckRuntimeErrors', () => {
   it('reads the report and the list from their files', async (t) => {
     const dir = await tempDir(t);
@@ -152,7 +180,11 @@ describe('runtime-errors.cli.ts', () => {
   });
 
   it('exits 1 and names each unrecorded RuntimeError mutant on its own line', async (t) => {
-    const report = reportOf([mutant('RuntimeError'), mutant('RuntimeError', 'EqualityOperator', 26, 7)]);
+    const report = reportOf([
+      mutant('Killed', 'StringLiteral', 1, 1),
+      mutant('RuntimeError'),
+      mutant('RuntimeError', 'EqualityOperator', 26, 7),
+    ]);
     const reportFile = await writeJson(await tempDir(t), 'report.json', report);
 
     assert.deepEqual(runCheck([reportFile]), {
@@ -161,6 +193,17 @@ describe('runtime-errors.cli.ts', () => {
         'Stryker left RuntimeError mutants out of the mutation score. Kill each one with a test, or record why it ' +
         `cannot be killed in tools/eslint-rules/runtime-errors.json:\n  ${unrecordedLine}\n` +
         `  ${file}:26:7 EqualityOperator: ${reason}\n`,
+    });
+  });
+
+  it('exits 1 when the report holds no mutant that counts toward the score, as a run that mutated nothing passes', async (t) => {
+    const reportFile = await writeJson(await tempDir(t), 'report.json', reportOf([mutant('Ignored')]));
+
+    assert.deepEqual(runCheck([reportFile]), {
+      code: 1,
+      stderr:
+        'Stryker scored no mutant, so its mutation score says nothing. Check that the mutate patterns match files ' +
+        'with code to mutate.\n',
     });
   });
 
