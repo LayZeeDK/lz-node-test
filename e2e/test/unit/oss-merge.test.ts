@@ -134,6 +134,69 @@ describe('lzMerge', () => {
     });
   });
 
+  it('creates an --out folder whose parent does not exist yet', (t) => {
+    const { run, out } = setup(t);
+    const deep = join(out, 'a', 'b');
+
+    assert.equal(lzMerge([run('lz', 'p', { lz: [] })], deep), join(deep, 'result.json'));
+  });
+
+  it('refuses to merge no result.json at all', (t) => {
+    const { out } = setup(t);
+
+    assert.throws(() => lzMerge([], out), { message: '--merge takes at least one result.json.' });
+  });
+
+  it('names entries not every run has in sorted order, whatever order the runs list them in', (t) => {
+    const { run, out } = setup(t);
+    const runs = [
+      run('a', 'p', { lz: [] }, { installedVersions: ['node_modules/z@1.0.0'] }),
+      run('b', 'p', { command: [] }, { installedVersions: ['node_modules/a@1.0.0'] }),
+    ];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message:
+        '--merge takes runs of one installedVersions; some runs only have node_modules/a@1.0.0, node_modules/z@1.0.0.',
+    });
+  });
+
+  it('shows every value when not all of them are lists, even if the lists differ in entries', (t) => {
+    const { run, out } = setup(t);
+    const runs = [
+      run('a', 'p', { lz: [] }, { tarballDigests: ['d1'] }),
+      run('b', 'p', { command: [] }, { tarballDigests: ['d2'] }),
+      run('c', 'p', { command: [] }, { tarballDigests: 'd3' }),
+    ];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one tarballDigests; found ["d1"] and ["d2"] and d3.',
+    });
+  });
+
+  it('leaves two mutants at one key inside one report for the comparison to refuse', (t) => {
+    const { run, out } = setup(t);
+    const file = run('a', 'p', {
+      lz: [
+        { line: 1, status: 'Killed' },
+        { line: 1, status: 'Survived' },
+      ],
+      command: [{ line: 1, status: 'Killed' }],
+    });
+
+    const result: unknown = JSON.parse(readFileSync(lzMerge([file], out), 'utf8'));
+
+    assert.deepEqual(result, {
+      project: 'p',
+      mergedFrom: [file],
+      scores: {
+        lz: { counts: { Killed: 1, Survived: 1 }, score: 50, mutants: 2 },
+        command: { counts: { Killed: 1 }, score: 100, mutants: 1 },
+      },
+      compared: false,
+      reason: 'Two mutants share the key "index.js:1:3-1:9 StringLiteral """; the comparison would drop one.',
+    });
+  });
+
   it('refuses runs of two projects', (t) => {
     const { run, out } = setup(t);
 
