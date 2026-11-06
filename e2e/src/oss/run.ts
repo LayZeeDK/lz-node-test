@@ -235,6 +235,7 @@ async function runSide(
     errors.push(`Sampler: ${stopped.value.error}`);
   }
 
+  // Stryker disable next-line LzNodeTimerDelay: equivalent, as no test can tell a wait one millisecond apart
   await timers.setTimeout(settleMs);
   // One fresh snapshot just before the endings, so a pair that ended or whose id was reused meanwhile is skipped.
   // Ended once recorded, so that one side's leftovers cannot load the next side's run.
