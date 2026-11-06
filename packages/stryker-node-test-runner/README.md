@@ -158,9 +158,10 @@ once per run as under `node --test`.
 - **The hook in every process.** Each `node` process that a test starts loads the runner's hook before its own code.
   In one measurement on a Windows arm64 machine where `node -e 0` took 80 ms, the hook added a few tens of
   milliseconds to that start with the runner's compile cache, a little more with the thread that watches memory, and
-  about three times as much without a compile cache. The thread runs in each process of a mutant run, and of the dry run when `maxMemoryMB` is set. To start a process
-  without the hook, give it an environment whose `NODE_OPTIONS` leaves out the runner's `--import`. What that process
-  covers then counts for no test, so a mutant that only it reaches comes out as `NoCoverage`.
+  about three times as much without a compile cache. The thread runs in each process of a mutant run, and of the dry
+  run when `maxMemoryMB` is set. To start a process without the hook, give it an environment whose `NODE_OPTIONS`
+  leaves out the runner's `--import`. What that process covers then counts for no test, so a mutant that only it
+  reaches comes out as `NoCoverage`.
 - **Tests run one at a time.** The runner registers every suite and test with `concurrency: false`, so that coverage
   goes to the one test that runs. A suite that sets `concurrency` takes as long as its tests together.
 - **The dry run runs files in parallel.** It runs as many test files at once as Stryker later runs test runners for
@@ -191,8 +192,8 @@ once per run as under `node --test`.
   lived through. In the test file's own process, a callback that runs after its test ended, such as one passed to
   `process.nextTick` or `setTimeout`, counts toward the test that is running when it runs, often the next one. Its
   mutants then run that test, not the one that scheduled the callback, and can survive although `node --test` fails.
-  Stryker's runners for Jest and Vitest also count each hit toward the test running at the time. With `coverageAnalysis: 'all'`, every
-  mutant that tests reach runs every test.
+  Stryker's runners for Jest and Vitest also count each hit toward the test running at the time. With
+  `coverageAnalysis: 'all'`, every mutant that tests reach runs every test.
 - **Static mutants.** Stryker calls a mutant static when code outside every test reaches it, such as the code that
   sets a module-level constant. A static mutant runs every test file, each in a fresh process. The mutant is active
   from the start of each process, also when Stryker's `--testFiles` limits the run. To skip static mutants, set
@@ -279,8 +280,8 @@ With `--incremental`, Stryker stores each mutant's result and, on the next run, 
 code and tests did not change. Give each Stryker configuration its own `incrementalFile`: each run reads and rewrites
 the whole file, so a configuration that shares it would read another configuration's results as its own.
 
-On a configuration that mutates the `@layzee/node-test-extensions` package's source (349 mutants, concurrency 6, median of 5
-runs a side, Windows 11 ARM64, Node.js 24.18.1, Stryker 10.1.1):
+On a configuration that mutates the `@layzee/node-test-extensions` package's source (349 mutants, concurrency 6,
+median of 5 runs a side, Windows 11 ARM64, Node.js 24.18.1, Stryker 10.1.1):
 
 | Change since the stored run | Full run | Incremental run | Results reused |
 | --------------------------- | -------- | --------------- | -------------- |
@@ -369,7 +370,8 @@ When the test files run under Node.js's permission model (`--permission`), give 
 
 The runner keeps its run directories in `os.tmpdir()`, named `lz-node-test-*`, and removes them when the run
 ends. Each test file's process gets its own empty folder there as `TMPDIR`, `TEMP` and `TMP`, so `os.tmpdir()` in a
-test returns that folder, which is removed when the file ends. Which test files the dry run ran, and what it measured of each, its memory peak and its start-up, is kept in
-`lz-node-test-dry-run-<pid>-store` and stays until Stryker's own process exits, as the mutant runs read it.
+test returns that folder, which is removed when the file ends. Which test files the dry run ran, and what it measured
+of each, its memory peak and its start-up, is kept in `lz-node-test-dry-run-<pid>-store` and stays until Stryker's
+own process exits, as the mutant runs read it.
 When Stryker is killed instead, the next run removes it, as it removes any directory that a crashed run left behind.
 With `maxMemoryMB` set, the runner records no peaks.

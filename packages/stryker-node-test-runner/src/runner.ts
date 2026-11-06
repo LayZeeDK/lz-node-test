@@ -325,8 +325,8 @@ function fileOutcome(file: string, fileRun: LzFileRun, fileMs: number, run: LzRu
   }
 
   // The hook ended a file that something its tests opened kept alive, which `node --test` would wait for forever: in
-  // the dry run an error to fix, and in a mutant run a timeout, which Stryker's own timer reports first unless the
-  // file's tests take most of its budget.
+  // the dry run an error to fix, and in a mutant run a timeout, which the runner's deadline or Stryker's own timer
+  // reports first unless the file's tests take most of the budget.
   if (!failed && main.heldOpen) {
     const heldBy = main.heldOpen.join(', ');
     const errorMessage =
