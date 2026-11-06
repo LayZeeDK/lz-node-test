@@ -46,9 +46,7 @@ function isKillArgument(path: NodePath): boolean {
   const call = argument.parent;
 
   return (
-    (call.type === 'CallExpression' || call.type === 'OptionalCallExpression') &&
-    call.arguments.some((node) => node === argument.node) &&
-    calleeName(call.callee) === 'kill'
+    (call.type === 'CallExpression' || call.type === 'OptionalCallExpression') && calleeName(call.callee) === 'kill'
   );
 }
 

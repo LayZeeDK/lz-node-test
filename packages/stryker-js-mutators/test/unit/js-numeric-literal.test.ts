@@ -32,6 +32,7 @@ describe('LzJsNumericLiteral', () => {
     ['the literal of a negative number, so -1 becomes -2 and -0', 'const n = -1;', ['2', '0']],
     ['an index', 'const first = items[0];', ['1', '-1']],
     ['a computed key', "const o = { [1]: 'a' };", ['2', '0']],
+    ['the value of a property', 'const o = { a: 2 };', ['3', '1']],
     ['a case', 'switch (n) {\n  case 3:\n    break;\n}', ['4', '2']],
     ['an argument of another call', 'child.close(9);', ['10', '8']],
     ['a negative argument of another call', 'skip(-1);', ['2', '0']],
