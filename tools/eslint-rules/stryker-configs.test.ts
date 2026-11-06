@@ -173,6 +173,7 @@ function expandGlobs(patterns: readonly string[]): string[] {
 
 const matrixRows = readMatrix();
 const matrixRuns = Map.groupBy(matrixRows, runKey);
+const matrixCases = matrixRows.map((row): [string, MatrixRow] => [`${runKey(row)} ${row.shard ?? ''}`.trimEnd(), row]);
 
 async function loadConfig(file: string): Promise<Record<string, unknown>> {
   const module: unknown = await import(pathToFileURL(join(workspaceRoot, file)).href);
@@ -241,18 +242,19 @@ describe('CI mutation matrix', () => {
     );
   });
 
-  lzTestEach(matrixRows.map((row): [string, MatrixRow] => [`${runKey(row)} ${row.shard ?? ''}`.trimEnd(), row]))(
-    '%s excludes the files its config mutates from the cache key',
-    (_title, row) => {
-      const config = configs.find((candidate) => runKey(candidate) === runKey(row));
-      assert.ok(config, `${runKey(row)} has no Stryker config`);
+  lzTestEach(matrixCases)('%s sets mutate exactly when it sets shard', (_title, { shard, mutate }) => {
+    assert.equal(mutate === undefined, shard === undefined, 'a row sets one of mutate and shard without the other');
+  });
 
-      assert.deepEqual(
-        row.mutated,
-        config.mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
-      );
-    },
-  );
+  lzTestEach(matrixCases)('%s excludes the files its config mutates from the cache key', (_title, row) => {
+    const config = configs.find((candidate) => runKey(candidate) === runKey(row));
+    assert.ok(config, `${runKey(row)} has no Stryker config`);
+
+    assert.deepEqual(
+      row.mutated,
+      config.mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
+    );
+  });
 
   lzTestEach(
     configs
