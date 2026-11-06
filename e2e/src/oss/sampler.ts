@@ -25,12 +25,14 @@ export interface LzProcessReader {
 }
 
 const win32Sample =
+  // Stryker disable next-line StringLiteral: Windows only, as the Linux run never starts PowerShell; the Windows run kills it
   "Get-CimInstance -ClassName Win32_Process -Property ProcessId,ParentProcessId,WorkingSetSize,CreationDate,Name | ForEach-Object { '{0} {1} {2} {3} {4}' -f $_.ProcessId, $_.ParentProcessId, $_.WorkingSetSize, $(if ($_.CreationDate) { $_.CreationDate.ToFileTimeUtc() } else { 0 }), $_.Name }; '--'";
 
 const windowsReader: LzProcessReader = {
   command: 'pwsh',
   args: ['-NoProfile', '-NonInteractive', '-Command'],
   sample: win32Sample,
+  // Stryker disable next-line StringLiteral: Windows only, as the Linux run never starts PowerShell; the Windows run kills it
   loop: `$ErrorActionPreference = 'Stop'; while ($true) { $start = Get-Date; ${win32Sample}; $wait = 1000 - ((Get-Date) - $start).TotalMilliseconds; if ($wait -gt 0) { Start-Sleep -Milliseconds $wait } }`,
   parse: lzParseSamples,
 };

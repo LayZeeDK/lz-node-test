@@ -34,8 +34,10 @@ export function lzFileWriters(
   testFiles: readonly string[],
   patched: readonly string[],
 ): ReadonlyMap<string, readonly string[]> {
+  // Stryker disable next-line StringLiteral: Windows only, as Linux paths hold no backslash; the Windows run kills it
+  const posix = (file: string): string => file.replaceAll('\\', '/');
   const files = [...new Set(testFiles.flatMap((pattern) => globSync(pattern, { cwd: dir })))]
-    .map((file) => file.replaceAll('\\', '/'))
+    .map(posix)
     .filter((file) => !patched.includes(file))
     .sort();
 

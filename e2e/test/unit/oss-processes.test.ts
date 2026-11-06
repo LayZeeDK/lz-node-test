@@ -17,12 +17,12 @@ function row(pid: number, ppid: number, created = pid, workingSetBytes = 100): L
 
 describe('lzParseSamples', () => {
   it('reads each sample up to its -- line, with CRLF line ends and spaces in a name', () => {
-    const text = '4 0 10 0 System\r\n10 4 2048 133000000000000001 my tool.exe\r\n--\r\n4 0 10 0 System\r\n--\r\n';
+    const text = '4 0 10 0 System\r\n10 42 2048 133000000000000001 my tool.exe\r\n--\r\n4 0 10 0 System\r\n--\r\n';
 
     assert.deepEqual(lzParseSamples(text), [
       [
         { pid: 4, ppid: 0, workingSetBytes: 10, created: 0n, name: 'System' },
-        { pid: 10, ppid: 4, workingSetBytes: 2048, created: 133000000000000001n, name: 'my tool.exe' },
+        { pid: 10, ppid: 42, workingSetBytes: 2048, created: 133000000000000001n, name: 'my tool.exe' },
       ],
       [{ pid: 4, ppid: 0, workingSetBytes: 10, created: 0n, name: 'System' }],
     ]);

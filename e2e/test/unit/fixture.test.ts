@@ -39,14 +39,16 @@ const packagesDir = join(workspaceDir, 'packages');
 const srcDir = join(import.meta.dirname, '..', '..', 'src');
 const strykerBinDir = join('node_modules', '@stryker-mutator', 'core', 'bin');
 
-// Stands in for Stryker: leaves `a` and `B` in its temporary folder, which NTFS lists in the order sort() reverses,
-// writes an empty report when asked, and prints what it was started with.
+// Stands in for Stryker: leaves twelve entries of mixed case in its temporary folder, which neither NTFS (case-insensitive
+// order) nor a Linux file system (hash order) lists in sort() order, writes an empty report when asked, and prints what
+// it was started with.
 const fakeStryker = `
 const { mkdirSync, readdirSync, writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const args = process.argv.slice(2);
-writeFileSync(join(process.env.TMPDIR, 'a'), '');
-writeFileSync(join(process.env.TMPDIR, 'B'), '');
+for (const name of ['a', 'B', 'c', 'D', 'e', 'F', 'g', 'H', 'i', 'J', 'k', 'L']) {
+  writeFileSync(join(process.env.TMPDIR, name), '');
+}
 if (args.includes('--report')) {
   mkdirSync(join('reports', 'mutation'), { recursive: true });
   writeFileSync(join('reports', 'mutation', 'mutation.json'), '{"files":{}}');
@@ -232,7 +234,7 @@ describe('lzStryker', () => {
           tmp: join(dir, 'tmp'),
           files: ['node_modules', 'tmp'],
         },
-        leftover: ['B', 'a'],
+        leftover: ['B', 'D', 'F', 'H', 'J', 'L', 'a', 'c', 'e', 'g', 'i', 'k'],
         timedOut: false,
         reported: false,
       },
