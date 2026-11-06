@@ -33,11 +33,14 @@ export async function lzExec(
   let timedOut = false;
   const timer =
     timeoutMs > 0
-      ? setTimeout(() => {
-          timedOut = true;
-          child.kill('SIGTERM');
+      ? setTimeout(
+          () => {
+            timedOut = true;
+            child.kill('SIGTERM');
+          },
           // Stryker disable next-line LzNodeTimerDelay: equivalent, as no test can tell a timeout one millisecond apart
-        }, timeoutMs)
+          timeoutMs,
+        )
       : undefined;
   // 'close' also waits for the processes the child started that still hold its stdout or stderr.
   child.once('exit', () => {
