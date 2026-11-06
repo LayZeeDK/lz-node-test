@@ -197,6 +197,15 @@ describe('lzMerge', () => {
     });
   });
 
+  it('refuses a file that is not the result.json of a driver run, such as a list', (t) => {
+    const { out } = setup(t);
+    const file = join(dirname(out), 'list.json');
+
+    writeFileSync(file, '[]');
+
+    assert.throws(() => lzMerge([file], out), { message: `${file} is not the result.json of a driver run.` });
+  });
+
   it('refuses runs of two projects', (t) => {
     const { run, out } = setup(t);
 
