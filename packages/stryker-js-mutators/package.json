@@ -39,6 +39,9 @@
   "scripts": {
     "test": "node --conditions=@layzee/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\""
   },
+  "dependencies": {
+    "@layzee/stryker-mutator-core": "*"
+  },
   "peerDependencies": {
     "@stryker-mutator/core": "^10.1.1"
   },
