@@ -400,6 +400,7 @@ describe('lzParseOptions', () => {
       "--merge   compares the sides of earlier runs from their result.json, each read with its sides' reports beside",
       'it. Batches of one side merge into one; a mutant in two batches is refused.',
       'installedVersions, tarballDigests and projectSetup are refused, naming the field and, for a list, the',
+      'entries that not every run has, as are a result.json that lacks one,',
     ];
 
     assert.deepEqual(
