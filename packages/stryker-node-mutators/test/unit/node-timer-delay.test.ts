@@ -27,6 +27,8 @@ describe('LzNodeTimerDelay', () => {
     ],
     ['scheduler.wait', "import { scheduler } from 'node:timers/promises';\nawait scheduler.wait(ms);", 'ms'],
     ['a delay that needs parentheses', 'setTimeout(f, a ?? 5);', '(a ?? 5)'],
+    ['a negated variable', 'setTimeout(f, -ms);', '-ms'],
+    ['a literal with a plus sign', 'setTimeout(f, +5);', '+5'],
   ])('moves the delay of %s by 1 each way', async (_title, source, delay) => {
     assert.deepEqual(await mutantsOf(nodeTimerDelay, source), [`${delay} + 1`, `${delay} - 1`]);
   });
