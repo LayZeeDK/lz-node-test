@@ -67,7 +67,9 @@ describe('LzNodeTestTestRunner experimentalWorkerCopy', () => {
     const copies = () => readdirSync(dirname(dir)).filter((name) => name.startsWith(lzDirPrefix('copy', process.pid)));
     const before = copies();
     const debug: string[] = [];
+    const started = performance.now();
     const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true }, { log: logger({ debug }) });
+    const initMs = performance.now() - started;
     const made = copies().filter((name) => !before.includes(name));
 
     await runner.dispose();
@@ -75,6 +77,8 @@ describe('LzNodeTestTestRunner experimentalWorkerCopy', () => {
     assert.deepEqual(copies(), before);
     assert.equal(made.length, 1);
     assert.match(debug.join('\n'), new RegExp(`Copied the sandbox to .*${made.join('')} in \\d+ ms`));
+    const copiedMs = Number(/ in (\d+) ms \(experimentalWorkerCopy\)/.exec(debug.join('\n'))?.[1]);
+    assert.ok(copiedMs <= Math.ceil(initMs), `copied in ${copiedMs} ms, init took ${initMs} ms`);
   });
 
   it('gives a runner that starts after another in the same process a fresh copy of the sandbox', async (t) => {

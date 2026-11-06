@@ -24,6 +24,7 @@ export function lzCopySandbox(sandbox: string, pid: number): string {
 
       // A junction, as Stryker links node_modules, needs no symlink privilege on Windows, so a link whose target is
       // missing becomes one too; POSIX ignores the type.
+      // Stryker disable next-line LogicalOperator,BooleanLiteral: Windows only, as POSIX ignores the link type; the Windows run kills it
       const isDirectory = statSync(source, { throwIfNoEntry: false })?.isDirectory() ?? true;
       symlinkSync(readlinkSync(source), lzRebase(source, sandbox, copy), isDirectory ? 'junction' : 'file');
 

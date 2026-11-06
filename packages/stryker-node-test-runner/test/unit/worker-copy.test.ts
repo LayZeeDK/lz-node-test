@@ -3,6 +3,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   realpathSync,
@@ -14,7 +15,6 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { lzDirPrefix } from '../../src/dirs.ts';
 import type { ProcessRecord } from '../../src/record.ts';
 import { lzCopySandbox, lzRebase, lzRebaseRecord } from '../../src/worker-copy.ts';
 
@@ -59,7 +59,7 @@ describe('lzCopySandbox', () => {
     const copy = lzCopySandbox(sandbox, 123);
 
     assert.equal(dirname(copy), dirname(sandbox));
-    assert.ok(basename(copy).startsWith(lzDirPrefix('copy', 123)), copy);
+    assert.ok(basename(copy).startsWith('lz-node-test-copy-123-'), copy);
     assert.equal(readFileSync(join(copy, 'test', 'a.test.js'), 'utf8'), 'content');
   });
 
@@ -83,6 +83,26 @@ describe('lzCopySandbox', () => {
     const copy = lzCopySandbox(sandbox, 123);
 
     assert.equal(readlinkSync(join(copy, 'dangling')), readlinkSync(join(sandbox, 'dangling')));
+  });
+
+  it('points a relative link inside the copy, not back into the sandbox', (t) => {
+    const sandbox = sandboxDir(t, { [join('sub', 'a.js')]: '' });
+    symlinkSync('sub', join(sandbox, 'relative'), 'dir');
+
+    const copy = lzCopySandbox(sandbox, 123);
+
+    assert.equal(realpathSync.native(join(copy, 'relative')), join(copy, 'sub'));
+  });
+
+  it('links a link whose target is missing as a directory link, so it works once the target folder exists', (t) => {
+    const sandbox = sandboxDir(t, { 'index.js': '' });
+    const missing = join(dirname(sandbox), 'missing');
+    symlinkSync(missing, join(sandbox, 'dangling'), 'junction');
+
+    const copy = lzCopySandbox(sandbox, 123);
+    mkdirSync(join(missing, 'dep'), { recursive: true });
+
+    assert.deepEqual(readdirSync(join(copy, 'dangling')), ['dep']);
   });
 });
 
