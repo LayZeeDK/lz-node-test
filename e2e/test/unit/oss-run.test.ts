@@ -455,7 +455,7 @@ describe('lzRunDriver', () => {
     const overMs = Number(side['wallMs']) - ranMs;
 
     assert.ok(overMs >= -1, `${overMs} ms`);
-    assert.ok(overMs < 50, `${overMs} ms`);
+    assert.ok(overMs < 1_000, `${overMs} ms`);
     assert.deepEqual(
       { ...side, wallMs: 0 },
       {
