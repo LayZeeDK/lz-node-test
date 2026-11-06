@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -64,6 +73,16 @@ describe('lzCopySandbox', () => {
 
     assert.ok(lstatSync(join(copy, 'node_modules')).isSymbolicLink());
     assert.equal(realpathSync.native(join(copy, 'node_modules')), modules);
+  });
+
+  it('links to the same place as a link in the sandbox whose target is missing', (t) => {
+    const sandbox = sandboxDir(t, { 'index.js': '' });
+    const missing = join(dirname(sandbox), 'missing');
+    symlinkSync(missing, join(sandbox, 'dangling'), 'junction');
+
+    const copy = lzCopySandbox(sandbox, 123);
+
+    assert.equal(readlinkSync(join(copy, 'dangling')), readlinkSync(join(sandbox, 'dangling')));
   });
 });
 

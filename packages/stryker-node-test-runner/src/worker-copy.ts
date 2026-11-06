@@ -1,4 +1,4 @@
-import { cpSync, lstatSync, mkdtempSync, realpathSync, statSync, symlinkSync } from 'node:fs';
+import { cpSync, lstatSync, mkdtempSync, readlinkSync, statSync, symlinkSync } from 'node:fs';
 import { dirname, join, sep } from 'node:path';
 
 import { lzDirPrefix } from './dirs.ts';
@@ -22,9 +22,10 @@ export function lzCopySandbox(sandbox: string, pid: number): string {
         return true;
       }
 
-      const target = realpathSync.native(source);
-      // A junction, as Stryker links node_modules, needs no symlink privilege on Windows; POSIX ignores the type.
-      symlinkSync(target, lzRebase(source, sandbox, copy), statSync(target).isDirectory() ? 'junction' : 'file');
+      // A junction, as Stryker links node_modules, needs no symlink privilege on Windows, so a link whose target is
+      // missing becomes one too; POSIX ignores the type.
+      const isDirectory = statSync(source, { throwIfNoEntry: false })?.isDirectory() ?? true;
+      symlinkSync(readlinkSync(source), lzRebase(source, sandbox, copy), isDirectory ? 'junction' : 'file');
 
       return false;
     },
