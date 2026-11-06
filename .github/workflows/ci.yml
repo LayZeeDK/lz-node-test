@@ -75,7 +75,7 @@ jobs:
             slug: eslint-rules
             root: tools/eslint-rules
             config: src
-            mutated: '!tools/eslint-rules/*.ts'
+            mutated: "!tools/eslint-rules/*.ts\ntools/eslint-rules/*.fixtures.ts"
             timeout: 30
           - project: '@layzee/eslint-rules'
             slug: eslint-rules

@@ -140,13 +140,20 @@ describe('CI mutation matrix', () => {
     assert.equal(mutate === undefined, shard === undefined, 'a row sets one of mutate and shard without the other');
   });
 
+  // A helper module that a config leaves out of `mutate` goes back into the key: Stryker cannot see a change to it.
   lzTestEach(matrixCases)('%s excludes the files its config mutates from the cache key', (_title, row) => {
     const config = configs.find((candidate) => runKey(candidate) === runKey(row));
     assert.ok(config, `${runKey(row)} has no Stryker config`);
 
     assert.deepEqual(
       row.mutated,
-      config.mutate.filter((pattern) => !pattern.startsWith('!')).map((pattern) => `!${pattern}`),
+      config.mutate.flatMap((pattern) => {
+        if (!pattern.startsWith('!')) {
+          return [`!${pattern}`];
+        }
+
+        return pattern.endsWith('.test.ts') ? [] : [pattern.slice(1)];
+      }),
     );
   });
 
