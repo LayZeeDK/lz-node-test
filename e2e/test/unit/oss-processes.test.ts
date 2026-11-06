@@ -35,6 +35,22 @@ describe('lzParseSamples', () => {
   it('refuses a line that is no process', () => {
     assert.throws(() => lzParseSamples('WARNING: slow\n--\n'), { message: 'Not a process line: "WARNING: slow"' });
   });
+
+  it('splits samples only at a line that is -- and nothing else', () => {
+    assert.deepEqual(lzParseSamples('10 4 2048 1 tool --\n--\n'), [
+      [{ pid: 10, ppid: 4, workingSetBytes: 2048, created: 1n, name: 'tool --' }],
+    ]);
+    assert.throws(() => lzParseSamples('--x\n--\n'), { message: 'Not a process line: "--x"' });
+  });
+
+  it('refuses a line with text before its pid or a stray carriage return in it', () => {
+    assert.throws(() => lzParseSamples('x4 0 10 0 System\n--\n'), {
+      message: 'Not a process line: "x4 0 10 0 System"',
+    });
+    assert.throws(() => lzParseSamples('4 0 10 0 Sys\rtem\n--\n'), {
+      message: 'Not a process line: "4 0 10 0 Sys\rtem"',
+    });
+  });
 });
 
 describe('lzParseProcSamples', () => {
@@ -75,6 +91,23 @@ describe('lzParseProcSamples', () => {
       message: 'Not a /proc/<pid>/stat line: "1 (node) S 0"',
     });
   });
+
+  it('reads a state of more than one character and a parent id of more than one digit', () => {
+    const child = tool.replace('4021 (my (tool) x) R 1 ', '4022 (sh) Ss 4021 ');
+
+    assert.deepEqual(lzParseProcSamples(`4096\n${child}\n--\n`), [
+      [{ pid: 4022, ppid: 4021, workingSetBytes: 512 * 4096, created: 90210n, name: 'sh' }],
+    ]);
+  });
+
+  it('refuses a stat line with text before its pid or after its last field', () => {
+    assert.throws(() => lzParseProcSamples(`4096\nx${init}\n--\n`), {
+      message: `Not a /proc/<pid>/stat line: "x${init}"`,
+    });
+    assert.throws(() => lzParseProcSamples(`4096\n${init} \n--\n`), {
+      message: `Not a /proc/<pid>/stat line: "${init} "`,
+    });
+  });
 });
 
 describe('lzDescendants', () => {
@@ -102,6 +135,24 @@ describe('lzDescendants', () => {
     assert.deepEqual(
       lzDescendants(rows, 1, new Set()).map(({ pid }) => pid),
       [3],
+    );
+  });
+
+  it('leaves out a process that names itself as its parent, such as the idle process', () => {
+    const rows = [row(0, 0), row(4, 0)];
+
+    assert.deepEqual(
+      lzDescendants(rows, 0, new Set()).map(({ pid }) => pid),
+      [4],
+    );
+  });
+
+  it('compares start times with the root process, wherever it is in the rows', () => {
+    const rows = [row(9, 0, 100), row(1, 0, 50), row(2, 1, 60)];
+
+    assert.deepEqual(
+      lzDescendants(rows, 1, new Set()).map(({ pid }) => pid),
+      [2],
     );
   });
 
@@ -144,6 +195,10 @@ describe('lzLeftovers', () => {
 
   it('leaves out a child of an ended run process that no sample saw in the run', () => {
     assert.deepEqual(lzLeftovers([row(10, 1), row(11, 10)], [row(1, 0), row(12, 10, 50)]), []);
+  });
+
+  it('leaves out a process that started at the same time as a seen one under another id', () => {
+    assert.deepEqual(lzLeftovers([row(10, 1, 5)], [row(20, 1, 5)]), []);
   });
 
   it('leaves out a process that reuses the id of an ended one', () => {

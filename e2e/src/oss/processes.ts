@@ -29,7 +29,9 @@ export function lzParseSamples(text: string): LzProcessRow[][] {
  * `/proc/<pid>/stat` lines of every process and a `--` line. Text after the last `--` is dropped.
  */
 export function lzParseProcSamples(text: string): LzProcessRow[][] {
-  const [first = '', ...rest] = text.split('\n');
+  const lines = text.split('\n');
+  // Stryker disable next-line StringLiteral: equivalent, as split returns at least one string, so the default never applies
+  const [first = '', ...rest] = lines;
 
   if (!/^\d+$/.test(first)) {
     throw new Error(`Not a page size: "${first}"`);
@@ -67,6 +69,7 @@ function parseProcStat(line: string, pageSize: number): LzProcessRow {
     throw new Error(`Not a /proc/<pid>/stat line: "${line}"`);
   }
 
+  // Stryker disable next-line StringLiteral: equivalent, as every group of the pattern takes part in each match, so no default applies
   const [, pid = '', name = '', ppid = '', startTime = '', rssPages = ''] = match;
 
   return {
@@ -85,6 +88,7 @@ function parseRow(line: string): LzProcessRow {
     throw new Error(`Not a process line: "${line}"`);
   }
 
+  // Stryker disable next-line StringLiteral: equivalent, as every group of the pattern takes part in each match, so no default applies
   const [, pid = '', ppid = '', workingSet = '', created = '', name = ''] = match;
 
   return { pid: Number(pid), ppid: Number(ppid), workingSetBytes: Number(workingSet), created: BigInt(created), name };
