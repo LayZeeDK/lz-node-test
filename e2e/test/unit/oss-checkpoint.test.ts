@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import type { MutantResult } from '@stryker-mutator/api/core';
+import { PluginKind } from '@stryker-mutator/api/plugin';
 import { DryRunStatus, TestStatus, type TestResult } from '@stryker-mutator/api/test-runner';
 
 import {
@@ -14,9 +15,11 @@ import {
   lzCheckpointMutants,
   lzCheckpointReport,
   LzCheckpointReporter,
+  lzCheckpointReporterName,
   lzEndCheckpoint,
   lzInstalledVersions,
   lzStartCheckpoint,
+  strykerPlugins,
 } from '../../src/oss/checkpoint.ts';
 
 const root = join(tmpdir(), 'project');
@@ -102,10 +105,33 @@ describe('lzCheckpointReport', () => {
     });
   });
 
-  it('marks a TypeScript file as typescript', () => {
-    const report = lzCheckpointReport([mutant('src/a.ts', '1')], [], root, sources);
+  it('marks each TypeScript extension as typescript and any other file as javascript', () => {
+    const files = ['a.ts', 'a.tsx', 'a.mts', 'a.cts', 'a.mjs'];
+    const report = lzCheckpointReport(
+      files.map((file, index) => mutant(file, String(index))),
+      [],
+      root,
+      sources,
+    );
 
-    assert.equal(report.files['src/a.ts']?.language, 'typescript');
+    assert.deepEqual(
+      files.map((file) => report.files[file]?.language),
+      ['typescript', 'typescript', 'typescript', 'typescript', 'javascript'],
+    );
+  });
+
+  it('is a report of schema version 1.0, which Stryker reads', () => {
+    assert.equal(lzCheckpointReport([], [], root, sources).schemaVersion, '1.0');
+  });
+});
+
+describe('strykerPlugins', () => {
+  it('declares the reporter under the name lz-checkpoint, which the driver passes in --reporters', () => {
+    assert.deepEqual(
+      strykerPlugins.map(({ kind, name, injectableClass }) => ({ kind, name, injectableClass })),
+      [{ kind: PluginKind.Reporter, name: 'lz-checkpoint', injectableClass: LzCheckpointReporter }],
+    );
+    assert.equal(lzCheckpointReporterName, 'lz-checkpoint');
   });
 });
 
@@ -171,6 +197,23 @@ describe('LzCheckpointReporter', () => {
     assert.equal(lzCheckpointMutants(file), 1);
     assert.deepEqual(readdirSync(dir), ['lz.checkpoint.json']);
   });
+
+  it("by default reads each mutated file's source from disk, and writes an empty one for a file it cannot read", (t) => {
+    const dir = setup(t);
+    const file = join(dir, 'lz.checkpoint.json');
+    const source = join(dir, 'index.js');
+
+    writeFileSync(source, 'export const a = 1;\n');
+    const reporter = new LzCheckpointReporter({ incrementalFile: file }, undefined, 0);
+
+    reporter.onMutantTested(mutant('index.js', '1', { fileName: source }));
+    reporter.onMutantTested(mutant('index.js', '2', { fileName: join(dir, 'gone.js') }));
+
+    const written = readFileSync(file, 'utf8');
+
+    assert.match(written, /\/index\.js":\{"language":"javascript","source":"export const a = 1;\\n"/);
+    assert.match(written, /\/gone\.js":\{"language":"javascript","source":""/);
+  });
 });
 
 describe('lzStartCheckpoint', () => {
@@ -207,6 +250,28 @@ describe('lzStartCheckpoint', () => {
     assert.equal(lzStartCheckpoint(file, 'key A'), 0);
     assert.equal(readFileSync(`${file}.key`, 'utf8'), 'key A');
   });
+
+  it('says it discarded a checkpoint written under another key, and says nothing when there was none', (t) => {
+    const dir = setup(t);
+    const file = checkpoint(dir);
+    const write = t.mock.method(process.stdout, 'write', () => true);
+
+    lzStartCheckpoint(file, 'key A');
+    lzStartCheckpoint(join(dir, 'none.json'), 'key A');
+    write.mock.restore();
+
+    assert.deepEqual(
+      write.mock.calls.map(({ arguments: [text] }) => text),
+      [`Discarded ${file}: it was written by a run with other options, tarballs or project.\n`],
+    );
+  });
+
+  it('starts afresh when neither a checkpoint nor its key exists', (t) => {
+    const file = join(setup(t), 'lz.checkpoint.json');
+
+    assert.equal(lzStartCheckpoint(file, 'key A'), 0);
+    assert.equal(readFileSync(`${file}.key`, 'utf8'), 'key A');
+  });
 });
 
 describe('lzEndCheckpoint', () => {
@@ -222,6 +287,14 @@ describe('lzEndCheckpoint', () => {
     lzEndCheckpoint(file);
 
     assert.deepEqual(readdirSync(dir), ['lz.mutation.json']);
+  });
+
+  it('does nothing when there is nothing to remove', (t) => {
+    const dir = setup(t);
+
+    lzEndCheckpoint(join(dir, 'lz.checkpoint.json'));
+
+    assert.deepEqual(readdirSync(dir), []);
   });
 });
 
@@ -265,6 +338,12 @@ describe('lzInstalledVersions', () => {
     });
 
     assert.deepEqual(lzInstalledVersions(lockfile), ['node_modules/a@1.0.0', 'node_modules/b@2.0.0']);
+  });
+
+  it('lists a package with no version, such as the root, with an empty one', () => {
+    const lockfile = JSON.stringify({ packages: { '': { name: 'p' }, 'node_modules/a': true } });
+
+    assert.deepEqual(lzInstalledVersions(lockfile), ['@', 'node_modules/a@']);
   });
 
   it('refuses a file that lists no packages', () => {
