@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { glob } from 'node:fs/promises';
 import { availableParallelism, tmpdir } from 'node:os';
-import { extname, join, resolve } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
@@ -625,6 +625,7 @@ export class LzNodeTestTestRunner implements TestRunner {
 
     if (this.#workerCopy) {
       const sandbox = process.cwd();
+      removeLeftDirs(dirname(sandbox));
       const started = performance.now();
       this.#copy = { sandbox, dir: lzCopySandbox(sandbox, process.pid) };
       this.#log.debug(

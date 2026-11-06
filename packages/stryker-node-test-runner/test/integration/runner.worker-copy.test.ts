@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 
@@ -14,6 +14,7 @@ import {
   initRunner,
   logger,
   mutantRunOptions,
+  noProcess,
   passed,
   passing,
   project,
@@ -74,5 +75,39 @@ describe('LzNodeTestTestRunner experimentalWorkerCopy', () => {
     assert.deepEqual(copies(), before);
     assert.equal(made.length, 1);
     assert.match(debug.join('\n'), new RegExp(`Copied the sandbox to .*${made.join('')} in \\d+ ms`));
+  });
+
+  it('gives a runner that starts after another in the same process a fresh copy of the sandbox', async (t) => {
+    const dir = project(t, { 'a.test.mjs': fixture("it('first', () => {});") });
+    const file = join(dir, 'a.test.mjs');
+    const copies = () => readdirSync(dirname(dir)).filter((name) => name.startsWith(lzDirPrefix('copy', process.pid)));
+    const before = copies();
+    const first = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true });
+    await first.dispose();
+    writeFileSync(file, fixture("it('second', () => {});"));
+
+    const second = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true });
+    const { tests } = complete(await settle(second.dryRun(dryRun)));
+    await second.dispose();
+
+    assert.deepEqual(summary(tests), [passed(`${file} > second`)]);
+    assert.deepEqual(copies(), before);
+  });
+
+  it('removes the copy that a killed runner left beside the sandbox, but not what its links point at', async (t) => {
+    const dir = project(
+      t,
+      { [join('sandbox', 'a.test.mjs')]: passing, [join('kept', 'file.txt')]: '' },
+      { cwd: 'sandbox' },
+    );
+    const left = join(dir, `${lzDirPrefix('copy', noProcess)}left`);
+    mkdirSync(left);
+    symlinkSync(join(dir, 'kept'), join(left, 'node_modules'), 'junction');
+
+    const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true });
+    await runner.dispose();
+
+    assert.equal(existsSync(left), false);
+    assert.equal(existsSync(join(dir, 'kept', 'file.txt')), true);
   });
 });

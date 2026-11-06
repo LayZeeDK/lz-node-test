@@ -93,8 +93,9 @@ export function lzDirPrefix(kind: keyof typeof lzDirKinds, pid: number): string 
 /**
  * Removes the directories in `dir` that runners of this user's processes that no longer run left behind; a shared
  * temporary directory holds other users' directories too. Stryker kills a worker whose run takes too long, and a
- * killed worker cannot remove its run directory or its compile cache. Stryker's own process removes the dry-run store
- * as it exits, so only a killed one leaves it. A directory that cannot be removed yet is left for a later runner.
+ * killed worker cannot remove its run directory, its compile cache or its copy of the sandbox. Stryker's own process
+ * removes the dry-run store as it exits, so only a killed one leaves it. A directory that cannot be removed yet is
+ * left for a later runner.
  */
 export function removeLeftDirs(
   dir: string,

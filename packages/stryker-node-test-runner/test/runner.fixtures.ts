@@ -68,7 +68,7 @@ export const grows =
   'const pause = Date.now() + 10; while (Date.now() < pause); }';
 export const failing = fixture("it('fails', () => { throw new Error('expected failure'); });");
 
-export function project(t: TestContext, files: Record<string, string>): string {
+export function project(t: TestContext, files: Record<string, string>, { cwd = '.' } = {}): string {
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'node-test-runner-')));
   const previous = process.cwd();
 
@@ -77,7 +77,7 @@ export function project(t: TestContext, files: Record<string, string>): string {
     writeFileSync(join(dir, name), content);
   }
 
-  process.chdir(dir);
+  process.chdir(join(dir, cwd));
   t.after(async () => {
     process.chdir(previous);
     // Windows refuses to remove a directory that a process the test just ended still works in. rm, not rmSync: from
