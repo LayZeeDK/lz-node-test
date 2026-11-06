@@ -50,7 +50,7 @@ const linuxReader: LzProcessReader = {
 };
 
 /** Samples every process once a second, in one shell process, until `stop`. */
-export async function lzStartSampler({ command, args, loop, parse } = reader()): Promise<LzSampler> {
+export async function lzStartSampler({ command, args, loop, parse } = lzProcessReader()): Promise<LzSampler> {
   const child = spawn(command, [...args, loop], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
 
   await once(child, 'spawn');
@@ -86,7 +86,9 @@ export async function lzStartSampler({ command, args, loop, parse } = reader()):
 }
 
 /** One sample of every process on the machine. */
-export async function lzSnapshot({ command, args, sample: script, parse } = reader()): Promise<LzProcessRow[]> {
+export async function lzSnapshot(
+  { command, args, sample: script, parse } = lzProcessReader(),
+): Promise<LzProcessRow[]> {
   const { exitCode, stdout, stderr } = await lzExec(command, [...args, script], { cwd: process.cwd() });
   const [sample] = parse(stdout);
 
@@ -97,14 +99,15 @@ export async function lzSnapshot({ command, args, sample: script, parse } = read
   return sample;
 }
 
-function reader(): LzProcessReader {
-  if (process.platform === 'win32') {
+/** The reader for `platform`, this one by default. */
+export function lzProcessReader(platform: NodeJS.Platform = process.platform): LzProcessReader {
+  if (platform === 'win32') {
     return windowsReader;
   }
 
-  if (process.platform === 'linux') {
+  if (platform === 'linux') {
     return linuxReader;
   }
 
-  throw new Error(`The process sampler reads Win32_Process or /proc; ${process.platform} has neither.`);
+  throw new Error(`The process sampler reads Win32_Process or /proc; ${platform} has neither.`);
 }
