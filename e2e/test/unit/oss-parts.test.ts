@@ -208,8 +208,9 @@ describe('parts-main', () => {
 
     assert.deepEqual({ status, stdout }, { status: 1, stdout: '' });
     assert.ok(
+      // Node.js also prints the source line that throws, which holds the usage.
       stderr.includes(
-        'Usage: node e2e/src/oss/parts-main.ts <path to the file> <file as --mutate names it> <parts> [<mutation.json>]',
+        'Error: Usage: node e2e/src/oss/parts-main.ts <path to the file> <file as --mutate names it> <parts> [<mutation.json>]',
       ),
       stderr,
     );
