@@ -32,24 +32,14 @@ interface MatrixRow {
   readonly mutated: readonly string[];
 }
 
-function readMatrix(): readonly MatrixRow[] {
+function readMatrixInclude(): unknown {
   const workflow: unknown = parse(readFileSync(join(workspaceRoot, '.github/workflows/ci.yml'), 'utf8'));
   const jobs = lzIsRecord(workflow) ? workflow['jobs'] : undefined;
   const job = lzIsRecord(jobs) ? jobs['mutation'] : undefined;
   const strategy = lzIsRecord(job) ? job['strategy'] : undefined;
   const matrix = lzIsRecord(strategy) ? strategy['matrix'] : undefined;
-  const include = lzIsRecord(matrix) ? matrix['include'] : undefined;
-  assert.ok(Array.isArray(include), 'ci.yml has no mutation matrix include list');
-  const rows = include.filter(isRawMatrixRow);
-  assert.equal(rows.length, include.length, 'a mutation matrix row lacks a project, config or mutated string');
 
-  return rows.map(({ project, config, shard, mutate, mutated }) => ({
-    project,
-    config,
-    shard,
-    mutate: mutate?.split(','),
-    mutated: mutated.split('\n'),
-  }));
+  return lzIsRecord(matrix) ? matrix['include'] : undefined;
 }
 
 function isRawMatrixRow(
@@ -65,7 +55,17 @@ function isRawMatrixRow(
   );
 }
 
-const matrixRows = readMatrix();
+const matrixInclude = readMatrixInclude();
+const matrixRawRows = (Array.isArray(matrixInclude) ? matrixInclude : []).filter(isRawMatrixRow);
+const matrixRows = matrixRawRows.map(
+  ({ project, config, shard, mutate, mutated }): MatrixRow => ({
+    project,
+    config,
+    shard,
+    mutate: mutate?.split(','),
+    mutated: mutated.split('\n'),
+  }),
+);
 const matrixRuns = Map.groupBy(matrixRows, runKey);
 const matrixCases = matrixRows.map((row): [string, MatrixRow] => [`${runKey(row)} ${row.shard ?? ''}`.trimEnd(), row]);
 
@@ -122,6 +122,15 @@ describe('Stryker configs', () => {
 });
 
 describe('CI mutation matrix', () => {
+  it('reads every row of the mutation matrix include list', () => {
+    assert.ok(Array.isArray(matrixInclude), 'ci.yml has no mutation matrix include list');
+    assert.equal(
+      matrixRawRows.length,
+      matrixInclude.length,
+      'a mutation matrix row lacks a project, config or mutated string',
+    );
+  });
+
   it('runs each Stryker config once, counting the shards of a config as one', () => {
     assert.deepEqual([...matrixRuns.keys()].toSorted(), configs.map(runKey).toSorted());
   });
