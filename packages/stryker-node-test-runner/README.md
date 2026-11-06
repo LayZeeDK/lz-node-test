@@ -317,9 +317,10 @@ These cases cost time but give the same results:
 - A test file that the configuration also mutates. After any change to it, the mutants that its tests cover run again,
   as [What the runner does](#what-the-runner-does) describes.
 
-In CI, cache the incremental file. Key the cache on the Stryker configuration, the lockfile and the Node.js version, so
-that a change to those runs in full. Pass `--force` on the default branch, so that each push there stores fresh
-results.
+In CI, cache the incremental file. Key the cache on every input of the first case above: the Stryker configuration,
+the lockfile, the Node.js version, the helper modules that tests import, and the source that the configuration does not
+mutate. A change to any of them then runs in full. Pass `--force` on the default branch, so that each push there
+stores fresh results.
 
 ## Make your tests safe for parallel runs
 
