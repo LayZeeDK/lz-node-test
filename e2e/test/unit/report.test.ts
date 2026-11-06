@@ -186,6 +186,27 @@ describe('lzParseReport', () => {
     ]);
   });
 
+  it('sorts a greater mutator after a smaller one even when its replacement and end come first', () => {
+    const report = lzParseReport(
+      reportOf([
+        {
+          ...timeout,
+          mutatorName: 'A',
+          replacement: 'b',
+          location: { start: { line: 3, column: 1 }, end: { line: 5, column: 1 } },
+        },
+        {
+          ...timeout,
+          mutatorName: 'B',
+          replacement: 'a',
+          location: { start: { line: 3, column: 1 }, end: { line: 3, column: 1 } },
+        },
+      ]),
+    );
+
+    assert.deepEqual(report.get('src/grow.ts')?.map(lzMutantLine), ['3:1 A b Timeout', '3:1 B a Timeout']);
+  });
+
   it('sorts mutants that differ only in their end by end line, then end column, whichever order the report has', () => {
     const ending = (line: number, column: number) => ({
       ...timeout,
