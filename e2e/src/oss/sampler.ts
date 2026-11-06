@@ -51,6 +51,7 @@ const linuxReader: LzProcessReader = {
 
 /** Samples every process once a second, in one shell process, until `stop`. */
 export async function lzStartSampler({ command, args, loop, parse } = lzProcessReader()): Promise<LzSampler> {
+  // Stryker disable next-line BooleanLiteral: equivalent to a test, as a console window shown or hidden changes no output it can read
   const child = spawn(command, [...args, loop], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
 
   await once(child, 'spawn');
@@ -63,6 +64,7 @@ export async function lzStartSampler({ command, args, loop, parse } = lzProcessR
   child.stderr.setEncoding('utf8').on('data', (chunk: string) => errors.push(chunk));
 
   if (child.pid === undefined) {
+    // Stryker disable next-line StringLiteral: unreachable, as a child that emitted spawn has a pid
     throw new Error('The process sampler did not start.');
   }
 
