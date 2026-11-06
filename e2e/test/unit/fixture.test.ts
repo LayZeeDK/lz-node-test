@@ -39,14 +39,14 @@ const packagesDir = join(workspaceDir, 'packages');
 const srcDir = join(import.meta.dirname, '..', '..', 'src');
 const strykerBinDir = join('node_modules', '@stryker-mutator', 'core', 'bin');
 
-// Stands in for Stryker: leaves `b` and `a` in its temporary folder, writes an empty report when asked, and prints
-// what it was started with.
+// Stands in for Stryker: leaves `a` and `B` in its temporary folder, which NTFS lists in the order sort() reverses,
+// writes an empty report when asked, and prints what it was started with.
 const fakeStryker = `
 const { mkdirSync, readdirSync, writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const args = process.argv.slice(2);
-writeFileSync(join(process.env.TMPDIR, 'b'), '');
 writeFileSync(join(process.env.TMPDIR, 'a'), '');
+writeFileSync(join(process.env.TMPDIR, 'B'), '');
 if (args.includes('--report')) {
   mkdirSync(join('reports', 'mutation'), { recursive: true });
   writeFileSync(join('reports', 'mutation', 'mutation.json'), '{"files":{}}');
@@ -134,7 +134,7 @@ function workspacePins(): string[] {
 
 describe('lzConsumerEnv', () => {
   it("drops the test runner's variables, puts this Node.js first on the PATH as Windows spells it, and sets the temporary folder", () => {
-    const env = lzConsumerEnv('t', { Path: 'a', NODE_OPTIONS: 'x', NODE_TEST_CONTEXT: 'y', KEEP: 'z' });
+    const env = lzConsumerEnv('t', { KEEP: 'z', Path: 'a', NODE_OPTIONS: 'x', NODE_TEST_CONTEXT: 'y' });
 
     assert.deepEqual(env, {
       KEEP: 'z',
@@ -232,7 +232,7 @@ describe('lzStryker', () => {
           tmp: join(dir, 'tmp'),
           files: ['node_modules', 'tmp'],
         },
-        leftover: ['a', 'b'],
+        leftover: ['B', 'a'],
         timedOut: false,
         reported: false,
       },
@@ -567,7 +567,9 @@ describe('lzFixture', () => {
 });
 
 describe('lzRemoveOnExit', () => {
-  function exitAfterRemoveOnExit(dir: string): string {
+  // A process that ends by itself, rather than through process.exit(), runs the exit listener before the mutation test
+  // runner records what the process covered.
+  function exitAfterRemoveOnExit(dir: string, ending: 'process.exit(0);' | 'by itself' = 'by itself'): string {
     const child = spawnSync(
       process.execPath,
       [
@@ -575,7 +577,7 @@ describe('lzRemoveOnExit', () => {
         '-e',
         `const { lzRemoveOnExit } = await import(${JSON.stringify(fixtureUrl)});
         lzRemoveOnExit(${JSON.stringify(dir)});
-        process.exit(0);`,
+        ${ending === 'by itself' ? '' : ending}`,
       ],
       { encoding: 'utf8', windowsHide: true },
     );
@@ -588,7 +590,10 @@ describe('lzRemoveOnExit', () => {
 
     writeFileSync(join(dir, 'a'), '');
 
-    assert.deepEqual({ stderr: exitAfterRemoveOnExit(dir), exists: existsSync(dir) }, { stderr: '', exists: false });
+    assert.deepEqual(
+      { stderr: exitAfterRemoveOnExit(dir, 'process.exit(0);'), exists: existsSync(dir) },
+      { stderr: '', exists: false },
+    );
   });
 
   it('says nothing when the folder is already gone', (t) => {
