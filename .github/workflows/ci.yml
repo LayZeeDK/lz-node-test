@@ -119,6 +119,18 @@ jobs:
             config: test-code
             mutated: '!packages/stryker-node-mutators/test/**/*.test.ts'
             timeout: 30
+          - project: '@layzee/stryker-js-mutators'
+            slug: stryker-js-mutators
+            root: packages/stryker-js-mutators
+            config: src
+            mutated: "!packages/stryker-js-mutators/src/**/*.ts\n!packages/stryker-js-mutators/test/synthetic/js-shapes.ts"
+            timeout: 45
+          - project: '@layzee/stryker-js-mutators'
+            slug: stryker-js-mutators
+            root: packages/stryker-js-mutators
+            config: test-code
+            mutated: '!packages/stryker-js-mutators/test/**/*.test.ts'
+            timeout: 30
           - project: '@layzee/stryker-node-test-mutators'
             slug: stryker-node-test-mutators
             root: packages/stryker-node-test-mutators

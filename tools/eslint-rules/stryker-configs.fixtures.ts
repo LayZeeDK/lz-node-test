@@ -51,6 +51,18 @@ export const configs: readonly StrykerConfigRow[] = [
     mutate: ['packages/stryker-node-mutators/test/**/*.test.ts'],
   },
   {
+    file: 'packages/stryker-js-mutators/stryker.config.mjs',
+    project: '@layzee/stryker-js-mutators',
+    config: 'src',
+    mutate: ['packages/stryker-js-mutators/src/**/*.ts', 'packages/stryker-js-mutators/test/synthetic/js-shapes.ts'],
+  },
+  {
+    file: 'packages/stryker-js-mutators/stryker.test-code.config.mjs',
+    project: '@layzee/stryker-js-mutators',
+    config: 'test-code',
+    mutate: ['packages/stryker-js-mutators/test/**/*.test.ts'],
+  },
+  {
     file: 'packages/stryker-node-test-mutators/stryker.config.mjs',
     project: '@layzee/stryker-node-test-mutators',
     config: 'src',

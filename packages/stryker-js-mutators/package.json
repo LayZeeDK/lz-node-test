@@ -1,0 +1,58 @@
+{
+  "name": "@layzee/stryker-js-mutators",
+  "version": "0.0.0",
+  "private": true,
+  "description": "StrykerJS mutators for any JavaScript or TypeScript code: statements and literals Stryker leaves alone",
+  "license": "MIT",
+  "keywords": [
+    "stryker",
+    "mutation-testing",
+    "mutator"
+  ],
+  "homepage": "https://github.com/LayZeeDK/lz-node-test/tree/main/packages/stryker-js-mutators#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LayZeeDK/lz-node-test.git",
+    "directory": "packages/stryker-js-mutators"
+  },
+  "bugs": {
+    "url": "https://github.com/LayZeeDK/lz-node-test/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@layzee/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --conditions=@layzee/source --test \"test/unit/**/*.test.ts\" \"test/synthetic/**/*.test.ts\""
+  },
+  "peerDependencies": {
+    "@stryker-mutator/core": "^10.1.1"
+  },
+  "devDependencies": {
+    "@layzee/node-test-extensions": "*"
+  },
+  "nx": {
+    "tags": [
+      "type:lib"
+    ],
+    "targets": {
+      "mutate": {},
+      "mutate-src": {},
+      "mutate-test-code": {}
+    }
+  }
+}
