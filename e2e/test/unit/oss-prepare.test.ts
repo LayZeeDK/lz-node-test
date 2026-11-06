@@ -65,6 +65,18 @@ describe('lzFileWriters', () => {
     );
   });
 
+  it('lists the files in sorted order, whatever order the patterns match them in', (t) => {
+    const dir = project(t);
+
+    writeFileSync(join(dir, 'test', 'a.test.js'), 'fs.rmSync(p)\n');
+    writeFileSync(join(dir, 'test', 'b.test.js'), 'fs.rmSync(p)\n');
+
+    assert.deepEqual(
+      [...lzFileWriters(dir, ['test/b.test.js', 'test/a.test.js'], []).keys()],
+      ['test/a.test.js', 'test/b.test.js'],
+    );
+  });
+
   it('leaves out the files the driver patched, whose writes are already dealt with', (t) => {
     const dir = project(t);
 
