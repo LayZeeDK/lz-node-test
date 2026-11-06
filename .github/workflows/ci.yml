@@ -197,7 +197,7 @@ jobs:
         run: >-
           echo "prefix=stryker-inc-${{ env.RUN }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
-          'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**/*.ts', 'packages/*/stryker*.config.mjs',
+          'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**', 'packages/*/stryker*.config.mjs',
           'e2e/stryker*.config.mjs', 'eslint.config.mjs', 'packages/*/eslint.config.mjs', '.github/workflows/ci.yml',
           format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
           '!**/out-tsc/**', matrix.mutated)
