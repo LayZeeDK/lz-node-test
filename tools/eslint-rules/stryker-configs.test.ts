@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { globSync, readFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
@@ -65,6 +65,8 @@ const configs: readonly (readonly [file: string, reportName: string, mutate: rea
     '@layzee/stryker-node-test-runner.test-code',
     ['packages/stryker-node-test-runner/test/**/*.test.ts'],
   ],
+  ['e2e/stryker.config.mjs', 'e2e.src', ['e2e/src/**/*.ts']],
+  ['e2e/stryker.test-code.config.mjs', 'e2e.test-code', ['e2e/test/unit/*.test.ts']],
   [
     'tools/eslint-rules/stryker.config.mjs',
     '@layzee/eslint-rules.src',
@@ -77,7 +79,14 @@ const configs: readonly (readonly [file: string, reportName: string, mutate: rea
   ],
 ];
 
-const ignorePatterns = ['/.claude', '/.nx', '/.scratch', '/e2e', '/reports'];
+// The packages' runs never read e2e/; the e2e runs mutate it, and these tests load its Stryker configs.
+const ignorePatterns = (file: string): string[] => [
+  '/.claude',
+  '/.nx',
+  '/.scratch',
+  file.startsWith('packages/') ? '/e2e' : '/e2e/fixtures',
+  '/reports',
+];
 
 const notWorkspaceConfigs = new Set(['node_modules', 'e2e/fixtures', '.scratch', '.claude', '.nx', 'dist', 'reports']);
 
@@ -122,18 +131,6 @@ function isRawMatrixRow(
   );
 }
 
-function matrixKey(file: string): string {
-  const folder = dirname(file);
-  const packageJson: unknown = JSON.parse(readFileSync(join(workspaceRoot, folder, 'package.json'), 'utf8'));
-  const project = lzIsRecord(packageJson) ? packageJson['name'] : undefined;
-
-  if (typeof project !== 'string') {
-    throw new TypeError(`${folder}/package.json has no name`);
-  }
-
-  return `${project} ${basename(file) === 'stryker.config.mjs' ? 'src' : 'test-code'}`;
-}
-
 function expandGlobs(patterns: readonly string[]): string[] {
   const glob = (globs: readonly string[]): string[] =>
     globSync(globs, { cwd: workspaceRoot }).map((file) => file.replaceAll('\\', '/'));
@@ -144,7 +141,7 @@ function expandGlobs(patterns: readonly string[]): string[] {
   return glob(patterns.filter((pattern) => !pattern.startsWith('!'))).filter((file) => !excluded.has(file));
 }
 
-const configsByKey = new Map(configs.map((config) => [matrixKey(config[0]), config]));
+const configsByKey = new Map(configs.map((config) => [config[1].replace(/\.(src|test-code)$/, ' $1'), config]));
 
 const matrixRows = readMatrix();
 
@@ -177,7 +174,7 @@ describe('Stryker configs', () => {
 
     assert.deepEqual(
       { mutate: config['mutate'], ignorePatterns: config['ignorePatterns'] },
-      { mutate, ignorePatterns },
+      { mutate, ignorePatterns: ignorePatterns(file) },
     );
   });
 

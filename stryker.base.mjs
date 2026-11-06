@@ -49,6 +49,12 @@ export default {
 };
 
 /**
+ * The ignore patterns of the configs whose runs read e2e/: the e2e project mutates it, and the eslint-rules tests
+ * load its Stryker configs. Its consumer fixtures stay out of the sandbox.
+ */
+export const e2eIgnorePatterns = ['/.claude', '/.nx', '/.scratch', '/e2e/fixtures', '/reports'];
+
+/**
  * A config's HTML and JSON report files, so that the two configs of a project do not write the same file. The
  * mutate-src and mutate-test-code targets read the JSON report by this name.
  *

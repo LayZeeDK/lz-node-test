@@ -163,6 +163,18 @@ jobs:
             config: test-code
             mutated: '!packages/stryker-node-test-runner/test/**/*.test.ts'
             timeout: 30
+          - project: e2e
+            slug: e2e
+            root: e2e
+            config: src
+            mutated: '!e2e/src/**/*.ts'
+            timeout: 60
+          - project: e2e
+            slug: e2e
+            root: e2e
+            config: test-code
+            mutated: '!e2e/test/unit/*.test.ts'
+            timeout: 30
     env:
       RUN: ${{ matrix.project }}.${{ matrix.config }}${{ matrix.shard && format('.{0}', matrix.shard) || '' }}
       INCREMENTAL_FILE: reports/stryker-incremental/${{ matrix.project }}.${{ matrix.config }}${{ matrix.shard &&
@@ -186,8 +198,9 @@ jobs:
           echo "prefix=stryker-inc-${{ env.RUN }}-${{ runner.os }}-node-${{
           steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json', 'stryker.base.mjs',
           'tsconfig.base.json', 'packages/*/package.json', 'packages/*/src/**/*.ts', 'packages/*/stryker*.config.mjs',
-          'eslint.config.mjs', 'packages/*/eslint.config.mjs', '.github/workflows/ci.yml', format('{0}/**', matrix.root),
-          format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**', '!**/out-tsc/**', matrix.mutated)
+          'e2e/stryker*.config.mjs', 'eslint.config.mjs', 'packages/*/eslint.config.mjs', '.github/workflows/ci.yml',
+          format('{0}/**', matrix.root), format('!{0}/**/*.test.ts', matrix.root), '!**/*.md', '!**/dist/**',
+          '!**/out-tsc/**', matrix.mutated)
           }}-" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

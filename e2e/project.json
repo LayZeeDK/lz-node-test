@@ -31,6 +31,8 @@
         "default",
         "!{projectRoot}/src/oss/**/*",
         "!{projectRoot}/test/unit/oss-*.test.ts",
+        "!{projectRoot}/stryker*.config.mjs",
+        "!{projectRoot}/tsconfig.stryker.json",
         "^production",
         "nodeVersion",
         "{workspaceRoot}/package.json",
@@ -43,6 +45,9 @@
           ]
         }
       ]
-    }
+    },
+    "mutate": {},
+    "mutate-src": {},
+    "mutate-test-code": {}
   }
 }
