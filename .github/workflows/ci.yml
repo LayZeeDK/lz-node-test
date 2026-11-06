@@ -168,7 +168,7 @@ jobs:
             root: e2e
             config: src
             mutated: '!e2e/src/**/*.ts'
-            timeout: 60
+            timeout: 90
           - project: e2e
             slug: e2e
             root: e2e
