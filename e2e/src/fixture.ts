@@ -225,6 +225,7 @@ export async function lzPack(into: string): Promise<string[]> {
 /** npm 11 prints an array of packed packages, npm 12 an object keyed by package name. */
 export function lzPackedFile(stdout: string): string {
   const packed: unknown = JSON.parse(stdout);
+  // Stryker disable next-line ArrayDeclaration: a non-empty fallback holds only strings, which the record check below refuses with the same error as an empty one
   const entries: readonly unknown[] = Array.isArray(packed) ? packed : lzIsRecord(packed) ? Object.values(packed) : [];
   const [entry] = entries;
 
