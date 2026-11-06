@@ -350,7 +350,7 @@ export function wrapNodeTest(options: WrapOptions): NodeTestModule {
   /**
    * Whether the filter selects the test, a test it lies inside, or a subtest of it, which the test must run to
    * register. A selected test runs whole, subtests included, as Stryker covers a subtest's assertions with its parent.
-   * Stryker names a whole test file in the filter when --testFiles limits the run.
+   * A test file in the filter selects all its tests.
    */
   const selected = (id: string) => !filter || [...filter].some((test) => within(test, id) || within(id, test));
   const activate = () => {
