@@ -2,6 +2,7 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+export const isBoolean = (value: unknown) => typeof value === 'boolean';
 export const isNumber = (value: unknown) => typeof value === 'number';
 export const isString = (value: unknown) => typeof value === 'string';
 export const isStrings = (value: unknown) => Array.isArray(value) && value.every(isString);

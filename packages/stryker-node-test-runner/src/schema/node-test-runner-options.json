@@ -26,6 +26,10 @@
           "description": "The memory in MB that each process of a mutant run may hold before the runner ends it and reports the mutant as timed out. Defaults to the most memory a process of the test file held in the dry run, times 1.5, plus 1024. A dry run in which a process holds more ends as an error.",
           "type": "integer",
           "minimum": 1
+        },
+        "experimentalWorkerCopy": {
+          "description": "Experimental. Each test runner copies Stryker's sandbox once when it starts, into a folder beside it, and runs its test files there, so tests that write fixed paths inside the project no longer meet another runner's writes. Fixed ports and absolute paths still collide. Each runner start, including Stryker's restart of a runner, pays one copy. Defaults to false.",
+          "type": "boolean"
         }
       }
     }

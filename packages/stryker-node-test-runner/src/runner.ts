@@ -30,7 +30,7 @@ import {
 
 import { lzMergeAsStatic, lzMergeCoverage, lzOverlapCoverage } from './coverage.ts';
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
-import { isNumber, isObject, isStrings, optional } from './guards.ts';
+import { isBoolean, isNumber, isObject, isStrings, optional } from './guards.ts';
 import { lzDryRunDir, lzDryRunStore, lzOwnDryRun, type LzDryRunStore } from './dry-run-store.ts';
 import { memoryLimits, type MemoryLimits } from './memory-limits.ts';
 import { lzConsumerNodeOptions, withoutReporters } from './node-options.ts';
@@ -48,12 +48,14 @@ import {
 } from './record.ts';
 import schema from './schema/node-test-runner-options.json' with { type: 'json' };
 import { lzStartUpOf, lzStartUps, type LzStartUps } from './start-up.ts';
+import { lzCopySandbox, lzRebase, lzRebaseRecord } from './worker-copy.ts';
 
 /** Options under `lzNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
 export interface LzNodeTestOptions {
   readonly testFiles?: readonly string[];
   readonly nodeArgs?: readonly string[];
   readonly maxMemoryMB?: number;
+  readonly experimentalWorkerCopy?: boolean;
 }
 
 const defaults = schema.properties.lzNodeTest.properties;
@@ -202,12 +204,13 @@ function parseOptions(value: unknown): LzNodeTestOptions {
     notOptions();
   }
 
-  const { testFiles, nodeArgs, maxMemoryMB } = value;
+  const { testFiles, nodeArgs, maxMemoryMB, experimentalWorkerCopy } = value;
 
   return {
     ...optional('testFiles', testFiles, isStrings, notOptions),
     ...optional('nodeArgs', nodeArgs, isStrings, notOptions),
     ...optional('maxMemoryMB', maxMemoryMB, isNumber, notOptions),
+    ...optional('experimentalWorkerCopy', experimentalWorkerCopy, isBoolean, notOptions),
   };
 }
 
@@ -542,6 +545,9 @@ export class LzNodeTestTestRunner implements TestRunner {
   #cacheDir?: string;
   /** Stryker's pool disposes a runner whose init has not settled yet, so dispose waits for it. */
   #initialized?: Promise<void>;
+  readonly #workerCopy: boolean;
+  /** The sandbox and this runner's copy of it, in which its test files run, under experimentalWorkerCopy. */
+  #copy?: { readonly sandbox: string; readonly dir: string };
   readonly #patterns: string[];
   readonly #nodeArgs: string[];
   readonly #dryRunConcurrency: number;
@@ -569,6 +575,7 @@ export class LzNodeTestTestRunner implements TestRunner {
     this.#startUps = lzStartUps(this.#dryRunStore, options.timeoutFactor, log);
     this.#allowEmpty = options.allowEmpty;
     this.#stallMs = options.timeoutMS;
+    this.#workerCopy = lzNodeTest.experimentalWorkerCopy ?? false;
     this.#log = log;
   }
 
@@ -615,6 +622,15 @@ export class LzNodeTestTestRunner implements TestRunner {
     if (process.env['NODE_COMPILE_CACHE'] === undefined) {
       this.#cacheDir = mkdtempSync(join(tmpdir(), lzDirPrefix('cache', process.pid)));
     }
+
+    if (this.#workerCopy) {
+      const sandbox = process.cwd();
+      const started = performance.now();
+      this.#copy = { sandbox, dir: lzCopySandbox(sandbox, process.pid) };
+      this.#log.debug(
+        `Copied the sandbox to ${this.#copy.dir} in ${Math.round(performance.now() - started)} ms (experimentalWorkerCopy)`,
+      );
+    }
   }
 
   async dispose(): Promise<void> {
@@ -622,6 +638,10 @@ export class LzNodeTestTestRunner implements TestRunner {
 
     if (this.#cacheDir !== undefined) {
       await removeDir(this.#cacheDir, this.#log);
+    }
+
+    if (this.#copy !== undefined) {
+      await removeDir(this.#copy.dir, this.#log);
     }
   }
 
@@ -772,26 +792,33 @@ export class LzNodeTestTestRunner implements TestRunner {
       mkdirSync(outDir);
       mkdirSync(tmpDir);
       const nodeOptions = lzConsumerNodeOptions(process.env);
+      const copy = this.#copy;
+      const runAs = copy ? lzRebase(file, copy.sandbox, copy.dir) : file;
       const env = lzRunEnv({
         base: process.env,
-        file,
+        file: runAs,
         outDir,
         tmpDir,
-        run,
+        run:
+          copy && !run.dryRun
+            ? { ...run, testFilter: run.testFilter?.map((id) => lzRebase(id, copy.sandbox, copy.dir)) }
+            : run,
         cacheDir: this.#cacheDir,
         nodeOptions,
         memoryLimitMB,
         heldOpenMs: shortenedHeldOpen.get(this),
         stallMs: this.#stallMs,
       });
-      const fileArgs = [...this.#nodeArgs, file];
+      const fileArgs = [...this.#nodeArgs, runAs];
       const args = [`--test-reporter=${reporterUrl}`, ...fileArgs];
+      const cwd = copy?.dir ?? process.cwd();
 
       if (this.#log.isDebugEnabled()) {
-        this.#log.debug(`Running: \`${nodeCommand(args)}\` in ${process.cwd()}`);
+        this.#log.debug(`Running: \`${nodeCommand(args)}\` in ${cwd}`);
       }
 
       const child = spawn(process.execPath, args, {
+        cwd,
         env,
         // stdin an open pipe that never ends, as node --test gives each test file: on an ended stdin, a test that hands
         // process.stdin to a subprocess can wait forever.
@@ -824,7 +851,9 @@ export class LzNodeTestTestRunner implements TestRunner {
         .filter(lzIsRecordName)
         .flatMap((name) => {
           try {
-            return [lzParseRecord(readFileSync(join(outDir, name), 'utf8'))];
+            const record = lzParseRecord(readFileSync(join(outDir, name), 'utf8'));
+
+            return [copy ? lzRebaseRecord(record, copy.dir, copy.sandbox) : record];
           } catch (error) {
             // lzWriteRecord leaves a whole record or none, so this is a file that something else wrote at a record's
             // name, or one that cannot be read.

@@ -82,7 +82,7 @@ export function isOwn(
 }
 
 const lzDirBase = 'lz-node-test-';
-const lzDirKinds = { run: '', cache: 'cache-', dryRun: 'dry-run-' };
+const lzDirKinds = { run: '', cache: 'cache-', dryRun: 'dry-run-', copy: 'copy-' };
 const lzDirPattern = new RegExp(`^${lzDirBase}(?:${Object.values(lzDirKinds).join('|')})(\\d+)-`);
 
 /** The start of the name of a directory that the runners of process `pid` make, which `removeLeftDirs` recognizes. */
