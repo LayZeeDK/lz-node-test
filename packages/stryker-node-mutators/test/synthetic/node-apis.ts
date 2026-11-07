@@ -52,6 +52,7 @@ export function onIdle(listener: () => void): void {
 }
 
 export function share(part: number, whole: number): number {
+  // Stryker disable next-line LzJsNumericLiteral: sample code for the Node.js operators, which no test runs
   assert.ok(whole > 0);
 
   return part / whole;

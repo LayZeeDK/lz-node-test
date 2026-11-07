@@ -35,6 +35,12 @@ describe('mutantDiff', () => {
       removed: ['1:5 CallExpression ;', '3:1 StringLiteral ""'],
     });
   });
+
+  it('lists nothing when both sides have the same mutants', () => {
+    const mutants = [mutant('CallExpression', 0, 4), mutant('StringLiteral', 2, 0, '""')];
+
+    assert.deepEqual(mutantDiff(mutants, [...mutants]), { added: [], removed: [] });
+  });
 });
 
 describe('corpusDiff', () => {

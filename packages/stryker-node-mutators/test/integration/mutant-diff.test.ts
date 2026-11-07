@@ -23,6 +23,9 @@ describe('corpusDiff', () => {
       },
     );
 
-    assert.match(output, /sample\.ts\n\n1 mutants without the operators, 1 with them\.\n\n {4}\(no difference\)\n\n$/);
+    assert.match(
+      output,
+      /^### [^\n]*sample\.ts\n\n1 mutants without the operators, 1 with them\.\n\n {4}\(no difference\)\n\n$/,
+    );
   });
 });

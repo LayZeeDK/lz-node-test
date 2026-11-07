@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { describe } from 'node:test';
+import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
 import { nodeTestAssertValidator } from '../../src/node-test-assert-validator.ts';
-import { mutantsOf, strict } from '../mutants-of.fixtures.ts';
+import { instrumentWith, mutantsOf, strict } from '../mutants-of.fixtures.ts';
 
 const throws = '() => { throw new Error("Stryker"); }';
 const rejects = 'Promise.reject(new Error("Stryker"))';
@@ -55,6 +55,16 @@ describe('LzNodeTestAssertValidator', () => {
     ['an object match of a label', expecting("{ label: 'bad ids fail', match: { code: 'ERR_BAD_ID' } }")],
   ])('replaces the test function of an expectFailure that matches through %s', async (_title, source) => {
     assert.deepEqual(await mutantsOf(nodeTestAssertValidator, source), [throws]);
+  });
+
+  it('places the mutant of an expectFailure on the test function, not on its options', async () => {
+    const source = expecting('/bad id/');
+    const mutants = await instrumentWith(nodeTestAssertValidator, source);
+
+    assert.deepEqual(
+      mutants.map(({ location }) => location.start),
+      [{ line: 1, column: source.split('\n')[1]?.indexOf('() =>') }],
+    );
   });
 
   lzTestEach([

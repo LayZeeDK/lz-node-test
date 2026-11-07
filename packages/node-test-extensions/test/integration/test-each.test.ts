@@ -40,6 +40,15 @@ describe('lzTestEach', () => {
     ]);
   });
 
+  it('gives a template literal table with one value one row', async (t) => {
+    await t.assert.reports(() => {
+      lzTestEach`
+          only
+          ${1}
+        `('$only', report);
+    }, [{ name: '1', outcome: 'fail', error: JSON.stringify([{ only: 1 }]) }]);
+  });
+
   it('passes a test whose body returns, and fails one whose body throws or whose promise rejects', async (t) => {
     await t.assert.reports(() => {
       lzTestEach([1, 2])('case %s', (n) => {

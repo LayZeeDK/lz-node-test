@@ -124,6 +124,9 @@ describe('formatTitle', () => {
     ['$a', [{ a: `a${'😀'.repeat(25)}` }], `a${'😀'.repeat(19)}…`],
     ['$a', [{ a: `${digits(38)}😀${digits(3)}` }], `${digits(38)}…`],
     ['$a', [{ a: `${digits(40)}😀` }], `${digits(39)}…`],
+    // The code units just outside the high surrogates, U+D800 to U+DBFF, end the cut as any other character.
+    ['$a', [{ a: `${digits(38)}퟿${digits(3)}` }], `${digits(38)}퟿…`],
+    ['$a', [{ a: `${digits(38)}\uDC00${digits(3)}` }], `${digits(38)}\uDC00…`],
   ];
 
   for (const [template, items, expected] of cuts) {
