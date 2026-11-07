@@ -27,13 +27,16 @@ shareCompileCache();
 
 /**
  * Three tests in a file that takes 600 ms to load. With LZ_FIXTURE_HANG set, the first test starts a process that
- * writes its pid and runs on, and then waits forever.
+ * runs on, writes its pid, and then waits forever. The test writes the pid, as the process could be ended before it
+ * had started far enough to write it.
  */
 const slowStart = fixture(
   'await new Promise((resolve) => setTimeout(resolve, 600));',
   "const { spawn } = await import('node:child_process');",
+  "const { writeFileSync } = await import('node:fs');",
   "it('hangs', async () => { if (process.env.LZ_FIXTURE_HANG) {",
-  "  spawn(process.execPath, ['-e', 'require(\"node:fs\").writeFileSync(\"child.pid\", String(process.pid)); setInterval(() => {}, 1000);'], { stdio: 'ignore', windowsHide: true });",
+  "  const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000);'], { stdio: 'ignore', windowsHide: true });",
+  "  writeFileSync('child.pid', String(child.pid));",
   '  await new Promise(() => setInterval(() => {}, 1000));',
   '} });',
   "it('passes', () => {});",
