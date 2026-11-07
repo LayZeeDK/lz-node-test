@@ -11,6 +11,7 @@ describe('LzJsAssignmentStatement', () => {
     ['a property', 'obj.k = v;'],
     ['an element', 'arr[i] = v;'],
     ['a chain, as one statement', 'a = b = c;'],
+    ['a property of an object named env', 'config.env.HOME = dir;'],
   ])('removes the assignment statement of %s', async (_title, source) => {
     assert.deepEqual(await mutantsOf(jsAssignmentStatement, source), [';']);
   });
@@ -22,6 +23,11 @@ describe('LzJsAssignmentStatement', () => {
     ['a declaration with no value', 'let x;'],
     ['a delete', 'delete o.k;'],
     ['an assignment inside another expression', 'f(x = y);'],
+    ['an assignment under a non-null assertion, which is no statement', '(x = y)!;'],
+    ['an environment variable, which can point a test away from real files', 'process.env.HOME = dir;'],
+    ['an environment variable by its quoted name', "process.env['HOME'] = dir;"],
+    ['an environment variable of a quoted env', "process['env'].HOME = dir;"],
+    ['the whole environment', 'process.env = { HOME: dir };'],
   ])('leaves %s alone', async (_title, source) => {
     assert.deepEqual(await mutantsOf(jsAssignmentStatement, source), []);
   });

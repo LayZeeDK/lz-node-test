@@ -15,6 +15,7 @@ export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
       path.isNumericLiteral() &&
       Number.isSafeInteger(path.node.value) &&
       !isPropertyKey(path) &&
+      !isOctal(path.node) &&
       !isLiteralType(path) &&
       !isKillArgument(path)
     ) {
@@ -39,6 +40,13 @@ function isPropertyKey(path: NodePath): boolean {
   const { parent } = path;
 
   return path.key === 'key' && 'computed' in parent && !parent.computed;
+}
+
+/** A file mode, such as `0o600`: 1 more or less gives others access to a real file. */
+function isOctal(literal: types.NumericLiteral): boolean {
+  const raw = literal.extra?.['raw'];
+
+  return typeof raw === 'string' && raw.toLowerCase().startsWith('0o');
 }
 
 function withSign(path: NodePath): NodePath {

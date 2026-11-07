@@ -45,6 +45,7 @@ describe('LzJsNumericLiteral', () => {
     ['a fraction', 'const n = 2.5;'],
     ['an integer beyond the safe range, where 1 more is the same number', 'const n = 9007199254740993;'],
     ['a BigInt', 'const n = 10n;'],
+    ['an octal file mode, where 1 more or less gives others access', 'chmodSync(f, 0o600);\nconst m = 0O755;'],
     ['a number type', 'type T = 1;\nlet x: 2 | 3;'],
     [
       'a number type after satisfies, where Babel takes no expression',
