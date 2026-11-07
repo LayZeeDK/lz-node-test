@@ -88,7 +88,7 @@ describe('LzNodeTestTestRunner experimentalWorkerCopy', () => {
     assert.equal(result.status, DryRunStatus.Error, JSON.stringify(result));
     const reproduce = result.errorMessage.split('\n').find((line) => line.startsWith('To reproduce'));
     assert.ok(reproduce, result.errorMessage);
-    assert.ok(reproduce.includes(`"${join(dir, 'a.test.mjs')}"\` in ${dir} `), reproduce);
+    assert.ok(reproduce.includes(`"${join(dir, 'a.test.mjs')}"\` in ${dir}`), reproduce);
     assert.doesNotMatch(reproduce, /lz-node-test-copy-/);
   });
 
