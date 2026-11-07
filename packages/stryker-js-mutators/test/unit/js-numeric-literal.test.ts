@@ -46,6 +46,10 @@ describe('LzJsNumericLiteral', () => {
     ['an integer beyond the safe range, where 1 more is the same number', 'const n = 9007199254740993;'],
     ['a BigInt', 'const n = 10n;'],
     ['a number type', 'type T = 1;\nlet x: 2 | 3;'],
+    [
+      'a number type after satisfies, where Babel takes no expression',
+      'const n = x satisfies 1;\nconst m = y satisfies -1;',
+    ],
     ['a string', "const n = '1';"],
     ['an enum member', 'enum E {\n  A = 1,\n}'],
     ['an object key', "const o = { 1: 'a' };"],
@@ -54,6 +58,10 @@ describe('LzJsNumericLiteral', () => {
     ['the signal of a kill method', 'child.kill(9);'],
     ['a negative process id of a kill function, as -0 is the process group', 'kill(-1, 15);'],
     ['an argument of an optional kill call', 'child?.kill(9);'],
+    [
+      'the signal of a private kill method',
+      'class C {\n  #kill(pid, signal) {}\n  stop() {\n    this.#kill(pid, 0);\n  }\n}',
+    ],
   ])('leaves %s alone', async (_title, source) => {
     assert.deepEqual(await mutantsOf(jsNumericLiteral, source), []);
   });

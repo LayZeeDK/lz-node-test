@@ -14,7 +14,8 @@ export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
     if (
       path.isNumericLiteral() &&
       Number.isSafeInteger(path.node.value) &&
-      !isPropertyName(path) &&
+      !isPropertyKey(path) &&
+      !isLiteralType(path) &&
       !isKillArgument(path)
     ) {
       yield numberNode(t, path.node.value + 1);
@@ -34,16 +35,24 @@ function isOwnMutant(mutant: unknown): boolean {
 }
 
 /** The key of `{ 1: x }` or of a class member names a property, and a computed key such as `{ [1]: x }` does not. */
-function isPropertyName(path: NodePath): boolean {
+function isPropertyKey(path: NodePath): boolean {
   const { parent } = path;
 
   return path.key === 'key' && 'computed' in parent && !parent.computed;
 }
 
+function withSign(path: NodePath): NodePath {
+  return path.parentPath.isUnaryExpression() ? path.parentPath : path;
+}
+
+/** A number type, such as the `1` of `x satisfies 1`, where Stryker places mutants as it places none in other types. */
+function isLiteralType(path: NodePath): boolean {
+  return withSign(path).parent.type === 'TSLiteralType';
+}
+
 /** A process id or a signal of `kill(...)`, `process.kill(...)` or `child.kill(...)`, also behind a minus sign. */
 function isKillArgument(path: NodePath): boolean {
-  const argument = path.parentPath.isUnaryExpression() ? path.parentPath : path;
-  const call = argument.parent;
+  const call = withSign(path).parent;
 
   return (
     (call.type === 'CallExpression' || call.type === 'OptionalCallExpression') && calleeName(call.callee) === 'kill'
@@ -55,11 +64,13 @@ function calleeName(callee: types.Node): string | undefined {
     return callee.name;
   }
 
-  return (callee.type === 'MemberExpression' || callee.type === 'OptionalMemberExpression') &&
-    !callee.computed &&
-    callee.property.type === 'Identifier'
-    ? callee.property.name
-    : undefined;
+  if ((callee.type !== 'MemberExpression' && callee.type !== 'OptionalMemberExpression') || callee.computed) {
+    return undefined;
+  }
+
+  const { property } = callee;
+
+  return property.type === 'PrivateName' ? property.id.name : property.name;
 }
 
 /** Babel's numericLiteral takes no negative number. */
