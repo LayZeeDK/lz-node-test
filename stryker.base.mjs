@@ -11,10 +11,16 @@ export const source = '--conditions=@layzee/source';
  * mutator packages, which depend on some of them.
  *
  * @param {import('@stryker-mutator/api/core').PartialStrykerOptions} config
+ * @param {import('@layzee/stryker-js-mutators').LzJsMutatorOptions} [jsMutators] the JavaScript mutators to add
  */
-export async function production(config) {
+export async function production(config, jsMutators) {
   const { lzNodeMutators } = await import('@layzee/stryker-node-mutators');
   await lzNodeMutators({ LzNodeAssertStatement: true });
+
+  if (jsMutators !== undefined) {
+    const { lzJsMutators } = await import('@layzee/stryker-js-mutators');
+    await lzJsMutators(jsMutators);
+  }
 
   return config;
 }
