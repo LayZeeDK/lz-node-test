@@ -49,15 +49,15 @@ await lzJsMutators({ extended: true, experimental: true });
 - An experimental mutator has been measured on too few projects to run by default, and may change or go in a minor
   release. Turn one on by its name inside `experimental`, or all of them with `experimental: true`.
 
-Each option takes only `true`. The call throws on a name it does not know, on another value than `true`, and
+Each option takes only `true`; an option left `undefined` counts as absent. The call throws on a name it does not know, on another value than `true`, and
 on a name in the wrong place; the message says where the name belongs. Call it in the configuration file, not through
 `plugins`: Stryker only warns when a module in `plugins` fails to load, while a failed call stops the run.
 
 ### Opt-in mutators
 
-| Mutator              | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LzJsNumericLiteral` | Moves an integer literal by 1 each way, including 0 and 1, as an off-by-one in a limit, an index or a count does. Stryker has no numeric mutator. A survivor is a constant that no test pins; a tuning value, such as a poll interval, gives survivors that need a disable comment with a reason. It leaves fractions, BigInts, types, enum members, property keys and the arguments of a call named `kill`, such as `process.kill(pid, 0)`, alone, as a mutant there would signal a real process. |
+| Mutator              | What it changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LzJsNumericLiteral` | Moves an integer literal by 1 each way, including 0 and 1, as an off-by-one in a limit, an index or a count does. Stryker has no numeric mutator. A survivor is a constant that no test pins; a tuning value, such as a poll interval, gives survivors that need a disable comment with a reason. It leaves fractions, BigInts, types, enum members, property keys and the number arguments of a call named `kill`, such as `process.kill(pid, 0)`, alone, as a mutant there would signal a real process; a signal or process id held in a variable, as in `const probe = 0; process.kill(pid, probe)`, is still mutated, so give its declaration a disable comment. |
 
 ### Experimental mutators
 
@@ -82,12 +82,14 @@ The mutators' names work in Stryker's disable comments like Stryker's own mutato
 const pollMs = 100;
 ```
 
-Both mutators step back where another mutant exists, so they add no mutant that another mutator already covers.
+Both mutators step back where another mutant exists, so they add no mutant on a node that another mutator mutates.
 `LzJsAssignmentStatement`, like Stryker's `CallExpression` removal of a call statement, removes a statement only when
 no other mutant shares it: `x = true;` keeps its `BooleanLiteral` mutant and gets no removal, while `x = f(a);` gets
 one. `LzJsNumericLiteral` drops its mutants of a literal that another mutator also mutates, so a mutator of a site,
 such as `LzNodeTimerDelay`'s delay of `setTimeout(f, 10)` or `LzNodeExitCode`'s `process.exitCode = 1`, takes
 precedence. An assigned number keeps the two `LzJsNumericLiteral` mutants, so `x = 1;` gets those and no removal.
+A mutant of a nearby node can still behave the same: `x > 2` moved to `x > 1` acts like Stryker's `x >= 2` for
+integers, and without the Node.js mutators `setTimeout(f, 0)` gets delays of 1 and -1, which Node.js runs like 0.
 
 A disable comment that names only the other mutator ignores its mutants and brings this package's mutants back as new
 mutants. Name both mutators when no test can kill either.
