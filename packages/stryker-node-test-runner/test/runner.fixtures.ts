@@ -123,6 +123,7 @@ export interface RunnerOptions {
   readonly checkers?: readonly string[];
   readonly allowEmpty?: boolean;
   readonly timeoutMS?: number;
+  readonly inPlace?: boolean;
 }
 
 export function strykerOptions({
@@ -134,6 +135,7 @@ export function strykerOptions({
     allowEmpty: false,
     timeoutFactor: 1.5,
     timeoutMS: 5000,
+    inPlace: false,
     ...options,
     testFiles: [...testFiles],
     checkers: [...checkers],

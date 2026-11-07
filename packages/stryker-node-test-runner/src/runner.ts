@@ -521,7 +521,7 @@ export function lzShortenHeldOpen(runner: LzNodeTestTestRunner, ms: number): voi
 /** The Stryker options the runner reads, of all that Stryker passes it. */
 type RunnerStrykerOptions = Pick<
   StrykerOptions,
-  'allowEmpty' | 'checkers' | 'concurrency' | 'testFiles' | 'timeoutFactor' | 'timeoutMS'
+  'allowEmpty' | 'checkers' | 'concurrency' | 'inPlace' | 'testFiles' | 'timeoutFactor' | 'timeoutMS'
 > & {
   readonly lzNodeTest?: unknown;
 };
@@ -577,6 +577,12 @@ export class LzNodeTestTestRunner implements TestRunner {
     this.#stallMs = options.timeoutMS;
     this.#workerCopy = lzNodeTest.experimentalWorkerCopy ?? false;
     this.#log = log;
+
+    if (this.#workerCopy && options.inPlace) {
+      throw new Error(
+        'lzNodeTest.experimentalWorkerCopy cannot run with inPlace, where each worker would copy the project itself.',
+      );
+    }
   }
 
   capabilities(): TestRunnerCapabilities {
@@ -636,14 +642,10 @@ export class LzNodeTestTestRunner implements TestRunner {
 
   async dispose(): Promise<void> {
     await Promise.allSettled([this.#initialized]);
-
-    if (this.#cacheDir !== undefined) {
-      await removeDir(this.#cacheDir, this.#log);
-    }
-
-    if (this.#copy !== undefined) {
-      await removeDir(this.#copy.dir, this.#log);
-    }
+    // At once, as Stryker gives dispose 2 s and each removal may retry for that long.
+    await Promise.all(
+      [this.#cacheDir, this.#copy?.dir].filter((dir) => dir !== undefined).map((dir) => removeDir(dir, this.#log)),
+    );
   }
 
   async dryRun(options: DryRunOptions): Promise<DryRunResult> {
@@ -810,8 +812,8 @@ export class LzNodeTestTestRunner implements TestRunner {
         heldOpenMs: shortenedHeldOpen.get(this),
         stallMs: this.#stallMs,
       });
-      const fileArgs = [...this.#nodeArgs, runAs];
-      const args = [`--test-reporter=${reporterUrl}`, ...fileArgs];
+      const fileArgs = [...this.#nodeArgs, file];
+      const args = [`--test-reporter=${reporterUrl}`, ...this.#nodeArgs, runAs];
       const cwd = copy?.dir ?? process.cwd();
 
       if (this.#log.isDebugEnabled()) {

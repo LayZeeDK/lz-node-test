@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from '
 import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { MutantRunStatus } from '@stryker-mutator/api/test-runner';
+import { DryRunStatus, MutantRunStatus } from '@stryker-mutator/api/test-runner';
 
 import { lzDirPrefix } from '../../src/dirs.ts';
 import {
@@ -62,22 +62,69 @@ describe('LzNodeTestTestRunner experimentalWorkerCopy', () => {
     assert.deepEqual(result.killedBy, [selected]);
   });
 
+  it("runs a filtered test whose name holds the working folder, which is each worker's own copy", async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        `it(\`kills in \${process.cwd()}\`, () => { assert.equal(process.env.${activeMutant} ?? globalThis.__stryker__?.activeMutant, undefined); });`,
+      ),
+    });
+    const selected = `${join(dir, 'a.test.mjs')} > kills in ${dir}`;
+    const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true });
+
+    const result = await settle(runner.mutantRun(mutantRunOptions({ testFilter: [selected] })));
+    await runner.dispose();
+
+    assert.equal(result.status, MutantRunStatus.Killed, JSON.stringify(result));
+    assert.deepEqual(result.killedBy, [selected]);
+  });
+
+  it("names the sandbox's file in the command that reproduces a failed test file, as the copy is gone by then", async (t) => {
+    const dir = project(t, { 'a.test.mjs': "throw new Error('fails to load');" });
+    const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true });
+
+    const result = await settle(runner.dryRun(dryRun));
+    await runner.dispose();
+
+    assert.equal(result.status, DryRunStatus.Error, JSON.stringify(result));
+    const reproduce = result.errorMessage.split('\n').find((line) => line.startsWith('To reproduce'));
+    assert.ok(reproduce, result.errorMessage);
+    assert.ok(reproduce.includes(`"${join(dir, 'a.test.mjs')}"\` in ${dir} `), reproduce);
+    assert.doesNotMatch(reproduce, /lz-node-test-copy-/);
+  });
+
+  it('refuses to copy the sandbox under inPlace, where the sandbox is the project itself', async (t) => {
+    project(t, { 'a.test.mjs': passing });
+
+    await assert.rejects(
+      initRunner(['*.test.mjs'], { experimentalWorkerCopy: true }, { inPlace: true }),
+      /experimentalWorkerCopy cannot run with inPlace/,
+    );
+  });
+
   it('removes its copy when it is disposed', async (t) => {
     const dir = project(t, { 'a.test.mjs': passing });
     const copies = () => readdirSync(dirname(dir)).filter((name) => name.startsWith(lzDirPrefix('copy', process.pid)));
     const before = copies();
-    const debug: string[] = [];
-    const started = performance.now();
-    const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true }, { log: logger({ debug }) });
-    const initMs = performance.now() - started;
+    const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true });
     const made = copies().filter((name) => !before.includes(name));
 
     await runner.dispose();
 
     assert.deepEqual(copies(), before);
     assert.equal(made.length, 1);
-    assert.match(debug.join('\n'), new RegExp(`Copied the sandbox to .*${made.join('')} in \\d+ ms`));
+  });
+
+  it('logs where it copied the sandbox and how long that took', async (t) => {
+    project(t, { 'a.test.mjs': passing });
+    const debug: string[] = [];
+    const started = performance.now();
+    const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true }, { log: logger({ debug }) });
+    const initMs = performance.now() - started;
+
+    await runner.dispose();
+
     const copiedMs = Number(/ in (\d+) ms \(experimentalWorkerCopy\)/.exec(debug.join('\n'))?.[1]);
+    assert.match(debug.join('\n'), /Copied the sandbox to .*lz-node-test-copy-\d+-\S+ in \d+ ms/);
     assert.ok(copiedMs <= Math.ceil(initMs), `copied in ${copiedMs} ms, init took ${initMs} ms`);
   });
 

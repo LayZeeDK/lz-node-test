@@ -35,6 +35,16 @@ describe('lzRebase', () => {
 
     assert.equal(lzRebase(sibling, sandbox, join('work', 'copy')), sibling);
   });
+
+  it("gives the sandbox's path in a test's name the copy's path too, as each worker's copy differs", () => {
+    const sandbox = join('work', 'sandbox');
+    const copy = join('work', 'copy');
+
+    assert.equal(
+      lzRebase(`${join(sandbox, 'a.test.js')} > writes ${join(sandbox, 'out')}`, sandbox, copy),
+      `${join(copy, 'a.test.js')} > writes ${join(copy, 'out')}`,
+    );
+  });
 });
 
 function sandboxDir(t: TestContext, files: Readonly<Record<string, string>>): string {
@@ -53,6 +63,13 @@ function sandboxDir(t: TestContext, files: Readonly<Record<string, string>>): st
 }
 
 describe('lzCopySandbox', () => {
+  it('removes its folder again when the copy fails', (t) => {
+    const missing = sandboxDir(t, {});
+
+    assert.throws(() => lzCopySandbox(missing, 123), { code: 'ENOENT' });
+    assert.deepEqual(readdirSync(dirname(missing)), []);
+  });
+
   it("copies the sandbox's files into a folder of this process beside it", (t) => {
     const sandbox = sandboxDir(t, { [join('test', 'a.test.js')]: 'content' });
 

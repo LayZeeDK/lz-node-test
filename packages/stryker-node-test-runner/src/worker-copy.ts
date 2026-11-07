@@ -1,36 +1,38 @@
-import { cpSync, lstatSync, mkdtempSync, readlinkSync, statSync, symlinkSync } from 'node:fs';
-import { dirname, join, sep } from 'node:path';
+import { cpSync, lstatSync, mkdtempSync, readlinkSync, rmSync, statSync, symlinkSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 import { lzDirPrefix } from './dirs.ts';
 import type { ProcessRecord } from './record.ts';
 
-export function lzRebase(path: string, from: string, to: string): string {
-  if (!path.startsWith(from + sep)) {
-    return path;
-  }
-
-  return to + path.slice(from.length);
+/** Moves every path under `from` in `text` to `to`; a test's name can hold the folder its process works in. */
+export function lzRebase(text: string, from: string, to: string): string {
+  return text.split(from).reduce((rebased, rest) => rebased + (/^[\w.-]/.test(rest) ? from : to) + rest);
 }
 
 export function lzCopySandbox(sandbox: string, pid: number): string {
   const copy = mkdtempSync(join(dirname(sandbox), lzDirPrefix('copy', pid)));
 
-  cpSync(sandbox, copy, {
-    recursive: true,
-    filter: (source) => {
-      if (!lstatSync(source).isSymbolicLink()) {
-        return true;
-      }
+  try {
+    cpSync(sandbox, copy, {
+      recursive: true,
+      filter: (source) => {
+        if (!lstatSync(source).isSymbolicLink()) {
+          return true;
+        }
 
-      // A junction, as Stryker links node_modules, needs no symlink privilege on Windows, so a link whose target is
-      // missing becomes one too; POSIX ignores the type.
-      // Stryker disable next-line LogicalOperator,BooleanLiteral: Windows only, as POSIX ignores the link type; the Windows run kills it
-      const isDirectory = statSync(source, { throwIfNoEntry: false })?.isDirectory() ?? true;
-      symlinkSync(readlinkSync(source), lzRebase(source, sandbox, copy), isDirectory ? 'junction' : 'file');
+        // A junction, as Stryker links node_modules, needs no symlink privilege on Windows, so a link whose target is
+        // missing becomes one too; POSIX ignores the type.
+        // Stryker disable next-line LogicalOperator,BooleanLiteral: Windows only, as POSIX ignores the link type; the Windows run kills it
+        const isDirectory = statSync(source, { throwIfNoEntry: false })?.isDirectory() ?? true;
+        symlinkSync(readlinkSync(source), lzRebase(source, sandbox, copy), isDirectory ? 'junction' : 'file');
 
-      return false;
-    },
-  });
+        return false;
+      },
+    });
+  } catch (error) {
+    rmSync(copy, { recursive: true });
+    throw error;
+  }
 
   return copy;
 }
