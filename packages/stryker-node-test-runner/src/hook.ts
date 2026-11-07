@@ -91,5 +91,6 @@ install({
   signals: lzSignals(process.platform),
   platform: process.platform,
   parentPid: () => process.ppid,
+  // Stryker disable next-line ArrowFunction: POSIX only, as Windows has no process groups to end; the Linux run kills it
   kill: (pid, signal) => process.kill(pid, signal),
 });
