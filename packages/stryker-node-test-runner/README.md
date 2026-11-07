@@ -350,10 +350,13 @@ If you cannot change tests that write fixed paths inside the project, set `lzNod
 `true`. Each worker then copies the sandbox once as it starts, into `lz-node-test-copy-<pid>-*` beside the sandbox,
 and runs its test files there with the copy as their working directory. Links in the sandbox, such as Stryker's
 `node_modules` link, are linked again, not copied. Test names, coverage and killing tests still name the sandbox's
-files, as they do without the option. The worker removes its copy when it ends, and the next worker
-removes copies that killed workers left.
+files, as they do without the option, also where a test's name holds its working directory as `process.cwd()` spells it. The worker removes its
+copy when it ends, and the next worker started with the option removes copies that killed workers left. That clean-up
+goes by process id, so a container and its host that share one checkout can remove each other's copies; give each its
+own checkout. The option refuses to run with Stryker's `inPlace`, where the sandbox is the project itself.
 
-On fast-json-stringify, whose standalone-mode test writes into `test/fixtures`, 5 runs at concurrency 6 without the
+Measured on 2026-11-06 on Windows, on fast-json-stringify, whose standalone-mode test writes into `test/fixtures`: 5
+runs at concurrency 6 without the
 option each gave 0 to 2 mutants a status that differed from a run at concurrency 1, all of them kills by that test.
 With the option, no mutant differed in 5 runs. It cost:
 
@@ -367,8 +370,8 @@ It does not cover:
 - Test files that run together in the dry run. The dry run runs several test files of one worker at once, in that
   worker's one copy, so they can still race each other.
 - Test files outside the sandbox. They run from their own path; only the working directory is the copy.
-- Paths in messages. A failure message, a stack trace and the command that the runner gives to reproduce a failure
-  name the copy's path, which is gone once the worker ends. Run that command in the sandbox instead.
+- Paths in messages. A failure message and a stack trace name the copy's path, which is gone once the worker ends.
+  The command that the runner gives to reproduce a failure names the sandbox's files.
 
 ## Close what your tests open
 
