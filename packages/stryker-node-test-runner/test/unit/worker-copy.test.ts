@@ -16,7 +16,8 @@ import { basename, dirname, join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
 import type { ProcessRecord } from '../../src/record.ts';
-import { lzCopySandbox, lzRebase, lzRebaseRecord } from '../../src/worker-copy.ts';
+import { logger } from '../runner.fixtures.ts';
+import { lzCopySandbox, lzRebase, lzRebaseRecord, lzRemoveCopy } from '../../src/worker-copy.ts';
 
 describe('lzRebase', () => {
   it("gives a test id under the sandbox the copy's path instead", () => {
@@ -73,7 +74,7 @@ describe('lzCopySandbox', () => {
   it("copies the sandbox's files into a folder of this process beside it", (t) => {
     const sandbox = sandboxDir(t, { [join('test', 'a.test.js')]: 'content' });
 
-    const copy = lzCopySandbox(sandbox, 123);
+    const { dir: copy } = lzCopySandbox(sandbox, 123);
 
     assert.equal(dirname(copy), dirname(sandbox));
     assert.ok(basename(copy).startsWith('lz-node-test-copy-123-'), copy);
@@ -86,7 +87,7 @@ describe('lzCopySandbox', () => {
     mkdirSync(join(modules, 'dep'), { recursive: true });
     symlinkSync(modules, join(sandbox, 'node_modules'), 'junction');
 
-    const copy = lzCopySandbox(sandbox, 123);
+    const { dir: copy } = lzCopySandbox(sandbox, 123);
 
     assert.ok(lstatSync(join(copy, 'node_modules')).isSymbolicLink());
     assert.equal(realpathSync.native(join(copy, 'node_modules')), modules);
@@ -97,16 +98,27 @@ describe('lzCopySandbox', () => {
     const missing = join(dirname(sandbox), 'missing');
     symlinkSync(missing, join(sandbox, 'dangling'), 'junction');
 
-    const copy = lzCopySandbox(sandbox, 123);
+    const { dir: copy } = lzCopySandbox(sandbox, 123);
 
     assert.equal(readlinkSync(join(copy, 'dangling')), readlinkSync(join(sandbox, 'dangling')));
+  });
+
+  it('lists the links it made in the copy, so a caller can remove them before the folder', (t) => {
+    const sandbox = sandboxDir(t, { 'index.js': '' });
+    const modules = join(dirname(sandbox), 'node_modules');
+    mkdirSync(modules);
+    symlinkSync(modules, join(sandbox, 'node_modules'), 'junction');
+
+    const { dir, links } = lzCopySandbox(sandbox, 123);
+
+    assert.deepEqual(links, [join(dir, 'node_modules')]);
   });
 
   it('points a relative link inside the copy, not back into the sandbox', (t) => {
     const sandbox = sandboxDir(t, { [join('sub', 'a.js')]: '' });
     symlinkSync('sub', join(sandbox, 'relative'), 'dir');
 
-    const copy = lzCopySandbox(sandbox, 123);
+    const { dir: copy } = lzCopySandbox(sandbox, 123);
 
     assert.equal(realpathSync.native(join(copy, 'relative')), join(copy, 'sub'));
   });
@@ -116,10 +128,62 @@ describe('lzCopySandbox', () => {
     const missing = join(dirname(sandbox), 'missing');
     symlinkSync(missing, join(sandbox, 'dangling'), 'junction');
 
-    const copy = lzCopySandbox(sandbox, 123);
+    const { dir: copy } = lzCopySandbox(sandbox, 123);
     mkdirSync(join(missing, 'dep'), { recursive: true });
 
     assert.deepEqual(readdirSync(join(copy, 'dangling')), ['dep']);
+  });
+});
+
+function removal(options: { readonly failingLink?: string } = {}) {
+  const calls: string[] = [];
+  const warnings: string[] = [];
+  const log = logger({ debugEnabled: false, warnings });
+  const copy = {
+    dir: join('work', 'copy'),
+    links: [join('work', 'copy', 'node_modules'), join('work', 'copy', 'link')],
+  };
+
+  return {
+    calls,
+    warnings,
+    copy,
+    run: () =>
+      lzRemoveCopy(copy, log, {
+        unlink: (link: string) => {
+          calls.push(`unlink ${link}`);
+
+          if (link === options.failingLink) {
+            throw new Error('EPERM');
+          }
+        },
+        remove: (dir: string) => {
+          calls.push(`remove ${dir}`);
+
+          return Promise.resolve();
+        },
+      }),
+  };
+}
+
+describe('lzRemoveCopy', () => {
+  it('removes each link on its own before the folder, so the removal never follows a link', async () => {
+    const { calls, copy, run } = removal();
+
+    await run();
+
+    assert.deepEqual(calls, [...copy.links.map((link) => `unlink ${link}`), `remove ${copy.dir}`]);
+  });
+
+  it('leaves the folder for a later runner and warns when a link cannot be removed', async () => {
+    const failingLink = join('work', 'copy', 'node_modules');
+    const { calls, run, warnings } = removal({ failingLink });
+
+    await run();
+
+    assert.deepEqual(calls, [`unlink ${failingLink}`]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0] ?? '', /Left .*copy.* for a later runner to remove: EPERM/);
   });
 });
 

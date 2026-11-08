@@ -48,7 +48,7 @@ import {
 } from './record.ts';
 import schema from './schema/node-test-runner-options.json' with { type: 'json' };
 import { lzStartUpOf, lzStartUps, type LzStartUps } from './start-up.ts';
-import { lzCopySandbox, lzRebase, lzRebaseRecord } from './worker-copy.ts';
+import { lzCopySandbox, lzRebase, lzRebaseRecord, lzRemoveCopy, type LzSandboxCopy } from './worker-copy.ts';
 
 /** Options under `lzNodeTest` in the Stryker configuration, which `schema/node-test-runner-options.json` describes. */
 export interface LzNodeTestOptions {
@@ -547,7 +547,7 @@ export class LzNodeTestTestRunner implements TestRunner {
   #initialized?: Promise<void>;
   readonly #workerCopy: boolean;
   /** The sandbox and this runner's copy of it, in which its test files run, under experimentalWorkerCopy. */
-  #copy?: { readonly sandbox: string; readonly dir: string };
+  #copy?: LzSandboxCopy & { readonly sandbox: string };
   readonly #patterns: string[];
   readonly #nodeArgs: string[];
   readonly #dryRunConcurrency: number;
@@ -633,7 +633,7 @@ export class LzNodeTestTestRunner implements TestRunner {
       const sandbox = process.cwd();
       removeLeftDirs(dirname(sandbox));
       const started = performance.now();
-      this.#copy = { sandbox, dir: lzCopySandbox(sandbox, process.pid) };
+      this.#copy = { sandbox, ...lzCopySandbox(sandbox, process.pid) };
       this.#log.debug(
         `Copied the sandbox to ${this.#copy.dir} in ${Math.round(performance.now() - started)} ms (experimentalWorkerCopy)`,
       );
@@ -643,9 +643,10 @@ export class LzNodeTestTestRunner implements TestRunner {
   async dispose(): Promise<void> {
     await Promise.allSettled([this.#initialized]);
     // At once, as Stryker gives dispose 2 s and each removal may retry for that long.
-    await Promise.all(
-      [this.#cacheDir, this.#copy?.dir].filter((dir) => dir !== undefined).map((dir) => removeDir(dir, this.#log)),
-    );
+    await Promise.all([
+      this.#cacheDir === undefined ? undefined : removeDir(this.#cacheDir, this.#log),
+      this.#copy && lzRemoveCopy(this.#copy, this.#log),
+    ]);
   }
 
   async dryRun(options: DryRunOptions): Promise<DryRunResult> {

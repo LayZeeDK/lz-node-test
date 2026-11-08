@@ -145,6 +145,24 @@ describe('LzNodeTestTestRunner experimentalWorkerCopy', () => {
     assert.deepEqual(copies(), before);
   });
 
+  it('removes its copy on dispose, but not what the links in the copy point at', async (t) => {
+    const dir = project(
+      t,
+      { [join('sandbox', 'a.test.mjs')]: passing, [join('kept', 'file.txt')]: '' },
+      { cwd: 'sandbox' },
+    );
+    symlinkSync(join(dir, 'kept'), join(dir, 'sandbox', 'node_modules'), 'junction');
+    const copies = () => readdirSync(dir).filter((name) => name.startsWith(lzDirPrefix('copy', process.pid)));
+
+    const runner = await initRunner(['*.test.mjs'], { experimentalWorkerCopy: true });
+    const during = copies();
+    await runner.dispose();
+
+    assert.equal(during.length, 1);
+    assert.deepEqual(copies(), []);
+    assert.equal(existsSync(join(dir, 'kept', 'file.txt')), true);
+  });
+
   it('removes the copy that a killed runner left beside the sandbox, but not what its links point at', async (t) => {
     const dir = project(
       t,
