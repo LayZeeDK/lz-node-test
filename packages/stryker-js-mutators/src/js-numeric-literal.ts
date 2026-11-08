@@ -5,7 +5,8 @@ import type { LzBabelTypes, LzOperator } from '@layzee/stryker-mutator-core';
 /**
  * Moves an integer literal by 1 each way, as an off-by-one in a limit, an index or a count does. A literal that another
  * mutator mutates keeps only that mutator's mutants, so a mutator of a site, such as a timer's delay, takes precedence.
- * The arguments of a `kill` call are left alone: a mutant there would signal a real process.
+ * The arguments of a `kill` call and the `uid` and `gid` of an options object are left alone: a mutant there would signal
+ * a real process or run one as another user.
  */
 export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
   name: 'LzJsNumericLiteral',
@@ -17,7 +18,8 @@ export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
       !isPropertyKey(path) &&
       !isOctal(path.node) &&
       !isLiteralType(path) &&
-      !isKillArgument(path)
+      !isKillArgument(path) &&
+      !isUserOrGroupId(path)
     ) {
       yield numberNode(t, path.node.value + 1);
       yield numberNode(t, path.node.value - 1);
@@ -58,27 +60,52 @@ function isLiteralType(path: NodePath): boolean {
   return withSign(path).parent.type === 'TSLiteralType';
 }
 
-/** A process id or a signal of `kill(...)`, `process.kill(...)` or `child.kill(...)`, also behind a minus sign. */
+/** Anywhere in the arguments of the nearest call of `kill(...)`, `process.kill(...)` or `child.kill(...)`. */
 function isKillArgument(path: NodePath): boolean {
-  const call = withSign(path).parent;
+  const argument = path.find((current) => isCall(current.parent));
+  const call = argument?.parent;
 
-  return (
-    (call.type === 'CallExpression' || call.type === 'OptionalCallExpression') && calleeName(call.callee) === 'kill'
-  );
+  return argument?.listKey === 'arguments' && isCall(call) && nameOf(call.callee) === 'kill';
 }
 
-function calleeName(callee: types.Node): string | undefined {
-  if (callee.type === 'Identifier') {
-    return callee.name;
+function isCall(node: types.Node | null | undefined): node is types.CallExpression | types.OptionalCallExpression {
+  return node?.type === 'CallExpression' || node?.type === 'OptionalCallExpression';
+}
+
+/** The `uid` or `gid` of a spawn option, such as `{ uid: 1000 }`: 1 more or less runs the child as another user. */
+function isUserOrGroupId(path: NodePath): boolean {
+  const property = withSign(path).parent;
+
+  if (property.type !== 'ObjectProperty' || property.computed) {
+    return false;
   }
 
-  if ((callee.type !== 'MemberExpression' && callee.type !== 'OptionalMemberExpression') || callee.computed) {
+  const name = property.key.type === 'StringLiteral' ? property.key.value : nameOf(property.key);
+
+  return name === 'uid' || name === 'gid';
+}
+
+/** The name a callee or a property key stands for, such as `kill` in `process.kill` or `process['kill']`. */
+function nameOf(node: types.Node): string | undefined {
+  if (node.type === 'Identifier') {
+    return node.name;
+  }
+
+  if (node.type !== 'MemberExpression' && node.type !== 'OptionalMemberExpression') {
     return undefined;
   }
 
-  const { property } = callee;
+  const { property } = node;
 
-  return property.type === 'PrivateName' ? property.id.name : property.name;
+  if (property.type === 'PrivateName') {
+    return property.id.name;
+  }
+
+  if (property.type === 'Identifier' && !node.computed) {
+    return property.name;
+  }
+
+  return property.type === 'StringLiteral' ? property.value : undefined;
 }
 
 /** Babel's numericLiteral takes no negative number. */

@@ -36,7 +36,10 @@ describe('LzJsNumericLiteral', () => {
     ['a case', 'switch (n) {\n  case 3:\n    break;\n}', ['4', '2']],
     ['an argument of another call', 'child.close(9);', ['10', '8']],
     ['a negative argument of another call', 'skip(-1);', ['2', '0']],
-    ['a number next to a kill call', 'kill(pid, signal + 1);', ['2', '0']],
+    ['a number in a call inside a kill call, as the nearest call decides', 'kill(pid, next(1));', ['2', '0']],
+    ['an index in the callee of a kill call, which picks a child of the test', 'children[1].kill();', ['2', '0']],
+    ['an argument of a call named by a variable key', 'process[name](9);', ['10', '8']],
+    ['the value of a computed uid key', 'const o = { [uid]: 2 };', ['3', '1']],
   ])('moves %s by 1 each way', async (_title, source, expected) => {
     assert.deepEqual(await mutantsOf(jsNumericLiteral, source), expected);
   });
@@ -59,6 +62,11 @@ describe('LzJsNumericLiteral', () => {
     ['the signal of a kill method', 'child.kill(9);'],
     ['a negative process id of a kill function, as -0 is the process group', 'kill(-1, 15);'],
     ['an argument of an optional kill call', 'child?.kill(9);'],
+    ['the process id of a kill call named by a string key', "process['kill'](4321);"],
+    ['the uid of a spawn option, as 1 more is another user', 'spawn(cmd, args, { uid: 1000 });'],
+    ['the gid of a spawn option named by a string key', "spawn(cmd, args, { 'gid': 1000 });"],
+    ['a number in a condition inside the arguments of a kill call', 'process.kill(pid, cond ? 0 : 9);'],
+    ['a number inside an expression in the arguments of a kill call', 'kill(pid, signal + 1);'],
     [
       'the signal of a private kill method',
       'class C {\n  #kill(pid, signal) {}\n  stop() {\n    this.#kill(pid, 0);\n  }\n}',
