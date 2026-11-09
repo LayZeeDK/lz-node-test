@@ -104,6 +104,11 @@ describe('stryker-disable-comment', () => {
       ],
     ],
     [
+      'a restore of the first of two disables, which leaves the second open',
+      '// Stryker disable Regex: a\n// Stryker disable StringLiteral: b\nf();\n// Stryker restore Regex',
+      [{ messageId: 'unrestored', line: 2 }],
+    ],
+    [
       'two disables of the same mutators and one restore',
       '// Stryker disable Regex: a\n// Stryker disable Regex: b\nf();\n// Stryker restore Regex',
       [{ messageId: 'unrestored', line: 1 }],

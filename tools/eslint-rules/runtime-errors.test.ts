@@ -196,6 +196,18 @@ describe('runtime-errors.cli.ts', () => {
     });
   });
 
+  it('exits 1 for a single unrecorded RuntimeError mutant', async (t) => {
+    const report = reportOf([mutant('Killed', 'StringLiteral', 1, 1), mutant('RuntimeError')]);
+    const reportFile = await writeJson(await tempDir(t), 'report.json', report);
+
+    assert.deepEqual(runCheck([reportFile]), {
+      code: 1,
+      stderr:
+        'Stryker left RuntimeError mutants out of the mutation score. Kill each one with a test, or record why it ' +
+        `cannot be killed in tools/eslint-rules/runtime-errors.json:\n  ${unrecordedLine}\n`,
+    });
+  });
+
   it('exits 1 when the report holds no mutant that counts toward the score, as a run that mutated nothing passes', async (t) => {
     const reportFile = await writeJson(await tempDir(t), 'report.json', reportOf([mutant('Ignored')]));
 
