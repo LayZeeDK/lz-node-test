@@ -252,7 +252,7 @@ export function harness(env: Record<string, string | undefined>, overrides: Part
       timers.push({ ms, fire });
     },
     canWriteRecords: true,
-    peakMemoryMB: () => 123,
+    maxRssKiB: () => 123 * 1024,
     canWatchMemory: true,
     watchMemory: (options) => {
       calls.push(`watchMemory ${JSON.stringify(options)}`);

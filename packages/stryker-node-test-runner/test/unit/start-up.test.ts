@@ -69,6 +69,7 @@ describe('lzStartUps', () => {
     ['a record that is not JSON', '{"startUpMs":401,'],
     ['a record without the test count', '{"startUpMs":401}'],
     ['a record with a negative start-up', '{"startUpMs":-401,"tests":5}'],
+    ['a record with a test count of -1', '{"startUpMs":401,"tests":-1}'],
     ['a record with a fractional test count', '{"startUpMs":401,"tests":2.5}'],
   ])("keeps Stryker's timeout for a file with %s, warning about it once", ([, stored], t) => {
     const { dir, warnings, runner } = setup(t);

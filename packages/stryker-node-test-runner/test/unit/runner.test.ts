@@ -156,6 +156,12 @@ describe('lzFileError', () => {
         "with NODE_OPTIONS set to `--import tsx --max-old-space-size=100`, without the runner's reporter and hook.",
     );
   });
+
+  it('names a NODE_OPTIONS of one option', () => {
+    const run = { records: [], exitCode: 1, stderr: '', fileArgs: [file], nodeOptions: ['--import tsx'] };
+
+    assert.match(lzFileError(file, run), / with NODE_OPTIONS set to `--import tsx`, /);
+  });
 });
 
 describe('LzNodeTestTestRunner options', () => {
@@ -420,14 +426,17 @@ describe('lzTestRunnerConcurrency', () => {
   lzTestEach([
     [undefined, false, 8, 7],
     [undefined, false, 4, 4],
+    [undefined, false, 5, 4],
     [3, false, 8, 3],
     ['50%', false, 3, 2],
+    ['56%', false, 8, 4],
     ['0%', false, 8, 1],
     ['100%', false, 8, 8],
     ['50', false, 8, 7],
     ['150%', false, 8, 7],
     ['x50%', false, 8, 7],
     ['50%x', false, 8, 7],
+    [0, true, 8, 2],
     [1, true, 8, 2],
     ['0%', true, 8, 2],
     [3, true, 8, 3],

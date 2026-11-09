@@ -64,6 +64,7 @@ const defaults = schema.properties.lzNodeTest.properties;
 export const lzMinNodeVersion: readonly [major: number, minor: number] = [22, 18];
 
 function supportsNode(version: string): boolean {
+  // Stryker disable next-line LzJsNumericLiteral: equivalent, as a Node.js version always has a major and a minor part
   const [major = 0, minor = 0] = version.split('.').map(Number);
   const [minMajor, minMinor] = lzMinNodeVersion;
 

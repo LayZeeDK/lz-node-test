@@ -252,6 +252,7 @@ describe('processEnd', () => {
     ['the last 8 KiB of stderr', ['dropped', 'x'.repeat(8191), 'y'], `${'x'.repeat(8191)}y`],
     ['whole characters of the last 8 KiB of stderr', ['€'.repeat(3000)], '€'.repeat(2730)],
     ['nothing of a stderr that holds only the end of a character', [Buffer.from('€').subarray(1)], ''],
+    ['nothing of the end of a character whose last byte is odd, as 0xa3 of £ is', [Buffer.from('£').subarray(1)], ''],
   ])('keeps %s', async ([, writes, kept]) => {
     const { child, settled } = ending();
     writes.forEach((chunk) => child.stderr.write(chunk));

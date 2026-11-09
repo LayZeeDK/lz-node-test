@@ -32,7 +32,7 @@ function dryRunPeaks(store: LzDryRunStore, log: Logger): MemoryLimits {
     forDryRun: () => undefined,
 
     record(file, records) {
-      const peakMB = Math.max(0, ...records.map((record) => record.peakMemoryMB ?? 0));
+      const peakMB = Math.max(0, ...records.flatMap((record) => record.peakMemoryMB ?? []));
       store.write(file, 'peak', String(peakMB));
     },
 

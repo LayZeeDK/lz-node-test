@@ -49,16 +49,23 @@ export function lzStartUps(store: LzDryRunStore, timeoutFactor: number, log: Log
       return lzDeadlineMs(
         timeout,
         timeoutFactor,
-        files.map((file) => {
+        files.flatMap((file) => {
           const startUp = read(file);
+
+          if (startUp === undefined) {
+            return [];
+          }
+
           // Stryker runs every test of a file for a static mutant, or without coverage, and then sums the time of
           // every test of the dry run.
           const wholeFile = testFilter === undefined || lzNamesFile(testFilter, file);
 
-          return {
-            covering: wholeFile ? (startUp?.tests ?? 0) : testFilter.filter((id) => within(id, file)).length,
-            startUpMs: startUp?.startUpMs ?? 0,
-          };
+          return [
+            {
+              covering: wholeFile ? startUp.tests : testFilter.filter((id) => within(id, file)).length,
+              startUpMs: startUp.startUpMs,
+            },
+          ];
         }),
       );
     },

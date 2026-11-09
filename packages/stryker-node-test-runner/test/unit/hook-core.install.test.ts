@@ -78,10 +78,10 @@ describe('install', () => {
     assert.deepEqual(ns.mutantCoverage, { static: { 1: 1 }, perTest: {} });
   });
 
-  it('sets the hit limit and starts counting when the limit is positive', () => {
-    const { deps } = installedHarness({ [envNames.out]: out, [envNames.hitLimit]: '25' });
+  lzTestEach([1, 25])('sets the hit limit %d and starts counting', (hitLimit) => {
+    const { deps } = installedHarness({ [envNames.out]: out, [envNames.hitLimit]: String(hitLimit) });
 
-    assert.equal(deps.global.__stryker__?.hitLimit, 25);
+    assert.equal(deps.global.__stryker__?.hitLimit, hitLimit);
     assert.equal(deps.global.__stryker__.hitCount, 0);
   });
 
@@ -112,6 +112,16 @@ describe('install', () => {
     );
 
     assert.deepEqual(started, [expected]);
+  });
+
+  it('watches the memory with the smallest limit, 1 MB', () => {
+    const started: unknown[] = [];
+    installedHarness(
+      { [envNames.out]: out, [envNames.memoryLimit]: '1' },
+      { watchMemory: (options) => started.push(options.workerData.limitMB) },
+    );
+
+    assert.deepEqual(started, [1]);
   });
 
   it('watches no memory in a thread that may not start the watchdog', () => {
@@ -522,6 +532,19 @@ describe('install', () => {
       { tests: [], hitCount: 7, lifetime },
     ]);
   });
+
+  lzTestFor<readonly [string, number, number]>([
+    ['one KiB short of half a MiB, which rounds down', 123.5 * 1024 - 1, 123],
+    ['half a MiB, which rounds up', 123.5 * 1024, 124],
+  ])('writes the peak memory in whole MiB, %s', ([, maxRssKiB, expected]) => {
+    const { records, exit } = installedHarness(
+      { [envNames.out]: out, [envNames.dryRun]: 'true' },
+      { maxRssKiB: () => maxRssKiB },
+    );
+    exit();
+
+    assert.equal(records[0]?.record.peakMemoryMB, expected);
+  });
 });
 
 describe('a test file whose parent process is gone', () => {
@@ -596,6 +619,12 @@ describe('a test file whose parent process is gone', () => {
 
   lzTestEach(['', '0', 'runner'])("watches no parent when the runner's pid is %j, which names no process", (pid) => {
     assert.deepEqual(watched('linux', {}, { env: { ...fileEnv(), [envNames.runner]: pid } }).polls, []);
+  });
+
+  it('watches its parent when the runner is pid 1, as in a container', () => {
+    const { polls } = watched('linux', {}, { env: { ...fileEnv(), [envNames.runner]: '1' }, ppid: 1 });
+
+    assert.equal(polls.length, 1);
   });
 
   it('watches no parent on Windows, where the job object ends the process with its parent', () => {

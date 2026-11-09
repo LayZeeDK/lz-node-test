@@ -173,6 +173,11 @@ describe('lzPersistRecord, for a process that a signal ends', () => {
 
   lzTestFor<readonly [string, readonly unknown[], readonly LzEndingSignal[]]>([
     ["raises the signal when every other listener is signal-exit's", [{ count: 1 }, { count: 1 }], ['SIGTERM']],
+    [
+      'raises the signal when one signal-exit counts every other listener and one counts none',
+      [{ count: 2 }, undefined],
+      ['SIGTERM'],
+    ],
     ['leaves the signal to the other listeners when no signal-exit counts them', [undefined, { count: '2' }], []],
   ])('%s, which leaves how the process ends to any other listener', ([, emitters, expected]) => {
     const { raised, signal, listen, useSignalExit } = persisted();

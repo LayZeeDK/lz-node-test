@@ -76,7 +76,8 @@ export interface HookDependencies extends LzRecordDependencies {
   readonly later: (callback: () => void, ms: number) => void;
   /** Under the permission model without write access, the process runs as it would outside Stryker, with no record. */
   readonly canWriteRecords: boolean;
-  readonly peakMemoryMB: () => number;
+  /** The process's peak resident set in KiB, as `process.resourceUsage().maxRSS` gives it. */
+  readonly maxRssKiB: () => number;
   /** The main thread only, as a test's worker threads load the hook too, and only where the permission model allows. */
   readonly canWatchMemory: boolean;
   /**
@@ -102,6 +103,7 @@ export interface HookDependencies extends LzRecordDependencies {
 }
 
 /** How often a test file's process asks whether its parent, the runner's process, is still there. */
+// Stryker disable next-line LzJsNumericLiteral: a tuning value, as 1 ms more or less changes nothing a test can see
 const parentPollMs = 1_000;
 
 /**
@@ -268,7 +270,7 @@ export function install(deps: HookDependencies): boolean {
       tests,
       hitCount: ns.hitCount,
       mutantCoverage: dryRun ? ns.mutantCoverage : undefined,
-      peakMemoryMB: dryRun ? deps.peakMemoryMB() : undefined,
+      peakMemoryMB: dryRun ? Math.round(deps.maxRssKiB() / 1024) : undefined,
       ...(diagnostics.length > 0 && { diagnostics }),
       ...(main && !outcome?.summarized && !natural && !outcome?.complete && { unfinished: true }),
       ...outcome?.why,
@@ -327,6 +329,7 @@ export function ending(
   stallMs: number,
 ): Ending {
   let enqueuedTopLevel = 0;
+  // Stryker disable next-line LzJsNumericLiteral: equivalent, as the count is only compared with an earlier read of itself
   let results = 0;
   let summarized = false;
   let reportedTopLevel = 0;

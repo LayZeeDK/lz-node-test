@@ -70,7 +70,7 @@ install({
   activeResources,
   later,
   canWriteRecords: writesAllowed(process.permission, process.env[envNames.out]),
-  peakMemoryMB: () => Math.round(process.resourceUsage().maxRSS / 1024),
+  maxRssKiB: () => process.resourceUsage().maxRSS,
   canWatchMemory: isMainThread && workersAllowed(process.permission),
   watchMemory: (options) => {
     // Stryker disable next-line ArrayDeclaration: equivalent, as hook-core always passes execArgv: []

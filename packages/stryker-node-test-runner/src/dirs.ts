@@ -5,6 +5,7 @@ import timers from 'node:timers/promises';
 
 import type { Logger } from '@stryker-mutator/api/logging';
 
+// Stryker disable next-line LzJsNumericLiteral: a tuning value, as 1 ms more or less changes nothing a test can see
 const removeWaitMs = 2_000;
 
 /**
@@ -34,6 +35,7 @@ export async function removeDir(
   log: Logger,
   {
     waitMs = removeWaitMs,
+    // Stryker disable next-line LzJsNumericLiteral: tuning values, as one retry or 1 ms more or less changes nothing a test can see
     remove = (path: string) => rm(path, { recursive: true, maxRetries: 10, retryDelay: 20 }),
   } = {},
 ): Promise<void> {
