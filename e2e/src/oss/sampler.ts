@@ -13,6 +13,8 @@ export interface LzSamples {
 
 export interface LzSampler {
   readonly pid: number;
+  /** Settles once the sampling process has closed, by itself or after `stop`. */
+  readonly ended: Promise<unknown>;
   stop(): Promise<LzSamples>;
 }
 
@@ -72,6 +74,7 @@ export async function lzStartSampler({ command, args, loop, parse } = lzProcessR
 
   return {
     pid: child.pid,
+    ended: closed,
     async stop() {
       child.kill('SIGTERM');
       await closed;

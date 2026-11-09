@@ -35,22 +35,6 @@ function flagged(t: TestContext, script: string): { readonly script: string; rea
   };
 }
 
-async function ended(pid: number): Promise<void> {
-  for (let tries = 0; tries < 500 && isRunning(pid); tries++) {
-    await setTimeout(20);
-  }
-}
-
-function isRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 describe('lzSnapshot', () => {
   it("lists this process under its parent, read by this platform's own script", async () => {
     const sample = await lzSnapshot();
@@ -113,7 +97,7 @@ describe('lzStartSampler', () => {
   it('keeps the samples of a sampler that ended before the stop, and reports that it ended', async () => {
     const sampler = await lzStartSampler(nodeReader(oneSample));
 
-    await ended(sampler.pid);
+    await sampler.ended;
 
     assert.deepEqual(await sampler.stop(), {
       samples: [[row]],
@@ -146,7 +130,7 @@ describe('lzStartSampler', () => {
       ),
     );
 
-    await ended(sampler.pid);
+    await sampler.ended;
 
     assert.deepEqual(await sampler.stop(), { samples: [[row]], error: 'The process sampler failed:\nCIM timed out' });
   });
@@ -154,7 +138,7 @@ describe('lzStartSampler', () => {
   it('gives its script no input, so a script that reads to the end of its input goes on', async () => {
     const sampler = await lzStartSampler(nodeReader(`process.stdin.on('end', () => { ${oneSample} }).resume();`));
 
-    await ended(sampler.pid);
+    await sampler.ended;
 
     assert.deepEqual(await sampler.stop(), {
       samples: [[row]],
@@ -171,7 +155,7 @@ describe('lzStartSampler', () => {
       ),
     );
 
-    await ended(sampler.pid);
+    await sampler.ended;
 
     assert.deepEqual(await sampler.stop(), {
       samples: [[row]],

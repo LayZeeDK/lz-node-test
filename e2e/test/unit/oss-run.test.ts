@@ -100,7 +100,7 @@ function row(pid: number, workingSetBytes: number, name: string): LzProcessRow {
 }
 
 function sampler(pid: number, stop: () => Promise<LzSamples>): LzRunSteps['startSampler'] {
-  return () => Promise.resolve({ pid, stop });
+  return () => Promise.resolve({ pid, ended: Promise.resolve(), stop });
 }
 
 function notReported(): Promise<LzStrykerRun> {
