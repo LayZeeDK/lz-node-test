@@ -28,6 +28,9 @@ function reportOf(mutants: readonly unknown[], path = file): object {
 
 const recorded = { file, mutator: 'ArithmeticOperator', line: 24, column: 28, reason: 'Ends the test process.' };
 const unrecordedLine = `${file}:24:28 ArithmeticOperator: ${reason}`;
+const unrecordedHeader =
+  'Stryker left RuntimeError mutants out of the mutation score. Kill each one with a test, or record why it ' +
+  'cannot be killed in tools/eslint-rules/runtime-errors.json:\n';
 
 const malformedReport = "The mutation report does not match Stryker's JSON report schema.";
 const malformedList =
@@ -189,10 +192,7 @@ describe('runtime-errors.cli.ts', () => {
 
     assert.deepEqual(runCheck([reportFile]), {
       code: 1,
-      stderr:
-        'Stryker left RuntimeError mutants out of the mutation score. Kill each one with a test, or record why it ' +
-        `cannot be killed in tools/eslint-rules/runtime-errors.json:\n  ${unrecordedLine}\n` +
-        `  ${file}:26:7 EqualityOperator: ${reason}\n`,
+      stderr: `${unrecordedHeader}  ${unrecordedLine}\n  ${file}:26:7 EqualityOperator: ${reason}\n`,
     });
   });
 
@@ -202,9 +202,7 @@ describe('runtime-errors.cli.ts', () => {
 
     assert.deepEqual(runCheck([reportFile]), {
       code: 1,
-      stderr:
-        'Stryker left RuntimeError mutants out of the mutation score. Kill each one with a test, or record why it ' +
-        `cannot be killed in tools/eslint-rules/runtime-errors.json:\n  ${unrecordedLine}\n`,
+      stderr: `${unrecordedHeader}  ${unrecordedLine}\n`,
     });
   });
 
