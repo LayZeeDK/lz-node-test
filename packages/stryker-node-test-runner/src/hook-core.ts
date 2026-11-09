@@ -103,7 +103,7 @@ export interface HookDependencies extends LzRecordDependencies {
 }
 
 /** How often a test file's process asks whether its parent, the runner's process, is still there. */
-// Stryker disable next-line LzJsNumericLiteral: a tuning value, as 1 ms more or less changes nothing a test can see
+// Stryker disable next-line LzJsNumericLiteral: a tuning value, not a contract a test should pin
 const parentPollMs = 1_000;
 
 /**

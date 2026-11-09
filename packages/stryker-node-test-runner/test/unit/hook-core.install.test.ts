@@ -534,9 +534,9 @@ describe('install', () => {
   });
 
   lzTestFor<readonly [string, number, number]>([
-    ['one KiB short of half a MiB, which rounds down', 123.5 * 1024 - 1, 123],
-    ['half a MiB, which rounds up', 123.5 * 1024, 124],
-  ])('writes the peak memory in whole MiB, %s', ([, maxRssKiB, expected]) => {
+    ['one KiB short of half a MB, which rounds down', 123.5 * 1024 - 1, 123],
+    ['half a MB, which rounds up', 123.5 * 1024, 124],
+  ])('writes the peak memory in whole MB, %s', ([, maxRssKiB, expected]) => {
     const { records, exit } = installedHarness(
       { [envNames.out]: out, [envNames.dryRun]: 'true' },
       { maxRssKiB: () => maxRssKiB },
@@ -621,10 +621,11 @@ describe('a test file whose parent process is gone', () => {
     assert.deepEqual(watched('linux', {}, { env: { ...fileEnv(), [envNames.runner]: pid } }).polls, []);
   });
 
-  it('watches its parent when the runner is pid 1, as in a container', () => {
-    const { polls } = watched('linux', {}, { env: { ...fileEnv(), [envNames.runner]: '1' }, ppid: 1 });
+  it('watches its parent when the runner is pid 1, as in a container, and leaves the group alone while it lasts', () => {
+    const { killed, poll } = watched('linux', {}, { env: { ...fileEnv(), [envNames.runner]: '1' }, ppid: 1 });
+    poll();
 
-    assert.equal(polls.length, 1);
+    assert.deepEqual(killed, []);
   });
 
   it('watches no parent on Windows, where the job object ends the process with its parent', () => {

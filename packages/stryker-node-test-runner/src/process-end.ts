@@ -7,12 +7,11 @@ export function groupOptions(platform: NodeJS.Platform): { detached: boolean; wi
   return { detached: platform !== 'win32', windowsHide: true };
 }
 
-/** How long the processes of a test file's group get after SIGTERM before SIGKILL, at most. */
-// Stryker disable next-line LzJsNumericLiteral: a tuning value, as 1 ms more or less changes nothing a test can see
-export const termGraceMs = 200;
-
 /** How often the wait after SIGTERM asks whether the group is gone. */
 const pollMs = 10;
+
+/** How long the processes of a test file's group get after SIGTERM before SIGKILL, at most: a whole number of polls. */
+export const termGraceMs = 20 * pollMs;
 
 /**
  * How long a test file's process may hold stderr open after it exits, for the records of the processes it started
@@ -64,15 +63,14 @@ export async function endGroup(pid: number, platform: NodeJS.Platform, kill: Kil
 /** Whether the group is still there `termGraceMs` from now; it asks every `pollMs` and stops once the group is gone. */
 function groupLasts(pid: number, kill: Kill): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    // Stryker disable next-line LzJsNumericLiteral: equivalent, as 1 ms more crosses termGraceMs at the same poll
-    let waited = 0;
+    let polls = 0;
     const poll = setInterval(() => {
-      waited += pollMs;
+      polls += 1;
 
       try {
         const lasts = signalGroup(pid, 0, kill);
 
-        if (lasts && waited < termGraceMs) {
+        if (lasts && polls * pollMs < termGraceMs) {
           return;
         }
 
