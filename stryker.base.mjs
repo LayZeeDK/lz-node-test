@@ -1,19 +1,26 @@
 // What each package's Stryker configs share. Stryker runs from the workspace root, so that the sandbox keeps the
 // packages' tsconfig extends and the workspace's links.
 
-import { availableParallelism, freemem } from 'node:os';
+import { availableParallelism } from 'node:os';
+
+const reservedGb = 4;
+
+export const gbPerUnitWithChildProcesses = 2;
+
+/** @param {number} cores */
+function strykerDefaultConcurrency(cores) {
+  return cores > 4 ? cores - 1 : cores;
+}
 
 /**
- * Stryker's default concurrency, capped by the memory free as the run starts, with 4 GB left over for the rest of the
- * machine. A unit, a checker or a test runner process, costs `gbPerUnit`. `--concurrency` still overrides it.
+ * At least 2: Stryker starts one checker and one test runner at any lower value.
  *
- * @param {number} gbPerUnit
+ * @param {number} gbPerUnit the memory one checker or test runner process takes
  */
 export function concurrency(gbPerUnit) {
-  const cores = availableParallelism();
-  const byMemory = Math.floor((freemem() / 2 ** 30 - 4) / gbPerUnit);
+  const byMemory = Math.floor((process.availableMemory() / 2 ** 30 - reservedGb) / gbPerUnit);
 
-  return Math.max(1, Math.min(cores > 4 ? cores - 1 : cores, byMemory));
+  return Math.max(2, Math.min(strykerDefaultConcurrency(availableParallelism()), byMemory));
 }
 
 // The packages import each other and load the runner and the operators from their TypeScript source.

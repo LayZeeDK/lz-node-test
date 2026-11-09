@@ -1,10 +1,16 @@
-import base, { concurrency, ignorePatternsKeepingE2e, production, reportFiles, source } from '../stryker.base.mjs';
+import base, {
+  concurrency,
+  gbPerUnitWithChildProcesses,
+  ignorePatternsKeepingE2e,
+  production,
+  reportFiles,
+  source,
+} from '../stryker.base.mjs';
 
 export default await production(
   {
     ...base,
-    // Its tests start node processes of their own: fake npm and Stryker, the sampler and the CLI entry modules.
-    concurrency: concurrency(2),
+    concurrency: concurrency(gbPerUnitWithChildProcesses),
     mutate: ['e2e/src/**/*.ts'],
     ignorePatterns: ignorePatternsKeepingE2e,
     tsconfigFile: 'e2e/tsconfig.stryker.json',
