@@ -25,24 +25,23 @@ export interface LzExecOptions {
 export async function lzExec(
   file: string,
   args: readonly string[],
-  // Stryker disable next-line LzJsNumericLiteral: equivalent, as only a timeoutMs above 0 starts a timer, so -1 starts none either
-  { cwd, env = process.env, timeoutMs = 0, logFile }: LzExecOptions,
+  { cwd, env = process.env, timeoutMs, logFile }: LzExecOptions,
 ): Promise<LzExecResult> {
   // Stryker disable next-line BooleanLiteral: equivalent for tests, as windowsHide only hides a console window that no test can see
   const child = spawn(file, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   const closed = once(child, 'close');
   let timedOut = false;
   const timer =
-    timeoutMs > 0
-      ? setTimeout(
+    timeoutMs === undefined
+      ? undefined
+      : setTimeout(
           () => {
             timedOut = true;
             child.kill('SIGTERM');
           },
           // Stryker disable next-line LzNodeTimerDelay: equivalent, as no test can tell a timeout one millisecond apart
           timeoutMs,
-        )
-      : undefined;
+        );
   // 'close' also waits for the processes the child started that still hold its stdout or stderr.
   child.once('exit', () => {
     clearTimeout(timer);

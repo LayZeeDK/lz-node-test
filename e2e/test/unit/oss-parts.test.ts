@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { lzLineWeights, lzMutantsByLine, lzPartRanges } from '../../src/oss/parts.ts';
+import { lzMutantsByLine, lzPartRanges } from '../../src/oss/parts.ts';
 
 const source = [
   "'use strict'",
@@ -30,7 +30,7 @@ describe('lzPartRanges', () => {
     assert.deepEqual(lzPartRanges('index.js', source, 2), ['index.js:1-6', 'index.js:7-11']);
   });
 
-  it('weighs each line as given', () => {
+  it('weighs each line by its mutants, and a line without any by 0', () => {
     const mutantsByLine = new Map([
       [4, 1],
       [8, 1],
@@ -38,10 +38,17 @@ describe('lzPartRanges', () => {
       [11, 4],
     ]);
 
-    assert.deepEqual(
-      lzPartRanges('index.js', source, 2, (line) => mutantsByLine.get(line) ?? 0),
-      ['index.js:1-10', 'index.js:11-11'],
-    );
+    assert.deepEqual(lzPartRanges('index.js', source, 2, mutantsByLine), ['index.js:1-10', 'index.js:11-11']);
+  });
+
+  it('gives the lines between two mutants no weight, so the cut follows the first', () => {
+    const oneLineStatements = Array.from({ length: 12 }, (_, index) => `const v${index} = ${index}`).join('\n');
+    const mutantsByLine = new Map([
+      [1, 1],
+      [12, 1],
+    ]);
+
+    assert.deepEqual(lzPartRanges('index.js', oneLineStatements, 2, mutantsByLine), ['index.js:1-1', 'index.js:2-12']);
   });
 
   it('never cuts inside a statement or between two statements that share a line', () => {
@@ -103,20 +110,6 @@ function reportWith(t: TestContext, mutantLinesByFile: Readonly<Record<string, r
 
   return file;
 }
-
-describe('lzLineWeights', () => {
-  it('weighs a line by its mutants, and a line without any by 0', () => {
-    const weightOf = lzLineWeights(new Map([[3, 2]]));
-
-    assert.deepEqual([weightOf(3), weightOf(4)], [2, 0]);
-  });
-
-  it('weighs every line alike without counts', () => {
-    const weightOf = lzLineWeights(undefined);
-
-    assert.equal(weightOf(3), weightOf(4));
-  });
-});
 
 describe('lzMutantsByLine', () => {
   it('counts the mutants on each line of the file the report names exactly', (t) => {

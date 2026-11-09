@@ -4,18 +4,22 @@ import { parseSync } from '@babel/core';
 
 import { lzParseReport } from '../report.ts';
 
-/** Cuts fall between top-level statements because Stryker places a mutant only in a range that holds all of it. */
+/**
+ * Cuts fall between top-level statements because Stryker places a mutant only in a range that holds all of it. Each
+ * line weighs its mutants in `counts`, and a line without any weighs 0; without counts, every line weighs the same.
+ */
 export function lzPartRanges(
   file: string,
   source: string,
   parts: number,
-  weightOf: (line: number) => number = lzLineWeights(undefined),
+  counts?: ReadonlyMap<number, number>,
 ): string[] {
   if (!Number.isInteger(parts) || parts < 1) {
     throw new Error(`parts is a positive integer; got ${parts}.`);
   }
 
   const { lineCount, candidates } = statementStarts(file, source);
+  const weightOf = lineWeights(counts);
   const weightBefore: number[] = [0];
   const sumBefore = (line: number): number => {
     const index = line - 1;
@@ -76,10 +80,9 @@ function statementStarts(file: string, source: string): { lineCount: number; can
   return { lineCount, candidates };
 }
 
-/** Weighs each line by its mutants in `counts`, a line without any by 0; without counts, every line alike. */
-export function lzLineWeights(counts: ReadonlyMap<number, number> | undefined): (line: number) => number {
+function lineWeights(counts: ReadonlyMap<number, number> | undefined): (line: number) => number {
   if (counts === undefined) {
-    // Stryker disable next-line LzJsNumericLiteral: equivalent, as a weight every line shares scales every target and distance alike
+    // Stryker disable next-line LzJsNumericLiteral: the 2 is equivalent, as a weight every line shares scales every target and distance alike; the 0 is killed by the even-share test but cannot be enabled alone
     return () => 1;
   }
 

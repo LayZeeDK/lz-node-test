@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { lzLineWeights, lzMutantsByLine, lzPartRanges } from './parts.ts';
+import { lzMutantsByLine, lzPartRanges } from './parts.ts';
 
 const [path, file, parts, reportFile] = process.argv.slice(2);
 
@@ -11,7 +11,7 @@ if (path === undefined || file === undefined || parts === undefined) {
 }
 
 const counts = reportFile === undefined ? undefined : lzMutantsByLine(reportFile, file);
-const ranges = lzPartRanges(file, readFileSync(path, 'utf8'), Number(parts), lzLineWeights(counts));
+const ranges = lzPartRanges(file, readFileSync(path, 'utf8'), Number(parts), counts);
 
 if (ranges.length < Number(parts)) {
   process.stderr.write(`${file} has only ${ranges.length} parts between its top-level statements.\n`);
