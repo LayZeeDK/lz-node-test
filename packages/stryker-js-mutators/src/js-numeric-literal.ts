@@ -6,7 +6,7 @@ import type { LzBabelTypes, LzOperator } from '@layzee/stryker-mutator-core';
  * Moves an integer literal by 1 each way, as an off-by-one in a limit, an index or a count does. A literal that another
  * mutator mutates keeps only that mutator's mutants, so a mutator of a site, such as a timer's delay, takes precedence.
  * The arguments of a `kill` call and the `uid` and `gid` of an options object are left alone: a mutant there would signal
- * a real process or run one as another user.
+ * a real process or run one as another user. The indentation of `JSON.stringify` is left alone too.
  */
 export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
   name: 'LzJsNumericLiteral',
@@ -19,7 +19,8 @@ export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
       !isOctal(path.node) &&
       !isLiteralType(path) &&
       !isKillArgument(path) &&
-      !isUserOrGroupId(path)
+      !isUserOrGroupId(path) &&
+      !isJsonIndentation(path)
     ) {
       yield numberNode(t, path.node.value + 1);
       yield numberNode(t, path.node.value - 1);
@@ -83,6 +84,23 @@ function isUserOrGroupId(path: NodePath): boolean {
   const name = property.key.type === 'StringLiteral' ? property.key.value : nameOf(property.key);
 
   return name === 'uid' || name === 'gid';
+}
+
+/** The indentation of `JSON.stringify(value, null, 2)`, which changes only the whitespace it writes. */
+function isJsonIndentation(path: NodePath): boolean {
+  const call = path.parent;
+
+  if (path.key !== 2 || !isCall(call)) {
+    return false;
+  }
+
+  const { callee } = call;
+
+  return (
+    (callee.type === 'MemberExpression' || callee.type === 'OptionalMemberExpression') &&
+    nameOf(callee.object) === 'JSON' &&
+    nameOf(callee) === 'stringify'
+  );
 }
 
 /** The name a callee or a property key stands for, such as `kill` in `process.kill` or `process['kill']`. */

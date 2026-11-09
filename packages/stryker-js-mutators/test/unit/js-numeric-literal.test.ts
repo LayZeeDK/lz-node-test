@@ -40,6 +40,9 @@ describe('LzJsNumericLiteral', () => {
     ['an index in the callee of a kill call, which picks a child of the test', 'children[1].kill();', ['2', '0']],
     ['an argument of a call named by a variable key', 'process[name](9);', ['10', '8']],
     ['the value of a computed uid key', 'const o = { [uid]: 2 };', ['3', '1']],
+    ['the value that JSON.stringify writes, though not its indentation', 'JSON.stringify(2, null, 4);', ['3', '1']],
+    ['the third argument of another stringify', 'yaml.stringify(value, null, 4);', ['5', '3']],
+    ['the third argument of another JSON method', 'JSON.parse(text, reviver, 4);', ['5', '3']],
   ])('moves %s by 1 each way', async (_title, source, expected) => {
     assert.deepEqual(await mutantsOf(jsNumericLiteral, source), expected);
   });
@@ -67,6 +70,8 @@ describe('LzJsNumericLiteral', () => {
     ['the gid of a spawn option named by a string key', "spawn(cmd, args, { 'gid': 1000 });"],
     ['a number in a condition inside the arguments of a kill call', 'process.kill(pid, cond ? 0 : 9);'],
     ['a number inside an expression in the arguments of a kill call', 'kill(pid, signal + 1);'],
+    ['the indentation of JSON.stringify, which changes only whitespace', 'JSON.stringify(value, null, 2);'],
+    ['the indentation of an optional JSON.stringify call', 'JSON?.stringify(value, null, 2);'],
     [
       'the signal of a private kill method',
       'class C {\n  #kill(pid, signal) {}\n  stop() {\n    this.#kill(pid, 0);\n  }\n}',
