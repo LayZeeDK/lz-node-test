@@ -126,6 +126,8 @@ export interface RunnerOptions {
   readonly inPlace?: boolean;
 }
 
+const timeoutFactor = 1.5;
+
 export function strykerOptions({
   testFiles = [],
   checkers = [],
@@ -133,7 +135,7 @@ export function strykerOptions({
 }: RunnerOptions = {}): ConstructorParameters<typeof LzNodeTestTestRunner>[0] {
   return {
     allowEmpty: false,
-    timeoutFactor: 1.5,
+    timeoutFactor,
     timeoutMS: 5000,
     inPlace: false,
     ...options,
@@ -184,6 +186,10 @@ export function mutantRunOptions(options: Partial<MutantRunOptions> = {}): Mutan
     reloadEnvironment: true,
     ...options,
   };
+}
+
+export function timeoutFromDryRun(tests: readonly TestResult[], timeoutMs: number): number {
+  return timeoutFactor * tests.reduce((sum, test) => sum + test.timeSpentMs, 0) + timeoutMs;
 }
 
 export function complete(result: DryRunResult): CompleteDryRunResult {

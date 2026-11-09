@@ -21,6 +21,7 @@ import {
   settle,
   shareCompileCache,
   summary,
+  timeoutFromDryRun,
   withoutDuration,
 } from '../runner.fixtures.ts';
 
@@ -149,8 +150,7 @@ describe('LzNodeTestTestRunner filter, bail and mutant activation', () => {
     assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [passedA, failedA, ...laterA]);
     const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
     assert.deepEqual(summary(tests), [passedA, failedA, ...laterA, passedB]);
-    // As Stryker sizes it from the dry run: a fixed one leaves no deadline once a loaded machine slows the start-up.
-    const timeout = 1.5 * tests.reduce((sum, test) => sum + test.timeSpentMs, 0) + 10_000;
+    const timeout = timeoutFromDryRun(tests, mutantRunOptions().timeout);
 
     assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ timeout })))), {
       status: MutantRunStatus.Killed,

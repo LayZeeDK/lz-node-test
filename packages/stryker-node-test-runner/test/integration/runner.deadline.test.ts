@@ -20,10 +20,13 @@ import {
   project,
   settle,
   shareCompileCache,
+  timeoutFromDryRun,
   withoutDuration,
 } from '../runner.fixtures.ts';
 
 shareCompileCache();
+
+const loadedStartUpSlackMs = 2_000;
 
 /**
  * Three tests in a file that takes 600 ms to load. With LZ_FIXTURE_HANG set, the first test starts a process that
@@ -106,9 +109,7 @@ describe('LzNodeTestTestRunner deadline', () => {
     const dir = project(t, { 'a.test.mjs': slowStart });
     const runner = await initRunner(['a.test.mjs']);
     const { tests } = complete(await settle(runner.dryRun(dryRun)));
-    // As Stryker sizes it. A timeoutMS of 2 s lets the mutant run's start-up take that much longer than the dry run's,
-    // as on a loaded machine, and still reach the hanging test before the deadline.
-    const timeout = 1.5 * tests.reduce((sum, test) => sum + test.timeSpentMs, 0) + 2_000;
+    const timeout = timeoutFromDryRun(tests, loadedStartUpSlackMs);
     hang(t);
 
     const started = performance.now();
@@ -242,7 +243,7 @@ describe('LzNodeTestTestRunner deadline', () => {
     const runner = await initRunner(['a.test.mjs']);
     const { tests } = complete(await settle(runner.dryRun(dryRun)));
     const options = mutantRunOptions({
-      timeout: 1.5 * tests.reduce((sum, test) => sum + test.timeSpentMs, 0) + 500,
+      timeout: timeoutFromDryRun(tests, loadedStartUpSlackMs),
       testFilter: tests.map((test) => test.id),
     });
     hang(t);
