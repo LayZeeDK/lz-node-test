@@ -42,6 +42,7 @@ describe('LzJsNumericLiteral', () => {
     ['the value of a computed uid key', 'const o = { [uid]: 2 };', ['3', '1']],
     ['the value that JSON.stringify writes, though not its indentation', 'JSON.stringify(2, null, 4);', ['3', '1']],
     ['the third argument of another stringify', 'yaml.stringify(value, null, 4);', ['5', '3']],
+    ['the third argument of a stringify that is not a method', 'stringify(value, null, 4);', ['5', '3']],
     ['the third argument of another JSON method', 'JSON.parse(text, reviver, 4);', ['5', '3']],
   ])('moves %s by 1 each way', async (_title, source, expected) => {
     assert.deepEqual(await mutantsOf(jsNumericLiteral, source), expected);

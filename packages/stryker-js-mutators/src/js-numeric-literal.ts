@@ -6,7 +6,8 @@ import type { LzBabelTypes, LzOperator } from '@layzee/stryker-mutator-core';
  * Moves an integer literal by 1 each way, as an off-by-one in a limit, an index or a count does. A literal that another
  * mutator mutates keeps only that mutator's mutants, so a mutator of a site, such as a timer's delay, takes precedence.
  * The arguments of a `kill` call and the `uid` and `gid` of an options object are left alone: a mutant there would signal
- * a real process or run one as another user. The indentation of `JSON.stringify` is left alone too.
+ * a real process or run one as another user. The indentation of `JSON.stringify` is left alone too, as a mutant there
+ * changes only whitespace.
  */
 export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
   name: 'LzJsNumericLiteral',
@@ -96,11 +97,11 @@ function isJsonIndentation(path: NodePath): boolean {
 
   const { callee } = call;
 
-  return (
-    (callee.type === 'MemberExpression' || callee.type === 'OptionalMemberExpression') &&
-    nameOf(callee.object) === 'JSON' &&
-    nameOf(callee) === 'stringify'
-  );
+  return isMember(callee) && nameOf(callee.object) === 'JSON' && nameOf(callee) === 'stringify';
+}
+
+function isMember(node: types.Node): node is types.MemberExpression | types.OptionalMemberExpression {
+  return node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression';
 }
 
 /** The name a callee or a property key stands for, such as `kill` in `process.kill` or `process['kill']`. */
@@ -109,7 +110,7 @@ function nameOf(node: types.Node): string | undefined {
     return node.name;
   }
 
-  if (node.type !== 'MemberExpression' && node.type !== 'OptionalMemberExpression') {
+  if (!isMember(node)) {
     return undefined;
   }
 
