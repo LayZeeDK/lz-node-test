@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, type TestContext } from 'node:test';
 
-import { lzMutantsByLine, lzPartRanges } from '../../src/oss/parts.ts';
+import { lzLineWeights, lzMutantsByLine, lzPartRanges } from '../../src/oss/parts.ts';
 
 const source = [
   "'use strict'",
@@ -103,6 +103,20 @@ function reportWith(t: TestContext, mutantLinesByFile: Readonly<Record<string, r
 
   return file;
 }
+
+describe('lzLineWeights', () => {
+  it('weighs a line by its mutants, and a line without any by 0', () => {
+    const weightOf = lzLineWeights(new Map([[3, 2]]));
+
+    assert.deepEqual([weightOf(3), weightOf(4)], [2, 0]);
+  });
+
+  it('weighs every line alike without counts', () => {
+    const weightOf = lzLineWeights(undefined);
+
+    assert.equal(weightOf(3), weightOf(4));
+  });
+});
 
 describe('lzMutantsByLine', () => {
   it('counts the mutants on each line of the file the report names exactly', (t) => {

@@ -82,6 +82,15 @@ describe('lzExec', () => {
     );
   });
 
+  it('ends a process that outlives the shortest timeout, 1 ms', async () => {
+    const result = await lzExec(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      cwd: tmpdir(),
+      timeoutMs: 1,
+    });
+
+    assert.equal(result.timedOut, true);
+  });
+
   it('records a timeout even when the process exits with its own code on SIGTERM, as Stryker does on Linux', async () => {
     const stryker = "process.on('SIGTERM', () => process.exit(143)); setInterval(() => {}, 1000);";
     const result = await lzExec(process.execPath, ['-e', stryker], { cwd: tmpdir(), timeoutMs: 300 });

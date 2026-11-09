@@ -197,7 +197,7 @@ function byPosition(a: LzMutantDetail, b: LzMutantDetail): number {
 }
 
 function compareText(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
+  return Number(a > b) - Number(a < b);
 }
 
 function isStatus(value: unknown): value is LzMutantStatus {

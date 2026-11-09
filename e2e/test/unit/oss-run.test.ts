@@ -544,6 +544,24 @@ describe('lzRunDriver', () => {
     });
   });
 
+  it('records no resumed mutants when no checkpoint can start, not even afresh', async (t) => {
+    const driver = await setupDriver(t);
+    const { options, out } = driver;
+    mkdirSync(join(out, 'lz.checkpoint.json.key'), { recursive: true });
+
+    await lzRunDriver(options, driver.steps);
+
+    const side = sideOf(readResult(out));
+
+    assert.deepEqual(
+      {
+        steps: steps(side).filter((step) => step.startsWith('Checkpoint')),
+        resumedMutants: side['resumedMutants'],
+      },
+      { steps: ['Checkpoint', 'Checkpoint after removing the unreadable one'], resumedMutants: 0 },
+    );
+  });
+
   it('records each step that throws, goes on with the next and still writes the result', async (t) => {
     const driver = await setupDriver(t);
     const { options, out, source, strykerCalls } = driver;

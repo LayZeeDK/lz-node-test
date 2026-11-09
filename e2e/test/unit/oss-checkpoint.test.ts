@@ -120,8 +120,10 @@ describe('lzCheckpointReport', () => {
     );
   });
 
-  it('is a report of schema version 1.0, which Stryker reads', () => {
-    assert.equal(lzCheckpointReport([], [], root, sources).schemaVersion, '1.0');
+  it("is a report of schema version 1.0 with Stryker's default thresholds, which Stryker reads", () => {
+    const { schemaVersion, thresholds } = lzCheckpointReport([], [], root, sources);
+
+    assert.deepEqual({ schemaVersion, thresholds }, { schemaVersion: '1.0', thresholds: { high: 80, low: 60 } });
   });
 });
 

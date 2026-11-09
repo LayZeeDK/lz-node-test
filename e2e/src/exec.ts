@@ -25,6 +25,7 @@ export interface LzExecOptions {
 export async function lzExec(
   file: string,
   args: readonly string[],
+  // Stryker disable next-line LzJsNumericLiteral: equivalent, as only a timeoutMs above 0 starts a timer, so -1 starts none either
   { cwd, env = process.env, timeoutMs = 0, logFile }: LzExecOptions,
 ): Promise<LzExecResult> {
   // Stryker disable next-line BooleanLiteral: equivalent for tests, as windowsHide only hides a console window that no test can see

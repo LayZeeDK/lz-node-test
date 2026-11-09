@@ -324,6 +324,7 @@ function isRunning(pid: number): boolean {
 export function lzRemoveOnExit(dir: string): void {
   process.on('exit', () => {
     try {
+      // Stryker disable next-line LzJsNumericLiteral: tuning values, not a contract a test should pin
       rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     } catch (error) {
       process.stderr.write(`Left behind ${dir}: ${error instanceof Error ? error.message : String(error)}\n`);

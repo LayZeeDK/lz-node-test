@@ -9,7 +9,7 @@ export function lzPartRanges(
   file: string,
   source: string,
   parts: number,
-  weightOf: (line: number) => number = () => 1,
+  weightOf: (line: number) => number = lzLineWeights(undefined),
 ): string[] {
   if (!Number.isInteger(parts) || parts < 1) {
     throw new Error(`parts is a positive integer; got ${parts}.`);
@@ -17,22 +17,26 @@ export function lzPartRanges(
 
   const { lineCount, candidates } = statementStarts(file, source);
   const weightBefore: number[] = [0];
+  const sumBefore = (line: number): number => {
+    const index = line - 1;
+
+    // Stryker disable next-line LzJsNumericLiteral: unreachable, as every line from 1 to lineCount + 1 has a sum
+    return weightBefore[index] ?? 0;
+  };
 
   for (let line = 1; line <= lineCount; line++) {
-    const before = weightBefore[line - 1] ?? 0;
-
     // Stryker disable next-line ArithmeticOperator: equivalent, as negating every sum negates the targets too, so every distance stays
-    weightBefore.push(before + weightOf(line));
+    weightBefore.push(sumBefore(line) + weightOf(line));
   }
 
-  const total = weightBefore[lineCount] ?? 0;
+  const total = sumBefore(lineCount + 1);
   const cuts: number[] = [];
 
   for (let part = 1; part < parts; part++) {
     const target = (total * part) / parts;
-    const distance = (line: number): number => Math.abs((weightBefore[line - 1] ?? 0) - target);
+    const distance = (line: number): number => Math.abs(sumBefore(line) - target);
     const nearest = candidates
-      .filter((line) => line > (cuts.at(-1) ?? 1))
+      .filter((line) => cuts.every((cut) => line > cut))
       .reduce(
         (best: number | undefined, line) => (best === undefined || distance(line) < distance(best) ? line : best),
         undefined,
@@ -70,6 +74,16 @@ function statementStarts(file: string, source: string): { lineCount: number; can
   });
 
   return { lineCount, candidates };
+}
+
+/** Weighs each line by its mutants in `counts`, a line without any by 0; without counts, every line alike. */
+export function lzLineWeights(counts: ReadonlyMap<number, number> | undefined): (line: number) => number {
+  if (counts === undefined) {
+    // Stryker disable next-line LzJsNumericLiteral: equivalent, as a weight every line shares scales every target and distance alike
+    return () => 1;
+  }
+
+  return (line) => counts.get(line) ?? 0;
 }
 
 export function lzMutantsByLine(reportFile: string, file: string): Map<number, number> {

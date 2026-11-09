@@ -265,6 +265,15 @@ describe('lzMerge', () => {
     });
   });
 
+  it('names the one entry that not every run has', (t) => {
+    const { run, out } = setup(t);
+    const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { tarballDigests: ['d1'] })];
+
+    assert.throws(() => lzMerge(runs, out), {
+      message: '--merge takes runs of one tarballDigests; some runs only have d2.',
+    });
+  });
+
   it('refuses runs whose tarballs differ in content under the same names', (t) => {
     const { run, out } = setup(t);
     const runs = [run('a', 'p', { lz: [] }), run('b', 'p', { command: [] }, { tarballDigests: ['d1', 'd3'] })];

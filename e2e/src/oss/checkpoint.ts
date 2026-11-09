@@ -48,6 +48,7 @@ export class LzCheckpointReporter implements Reporter {
   constructor(
     { incrementalFile }: Pick<StrykerOptions, 'incrementalFile'>,
     deps: LzCheckpointDeps = defaultDeps,
+    // Stryker disable next-line LzJsNumericLiteral: a tuning value, not a contract a test should pin
     intervalMs = 5_000,
   ) {
     this.#file = incrementalFile;

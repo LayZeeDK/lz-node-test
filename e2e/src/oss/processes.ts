@@ -62,7 +62,7 @@ function parseSamples(text: string, parse: (line: string) => LzProcessRow): LzPr
 function parseProcStat(line: string, pageSize: number): LzProcessRow {
   const tab = line.lastIndexOf('\t');
   const stat = tab === -1 ? line : line.slice(0, tab);
-  const commandLine = tab === -1 ? '' : line.slice(tab + 1).trim();
+  const commandLine = tab === -1 ? '' : line.slice(tab).trim();
   const match = /^(\d+) \((.*)\) \S+ (\d+)(?: \S+){17} (\d+) \d+ (\d+)(?: \S+)*$/.exec(stat);
 
   if (match === null) {

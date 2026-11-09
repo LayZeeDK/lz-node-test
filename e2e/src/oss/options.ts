@@ -317,7 +317,7 @@ export function lzParseOptions(args: readonly string[]): LzOssOptions {
     ? Date.parse(npmBefore)
     : Number.NaN;
 
-  if (Number.isNaN(before) || !new Date(before).toISOString().startsWith(npmBefore.slice(0, 10))) {
+  if (Number.isNaN(before) || !new Date(before).toISOString().startsWith(npmBefore.slice(0, 'yyyy-mm-dd'.length))) {
     throw new Error(
       `${lzOssUsage}\n--npm-before is a date such as 2026-11-04 or a UTC time such as 2026-11-04T12:00:00Z.`,
     );

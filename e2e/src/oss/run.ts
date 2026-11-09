@@ -58,6 +58,7 @@ interface LzSideRun {
 }
 
 /** How long processes that a run left get to end by themselves before they count as left behind. */
+// Stryker disable next-line LzJsNumericLiteral: a tuning value, not a contract a test should pin
 const settleMs = 2_000;
 
 /** The steps that pack, install, run Stryker and watch processes, which a test replaces. */
