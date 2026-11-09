@@ -94,16 +94,20 @@ describe('lzStartSampler', () => {
     assert.deepEqual(await sampler.stop(), { samples: [[row]], error: 'The process sampler failed:\nCIM timed out' });
   });
 
-  it('keeps the samples of a sampler that ended before the stop, and reports that it ended', async () => {
-    const sampler = await lzStartSampler(nodeReader(oneSample));
+  it(
+    'keeps the samples of a sampler that ended before the stop, and reports that it ended',
+    { timeout: 10_000 },
+    async () => {
+      const sampler = await lzStartSampler(nodeReader(oneSample));
 
-    await sampler.ended;
+      await sampler.ended;
 
-    assert.deepEqual(await sampler.stop(), {
-      samples: [[row]],
-      error: 'The process sampler ended early, with exit code 0.',
-    });
-  });
+      assert.deepEqual(await sampler.stop(), {
+        samples: [[row]],
+        error: 'The process sampler ended early, with exit code 0.',
+      });
+    },
+  );
 
   it('reports no error for a sampler that ran until the stop', async (t) => {
     const { script, written } = flagged(t, oneSample);
@@ -122,7 +126,7 @@ describe('lzStartSampler', () => {
     assert.equal((await sampler.stop()).error, null);
   });
 
-  it('joins output that arrives in pieces', async () => {
+  it('joins output that arrives in pieces', { timeout: 10_000 }, async () => {
     const sampler = await lzStartSampler(
       nodeReader(
         "process.stdout.write('7 1 100 5 a\\n'); process.stderr.write('CIM ');" +
@@ -135,18 +139,22 @@ describe('lzStartSampler', () => {
     assert.deepEqual(await sampler.stop(), { samples: [[row]], error: 'The process sampler failed:\nCIM timed out' });
   });
 
-  it('gives its script no input, so a script that reads to the end of its input goes on', async () => {
-    const sampler = await lzStartSampler(nodeReader(`process.stdin.on('end', () => { ${oneSample} }).resume();`));
+  it(
+    'gives its script no input, so a script that reads to the end of its input goes on',
+    { timeout: 10_000 },
+    async () => {
+      const sampler = await lzStartSampler(nodeReader(`process.stdin.on('end', () => { ${oneSample} }).resume();`));
 
-    await sampler.ended;
+      await sampler.ended;
 
-    assert.deepEqual(await sampler.stop(), {
-      samples: [[row]],
-      error: 'The process sampler ended early, with exit code 0.',
-    });
-  });
+      assert.deepEqual(await sampler.stop(), {
+        samples: [[row]],
+        error: 'The process sampler ended early, with exit code 0.',
+      });
+    },
+  );
 
-  it('keeps what a process its script started writes after the script ended', async () => {
+  it('keeps what a process its script started writes after the script ended', { timeout: 10_000 }, async () => {
     const late = `setTimeout(() => { ${oneSample} }, 1000);`;
     const sampler = await lzStartSampler(
       nodeReader(
