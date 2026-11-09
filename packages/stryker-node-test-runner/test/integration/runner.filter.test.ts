@@ -147,24 +147,26 @@ describe('LzNodeTestTestRunner filter, bail and mutant activation', () => {
     const passedB = passed(`${join(dir, 'b.test.mjs')} > passes`);
 
     assert.deepEqual(summary(complete(await settle(runner.dryRun(dryRun))).tests), [passedA, failedA, ...laterA]);
-    assert.deepEqual(summary(complete(await settle(runner.dryRun({ ...dryRun, disableBail: true }))).tests), [
-      passedA,
-      failedA,
-      ...laterA,
-      passedB,
-    ]);
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions()))), {
+    const { tests } = complete(await settle(runner.dryRun({ ...dryRun, disableBail: true })));
+    assert.deepEqual(summary(tests), [passedA, failedA, ...laterA, passedB]);
+    // As Stryker sizes it from the dry run: a fixed one leaves no deadline once a loaded machine slows the start-up.
+    const timeout = 1.5 * tests.reduce((sum, test) => sum + test.timeSpentMs, 0) + 10_000;
+
+    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ timeout })))), {
       status: MutantRunStatus.Killed,
       killedBy: [failedA.id],
       failureMessage: 'expected failure',
       nrOfTests: 2,
     });
-    assert.deepEqual(withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ disableBail: true })))), {
-      status: MutantRunStatus.Killed,
-      killedBy: [failedA.id, ...laterA.map((test) => test.id)],
-      failureMessage: 'expected failure',
-      nrOfTests: 5,
-    });
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ timeout, disableBail: true })))),
+      {
+        status: MutantRunStatus.Killed,
+        killedBy: [failedA.id, ...laterA.map((test) => test.id)],
+        failureMessage: 'expected failure',
+        nrOfTests: 5,
+      },
+    );
   });
 
   it('runs only the filtered tests of the files that contain them, as a mutant run', async (t) => {

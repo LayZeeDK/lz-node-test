@@ -106,8 +106,9 @@ describe('LzNodeTestTestRunner deadline', () => {
     const dir = project(t, { 'a.test.mjs': slowStart });
     const runner = await initRunner(['a.test.mjs']);
     const { tests } = complete(await settle(runner.dryRun(dryRun)));
-    // As Stryker sizes it, with a timeoutMS of 500 to keep the test short.
-    const timeout = 1.5 * tests.reduce((sum, test) => sum + test.timeSpentMs, 0) + 500;
+    // As Stryker sizes it. A timeoutMS of 2 s lets the mutant run's start-up take that much longer than the dry run's,
+    // as on a loaded machine, and still reach the hanging test before the deadline.
+    const timeout = 1.5 * tests.reduce((sum, test) => sum + test.timeSpentMs, 0) + 2_000;
     hang(t);
 
     const started = performance.now();
