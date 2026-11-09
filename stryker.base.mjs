@@ -5,6 +5,8 @@ import { availableParallelism } from 'node:os';
 
 const reservedGb = 4;
 
+const baseGbPerUnit = 1.1;
+
 export const gbPerUnitWithChildProcesses = 2;
 
 /** @param {number} cores */
@@ -76,7 +78,7 @@ export default {
   reporters: ['clear-text', process.env.CI ? 'progress-append-only' : 'progress', 'html', 'json'],
   thresholds: { high: 100, low: 100, break: 100 },
   ignorePatterns: [...ignoredEverywhere, '/e2e'],
-  concurrency: concurrency(1.1),
+  concurrency: concurrency(baseGbPerUnit),
 };
 
 /**
