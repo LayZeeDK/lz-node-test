@@ -33,7 +33,7 @@ import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isBoolean, isNumber, isObject, isStrings, optional } from './guards.ts';
 import { lzDryRunDir, lzDryRunStore, lzOwnDryRun, type LzDryRunStore } from './dry-run-store.ts';
 import { memoryLimits, type MemoryLimits } from './memory-limits.ts';
-import { lzConsumerNodeOptions, withoutReporters } from './node-options.ts';
+import { lzConsumerNodeOptions, lzReporterArgs, withoutReporters } from './node-options.ts';
 import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
 import {
   envNames,
@@ -551,6 +551,7 @@ export class LzNodeTestTestRunner implements TestRunner {
   #copy?: LzSandboxCopy & { readonly sandbox: string };
   readonly #patterns: string[];
   readonly #nodeArgs: string[];
+  readonly #reporterArgs: string[];
   readonly #dryRunConcurrency: number;
   readonly #dryRunStore: LzDryRunStore;
   readonly #memoryLimits: MemoryLimits;
@@ -565,7 +566,9 @@ export class LzNodeTestTestRunner implements TestRunner {
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
     this.#patterns = [...patterns, ...options.testFiles];
     this.#dryRunFilesKey = JSON.stringify([process.cwd(), ...this.#patterns]);
-    this.#nodeArgs = withoutReporters(lzNodeTest.nodeArgs ?? defaults.nodeArgs.default);
+    const nodeArgs = lzNodeTest.nodeArgs ?? defaults.nodeArgs.default;
+    this.#nodeArgs = withoutReporters(nodeArgs);
+    this.#reporterArgs = lzReporterArgs(nodeArgs);
     this.#dryRunConcurrency = lzTestRunnerConcurrency(
       options.concurrency,
       options.checkers.length > 0,
@@ -659,6 +662,15 @@ export class LzNodeTestTestRunner implements TestRunner {
       instrumented: new Set(options.files?.map((file) => resolve(file))),
     } satisfies LzRunOptions;
     const memoryLimitMB = this.#memoryLimits.forDryRun();
+
+    // Only the dry run warns, so a run with several workers warns once.
+    if (this.#reporterArgs.length > 0) {
+      this.#log.warn(
+        `Left out \`${this.#reporterArgs.join(' ')}\` of lzNodeTest.nodeArgs, because the ` +
+          'runner uses its own node:test reporter.',
+      );
+    }
+
     this.#dryRunStore.start();
     this.#dryRunStore.write(this.#dryRunFilesKey, 'files', JSON.stringify(files));
     this.#dryRunFiles = files;

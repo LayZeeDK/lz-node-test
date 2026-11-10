@@ -209,8 +209,8 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
   class RecordingRunner extends LzNodeTestTestRunner {
     readonly #record: ProcessRecord;
 
-    constructor(record: ProcessRecord, log: Logger) {
-      super(strykerOptions({ lzNodeTest: { maxMemoryMB: 512 } }), log);
+    constructor(record: ProcessRecord, log: Logger, nodeArgs: readonly string[] = []) {
+      super(strykerOptions({ lzNodeTest: { maxMemoryMB: 512, nodeArgs } }), log);
       this.#record = record;
     }
 
@@ -262,6 +262,24 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
     ['only skipped tests', 'perTest', { static: {}, perTest: {} }, 'skipped'],
   ])('does not warn about coverage with %s', async (_title, coverageAnalysis, mutantCoverage, status) => {
     assert.deepEqual(await dryRunWarnings(coverageAnalysis, mutantCoverage, status), []);
+  });
+
+  lzTestEach([
+    ['one reporter', ['--test-reporter=tap', '--enable-source-maps'], '--test-reporter=tap'],
+    ['a destination with its value', ['--test-reporter-destination', 'stdout'], '--test-reporter-destination stdout'],
+  ])('warns once about %s it leaves out of nodeArgs, naming it', async (_title, nodeArgs, named) => {
+    const warnings: string[] = [];
+    const record: ProcessRecord = {
+      main: true,
+      tests: [{ id: test, status: 'passed', timeSpentMs: 1 }],
+      mutantCoverage: { static: {}, perTest: { [test]: { 1: 1 } } },
+    };
+
+    await new RecordingRunner(record, logger({ warnings }), nodeArgs).dryRun({ ...dryRun, testFiles: [file] });
+
+    assert.deepEqual(warnings, [
+      `Left out \`${named}\` of lzNodeTest.nodeArgs, because the runner uses its own node:test reporter.`,
+    ]);
   });
 });
 

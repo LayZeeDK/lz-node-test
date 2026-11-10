@@ -14,17 +14,26 @@ function optionRest(arg: string, name: string): string | undefined {
   return option === name || option.startsWith(`${name}=`) ? option.slice(name.length) : undefined;
 }
 
+// Stryker disable next-line StringLiteral: equivalent, as any default but a bare reporter option keeps the first argument
+const reporterOption = (arg = '') =>
+  optionRest(arg, '--test-reporter') ?? optionRest(arg, '--test-reporter-destination');
+
+/** Whether `arg` adds a node:test reporter or a reporter destination, or is the value of a bare one before it. */
+function isReporterArg(arg: string, index: number, args: readonly string[]): boolean {
+  return reporterOption(arg) !== undefined || reporterOption(args[index - 1]) === '';
+}
+
 /**
  * Leaves out node's options that add a node:test reporter or a reporter destination, with their values, so the
  * runner's reporter is the only one; node refuses more reporters than destinations.
  */
 export function withoutReporters(args: readonly string[]): string[] {
-  // Stryker disable next-line StringLiteral: equivalent, as any default but a bare reporter option keeps the first argument
-  const reporterOption = (arg = '') =>
-    optionRest(arg, '--test-reporter') ?? optionRest(arg, '--test-reporter-destination');
+  return args.filter((arg, index) => !isReporterArg(arg, index, args));
+}
 
-  // A reporter option without `=` takes the next argument as its value.
-  return args.filter((arg, index) => reporterOption(arg) === undefined && reporterOption(args[index - 1]) !== '');
+/** The options, with their values, that `withoutReporters` leaves out of `args`. */
+export function lzReporterArgs(args: readonly string[]): string[] {
+  return args.filter(isReporterArg);
 }
 
 /** The arguments of NODE_OPTIONS in `base` that a test file runs with, after the runner's hook. */

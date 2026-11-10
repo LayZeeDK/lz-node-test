@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { lzConsumerNodeOptions, lzNodeOptionArgs, lzTestOnly } from '../../src/node-options.ts';
+import { lzConsumerNodeOptions, lzNodeOptionArgs, lzReporterArgs, lzTestOnly } from '../../src/node-options.ts';
 
 describe('lzNodeOptionArgs', () => {
   lzTestEach([
@@ -39,6 +39,25 @@ describe('lzConsumerNodeOptions', () => {
     const nodeOptions = '--test_reporter=spec --test_reporter dot --test_reporter_destination=stdout --title=a_b';
 
     assert.deepEqual(lzConsumerNodeOptions({ NODE_OPTIONS: nodeOptions }), ['--title=a_b']);
+  });
+});
+
+describe('lzReporterArgs', () => {
+  it('gives the reporters and destinations, with the values of bare ones, and nothing else', () => {
+    const args = [
+      '--test-reporter=spec',
+      '--enable-source-maps',
+      '--test-reporter',
+      'dot',
+      '--test_reporter_destination=a',
+    ];
+
+    assert.deepEqual(lzReporterArgs(args), [
+      '--test-reporter=spec',
+      '--test-reporter',
+      'dot',
+      '--test_reporter_destination=a',
+    ]);
   });
 });
 
