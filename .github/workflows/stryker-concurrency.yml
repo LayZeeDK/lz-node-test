@@ -33,7 +33,7 @@ jobs:
       # stryker.base.mjs imports only node:os, so the probe needs no npm ci.
       - shell: bash
         run: |
-          node --input-type=module >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          node --input-type=module <<'EOF' | tee -a "$GITHUB_STEP_SUMMARY"
           import { availableParallelism, freemem, totalmem } from 'node:os';
           import base, { concurrency, gbPerUnitWithChildProcesses } from './stryker.base.mjs';
 
