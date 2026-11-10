@@ -179,6 +179,10 @@ once per run as under `node --test`.
   Stryker keeps the worker running. A mutant that runs one test of each file gets Stryker's timeout unchanged.
   The runner measures each file's start-up in the dry run. A file without a measured start-up, such as one that
   Stryker's `--testFiles` left out of the dry run, keeps Stryker's timeout, and the runner warns about it once.
+  Both the deadline and Stryker's timeout come from the tests' times in the dry run. Tests that slow down when the
+  machine is busy, such as tests that start processes, can take longer in a mutant run, beside Stryker's checkers and
+  the other workers. When many mutants end as `Timeout` at the deadline, raise Stryker's `timeoutFactor` or
+  `timeoutMS`, or lower `concurrency`.
 - **A test left pending.** When a test file's event loop empties while a test is still pending, Node.js 22 cancels
   the test, and Node.js 24 waits for it, as an unref'd timer or process may still settle it. In a mutant run, the
   runner ends such a file when no test result follows within Stryker's `timeoutMS`; the mutant is then a `Timeout`.
