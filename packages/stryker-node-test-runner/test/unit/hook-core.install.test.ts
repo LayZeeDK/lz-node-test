@@ -161,6 +161,24 @@ describe('install', () => {
     assert.equal(deps.global.__stryker__?.currentTestId, `${testFile} > spawns`);
   });
 
+  it('credits the hits that preloads made before the hook to the test that started the process', () => {
+    const spawns = `${testFile} > spawns`;
+    const { deps } = harness({ [envNames.out]: out, [envNames.current]: spawns }, { mainFile: '/other.mjs' });
+    deps.global.__stryker__ = { mutantCoverage: { static: { 1: 2 }, perTest: {} } };
+    install(deps);
+
+    assert.deepEqual(deps.global.__stryker__.mutantCoverage, { static: {}, perTest: { [spawns]: { 1: 2 } } });
+  });
+
+  it('adds the hits that preloads made before the hook to those the test already has in the process', () => {
+    const spawns = `${testFile} > spawns`;
+    const { deps } = harness({ [envNames.out]: out, [envNames.current]: spawns }, { mainFile: '/other.mjs' });
+    deps.global.__stryker__ = { mutantCoverage: { static: { 1: 2, 3: 1 }, perTest: { [spawns]: { 1: 1 } } } };
+    install(deps);
+
+    assert.deepEqual(deps.global.__stryker__.mutantCoverage, { static: {}, perTest: { [spawns]: { 1: 3, 3: 1 } } });
+  });
+
   lzTestEach([undefined, ''])('attributes the process to no test when the current test is %j', (current) => {
     const { deps } = harness({ [envNames.out]: out, [envNames.current]: current });
     deps.global.__stryker__ = { currentTestId: 'stale' };

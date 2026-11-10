@@ -179,6 +179,18 @@ export function install(deps: HookDependencies): boolean {
   // An empty id is no test, as in wrap.ts, where the reason not to delete the property is.
   ns.currentTestId = deps.env[envNames.current] ?? '';
 
+  // Preloads that run before the hook, as --require ones do, file their hits as static, though the test that started
+  // this process caused them. The instrumented code keeps the coverage object, so its hits move within it.
+  if (ns.currentTestId && ns.mutantCoverage) {
+    const { static: early, perTest } = ns.mutantCoverage;
+    const ofTest = (perTest[ns.currentTestId] ??= {});
+
+    for (const [mutantId, hits] of Object.entries(early)) {
+      ofTest[mutantId] = (ofTest[mutantId] ?? 0) + hits;
+      Reflect.deleteProperty(early, mutantId);
+    }
+  }
+
   const bail = deps.env[envNames.bail] === 'true';
   const dryRun = deps.env[envNames.dryRun] === 'true';
   const stallMs = Number(deps.env[envNames.stall]);
