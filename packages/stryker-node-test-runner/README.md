@@ -257,14 +257,16 @@ the runner with small test files:
 
 With `coverageAnalysis: 'perTest'`, Stryker's default, a mutant runs only the test files whose tests reach it.
 
-Two open-source projects, each run 5 times a side at concurrency 5, against Stryker's `command` runner with
-`node --test`. The restartable times were measured without the deadline that the fastify-cookie paragraph below
+Three open-source projects, each run 5 times a side, against Stryker's `command` runner with `node --test`:
+restartable and fastify-cookie at concurrency 5, and lz-gardening's `weeds.ts` script at concurrency 2 with the
+TypeScript checker. The restartable times were measured without the deadline that the fastify-cookie paragraph below
 describes.
 
-| Project               | Mutants | This runner, median | `command` runner, median |
-| --------------------- | ------- | ------------------- | ------------------------ |
-| restartable 3.0.4     | 167     | 53.5 s              | 166.0 s                  |
-| fastify-cookie 11.1.3 | 246     | 35.7 s              | 48.5 s                   |
+| Project                         | Mutants | This runner, median | `command` runner, median |
+| ------------------------------- | ------- | ------------------- | ------------------------ |
+| restartable 3.0.4               | 167     | 53.5 s              | 166.0 s                  |
+| fastify-cookie 11.1.3           | 246     | 35.7 s              | 48.5 s                   |
+| lz-gardening 8e4f910 (weeds.ts) | 409     | 398 s               | 1034 s                   |
 
 On restartable, the `command` runner runs the whole test suite for every mutant, and 36 to 37 mutants a run hang until
 Stryker's timeout ends them. This runner runs only the tests that reach each mutant. Both restartable times include the
@@ -274,6 +276,11 @@ On fastify-cookie, 7 mutants make a test hang on both runners. This runner ends 
 which counts each test file's start-up time once, so it does not wait for Stryker's timer. In 4 of the 5 runs, both
 runners gave every mutant the same status. In the other, 2 mutants that this runner killed timed out on the `command`
 runner, in that runner's slowest run.
+
+On lz-gardening, the `command` runner runs all 34 tests of the script's one test file for every mutant, which takes
+about 7 s a mutant. This runner runs a mean of 7.8 of them, in about 2.3 s a mutant. The whole run gains less than each
+mutant does, because the checker rejects 159 of the mutants as compile errors at the same cost on both runners. This
+runner's 5 runs took 384 to 454 s, and the `command` runner's took 921 to 1178 s.
 
 ## Use incremental mode
 
