@@ -257,6 +257,13 @@ the runner with small test files:
 
 With `coverageAnalysis: 'perTest'`, Stryker's default, a mutant runs only the test files whose tests reach it.
 
+A static mutant runs every test file, one after another, while the dry run runs the files in parallel. In a fixture of
+test files with one 500 ms test each, at concurrency 6, a static mutant that no test kills took 4.4 s for 6 files and
+8.5 s for 12, medians of 3 runs: about 0.69 s a file, for the test and the file's start-up. The dry run took under 2 s
+for either. A static mutant that a test kills stops at that test, unless you set `disableBail`. In one suite of 605
+tests, three static mutants took 3.0 s, 7.3 s and 44.7 s, killed after 36, 185 and 509 tests. To skip static
+mutants, set Stryker's `ignoreStatic: true`, as [What the runner does](#what-the-runner-does) describes.
+
 Three open-source projects, each run 5 times a side, against Stryker's `command` runner with `node --test`:
 restartable and fastify-cookie at concurrency 5, and lz-gardening's `weeds.ts` script at concurrency 2 with the
 TypeScript checker. The restartable times were measured without the deadline that the fastify-cookie paragraph below
