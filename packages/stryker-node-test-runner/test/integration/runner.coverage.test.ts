@@ -54,11 +54,27 @@ describe('LzNodeTestTestRunner coverage', () => {
       ['suite > passes', 'suite > fails', 'spawns'],
     );
     assert.ok(tests.every((test) => test.fileName === file && test.timeSpentMs >= 0));
-    assert.equal(mutantCoverage?.static['f-static'], 1);
+    assert.equal(mutantCoverage?.perTest[`${file} > spawns`]?.['f-static'], 1);
+    assert.equal(mutantCoverage.static['f-static'], undefined);
     assert.equal(mutantCoverage.perTest[`${file} > suite > passes`]?.['f-pass'], 1);
     assert.equal(mutantCoverage.perTest[`${file} > suite > fails`]?.['f-fail'], 1);
     assert.equal(mutantCoverage.perTest[`${file} > spawns`]?.['f-shared'], 2);
     assert.equal(mutantCoverage.perTest[`${file} > spawns`]?.['f-child'], 1);
+  });
+
+  it("credits the coverage of a test file's own process outside its tests to each of its tests", async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture("cover('load');", "it('one', () => {});", "it('two', () => { cover('two'); });"),
+    });
+    const file = join(dir, 'a.test.mjs');
+    const runner = await initRunner(['*.test.mjs']);
+
+    const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(fixtureCoverage(mutantCoverage), {
+      static: {},
+      perTest: { [`${file} > one`]: { load: 1 }, [`${file} > two`]: { load: 1, two: 1 } },
+    });
   });
 
   it('reports coverage as the coverage analysis asks: per test, all as static, or none', async (t) => {
@@ -68,8 +84,8 @@ describe('LzNodeTestTestRunner coverage', () => {
       fixtureCoverage(complete(await settle(runner.dryRun({ ...dryRun, coverageAnalysis }))).mutantCoverage);
 
     assert.deepEqual(await coverage('perTest'), {
-      static: { s: 1 },
-      perTest: { [`${join(dir, 'a.test.mjs')} > covers`]: { t: 1 } },
+      static: {},
+      perTest: { [`${join(dir, 'a.test.mjs')} > covers`]: { s: 1, t: 1 } },
     });
     assert.deepEqual(await coverage('all'), { static: { s: 1, t: 1 }, perTest: {} });
     assert.equal(await coverage('off'), undefined);
@@ -105,7 +121,7 @@ describe('LzNodeTestTestRunner coverage', () => {
     });
   });
 
-  it("counts the work of beforeEach and afterEach hooks as coverage of the test they run for, and a beforeEach hook's as static for a shared name", async (t) => {
+  it("counts the work of beforeEach and afterEach hooks as coverage of the test they run for, and a beforeEach hook's for a shared name as every test's", async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import { afterEach, beforeEach } from 'node:test';",
@@ -125,18 +141,19 @@ describe('LzNodeTestTestRunner coverage', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
-    const hooks = { beforeEach: 1, afterEach: 1 };
+    const sharedNameBeforeEach = 2;
+    const hooks = { beforeEach: 1 + sharedNameBeforeEach, afterEach: 1 };
 
     const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
-      static: { beforeEach: 2 },
+      static: {},
       perTest: {
         [`${a} > first`]: hooks,
         [`${a} > suite > second`]: { ...hooks, 'callback beforeEach': 1 },
         [`${a} > suite > second > child`]: { ...hooks, 'callback beforeEach': 1, 't.beforeEach': 1 },
-        [`${a} > same`]: { afterEach: 1 },
-        [`${a} > same (2)`]: { afterEach: 1 },
+        [`${a} > same`]: { beforeEach: sharedNameBeforeEach, afterEach: 1 },
+        [`${a} > same (2)`]: { beforeEach: sharedNameBeforeEach, afterEach: 1 },
       },
     });
   });

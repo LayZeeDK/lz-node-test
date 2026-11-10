@@ -31,7 +31,7 @@ import {
 import { lzMergeAsStatic, lzMergeCoverage, lzOverlapCoverage } from './coverage.ts';
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isBoolean, isNumber, isObject, isStrings, optional } from './guards.ts';
-import { lzDryRunDir, lzDryRunStore, lzOwnDryRun, type LzDryRunStore } from './dry-run-store.ts';
+import { lzDryRunDir, lzDryRunStore, lzOwnDryRun, type LzDryRunKind, type LzDryRunStore } from './dry-run-store.ts';
 import { memoryLimits, type MemoryLimits } from './memory-limits.ts';
 import { lzConsumerNodeOptions, lzReporterArgs, withoutReporters } from './node-options.ts';
 import { groupOptions, lzStderrTailBytes, processEnd } from './process-end.ts';
@@ -366,26 +366,25 @@ function dryRunErrorElseTimeout(run: LzRunOptions, errorMessage: string, reason:
   return run.dryRun ? errorEnd(errorMessage) : { end: { status: DryRunStatus.Timeout, reason } };
 }
 
-/** The test files that the dry run stored under `key`, or undefined when it stored none. */
-export function lzStoredFiles(key: string, content: string | undefined): string[] | undefined {
+export function lzStoredStrings(key: string, kind: LzDryRunKind, content: string | undefined): string[] | undefined {
   if (content === undefined) {
     return undefined;
   }
 
-  const message = `The dry-run store's files entry ${key} is no JSON array of test files: ${content}`;
-  let files: unknown;
+  const message = `The dry-run store's ${kind} entry ${key} is no JSON array of strings: ${content}`;
+  let strings: unknown;
 
   try {
-    files = JSON.parse(content);
+    strings = JSON.parse(content);
   } catch (error) {
     throw new Error(message, { cause: error });
   }
 
-  if (!isStrings(files)) {
+  if (!isStrings(strings)) {
     throw new Error(message);
   }
 
-  return files;
+  return strings;
 }
 
 export function lzFilesFor(testFiles: string[], testFilter: readonly string[] | undefined): string[] {
@@ -552,6 +551,7 @@ export class LzNodeTestTestRunner implements TestRunner {
   readonly #patterns: string[];
   readonly #nodeArgs: string[];
   readonly #reporterArgs: string[];
+  #mutantsOutsideTests?: ReadonlySet<string>;
   readonly #dryRunConcurrency: number;
   readonly #dryRunStore: LzDryRunStore;
   readonly #memoryLimits: MemoryLimits;
@@ -674,6 +674,7 @@ export class LzNodeTestTestRunner implements TestRunner {
     this.#dryRunStore.start();
     this.#dryRunStore.write(this.#dryRunFilesKey, 'files', JSON.stringify(files));
     this.#dryRunFiles = files;
+    const mutantsOutsideTests = new Set<string>();
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
@@ -685,6 +686,12 @@ export class LzNodeTestTestRunner implements TestRunner {
       // The same fileMs as every test's time, so the start-up a mutant run's deadline takes off is never more than the
       // time Stryker's timeout counted for it.
       (file, fileRun, fileMs) => {
+        for (const mutantId of Object.keys(
+          fileRun.records.find((record) => record.main)?.mutantCoverage?.static ?? {},
+        )) {
+          mutantsOutsideTests.add(mutantId);
+        }
+
         this.#memoryLimits.record(file, fileRun.records);
         this.#startUps.record(
           file,
@@ -695,6 +702,8 @@ export class LzNodeTestTestRunner implements TestRunner {
         );
       },
     );
+    this.#dryRunStore.write(this.#dryRunFilesKey, 'outside-tests', JSON.stringify([...mutantsOutsideTests]));
+    this.#mutantsOutsideTests = mutantsOutsideTests;
 
     if (
       result.status === DryRunStatus.Complete &&
@@ -712,9 +721,14 @@ export class LzNodeTestTestRunner implements TestRunner {
     return result;
   }
 
+  #stored(kind: LzDryRunKind): string[] | undefined {
+    return lzStoredStrings(this.#dryRunFilesKey, kind, this.#dryRunStore.read(this.#dryRunFilesKey, kind));
+  }
+
   async mutantRun(options: MutantRunOptions): Promise<MutantRunResult> {
     const started = performance.now();
-    this.#dryRunFiles ??= lzStoredFiles(this.#dryRunFilesKey, this.#dryRunStore.read(this.#dryRunFilesKey, 'files'));
+    this.#dryRunFiles ??= this.#stored('files');
+    this.#mutantsOutsideTests ??= new Set(this.#stored('outside-tests'));
     const files = lzFilesFor(this.#dryRunFiles ?? this.#testFiles, options.testFilter);
     // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
     const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
@@ -728,7 +742,7 @@ export class LzNodeTestTestRunner implements TestRunner {
       dryRun: false,
       disableBail: options.disableBail,
       activeMutant: options.activeMutant.id,
-      mutantActivation: options.mutantActivation,
+      mutantActivation: this.#mutantsOutsideTests.has(options.activeMutant.id) ? 'static' : options.mutantActivation,
       hitLimit: options.hitLimit,
       testFilter: options.testFilter,
     } satisfies LzRunOptions;

@@ -21,7 +21,7 @@ import {
   type LzRunEnvInput,
   lzRunInPool,
   type LzRunOptions,
-  lzStoredFiles,
+  lzStoredStrings,
   lzTestRunnerConcurrency,
   lzToTestResults,
 } from '../../src/runner.ts';
@@ -287,26 +287,26 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
   });
 });
 
-describe('lzStoredFiles', () => {
+describe('lzStoredStrings', () => {
   const key = JSON.stringify(['/repo', '*.test.mjs']);
 
-  it('returns no files when the dry run stored none', () => {
-    assert.equal(lzStoredFiles(key, undefined), undefined);
+  it('returns no strings when the dry run stored none', () => {
+    assert.equal(lzStoredStrings(key, 'files', undefined), undefined);
   });
 
-  it('returns the test files the dry run stored', () => {
-    assert.deepEqual(lzStoredFiles(key, JSON.stringify([file])), [file]);
+  it('returns the strings the dry run stored', () => {
+    assert.deepEqual(lzStoredStrings(key, 'files', JSON.stringify([file])), [file]);
   });
 
   lzTestFor(['', '[', '{}', '[1]', 'null'])('throws, naming the store entry, for content %j', (content) => {
-    assert.throws(() => lzStoredFiles(key, content), {
-      message: `The dry-run store's files entry ${key} is no JSON array of test files: ${content}`,
+    assert.throws(() => lzStoredStrings(key, 'outside-tests', content), {
+      message: `The dry-run store's outside-tests entry ${key} is no JSON array of strings: ${content}`,
     });
   });
 
   lzTestFor(['', '['])('keeps the parse error of content %j as the cause', (content) => {
     assert.throws(
-      () => lzStoredFiles(key, content),
+      () => lzStoredStrings(key, 'files', content),
       (error) => error instanceof Error && error.cause instanceof SyntaxError,
     );
   });

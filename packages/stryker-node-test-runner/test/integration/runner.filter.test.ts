@@ -264,6 +264,50 @@ describe('LzNodeTestTestRunner filter, bail and mutant activation', () => {
     assert.deepEqual(result.killedBy, [`${a} > greets`]);
   });
 
+  lzTestFor(['the dry run', 'another worker'])(
+    'activates a mutant from the start in the runner of %s when the dry run reached it outside every test, though activation is runtime',
+    async (worker, t) => {
+      const dir = project(t, {
+        'a.test.mjs': fixture(
+          "cover('fixture-mutant');",
+          `const greeting = process.env.${activeMutant} || globalThis.__stryker__.activeMutant ? 'mutated' : 'original';`,
+          "it('greets', () => { assert.equal(greeting, 'original'); });",
+        ),
+      });
+      const runner = await initRunner(['a.test.mjs']);
+      const greets = `${join(dir, 'a.test.mjs')} > greets`;
+      complete(await settle(runner.dryRun(dryRun)));
+      const mutantRunner = worker === 'the dry run' ? runner : await initRunner(['a.test.mjs']);
+
+      const result = await settle(
+        mutantRunner.mutantRun(mutantRunOptions({ testFilter: [greets], mutantActivation: 'runtime' })),
+      );
+
+      assert.strictEqual(result.status, MutantRunStatus.Killed);
+      assert.deepEqual(result.killedBy, [greets]);
+    },
+  );
+
+  it('activates a mutant once the tests start when activation is runtime and the dry run reached only other mutants outside every test', async (t) => {
+    const dir = project(t, {
+      'a.test.mjs': fixture(
+        "cover('other-mutant');",
+        `if (process.env.${activeMutant} || globalThis.__stryker__.activeMutant) {`,
+        "  throw new Error('module-level mutant');",
+        '}',
+        "it('sees the mutant', () => { cover('fixture-mutant'); });",
+      ),
+    });
+    const runner = await initRunner(['a.test.mjs']);
+    const testFilter = [`${join(dir, 'a.test.mjs')} > sees the mutant`];
+    complete(await settle(runner.dryRun(dryRun)));
+
+    assert.deepEqual(
+      withoutDuration(await settle(runner.mutantRun(mutantRunOptions({ mutantActivation: 'runtime', testFilter })))),
+      { status: MutantRunStatus.Survived, nrOfTests: 1 },
+    );
+  });
+
   it('activates a mutant once the tests start when activation is runtime, also in processes they start', async (t) => {
     const child = `process.exitCode = process.env.${activeMutant} === 'fixture-mutant' ? 0 : 1;`;
     const dir = project(t, {

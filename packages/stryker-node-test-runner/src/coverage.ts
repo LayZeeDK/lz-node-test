@@ -34,11 +34,14 @@ export function lzMergeAsStatic(coverages: readonly (MutantCoverage | undefined)
 }
 
 /**
- * A process or thread reads its current test once, when it starts, so it puts all its hits under that test. They go to
- * every test that was current while it lived instead, which can add tests to a mutant's run but not drop the one that
- * reaches it, and to static as well when it lived while no test was current. Its life counts from the start of the
- * span of the test it read, as it starts before its hook runs. Without its lifetime or the file's spans, its hits
- * count as static.
+ * The test file's own process puts its hits outside every test, from loading modules to its last exit listener, under
+ * each of its tests, as each mutant run reruns them in a fresh process.
+ *
+ * A started process or thread reads its current test once, when it starts, so it puts all its hits under that test.
+ * They go to every test that was current while it lived instead, which can add tests to a mutant's run but not drop
+ * the one that reaches it, and to static as well when it lived while no test was current. Its life counts from the
+ * start of the span of the test it read, as it starts before its hook runs. Without its lifetime or the file's spans,
+ * its hits count as static.
  */
 export function lzOverlapCoverage(
   record: ProcessRecord,
@@ -46,8 +49,15 @@ export function lzOverlapCoverage(
 ): MutantCoverage | undefined {
   const { mutantCoverage: coverage, lifetime } = record;
 
-  if (!coverage || record.main) {
+  if (!coverage || (record.main && record.tests.length === 0)) {
     return coverage;
+  }
+
+  if (record.main) {
+    return lzMergeCoverage([
+      { static: {}, perTest: coverage.perTest },
+      ...record.tests.map(({ id }) => ({ static: {}, perTest: { [id]: coverage.static } })),
+    ]);
   }
 
   if (!lifetime || !testSpans) {

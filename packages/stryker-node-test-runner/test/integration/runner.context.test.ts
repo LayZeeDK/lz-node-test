@@ -67,7 +67,7 @@ describe('LzNodeTestTestRunner with the test context', () => {
     });
   });
 
-  it("counts the work of the hooks a test registers as its coverage, and of the test file's after hook as static", async (t) => {
+  it("counts the work of the hooks a test registers as its coverage, and of the test file's after hook as each test's", async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         "import test, { after, before } from 'node:test';",
@@ -102,10 +102,11 @@ describe('LzNodeTestTestRunner with the test context', () => {
       passed(`${a} > reads what the before hook set`),
     ]);
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
-      static: { 'test.after': 1 },
+      static: {},
       perTest: {
-        [`${a} > hooks`]: { 't.before': 1, body: 1, 't.after': 1, after: 1 },
-        [`${a} > hooks > child`]: { child: 1 },
+        [`${a} > hooks`]: { 't.before': 1, body: 1, 't.after': 1, after: 1, 'test.after': 1 },
+        [`${a} > hooks > child`]: { child: 1, 'test.after': 1 },
+        [`${a} > reads what the before hook set`]: { 'test.after': 1 },
       },
     });
     assert.deepEqual(
@@ -238,7 +239,7 @@ describe('LzNodeTestTestRunner with the test context', () => {
     assert.deepEqual(summary(tests), [failed(`${a} > awaits`, 'thrown in a callback'), passed(`${a} > runs next`)]);
   });
 
-  it("counts the work of the test file's own exit listeners as static coverage", async (t) => {
+  it("counts the work of the test file's own exit listeners as coverage of each of its tests", async (t) => {
     const dir = project(t, {
       'a.test.mjs': fixture(
         // pino-pretty/node_modules/on-exit-leak-free/index.js:25
@@ -254,8 +255,8 @@ describe('LzNodeTestTestRunner with the test context', () => {
 
     assert.deepEqual(summary(tests), [passed(`${a} > listens`)]);
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
-      static: { exit: 1, beforeExit: 1, 'exit in a test': 1 },
-      perTest: {},
+      static: {},
+      perTest: { [`${a} > listens`]: { exit: 1, beforeExit: 1, 'exit in a test': 1 } },
     });
   });
 
