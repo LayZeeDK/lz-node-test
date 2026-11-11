@@ -1,3 +1,5 @@
+@AGENTS.md
+
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 
@@ -21,7 +23,3 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
-
-## Proving tests
-
-- Prove that a test catches a change with `npx nx run <project>:mutate-src --mutate <file>:<start>-<end>` (for example `npx nx run @layzee/stryker-node-test-runner:mutate-src --mutate packages/stryker-node-test-runner/src/dirs.ts:80-80`; a line without a range matches no file, and the dry run still reports success), not by reverting code or writing a control test by hand
