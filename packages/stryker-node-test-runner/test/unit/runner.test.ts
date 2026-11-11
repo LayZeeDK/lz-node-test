@@ -209,8 +209,13 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
   class RecordingRunner extends LzNodeTestTestRunner {
     readonly #record: ProcessRecord;
 
-    constructor(record: ProcessRecord, log: Logger, nodeArgs: readonly string[] = []) {
-      super(strykerOptions({ lzNodeTest: { maxMemoryMB: 512, nodeArgs } }), log);
+    constructor(record: ProcessRecord, log: Logger, nodeArgs: readonly string[] = [], testFiles?: readonly string[]) {
+      super(
+        strykerOptions({
+          lzNodeTest: { maxMemoryMB: 512, nodeArgs, ...(testFiles === undefined ? {} : { testFiles }) },
+        }),
+        log,
+      );
       this.#record = record;
     }
 
@@ -283,6 +288,40 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
     assert.deepEqual(
       warnings.filter((warning) => warning.startsWith('Left out')),
       [`Left out \`${named}\` of lzNodeTest.nodeArgs, because the runner uses its own node:test reporter.`],
+    );
+  });
+
+  it('warns once when no dry run left a list of the mutants it reached outside every test', async () => {
+    const warnings: string[] = [];
+    const record: ProcessRecord = { main: true, tests: [{ id: test, status: 'passed', timeSpentMs: 1 }] };
+    const runner = new RecordingRunner(record, logger({ warnings }), [], ['never-dry-run/*.test.mjs']);
+
+    await runner.mutantRun(mutantRunOptions({ testFilter: [test] }));
+    await runner.mutantRun(mutantRunOptions({ testFilter: [test] }));
+
+    assert.deepEqual(
+      warnings.filter((warning) => warning.includes('outside every test')),
+      [
+        'The dry run left no list of the mutants it reached outside every test, so each mutant is active only as ' +
+          'Stryker asks, and a mutant that only module-level code reaches may survive.',
+      ],
+    );
+  });
+
+  it('reads the list of the mutants reached outside every test that an earlier dry run left, without a warning', async () => {
+    const warnings: string[] = [];
+    const record: ProcessRecord = {
+      main: true,
+      tests: [{ id: test, status: 'passed', timeSpentMs: 1 }],
+      mutantCoverage: { static: { 1: 1 }, perTest: {} },
+    };
+
+    await new RecordingRunner(record, logger()).dryRun({ ...dryRun, testFiles: [file] });
+    await new RecordingRunner(record, logger({ warnings })).mutantRun(mutantRunOptions({ testFilter: [test] }));
+
+    assert.deepEqual(
+      warnings.filter((warning) => warning.includes('outside every test')),
+      [],
     );
   });
 });

@@ -141,19 +141,24 @@ describe('LzNodeTestTestRunner coverage', () => {
     });
     const runner = await initRunner(['a.test.mjs']);
     const a = join(dir, 'a.test.mjs');
-    const sharedNameBeforeEach = 2;
-    const hooks = { beforeEach: 1 + sharedNameBeforeEach, afterEach: 1 };
+    const sharedName = { first: 2, other: 1 };
+    const hooks = { afterEach: 1 };
 
     const { mutantCoverage } = complete(await settle(runner.dryRun(dryRun)));
 
     assert.deepEqual(fixtureCoverage(mutantCoverage), {
       static: {},
       perTest: {
-        [`${a} > first`]: hooks,
-        [`${a} > suite > second`]: { ...hooks, 'callback beforeEach': 1 },
-        [`${a} > suite > second > child`]: { ...hooks, 'callback beforeEach': 1, 't.beforeEach': 1 },
-        [`${a} > same`]: { beforeEach: sharedNameBeforeEach, afterEach: 1 },
-        [`${a} > same (2)`]: { beforeEach: sharedNameBeforeEach, afterEach: 1 },
+        [`${a} > first`]: { ...hooks, beforeEach: 1 + sharedName.first },
+        [`${a} > suite > second`]: { ...hooks, beforeEach: 1 + sharedName.other, 'callback beforeEach': 1 },
+        [`${a} > suite > second > child`]: {
+          ...hooks,
+          beforeEach: 1 + sharedName.other,
+          'callback beforeEach': 1,
+          't.beforeEach': 1,
+        },
+        [`${a} > same`]: { ...hooks, beforeEach: sharedName.other },
+        [`${a} > same (2)`]: { ...hooks, beforeEach: sharedName.other },
       },
     });
   });

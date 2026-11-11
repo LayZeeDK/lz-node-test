@@ -33,9 +33,17 @@ export function lzMergeAsStatic(coverages: readonly (MutantCoverage | undefined)
   return lzMergeCoverage([hits, ...Object.values(perTest)].map((ofTest) => ({ static: ofTest, perTest: {} })));
 }
 
+const creditsOutsideTests = (record: ProcessRecord) => record.main === true && record.tests.length > 0;
+
+/** The mutants that a test file's own process reached outside its tests, which each of its tests is credited with. */
+export function lzOutsideTests(records: readonly ProcessRecord[]): string[] {
+  return records.filter(creditsOutsideTests).flatMap((record) => Object.keys(record.mutantCoverage?.static ?? {}));
+}
+
 /**
  * The test file's own process puts its hits outside every test, from loading modules to its last exit listener, under
- * each of its tests, as each mutant run reruns them in a fresh process.
+ * each of its tests, as each mutant run reruns them in a fresh process. They count once, under the first test, and
+ * once more for each other test, as Stryker's hit limit grows with every hit counted.
  *
  * A started process or thread reads its current test once, when it starts, so it puts all its hits under that test.
  * They go to every test that was current while it lived instead, which can add tests to a mutant's run but not drop
@@ -49,14 +57,23 @@ export function lzOverlapCoverage(
 ): MutantCoverage | undefined {
   const { mutantCoverage: coverage, lifetime } = record;
 
-  if (!coverage || (record.main && record.tests.length === 0)) {
+  if (!coverage) {
     return coverage;
   }
 
   if (record.main) {
+    if (!creditsOutsideTests(record)) {
+      return coverage;
+    }
+
+    const reached = Object.fromEntries(Object.keys(coverage.static).map((mutantId) => [mutantId, 1]));
+
     return lzMergeCoverage([
       { static: {}, perTest: coverage.perTest },
-      ...record.tests.map(({ id }) => ({ static: {}, perTest: { [id]: coverage.static } })),
+      ...record.tests.map(({ id }, index) => ({
+        static: {},
+        perTest: { [id]: index === 0 ? coverage.static : reached },
+      })),
     ]);
   }
 

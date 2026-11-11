@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lzTestFor } from '@layzee/node-test-extensions';
-import { lzMergeAsStatic, lzMergeCoverage, lzOverlapCoverage } from '../../src/coverage.ts';
+import { lzMergeAsStatic, lzMergeCoverage, lzOutsideTests, lzOverlapCoverage } from '../../src/coverage.ts';
 
 describe('lzMergeCoverage', () => {
   it('adds up the hits of every process and skips processes without coverage', () => {
@@ -113,10 +113,41 @@ describe('lzOverlapCoverage', () => {
     assert.deepEqual(lzOverlapCoverage(descendant('a', { start: 3, end: 8 }), undefined), attributed([], true));
   });
 
-  it("leaves the test file's own coverage per test, and a record without coverage without it", () => {
-    const coverage = { static: own, perTest: { a: hits } };
+  it("credits the test file's own hits outside its tests to each test, counting them once so the hit limit holds", () => {
+    const tests = ['a', 'b', 'c'].map((id) => ({ id, status: 'passed' as const, timeSpentMs: 1 }));
+
+    assert.deepEqual(
+      lzOverlapCoverage({ main: true, tests, mutantCoverage: { static: { 9: 3 }, perTest: { a: hits } } }, testSpans),
+      { static: {}, perTest: { a: { ...hits, 9: 3 }, b: { 9: 1 }, c: { 9: 1 } } },
+    );
+  });
+
+  it('keeps the own hits of a test file without tests static, and a record without coverage without it', () => {
+    const coverage = { static: own, perTest: {} };
 
     assert.deepEqual(lzOverlapCoverage({ main: true, tests: [], mutantCoverage: coverage }, {}), coverage);
     assert.equal(lzOverlapCoverage({ tests: [], lifetime: { start: 3, end: 8 } }, testSpans), undefined);
+  });
+});
+
+describe('lzOutsideTests', () => {
+  const tests = [{ id: 'a', status: 'passed' as const, timeSpentMs: 1 }];
+
+  it("names the mutants that the test file's own process reached outside its tests, not a started process's", () => {
+    assert.deepEqual(
+      lzOutsideTests([
+        { main: true, tests, mutantCoverage: { static: { 1: 1, 2: 4 }, perTest: { a: { 3: 1 } } } },
+        { tests, mutantCoverage: { static: { 5: 1 }, perTest: {} } },
+      ]),
+      ['1', '2'],
+    );
+  });
+
+  it('names none for a test file without tests, whose hits stay static, or without coverage', () => {
+    assert.deepEqual(
+      lzOutsideTests([{ main: true, tests: [], mutantCoverage: { static: { 1: 1 }, perTest: {} } }]),
+      [],
+    );
+    assert.deepEqual(lzOutsideTests([{ main: true, tests }]), []);
   });
 });

@@ -28,7 +28,7 @@ import {
   type TestRunnerCapabilities,
 } from '@stryker-mutator/api/test-runner';
 
-import { lzMergeAsStatic, lzMergeCoverage, lzOverlapCoverage } from './coverage.ts';
+import { lzMergeAsStatic, lzMergeCoverage, lzOutsideTests, lzOverlapCoverage } from './coverage.ts';
 import { lzDirPrefix, removeDir, removeLeftDirs } from './dirs.ts';
 import { isBoolean, isNumber, isObject, isStrings, optional } from './guards.ts';
 import { lzDryRunDir, lzDryRunStore, lzOwnDryRun, type LzDryRunKind, type LzDryRunStore } from './dry-run-store.ts';
@@ -366,7 +366,13 @@ function dryRunErrorElseTimeout(run: LzRunOptions, errorMessage: string, reason:
   return run.dryRun ? errorEnd(errorMessage) : { end: { status: DryRunStatus.Timeout, reason } };
 }
 
-export function lzStoredStrings(key: string, kind: LzDryRunKind, content: string | undefined): string[] | undefined {
+export type LzStoredStringsKind = Extract<LzDryRunKind, 'files' | 'outside-tests'>;
+
+export function lzStoredStrings(
+  key: string,
+  kind: LzStoredStringsKind,
+  content: string | undefined,
+): string[] | undefined {
   if (content === undefined) {
     return undefined;
   }
@@ -535,8 +541,8 @@ export class LzNodeTestTestRunner implements TestRunner {
    * its --testFiles, which an absolute pattern of `#patterns` finds outside the sandbox.
    */
   #dryRunFiles?: string[] | undefined;
-  /** Under which the dry-run store keeps the files the dry run ran, apart from runners of other projects or patterns. */
-  readonly #dryRunFilesKey: string;
+  /** Under which the dry-run store keeps what the dry run ran and reached, apart from other projects or patterns. */
+  readonly #dryRunKey: string;
   /**
    * Every process compiles the hook and its imports; Node's compile cache makes that a one-time cost per runner.
    * The directory is this runner's own, because the cache keeps an entry for every file a process loads, including
@@ -565,7 +571,7 @@ export class LzNodeTestTestRunner implements TestRunner {
     const patterns = lzNodeTest.testFiles ?? defaults.testFiles.default;
     // Only the dry run gets Stryker's --testFiles; the mutant runs of other workers must find those files too.
     this.#patterns = [...patterns, ...options.testFiles];
-    this.#dryRunFilesKey = JSON.stringify([process.cwd(), ...this.#patterns]);
+    this.#dryRunKey = JSON.stringify([process.cwd(), ...this.#patterns]);
     const nodeArgs = lzNodeTest.nodeArgs ?? defaults.nodeArgs.default;
     this.#nodeArgs = withoutReporters(nodeArgs);
     this.#reporterArgs = lzReporterArgs(nodeArgs);
@@ -672,9 +678,9 @@ export class LzNodeTestTestRunner implements TestRunner {
     }
 
     this.#dryRunStore.start();
-    this.#dryRunStore.write(this.#dryRunFilesKey, 'files', JSON.stringify(files));
+    this.#dryRunStore.write(this.#dryRunKey, 'files', JSON.stringify(files));
     this.#dryRunFiles = files;
-    const mutantsOutsideTests = new Set<string>();
+    const mutantsOutsideTests: string[] = [];
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
@@ -686,12 +692,7 @@ export class LzNodeTestTestRunner implements TestRunner {
       // The same fileMs as every test's time, so the start-up a mutant run's deadline takes off is never more than the
       // time Stryker's timeout counted for it.
       (file, fileRun, fileMs) => {
-        for (const mutantId of Object.keys(
-          fileRun.records.find((record) => record.main)?.mutantCoverage?.static ?? {},
-        )) {
-          mutantsOutsideTests.add(mutantId);
-        }
-
+        mutantsOutsideTests.push(...lzOutsideTests(fileRun.records));
         this.#memoryLimits.record(file, fileRun.records);
         this.#startUps.record(
           file,
@@ -702,8 +703,8 @@ export class LzNodeTestTestRunner implements TestRunner {
         );
       },
     );
-    this.#dryRunStore.write(this.#dryRunFilesKey, 'outside-tests', JSON.stringify([...mutantsOutsideTests]));
-    this.#mutantsOutsideTests = mutantsOutsideTests;
+    this.#mutantsOutsideTests = new Set(mutantsOutsideTests);
+    this.#dryRunStore.write(this.#dryRunKey, 'outside-tests', JSON.stringify([...this.#mutantsOutsideTests]));
 
     if (
       result.status === DryRunStatus.Complete &&
@@ -721,14 +722,31 @@ export class LzNodeTestTestRunner implements TestRunner {
     return result;
   }
 
-  #stored(kind: LzDryRunKind): string[] | undefined {
-    return lzStoredStrings(this.#dryRunFilesKey, kind, this.#dryRunStore.read(this.#dryRunFilesKey, kind));
+  #stored(kind: LzStoredStringsKind): string[] | undefined {
+    return lzStoredStrings(this.#dryRunKey, kind, this.#dryRunStore.read(this.#dryRunKey, kind));
+  }
+
+  #outsideTests(): ReadonlySet<string> {
+    if (!this.#mutantsOutsideTests) {
+      const stored = this.#stored('outside-tests');
+
+      if (stored === undefined) {
+        this.#log.warn(
+          'The dry run left no list of the mutants it reached outside every test, so each mutant is active only as ' +
+            'Stryker asks, and a mutant that only module-level code reaches may survive.',
+        );
+      }
+
+      this.#mutantsOutsideTests = new Set(stored);
+    }
+
+    return this.#mutantsOutsideTests;
   }
 
   async mutantRun(options: MutantRunOptions): Promise<MutantRunResult> {
     const started = performance.now();
     this.#dryRunFiles ??= this.#stored('files');
-    this.#mutantsOutsideTests ??= new Set(this.#stored('outside-tests'));
+    const outsideTests = this.#outsideTests();
     const files = lzFilesFor(this.#dryRunFiles ?? this.#testFiles, options.testFilter);
     // Stryker's own timer stays as the backstop, and a Timeout the runner reports keeps Stryker's worker.
     const deadlineMs = Math.ceil(this.#startUps.deadline(files, options.testFilter, options.timeout));
@@ -742,7 +760,7 @@ export class LzNodeTestTestRunner implements TestRunner {
       dryRun: false,
       disableBail: options.disableBail,
       activeMutant: options.activeMutant.id,
-      mutantActivation: this.#mutantsOutsideTests.has(options.activeMutant.id) ? 'static' : options.mutantActivation,
+      mutantActivation: outsideTests.has(options.activeMutant.id) ? 'static' : options.mutantActivation,
       hitLimit: options.hitLimit,
       testFilter: options.testFilter,
     } satisfies LzRunOptions;
