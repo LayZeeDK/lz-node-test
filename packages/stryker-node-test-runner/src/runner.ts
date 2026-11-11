@@ -680,7 +680,7 @@ export class LzNodeTestTestRunner implements TestRunner {
     this.#dryRunStore.start();
     this.#dryRunStore.write(this.#dryRunKey, 'files', JSON.stringify(files));
     this.#dryRunFiles = files;
-    const mutantsOutsideTests: string[] = [];
+    const mutantsOutsideTests: string[][] = [];
 
     // The dry run runs as many files at once as Stryker later runs test runners for the mutants, so the test times it
     // reports, which size each mutant's timeout, include the slowdown of processes competing for the cores.
@@ -692,7 +692,7 @@ export class LzNodeTestTestRunner implements TestRunner {
       // The same fileMs as every test's time, so the start-up a mutant run's deadline takes off is never more than the
       // time Stryker's timeout counted for it.
       (file, fileRun, fileMs) => {
-        mutantsOutsideTests.push(...lzOutsideTests(fileRun.records));
+        mutantsOutsideTests.push(lzOutsideTests(fileRun.records));
         this.#memoryLimits.record(file, fileRun.records);
         this.#startUps.record(
           file,
@@ -703,7 +703,7 @@ export class LzNodeTestTestRunner implements TestRunner {
         );
       },
     );
-    this.#mutantsOutsideTests = new Set(mutantsOutsideTests);
+    this.#mutantsOutsideTests = new Set(mutantsOutsideTests.flat());
     this.#dryRunStore.write(this.#dryRunKey, 'outside-tests', JSON.stringify([...this.#mutantsOutsideTests]));
 
     if (
