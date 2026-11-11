@@ -18,7 +18,7 @@ function optionRest(arg: string, name: string): string | undefined {
 const reporterOption = (arg = '') =>
   optionRest(arg, '--test-reporter') ?? optionRest(arg, '--test-reporter-destination');
 
-/** Whether `arg` adds a node:test reporter or a reporter destination, or is the value of a bare one before it. */
+/** Whether `arg` adds a node:test reporter or a reporter destination, or is the value that follows a bare one. */
 function isReporterArg(arg: string, index: number, args: readonly string[]): boolean {
   return reporterOption(arg) !== undefined || reporterOption(args[index - 1]) === '';
 }

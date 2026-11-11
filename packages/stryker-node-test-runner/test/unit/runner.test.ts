@@ -12,7 +12,7 @@ import { lzTestEach } from '@layzee/node-test-extensions';
 import { lzTestFor } from '@layzee/node-test-extensions';
 import { activeMutantEnv, envNames, type ProcessRecord, type RecordedTest } from '../../src/record.ts';
 import { callMember, construct, member } from '../reflect.fixtures.ts';
-import { activeMutant, dryRun, hookUrl, logger, strykerOptions } from '../runner.fixtures.ts';
+import { activeMutant, dryRun, hookUrl, logger, mutantRunOptions, strykerOptions } from '../runner.fixtures.ts';
 import {
   LzNodeTestTestRunner,
   lzFileError,
@@ -275,11 +275,15 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
       mutantCoverage: { static: {}, perTest: { [test]: { 1: 1 } } },
     };
 
-    await new RecordingRunner(record, logger({ warnings }), nodeArgs).dryRun({ ...dryRun, testFiles: [file] });
+    const runner = new RecordingRunner(record, logger({ warnings }), nodeArgs);
 
-    assert.deepEqual(warnings, [
-      `Left out \`${named}\` of lzNodeTest.nodeArgs, because the runner uses its own node:test reporter.`,
-    ]);
+    await runner.dryRun({ ...dryRun, testFiles: [file] });
+    await runner.mutantRun(mutantRunOptions({ testFilter: [test] }));
+
+    assert.deepEqual(
+      warnings.filter((warning) => warning.startsWith('Left out')),
+      [`Left out \`${named}\` of lzNodeTest.nodeArgs, because the runner uses its own node:test reporter.`],
+    );
   });
 });
 
