@@ -1,9 +1,9 @@
-import { lzInstall, lzSelectOperators, type LzMutatorOptions } from '@layzee/stryker-mutator-core';
-import { testOperatorSets } from './operators.ts';
+import { lzInstall, lzSelectMutators, type LzMutatorOptions } from '@layzee/stryker-mutator-core';
+import { testMutatorSets } from './mutators.ts';
 import { lzCorePeerRange, lzPackageName } from './package-name.ts';
 
 /** The mutators measured on too few projects to run by default, turned on inside `experimental`. */
-export type LzNodeTestExperimentalMutator = (typeof testOperatorSets.experimental)[number]['name'];
+export type LzNodeTestExperimentalMutator = (typeof testMutatorSets.experimental)[number]['name'];
 
 export type LzNodeTestMutatorOptions = LzMutatorOptions<never, LzNodeTestExperimentalMutator>;
 
@@ -17,6 +17,6 @@ export async function lzNodeTestMutators(options?: LzNodeTestMutatorOptions): Pr
     packageName: lzPackageName,
     corePeerRange: lzCorePeerRange,
     mode: 'replace',
-    operators: lzSelectOperators(lzPackageName, testOperatorSets, options),
+    mutators: lzSelectMutators(lzPackageName, testMutatorSets, options),
   });
 }

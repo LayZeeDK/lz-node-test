@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import type { Location, Mutant, Position } from '@stryker-mutator/api/core';
 
 import { hasMember, isFunction, isNumber, isObject, isString, member } from './guards.ts';
-import { operatorBuilders, type LzBabelTypes } from './operator.ts';
+import { mutatorBuilders, type LzBabelTypes } from './mutator.ts';
 
 const coreBinPattern = /[\\/]@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/;
 const nothing = () => undefined;
@@ -161,11 +161,11 @@ function isListedMutator(value: unknown): value is LzListedMutator {
 }
 
 /**
- * Has a function for each member of the Babel types that the operators may call. The other members can differ, as when
+ * Has a function for each member of the Babel types that the mutators may call. The other members can differ, as when
  * the consumer's @babel/core is a newer patch than the instrumenter's.
  */
 function isBabelTypes(value: unknown): value is LzBabelTypes {
-  return isObject(value) && operatorBuilders.every((key) => isFunction(Reflect.get(value, key)));
+  return isObject(value) && mutatorBuilders.every((key) => isFunction(Reflect.get(value, key)));
 }
 
 function isMutantList(value: unknown): value is LzInstrumentedMutant[] {

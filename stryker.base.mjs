@@ -25,7 +25,7 @@ export function concurrency(gbPerUnit) {
   return Math.max(2, Math.min(strykerDefaultConcurrency(availableParallelism()), byMemory));
 }
 
-// The packages import each other and load the runner and the operators from their TypeScript source.
+// The packages import each other and load the runner and the mutators from their TypeScript source.
 export const source = '--conditions=@layzee/source';
 
 /**
@@ -50,8 +50,8 @@ export async function production(config, jsMutators) {
 }
 
 /**
- * A package's config for its test code: `config` with the test-code operators in place of Stryker's mutators. It
- * installs no production operators, which replace mode would keep.
+ * A package's config for its test code: `config` with the test-code mutators in place of Stryker's. It
+ * installs no production mutators, which replace mode would keep.
  *
  * @param {import('@stryker-mutator/api/core').PartialStrykerOptions} config
  */

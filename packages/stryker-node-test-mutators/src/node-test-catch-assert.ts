@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { lzCalleeRoot, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzCalleeRoot, lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 
 /**
  * Empties the `try` block of a `try`/`catch` whose `catch` asserts and does not throw, so a survivor is a test that
@@ -9,7 +9,7 @@ import { lzCalleeRoot, lzPropertyName, type LzOperator } from '@layzee/stryker-m
  * method other than `fail` of a callee rooted at `assert` or of an `assert` member, and a call of `assert` itself.
  * Functions inside the `catch` are not searched. A `try` block that ends in a `throw` or a `fail` is left alone.
  */
-export const nodeTestCatchAssert: LzOperator<'LzNodeTestCatchAssert'> = {
+export const nodeTestCatchAssert: LzMutator<'LzNodeTestCatchAssert'> = {
   name: 'LzNodeTestCatchAssert',
   sample: "try {\n  JSON.parse('');\n} catch (error) {\n  assert.ok(error);\n}\n",
   *mutate(path, t) {

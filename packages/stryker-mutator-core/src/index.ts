@@ -7,5 +7,5 @@ export {
   type LzListedMutator,
   type LzSourceFile,
 } from './instrumenter.ts';
-export { lzIsOwn, lzToNodeMutator, type LzBabelTypes, type LzNodeMutatorLike, type LzOperator } from './operator.ts';
-export { lzAllOperators, lzSelectOperators, type LzMutatorOptions, type LzOperatorSets } from './select.ts';
+export { lzIsOwn, lzToNodeMutator, type LzBabelTypes, type LzNodeMutatorLike, type LzMutator } from './mutator.ts';
+export { lzAllMutators, lzSelectMutators, type LzMutatorOptions, type LzMutatorSets } from './select.ts';

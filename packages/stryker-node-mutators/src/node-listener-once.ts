@@ -1,4 +1,4 @@
-import { lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 
 /** Events that fire at most once, so `on` and `once` behave the same for them. */
 const oneShot: ReadonlySet<string> = new Set([
@@ -28,7 +28,7 @@ const swaps: ReadonlyMap<string | undefined, string> = new Map([
  * every event misses the ones after the first. It matches the method name on any receiver, and leaves events that fire
  * at most once and `once('error')`; `on('error')` still becomes `once('error')`.
  */
-export const nodeListenerOnce: LzOperator<'LzNodeListenerOnce'> = {
+export const nodeListenerOnce: LzMutator<'LzNodeListenerOnce'> = {
   name: 'LzNodeListenerOnce',
   sample: "emitter.on('data', () => {});\n",
   *mutate(path, t) {

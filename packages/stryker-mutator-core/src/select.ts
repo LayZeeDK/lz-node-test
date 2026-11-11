@@ -1,13 +1,13 @@
 import { inspect } from 'node:util';
 
 import { isObject } from './guards.ts';
-import type { LzOperator } from './operator.ts';
+import type { LzMutator } from './mutator.ts';
 
 /** The mutators a package installs: those that run unless a config leaves them out, and those a user turns on. */
-export interface LzOperatorSets {
-  readonly defaults: readonly LzOperator[];
-  readonly optIn: readonly LzOperator[];
-  readonly experimental: readonly LzOperator[];
+export interface LzMutatorSets {
+  readonly defaults: readonly LzMutator[];
+  readonly optIn: readonly LzMutator[];
+  readonly experimental: readonly LzMutator[];
 }
 
 /**
@@ -22,7 +22,7 @@ export type LzMutatorOptions<TOptIn extends string, TExperimental extends string
   readonly experimental?: true | { readonly [TName in TExperimental]?: true };
 };
 
-type LzTier = keyof LzOperatorSets;
+type LzTier = keyof LzMutatorSets;
 
 const tiers: readonly LzTier[] = ['defaults', 'optIn', 'experimental'];
 type LzSelectableTier = Exclude<LzTier, 'defaults'>;
@@ -34,25 +34,25 @@ const whereTiersGo: Record<LzTier, string> = {
   experimental: 'it is experimental, so it goes inside experimental',
 };
 
-/** Every operator of `sets`, defaults first. */
-export function lzAllOperators(sets: LzOperatorSets): readonly LzOperator[] {
+/** Every mutator of `sets`, defaults first. */
+export function lzAllMutators(sets: LzMutatorSets): readonly LzMutator[] {
   return tiers.flatMap((tier) => sets[tier]);
 }
 
 /**
- * The defaults and the operators that `options` turns on, in the order of `sets`. Throws, starting with
+ * The defaults and the mutators that `options` turns on, in the order of `sets`. Throws, starting with
  * `packageName`, on options it does not take, as a config file in JavaScript has no type check.
  */
-export function lzSelectOperators(packageName: string, sets: LzOperatorSets, options: unknown): readonly LzOperator[] {
+export function lzSelectMutators(packageName: string, sets: LzMutatorSets, options: unknown): readonly LzMutator[] {
   const tierOf = new Map(tiers.flatMap((tier) => sets[tier].map(({ name }): [string, LzTier] => [name, tier])));
-  const named = (tier: LzSelectableTier, name: string): readonly LzOperator[] => {
+  const named = (tier: LzSelectableTier, name: string): readonly LzMutator[] => {
     const found = tierOf.get(name);
 
     if (found === tier) {
-      return sets[tier].filter((operator) => operator.name === name);
+      return sets[tier].filter((mutator) => mutator.name === name);
     }
 
-    const names = sets[tier].map((operator) => operator.name).join(', ');
+    const names = sets[tier].map((mutator) => mutator.name).join(', ');
     const hint = found === undefined ? `the names are ${names || 'none'}` : whereTiersGo[found];
 
     throw new Error(`${packageName}: no ${tierNames[tier]} mutator is named ${name}; ${hint}.`);
@@ -75,7 +75,7 @@ export function lzSelectOperators(packageName: string, sets: LzOperatorSets, opt
     return key === 'extended' ? sets.optIn : named('optIn', key);
   });
 
-  return lzAllOperators(sets).filter((operator) => sets.defaults.includes(operator) || selected.includes(operator));
+  return lzAllMutators(sets).filter((mutator) => sets.defaults.includes(mutator) || selected.includes(mutator));
 }
 
 function isRecord(value: unknown): value is object {

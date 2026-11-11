@@ -6,7 +6,7 @@ import { lzTestEach } from '@layzee/node-test-extensions';
 import { ESLint } from 'eslint';
 
 const workspaceRoot = join(import.meta.dirname, '..', '..');
-const testFile = 'packages/stryker-node-mutators/test/unit/operators.test.ts';
+const testFile = 'packages/stryker-node-mutators/test/unit/mutators.test.ts';
 
 async function reports(code: string, file: string, ruleId: string): Promise<readonly string[]> {
   const eslint = new ESLint({ cwd: workspaceRoot });

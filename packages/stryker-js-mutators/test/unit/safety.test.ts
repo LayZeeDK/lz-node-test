@@ -5,11 +5,11 @@ import type { NodePath } from '@babel/core';
 import type { Location } from '@stryker-mutator/api/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import type { LzOperator } from '@layzee/stryker-mutator-core';
+import type { LzMutator } from '@layzee/stryker-mutator-core';
 import { instrumentWith, mutantsOf } from '../mutants-of.fixtures.ts';
-import { jsOperators } from '../../src/operators.ts';
+import { jsMutators } from '../../src/mutators.ts';
 
-const operators = jsOperators;
+const mutators = jsMutators;
 const allowed: ReadonlySet<string> = new Set(['Error', 'Promise.reject']);
 const keywords: ReadonlySet<string> = new Set([
   'catch',
@@ -27,7 +27,7 @@ const targets = [
   "import { spawn } from 'node:child_process';\nspawn(cmd, args, { shell: false });",
 ];
 const corpus = [
-  ...operators.map(({ sample }) => sample),
+  ...mutators.map(({ sample }) => sample),
   ...targets,
   'latest = id;\nenv[name] = await load(id);\nthis.total = count(items);',
   'export function last(items: readonly number[]) {\n  return items[items.length - 1];\n}',
@@ -50,8 +50,8 @@ function textAt(source: string, { start, end }: Location): string {
     .join('\n');
 }
 
-async function newCallees(operator: LzOperator, source: string): Promise<string[][]> {
-  const mutants = await instrumentWith(operator, source);
+async function newCallees(mutator: LzMutator, source: string): Promise<string[][]> {
+  const mutants = await instrumentWith(mutator, source);
 
   return mutants.map(({ location, replacement }) => {
     const before = callees(textAt(source, location));
@@ -61,21 +61,21 @@ async function newCallees(operator: LzOperator, source: string): Promise<string[
 }
 
 describe('safety', () => {
-  lzTestEach(operators.map((operator): readonly [string, LzOperator] => [operator.name, operator]))(
+  lzTestEach(mutators.map((mutator): readonly [string, LzMutator] => [mutator.name, mutator]))(
     '%s calls nothing new in its replacements but Error and Promise.reject',
-    async (_name, operator) => {
-      const found = await Promise.all(corpus.map((source) => newCallees(operator, source)));
+    async (_name, mutator) => {
+      const found = await Promise.all(corpus.map((source) => newCallees(mutator, source)));
 
       assert.deepEqual(found.flat().flat(), []);
-      assert.ok(found.flat().length > 0, `${operator.name} made no mutant in the corpus`);
+      assert.ok(found.flat().length > 0, `${mutator.name} made no mutant in the corpus`);
     },
   );
 
   lzTestEach([
     [
-      'an operator that signals a process',
+      'a mutator that signals a process',
       'f();',
-      (t: Parameters<LzOperator['mutate']>[1]) =>
+      (t: Parameters<LzMutator['mutate']>[1]) =>
         t.callExpression(t.memberExpression(t.identifier('process'), t.identifier('kill')), [
           t.memberExpression(t.identifier('process'), t.identifier('pid')),
           t.stringLiteral('SIGKILL'),
@@ -84,14 +84,14 @@ describe('safety', () => {
       [['process.kill']],
     ],
     [
-      'an operator that only throws an Error',
+      'a mutator that only throws an Error',
       'f();',
-      (t: Parameters<LzOperator['mutate']>[1]) => t.newExpression(t.identifier('Error'), []),
+      (t: Parameters<LzMutator['mutate']>[1]) => t.newExpression(t.identifier('Error'), []),
       (path: NodePath) => path.isCallExpression(),
       [[]],
     ],
   ])('reports %s', async (_title, source, replacement, where, expected) => {
-    const unsafe: LzOperator = {
+    const unsafe: LzMutator = {
       name: 'Unsafe',
       sample: '',
       *mutate(path, t) {
@@ -105,17 +105,17 @@ describe('safety', () => {
   });
 
   lzTestEach(
-    operators.flatMap((operator) =>
-      targets.map((source): readonly [string, string, LzOperator] => [operator.name, source, operator]),
+    mutators.flatMap((mutator) =>
+      targets.map((source): readonly [string, string, LzMutator] => [mutator.name, source, mutator]),
     ),
-  )('%s leaves %j alone', async (_name, source, operator) => {
-    assert.deepEqual(await mutantsOf(operator, source), []);
+  )('%s leaves %j alone', async (_name, source, mutator) => {
+    assert.deepEqual(await mutantsOf(mutator, source), []);
   });
 
-  lzTestEach(operators.map((operator) => [operator.name, operator]))(
+  lzTestEach(mutators.map((mutator) => [mutator.name, mutator]))(
     '%s makes a mutant of its own sample',
-    async (_name, operator) => {
-      assert.notDeepEqual(await mutantsOf(operator, operator.sample), []);
+    async (_name, mutator) => {
+      assert.notDeepEqual(await mutantsOf(mutator, mutator.sample), []);
     },
   );
 });

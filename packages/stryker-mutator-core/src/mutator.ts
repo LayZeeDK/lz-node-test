@@ -1,7 +1,7 @@
 import type { NodePath, types } from '@babel/core';
 
-/** The members of the Babel types that the operators may call; the install checks the instrumenter's for each. */
-export const operatorBuilders = Object.freeze([
+/** The members of the Babel types that the mutators may call; the install checks the instrumenter's for each. */
+export const mutatorBuilders = Object.freeze([
   'arrowFunctionExpression',
   'binaryExpression',
   'blockStatement',
@@ -20,21 +20,21 @@ export const operatorBuilders = Object.freeze([
   'unaryExpression',
 ] satisfies (keyof typeof types)[]);
 
-export type LzBabelTypes = Pick<typeof types, (typeof operatorBuilders)[number]>;
+export type LzBabelTypes = Pick<typeof types, (typeof mutatorBuilders)[number]>;
 
-/** A mutation operator, free of Stryker: it maps a Babel path to replacement nodes. */
-export interface LzOperator<TName extends string = string> {
+/** A mutator, free of Stryker: it maps a Babel path to replacement nodes. */
+export interface LzMutator<TName extends string = string> {
   /**
    * Letters only, as Stryker's directives match no other character; PascalCase, like Stryker's own mutators. Reports
-   * show it, and `excludedMutations` and `// Stryker disable` comments select the operator by it.
+   * show it, and `excludedMutations` and `// Stryker disable` comments select the mutator by it.
    */
   readonly name: TName;
-  /** A TypeScript module in which the operator makes a mutant; the install's self-check instruments it. */
+  /** A TypeScript module in which the mutator makes a mutant; the install's self-check instruments it. */
   readonly sample: string;
   readonly mutate: (path: NodePath, t: LzBabelTypes) => Iterable<types.Node>;
   /**
-   * Stryker's mutator filter: once the instrumenter leaves a node this operator mutated, it passes every mutant made in
-   * that node, and `false` drops this operator's mutants of the node.
+   * Stryker's mutator filter: once the instrumenter leaves a node this mutator mutated, it passes every mutant made in
+   * that node, and `false` drops this mutator's mutants of the node.
    */
   readonly filter?: (mutantsInScope: readonly unknown[]) => boolean;
 }
@@ -57,14 +57,14 @@ interface OwnMutator extends LzNodeMutatorLike {
 }
 
 /** Yields nothing where Stryker's instrumenter allows no statement, such as a Vue template's expression. */
-export function lzToNodeMutator(operator: LzOperator, t: LzBabelTypes, packageName: string): OwnMutator {
+export function lzToNodeMutator(mutator: LzMutator, t: LzBabelTypes, packageName: string): OwnMutator {
   return {
-    name: operator.name,
+    name: mutator.name,
     [own]: packageName,
-    filter: operator.filter,
+    filter: mutator.filter,
     *mutate(path, { isExpressionContext }) {
       if (!isExpressionContext) {
-        yield* operator.mutate(path, t);
+        yield* mutator.mutate(path, t);
       }
     },
   };

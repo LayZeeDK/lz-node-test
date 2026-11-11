@@ -17,9 +17,9 @@ mutators, so a package of mutators calls `lzInstall` from a module that the Stry
 ```js
 import { lzInstall } from '@layzee/stryker-mutator-core';
 
-import { operators } from './operators.js';
+import { mutators } from './mutators.js';
 
-await lzInstall({ packageName: 'my-mutators', corePeerRange: '^10.1.1', mode: 'add', operators });
+await lzInstall({ packageName: 'my-mutators', corePeerRange: '^10.1.1', mode: 'add', mutators });
 ```
 
 - `packageName` starts each error and warning.
@@ -27,7 +27,7 @@ await lzInstall({ packageName: 'my-mutators', corePeerRange: '^10.1.1', mode: 'a
 - `mode` is `add`, which adds the package's mutators to the ones in the list, or `replace`, which first removes
   Stryker's mutators and the ones this package installed before. Both keep the mutators that other packages installed
   through `lzInstall`, and refuse a mutator whose name, ignoring case, one of them or one of Stryker's already has.
-- `operators` holds one `LzOperator` object per mutator: a name of letters only, a sample module in which the mutator
+- `mutators` holds one `LzMutator` object per mutator: a name of letters only, a sample module in which the mutator
   makes a mutant, and a `mutate` function that maps a Babel path to replacement nodes.
 
 `lzInstall` puts the mutators into every copy of the instrumenter that the process may run, then instruments each
@@ -39,17 +39,17 @@ them stops the run with an error that names the file.
 
 ### Opt-in and experimental mutators
 
-A package with mutators that run only when a user turns them on groups them as `LzOperatorSets`: `defaults`, `optIn`
-and `experimental`. `lzSelectOperators(packageName, sets, options)` returns the default mutators and the ones that the
-user's options turn on, in the order of the sets, and `lzAllOperators(sets)` returns them all. `LzMutatorOptions` types
+A package with mutators that run only when a user turns them on groups them as `LzMutatorSets`: `defaults`, `optIn`
+and `experimental`. `lzSelectMutators(packageName, sets, options)` returns the default mutators and the ones that the
+user's options turn on, in the order of the sets, and `lzAllMutators(sets)` returns them all. `LzMutatorOptions` types
 the options: an opt-in name or `extended` for every opt-in mutator, and `experimental` with `true` or an object of
 experimental names. A name and `extended` take only `true`; `experimental` takes `true` or an object whose values are
 `true`. The call throws on a name it does not know or a name in the wrong place.
 
 ```js
-import { lzInstall, lzSelectOperators } from '@layzee/stryker-mutator-core';
+import { lzInstall, lzSelectMutators } from '@layzee/stryker-mutator-core';
 
-import { defaults, experimental, optIn } from './operators.js';
+import { defaults, experimental, optIn } from './mutators.js';
 
 const sets = { defaults, optIn, experimental };
 
@@ -58,7 +58,7 @@ export async function myMutators(options) {
     packageName: 'my-mutators',
     corePeerRange: '^10.1.1',
     mode: 'add',
-    operators: lzSelectOperators('my-mutators', sets, options),
+    mutators: lzSelectMutators('my-mutators', sets, options),
   });
 }
 ```

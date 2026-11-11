@@ -1,6 +1,6 @@
 import type { NodePath } from '@babel/core';
 
-import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzImportOf, lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 import { lzNodeTest as nodeTest } from './bindings.ts';
 import { isNodeAssertCall } from './node-bindings.ts';
 
@@ -12,7 +12,7 @@ const teardowns: ReadonlySet<string | undefined> = new Set(['after', 'afterEach'
  * this one is dropped when another mutant shares the statement, as in `await f('x');`. An awaited `node:assert` call is
  * left to LzNodeAssertStatement.
  */
-export const nodeAwaitStatement: LzOperator = {
+export const nodeAwaitStatement: LzMutator = {
   name: 'LzNodeAwaitStatement',
   sample: 'await flush();\n',
   *mutate(path, t) {

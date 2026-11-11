@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint';
 const toolTest = ['tools/eslint-rules/*.test.ts'];
 const src = ['**/src/**/*.ts', 'tools/eslint-rules/*.ts'];
 const test = ['**/test/**/*.ts', ...toolTest];
-// Code samples the operators' tests mutate, not tests.
+// Code samples the mutators' tests mutate, not tests.
 const synthetic = ['**/test/synthetic/**'];
 // Consumer projects the e2e suite installs; they break workspace rules on purpose.
 const e2eFixtures = ['**/e2e/fixtures/**'];

@@ -1,4 +1,4 @@
-// Tests that exist to be mutated: the node:assert shapes the test-code operators match that no other test here has.
+// Tests that exist to be mutated: the node:assert shapes the test-code mutators match that no other test here has.
 import legacy from 'node:assert';
 import * as namespace from 'assert';
 import { deepStrictEqual as same, rejects, strict, strictEqual, throws } from 'node:assert';

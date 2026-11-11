@@ -6,7 +6,7 @@ import {
   lzToNodeMutator,
   type LzInstrumentedMutant,
   type LzInstrumenter,
-  type LzOperator,
+  type LzMutator,
 } from '@layzee/stryker-mutator-core';
 import { lzPackageName } from './package-name.ts';
 
@@ -26,12 +26,12 @@ export function mutantDiff(
 }
 
 /**
- * A removed mutant is one that a mutator's filter drops once an operator's mutant shares its scope, as the
- * CallExpression mutator does.
+ * A removed mutant is one that a Stryker mutator's filter drops once a mutant of one of these mutators shares its
+ * scope, as the CallExpression mutator does.
  */
 export async function corpusDiff(
   names: readonly string[],
-  operatorsFor: (name: string) => readonly LzOperator[],
+  mutatorsFor: (name: string) => readonly LzMutator[],
   resolve: () => Promise<LzInstrumenter> = lzResolveFromCore,
   read: (name: string) => string = (name) => readFileSync(name, 'utf8'),
 ): Promise<string> {
@@ -39,16 +39,18 @@ export async function corpusDiff(
   const sections: string[] = [];
 
   for (const name of names) {
-    const mutators = operatorsFor(name).map((operator) => lzToNodeMutator(operator, instrumenter.types, lzPackageName));
+    const nodeMutators = mutatorsFor(name).map((mutator) =>
+      lzToNodeMutator(mutator, instrumenter.types, lzPackageName),
+    );
     const files = [{ name, content: read(name) }];
     const before = await instrumenter.instrument(files, instrumenter.allMutators);
-    const after = await instrumenter.instrument(files, [...instrumenter.allMutators, ...mutators]);
+    const after = await instrumenter.instrument(files, [...instrumenter.allMutators, ...nodeMutators]);
     const { added, removed } = mutantDiff(before, after);
     const lines = [...added.map((mutant) => `    + ${mutant}`), ...removed.map((mutant) => `    - ${mutant}`)];
 
     sections.push(
       `### ${relative(process.cwd(), name).split(sep).join('/')}\n\n` +
-        `${before.length} mutants without the operators, ${after.length} with them.\n\n` +
+        `${before.length} mutants without the mutators, ${after.length} with them.\n\n` +
         `${lines.length > 0 ? lines.join('\n') : '    (no difference)'}\n`,
     );
   }

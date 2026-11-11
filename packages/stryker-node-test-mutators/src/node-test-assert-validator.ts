@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzImportOf, lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 import { lzAssertMethod, lzNodeTest } from '@layzee/stryker-node-mutators/bindings';
 
 const message = 'Stryker';
@@ -20,7 +20,7 @@ const matcherTypes: ReadonlySet<string> = new Set([
  * `expectFailure` names what the failure must match, throw an unrelated error, so a survivor is a validator that
  * accepts any error.
  */
-export const nodeTestAssertValidator: LzOperator = {
+export const nodeTestAssertValidator: LzMutator = {
   name: 'LzNodeTestAssertValidator',
   sample: "import assert from 'node:assert/strict';\n\nassert.throws(() => {}, /x/);\n",
   *mutate(path, t) {

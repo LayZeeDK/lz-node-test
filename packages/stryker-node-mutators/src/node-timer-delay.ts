@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzImportOf, lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 import { lzBuiltin } from './bindings.ts';
 
 const timers: ReadonlySet<string | undefined> = new Set(['setTimeout', 'setInterval']);
@@ -12,7 +12,7 @@ const nodeTimersPromises = lzBuiltin('timers/promises');
  * negative number that leave the delay Node.js runs unchanged are left out. A string delay is left out too, as `+ 1`
  * would append.
  */
-export const nodeTimerDelay: LzOperator = {
+export const nodeTimerDelay: LzMutator = {
   name: 'LzNodeTimerDelay',
   sample: 'setTimeout(() => {}, 10);\n',
   *mutate(path, t) {

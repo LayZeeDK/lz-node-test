@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 
 const bufferResults: ReadonlySet<string | undefined> = new Set([
   'from',
@@ -16,7 +16,7 @@ const utf8: ReadonlySet<string> = new Set(['utf8', 'utf-8']);
  * `'utf8'` encoding counts too. A Buffer's length is its byte length, so the result of a Buffer factory such as
  * `Buffer.from` is left out.
  */
-export const nodeByteLength: LzOperator<'LzNodeByteLength'> = {
+export const nodeByteLength: LzMutator<'LzNodeByteLength'> = {
   name: 'LzNodeByteLength',
   sample: 'export const size = Buffer.byteLength(text);\n',
   *mutate(path, t) {

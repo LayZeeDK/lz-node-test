@@ -7,7 +7,7 @@ interface Entry {
 
 /**
  * Each mutant whose status differs, or that one report lacks. Mutants are keyed as Stryker's incremental mode keys
- * them: file, location, mutator and replacement, which tells apart the mutants one operator makes at one place.
+ * them: file, location, mutator and replacement, which tells apart the mutants one mutator makes at one place.
  */
 export function lzCompareReports(first: LzReport, second: LzReport): string[] {
   const firstEntries = entriesByKey(first);

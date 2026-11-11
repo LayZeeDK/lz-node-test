@@ -2,26 +2,26 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import type { LzOperator } from '../../src/operator.ts';
-import { lzAllOperators, lzSelectOperators, type LzOperatorSets } from '../../src/select.ts';
+import type { LzMutator } from '../../src/mutator.ts';
+import { lzAllMutators, lzSelectMutators, type LzMutatorSets } from '../../src/select.ts';
 
 const packageName = 'lz-sample-mutators';
 
-function operator(name: string): LzOperator {
+function mutator(name: string): LzMutator {
   return { name, sample: `${name}();`, *mutate() {} };
 }
 
-const sets: LzOperatorSets = {
-  defaults: [operator('LzDefaultA'), operator('LzDefaultB')],
-  optIn: [operator('LzOptInA'), operator('LzOptInB')],
-  experimental: [operator('LzExperimentalA'), operator('LzExperimentalB')],
+const sets: LzMutatorSets = {
+  defaults: [mutator('LzDefaultA'), mutator('LzDefaultB')],
+  optIn: [mutator('LzOptInA'), mutator('LzOptInB')],
+  experimental: [mutator('LzExperimentalA'), mutator('LzExperimentalB')],
 };
 
 function namesFor(options: unknown): string[] {
-  return lzSelectOperators(packageName, sets, options).map(({ name }) => name);
+  return lzSelectMutators(packageName, sets, options).map(({ name }) => name);
 }
 
-describe('lzSelectOperators', () => {
+describe('lzSelectMutators', () => {
   lzTestEach([
     ['no options', undefined, ['LzDefaultA', 'LzDefaultB']],
     ['empty options', {}, ['LzDefaultA', 'LzDefaultB']],
@@ -141,19 +141,16 @@ describe('lzSelectOperators', () => {
     assert.throws(() => namesFor(options), { message });
   });
 
-  it('lists every operator, the defaults first', () => {
+  it('lists every mutator, the defaults first', () => {
     assert.deepEqual(
-      lzAllOperators(sets).map(({ name }) => name),
+      lzAllMutators(sets).map(({ name }) => name),
       ['LzDefaultA', 'LzDefaultB', 'LzOptInA', 'LzOptInB', 'LzExperimentalA', 'LzExperimentalB'],
     );
   });
 
   it('names no mutators when a set is empty', () => {
-    assert.throws(
-      () => lzSelectOperators(packageName, { ...sets, experimental: [] }, { experimental: { LzX: true } }),
-      {
-        message: 'lz-sample-mutators: no experimental mutator is named LzX; the names are none.',
-      },
-    );
+    assert.throws(() => lzSelectMutators(packageName, { ...sets, experimental: [] }, { experimental: { LzX: true } }), {
+      message: 'lz-sample-mutators: no experimental mutator is named LzX; the names are none.',
+    });
   });
 });

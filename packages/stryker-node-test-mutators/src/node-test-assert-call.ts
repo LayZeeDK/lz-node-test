@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { lzAwaited, type LzBabelTypes, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzAwaited, type LzBabelTypes, type LzMutator } from '@layzee/stryker-mutator-core';
 import { lzAssertMethod } from '@layzee/stryker-node-mutators/bindings';
 
 const message = 'Stryker: assertion reached';
@@ -15,7 +15,7 @@ const asyncMethods: ReadonlySet<string> = new Set(['rejects', 'doesNotReject']);
  * the others, a custom assertion added with `assert.register` included. There the original call is kept only for its
  * type and never runs.
  */
-export const nodeTestAssertCall: LzOperator = {
+export const nodeTestAssertCall: LzMutator = {
   name: 'LzNodeTestAssertCall',
   sample: 'export function check(t: any) {\n  t.assert.ok(true);\n}\n',
   *mutate(path, t) {

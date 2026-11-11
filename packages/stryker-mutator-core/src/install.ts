@@ -1,5 +1,5 @@
 import { resolveEachCore, type LzInstrumenter, type LzListedMutator } from './instrumenter.ts';
-import { lzIsOwn, lzToNodeMutator, ownerOf, type LzOperator } from './operator.ts';
+import { lzIsOwn, lzToNodeMutator, ownerOf, type LzMutator } from './mutator.ts';
 import { lzWarnOutsidePeerRange, parseCaretFloor } from './peer-range.ts';
 
 /** Stryker's `// Stryker disable` directives match mutator names with letters only. */
@@ -13,15 +13,15 @@ export interface LzInstallOptions {
   /** The installing package's peer range of `@stryker-mutator/core`, a caret range such as `^10.1.1`. */
   readonly corePeerRange: string;
   readonly mode: LzInstallMode;
-  readonly operators: readonly LzOperator[];
+  readonly mutators: readonly LzMutator[];
 }
 
 /**
- * Puts `operators` into the mutator list of each copy of Stryker's instrumenter, and throws unless each makes a mutant
- * of its sample: a bundled instrumenter does not read the list and would drop the operators without a word.
+ * Puts `mutators` into the mutator list of each copy of Stryker's instrumenter, and throws unless each makes a mutant
+ * of its sample: a bundled instrumenter does not read the list and would drop the mutators without a word.
  */
 export async function lzInstall(
-  { packageName, corePeerRange, mode, operators }: LzInstallOptions,
+  { packageName, corePeerRange, mode, mutators }: LzInstallOptions,
   resolve: () => Promise<readonly LzInstrumenter[]> = resolveEachCore,
   warn: (message: string) => void = console.warn,
 ): Promise<void> {
@@ -29,12 +29,12 @@ export async function lzInstall(
   const instrumenters = await resolve();
 
   instrumenters.forEach(({ allMutators }) => {
-    checkNames(packageName, operators, allMutators);
+    checkNames(packageName, mutators, allMutators);
   });
   instrumenters.forEach((instrumenter) => {
-    putInto(packageName, instrumenter, mode, operators);
+    putInto(packageName, instrumenter, mode, mutators);
   });
-  await Promise.all(instrumenters.map((instrumenter) => selfCheck(packageName, instrumenter, operators)));
+  await Promise.all(instrumenters.map((instrumenter) => selfCheck(packageName, instrumenter, mutators)));
   lzWarnOutsidePeerRange(
     packageName,
     floor,
@@ -48,26 +48,26 @@ function putInto(
   packageName: string,
   instrumenter: LzInstrumenter,
   mode: LzInstallMode,
-  operators: readonly LzOperator[],
+  mutators: readonly LzMutator[],
 ): void {
   const { allMutators } = instrumenter;
-  const mutators = operators.map((operator) => lzToNodeMutator(operator, instrumenter.types, packageName));
+  const nodeMutators = mutators.map((mutator) => lzToNodeMutator(mutator, instrumenter.types, packageName));
 
   if (mode === 'replace') {
     instrumenter.setMutators([
       ...allMutators.filter((mutator) => lzIsOwn(mutator) && ownerOf(mutator) !== packageName),
-      ...mutators,
+      ...nodeMutators,
     ]);
   } else {
     instrumenter.setMutators([
       ...allMutators,
-      ...mutators.filter((mutator) => !allMutators.some(({ name }) => name === mutator.name)),
+      ...nodeMutators.filter((mutator) => !allMutators.some(({ name }) => name === mutator.name)),
     ]);
   }
 }
 
-function checkNames(packageName: string, operators: readonly LzOperator[], present: readonly LzListedMutator[]): void {
-  const names = operators.map(({ name }) => name);
+function checkNames(packageName: string, mutators: readonly LzMutator[], present: readonly LzListedMutator[]): void {
+  const names = mutators.map(({ name }) => name);
   const invalid = names.filter((name) => !namePattern.test(name));
 
   if (invalid.length > 0) {
@@ -96,13 +96,13 @@ function checkNames(packageName: string, operators: readonly LzOperator[], prese
 async function selfCheck(
   packageName: string,
   instrumenter: LzInstrumenter,
-  operators: readonly LzOperator[],
+  mutators: readonly LzMutator[],
 ): Promise<void> {
   const mutants = await instrumenter.instrument(
-    operators.map(({ name, sample }) => ({ name: `${name}.self-check.ts`, content: sample })),
+    mutators.map(({ name, sample }) => ({ name: `${name}.self-check.ts`, content: sample })),
   );
   const made = new Set(mutants.map(({ mutatorName }) => mutatorName));
-  const missing = operators.map(({ name }) => name).filter((name) => !made.has(name));
+  const missing = mutators.map(({ name }) => name).filter((name) => !made.has(name));
 
   if (missing.length > 0) {
     throw new Error(

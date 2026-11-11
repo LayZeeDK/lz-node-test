@@ -8,7 +8,7 @@ import type {
   LzInstrumentedMutant,
   LzInstrumenter,
   LzNodeMutatorLike,
-  LzOperator,
+  LzMutator,
   LzSourceFile,
 } from '@layzee/stryker-mutator-core';
 import { corpusDiff, mutantDiff } from '../../src/mutant-diff.ts';
@@ -59,7 +59,7 @@ describe('corpusDiff', () => {
         return Promise.resolve(mutators.map(({ name }) => mutant(name, 0, 0)));
       },
     };
-    const own: LzOperator = { name: 'Own', sample: '', *mutate() {} };
+    const own: LzMutator = { name: 'Own', sample: '', *mutate() {} };
     const text = await corpusDiff(
       names,
       (name) => (name.includes('owned') ? [own] : []),
@@ -74,14 +74,14 @@ describe('corpusDiff', () => {
     return { text, read, instrumented };
   }
 
-  it("reports each file, relative to the working directory, with and without that file's operators", async () => {
+  it("reports each file, relative to the working directory, with and without that file's mutators", async () => {
     const owned = resolve('tools', 'owned.ts');
     const { text, read, instrumented } = await setup([owned, 'plain.ts']);
 
     assert.equal(
       text,
-      '### tools/owned.ts\n\n1 mutants without the operators, 2 with them.\n\n    + 1:1 Own ;\n\n' +
-        '### plain.ts\n\n1 mutants without the operators, 1 with them.\n\n    (no difference)\n',
+      '### tools/owned.ts\n\n1 mutants without the mutators, 2 with them.\n\n    + 1:1 Own ;\n\n' +
+        '### plain.ts\n\n1 mutants without the mutators, 1 with them.\n\n    (no difference)\n',
     );
     assert.deepEqual(read, [owned, 'plain.ts']);
     assert.deepEqual(instrumented, [
@@ -92,7 +92,7 @@ describe('corpusDiff', () => {
     ]);
   });
 
-  it('lists a mutant that an operator removes', async () => {
+  it('lists a mutant that a mutator removes', async () => {
     const instrumenter: LzInstrumenter = {
       dir: '/stryker/instrumenter',
       version: '10.1.1',
@@ -111,7 +111,7 @@ describe('corpusDiff', () => {
         () => Promise.resolve(instrumenter),
         () => '',
       ),
-      '### a.ts\n\n1 mutants without the operators, 1 with them.\n\n    + 1:1 Own ;\n    - 1:1 CallExpression ;\n',
+      '### a.ts\n\n1 mutants without the mutators, 1 with them.\n\n    + 1:1 Own ;\n    - 1:1 CallExpression ;\n',
     );
   });
 });

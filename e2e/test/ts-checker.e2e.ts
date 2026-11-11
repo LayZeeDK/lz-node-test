@@ -17,7 +17,7 @@ it('reports the mutants the TypeScript checker rejects as compile errors and kil
   ]);
 });
 
-it('kills the timer delay mutants of the installed operators when a test mocks the timers', () => {
+it('kills the timer delay mutants of the installed mutators when a test mocks the timers', () => {
   assert.deepEqual(lzMutants(run, 'src/later.ts'), [
     '3:61 BlockStatement {} CompileError',
     '4:27 LzNodeTimerDelay 10 + 1 Killed',

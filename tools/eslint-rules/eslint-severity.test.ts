@@ -22,7 +22,7 @@ const samples = [
   'packages/stryker-node-test-runner/src/index.ts',
   'packages/node-test-extensions/test/unit/title.test.ts',
   'packages/node-test-extensions/test/modified.types.ts',
-  'packages/stryker-node-mutators/test/unit/operators.test.ts',
+  'packages/stryker-node-mutators/test/unit/mutators.test.ts',
   'packages/stryker-node-test-runner/test/runner.fixtures.ts',
   'tools/eslint-rules/index.ts',
   'tools/eslint-rules/index.test.ts',

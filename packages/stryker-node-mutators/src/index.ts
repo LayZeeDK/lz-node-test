@@ -1,12 +1,12 @@
-import { lzInstall, lzSelectOperators, type LzMutatorOptions } from '@layzee/stryker-mutator-core';
-import { nodeOperatorSets } from './operators.ts';
+import { lzInstall, lzSelectMutators, type LzMutatorOptions } from '@layzee/stryker-mutator-core';
+import { nodeMutatorSets } from './mutators.ts';
 import { lzCorePeerRange, lzPackageName } from './package-name.ts';
 
 /** The mutators that run only when a config turns them on, by name or all with `extended`. */
-export type LzNodeOptInMutator = (typeof nodeOperatorSets.optIn)[number]['name'];
+export type LzNodeOptInMutator = (typeof nodeMutatorSets.optIn)[number]['name'];
 
 /** The mutators measured on too few projects to run by default, turned on inside `experimental`. */
-export type LzNodeExperimentalMutator = (typeof nodeOperatorSets.experimental)[number]['name'];
+export type LzNodeExperimentalMutator = (typeof nodeMutatorSets.experimental)[number]['name'];
 
 export type LzNodeMutatorOptions = LzMutatorOptions<LzNodeOptInMutator, LzNodeExperimentalMutator>;
 
@@ -19,6 +19,6 @@ export async function lzNodeMutators(options?: LzNodeMutatorOptions): Promise<vo
     packageName: lzPackageName,
     corePeerRange: lzCorePeerRange,
     mode: 'add',
-    operators: lzSelectOperators(lzPackageName, nodeOperatorSets, options),
+    mutators: lzSelectMutators(lzPackageName, nodeMutatorSets, options),
   });
 }

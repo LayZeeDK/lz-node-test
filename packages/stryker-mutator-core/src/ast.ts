@@ -5,7 +5,7 @@ export interface LzImportOf {
   readonly imported: string | undefined;
 }
 
-/** Only ES module `import` declarations count: the operators do not read CommonJS `require`. */
+/** Only ES module `import` declarations count: the mutators do not read CommonJS `require`. */
 export function lzImportOf(path: NodePath, name: string): LzImportOf | undefined {
   const bound = path.scope.getBinding(name)?.path;
 

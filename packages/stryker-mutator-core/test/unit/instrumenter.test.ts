@@ -9,7 +9,7 @@ import { types } from '@babel/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
 import { corePackageJsons, lzResolveFromCore, type LzListedMutator } from '../../src/instrumenter.ts';
-import type { LzNodeMutatorLike } from '../../src/operator.ts';
+import type { LzNodeMutatorLike } from '../../src/mutator.ts';
 
 const sampleLocation = { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } };
 
@@ -170,7 +170,7 @@ describe('lzResolveFromCore', () => {
     await assert.rejects(resolving, { message: refusal(replaced.join(), key) });
   });
 
-  it("takes the instrumenter's Babel types when they lack a member the operators do not call", async () => {
+  it("takes the instrumenter's Babel types when they lack a member the mutators do not call", async () => {
     const older = Object.fromEntries(Object.entries(types).filter(([key]) => key !== 'tsTypeAnnotation'));
     const { load } = loadingWith(babelFile, { types: older });
 

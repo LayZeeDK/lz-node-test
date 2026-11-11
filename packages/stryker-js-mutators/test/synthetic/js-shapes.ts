@@ -1,4 +1,4 @@
-// Code that exists to be mutated: the shapes the production operators match that no other file here has.
+// Code that exists to be mutated: the shapes the production mutators match that no other file here has.
 export const latest = { id: '' };
 
 export function remember(id: string): void {

@@ -1,5 +1,5 @@
 // Tests that exist to be mutated: the test context's assertion shapes of the open-source projects the runner was
-// measured on, which the test-code operators match.
+// measured on, which the test-code mutators match.
 import { AssertionError } from 'node:assert';
 import { EventEmitter } from 'node:events';
 import { Writable } from 'node:stream';

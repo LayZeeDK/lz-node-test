@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import { lzImportOf, lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzImportOf, lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 import { lzBuiltin } from './bindings.ts';
 import { isProcess } from './node-bindings.ts';
 
@@ -27,7 +27,7 @@ const streamSwaps: ReadonlyMap<string, readonly string[]> = new Map([
  * Swaps a lifecycle event that a listener waits for with one that fires at another time, such as a child process's
  * `exit`, which can fire while its output is still open, and its `close`.
  */
-export const nodeEventName: LzOperator = {
+export const nodeEventName: LzMutator = {
   name: 'LzNodeEventName',
   sample: "child.on('exit', () => {});\n",
   *mutate(path, t) {

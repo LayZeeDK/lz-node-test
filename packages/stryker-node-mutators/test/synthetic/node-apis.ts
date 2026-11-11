@@ -1,4 +1,4 @@
-// Code that exists to be mutated: the Node.js API shapes the production operators match that no other file here has.
+// Code that exists to be mutated: the Node.js API shapes the production mutators match that no other file here has.
 import assert from 'node:assert/strict';
 import { once, type EventEmitter } from 'node:events';
 import process from 'node:process';
@@ -52,7 +52,7 @@ export function onIdle(listener: () => void): void {
 }
 
 export function share(part: number, whole: number): number {
-  // Stryker disable next-line LzJsNumericLiteral: sample code for the Node.js operators, which no test runs
+  // Stryker disable next-line LzJsNumericLiteral: sample code for the Node.js mutators, which no test runs
   assert.ok(whole > 0);
 
   return part / whole;

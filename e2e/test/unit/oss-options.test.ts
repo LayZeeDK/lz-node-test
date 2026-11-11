@@ -532,7 +532,7 @@ describe('lzStrykerOptions', () => {
 });
 
 describe('lzStrykerConfig', () => {
-  it('installs the operators and exports the options on either side', () => {
+  it('installs the mutators and exports the options on either side', () => {
     const config = lzStrykerConfig('command', project);
 
     assert.match(

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import type { LzOperator } from '@layzee/stryker-mutator-core';
+import type { LzMutator } from '@layzee/stryker-mutator-core';
 import { jsAssignmentStatement } from '../../src/js-assignment-statement.ts';
 import { jsNumericLiteral } from '../../src/js-numeric-literal.ts';
 import { mutantsOf, mutantsOfAll } from '../mutants-of.fixtures.ts';
@@ -11,7 +11,7 @@ import { mutantsOf, mutantsOfAll } from '../mutants-of.fixtures.ts';
  * Stands in for a mutator of a site that holds a number: the argument of a call, as LzNodeTimerDelay mutates a timer's
  * delay, or an assigned number, as LzNodeExitCode mutates `process.exitCode = 1`.
  */
-const site: LzOperator = {
+const site: LzMutator = {
   name: 'Site',
   sample: '',
   *mutate(path, t) {

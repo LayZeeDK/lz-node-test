@@ -1,6 +1,6 @@
 import type { NodePath, types } from '@babel/core';
 
-import type { LzBabelTypes, LzOperator } from '@layzee/stryker-mutator-core';
+import type { LzBabelTypes, LzMutator } from '@layzee/stryker-mutator-core';
 
 /**
  * Moves an integer literal by 1 each way, as an off-by-one in a limit, an index or a count does. A literal that another
@@ -9,7 +9,7 @@ import type { LzBabelTypes, LzOperator } from '@layzee/stryker-mutator-core';
  * a real process or run one as another user. The indentation of `JSON.stringify` is left alone too, as a mutant there
  * changes only whitespace.
  */
-export const jsNumericLiteral: LzOperator<'LzJsNumericLiteral'> = {
+export const jsNumericLiteral: LzMutator<'LzJsNumericLiteral'> = {
   name: 'LzJsNumericLiteral',
   sample: 'const limit = 40;\n',
   *mutate(path, t) {

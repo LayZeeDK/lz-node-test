@@ -1,4 +1,4 @@
-import { lzPropertyName, type LzOperator } from '@layzee/stryker-mutator-core';
+import { lzPropertyName, type LzMutator } from '@layzee/stryker-mutator-core';
 
 const callbacks: ReadonlySet<string> = new Set(['cb', 'callback', 'done', 'next']);
 const errors: ReadonlySet<string> = new Set(['err', 'error', 'e', 'er']);
@@ -8,7 +8,7 @@ const errors: ReadonlySet<string> = new Set(['err', 'error', 'e', 'er']);
  * it was handed is dropped. The names decide: a callee named `cb`, `callback`, `done` or `next`, or any `destroy`
  * method, called with one argument named `err`, `error`, `e` or `er`.
  */
-export const nodeCallbackError: LzOperator<'LzNodeCallbackError'> = {
+export const nodeCallbackError: LzMutator<'LzNodeCallbackError'> = {
   name: 'LzNodeCallbackError',
   sample: 'export function end(err: Error, cb: (error?: Error) => void) {\n  cb(err);\n}\n',
   *mutate(path, t) {

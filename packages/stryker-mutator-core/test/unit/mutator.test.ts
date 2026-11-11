@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { parseSync, traverse, types, type NodePath } from '@babel/core';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import { lzIsOwn, lzToNodeMutator, own, type LzOperator } from '../../src/operator.ts';
+import { lzIsOwn, lzToNodeMutator, own, type LzMutator } from '../../src/mutator.ts';
 
 const node = types.emptyStatement();
 
@@ -23,7 +23,7 @@ function programPath(): NodePath {
   return path;
 }
 
-const operator: LzOperator = {
+const mutator: LzMutator = {
   name: 'Alpha',
   sample: '',
   *mutate() {
@@ -42,16 +42,16 @@ describe('lzToNodeMutator', () => {
     [false, [node]],
     [true, []],
   ])('gives, where isExpressionContext is %s, %j', (isExpressionContext, nodes) => {
-    const mutator = lzToNodeMutator(operator, types, 'lz-sample-mutators');
+    const nodeMutator = lzToNodeMutator(mutator, types, 'lz-sample-mutators');
 
-    assert.deepEqual([...mutator.mutate(programPath(), { isExpressionContext })], nodes);
-    assert.equal(lzIsOwn(mutator), true);
+    assert.deepEqual([...nodeMutator.mutate(programPath(), { isExpressionContext })], nodes);
+    assert.equal(lzIsOwn(nodeMutator), true);
   });
 
   it("names the package that installs it under the core's mark", () => {
-    const mutator = lzToNodeMutator(operator, types, 'lz-sample-mutators');
+    const nodeMutator = lzToNodeMutator(mutator, types, 'lz-sample-mutators');
 
-    assert.equal(Reflect.get(mutator, own), 'lz-sample-mutators');
+    assert.equal(Reflect.get(nodeMutator, own), 'lz-sample-mutators');
   });
 });
 

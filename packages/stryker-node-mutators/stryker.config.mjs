@@ -3,7 +3,7 @@ import base, { production, reportFiles, source } from '../../stryker.base.mjs';
 export default await production(
   {
     ...base,
-    // The synthetic sample is code that exists to be mutated by the production operators.
+    // The synthetic sample is code that exists to be mutated by the production mutators.
     mutate: [
       'packages/stryker-node-mutators/src/**/*.ts',
       'packages/stryker-node-mutators/test/synthetic/node-apis.ts',

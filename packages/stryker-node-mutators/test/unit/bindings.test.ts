@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
 import { lzTestEach } from '@layzee/node-test-extensions';
-import type { LzOperator } from '@layzee/stryker-mutator-core';
+import type { LzMutator } from '@layzee/stryker-mutator-core';
 import { lzAssertMethod } from '../../src/bindings.ts';
 import { mutantsOf } from '../mutants-of.fixtures.ts';
 
-const probe: LzOperator = {
+const probe: LzMutator = {
   name: 'Probe',
   sample: '',
   *mutate(path, t) {
