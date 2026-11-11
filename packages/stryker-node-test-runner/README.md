@@ -200,17 +200,17 @@ once per run as under `node --test`.
   Stryker's runners for Jest and Vitest also count each hit toward the test running at the time. With
   `coverageAnalysis: 'all'`, every mutant that tests reach runs every test.
 - **Code outside every test.** What a test file's own process runs outside its tests counts toward each test of that
-  file. That covers loading the file and the modules it imports, such as the code that sets a module-level constant,
-  and the file's top-level hooks and exit listeners. A mutant that only such code reaches runs the tests of the files
-  that reach it. A mutant that such code reaches is active from the start of each process, also when tests reach it
-  too, so the constant it changes is changed for those tests. Stryker's tap runner counts a test file's load the same
-  way.
-- **Static mutants.** Stryker calls a mutant static when code outside every test reaches it. With this runner that is
-  a test file that registers no tests, or a child process or worker thread that lived while no test ran. A static
-  mutant runs every test file, each in a fresh process. The mutant is active from the start of each process, also when
-  Stryker's `--testFiles` limits the run. To skip static mutants, set Stryker's `ignoreStatic: true`. `ignoreStatic`
-  needs `coverageAnalysis: 'perTest'`. Stryker reports the skipped mutants as `Ignored` and leaves them out of the
-  mutation score. With `ignoreStatic`, a static mutant that tests also reach is not skipped: it runs those tests.
+  file. Such code includes loading the file and the modules it imports, such as the code that sets a module-level
+  constant, and the file's top-level hooks and exit listeners. A mutant that only such code reaches runs the tests of
+  the files that reach it. A mutant that such code reaches is active from the start of each process, also when tests
+  reach it. Those tests then see the changed constant. Stryker's tap runner counts a test file's load the same way.
+- **Static mutants.** Stryker calls a mutant static when code outside every test reaches it. With this runner, such
+  code runs in a test file that registers no tests, or in a child process or worker thread that lived while no test
+  ran or whose lifetime the runner could not record. A static mutant runs every test file, each in a fresh process.
+  The mutant is active from the start of each process, also when Stryker's `--testFiles` limits the run. To skip
+  static mutants, set Stryker's `ignoreStatic: true`. `ignoreStatic` needs `coverageAnalysis: 'perTest'`. Stryker
+  reports the skipped mutants as `Ignored` and leaves them out of the mutation score. With `ignoreStatic`, a static
+  mutant that tests also reach is not skipped: it runs those tests.
 - **Bail.** Unless you set `disableBail`, a mutant run stops at the first failing test. With `disableBail`, a mutant
   whose tests failed in one test file is `Killed` by those tests also when a later file of its run times out.
 - **Incremental mode.** The runner reports each test with its file and its position in that file. That is the "Full"
