@@ -203,10 +203,12 @@ once per run as under `node --test`.
   file. Such code includes loading the file and the modules it imports, such as the code that sets a module-level
   constant, and the file's top-level hooks and exit listeners. A mutant that only such code reaches runs the tests of
   the files that reach it. A mutant that such code reaches is active from the start of each process, also when tests
-  reach it. Those tests then see the changed constant. Stryker's tap runner counts a test file's load the same way.
+  reach it. Those tests then see the mutated code, such as a changed module-level constant. Stryker's tap runner
+  counts a test file's load the same way.
 - **Static mutants.** Stryker calls a mutant static when code outside every test reaches it. With this runner, such
-  code runs in a test file that registers no tests, or in a child process or worker thread that lived while no test
-  ran or whose lifetime the runner could not record. A static mutant runs every test file, each in a fresh process.
+  code runs in a test file that registers no tests, or in a child process or worker thread that lived, at least in
+  part, while no test ran or whose lifetime the runner could not record. A static mutant runs every test file, each
+  in a fresh process.
   The mutant is active from the start of each process, also when Stryker's `--testFiles` limits the run. To skip
   static mutants, set Stryker's `ignoreStatic: true`. `ignoreStatic` needs `coverageAnalysis: 'perTest'`. Stryker
   reports the skipped mutants as `Ignored` and leaves them out of the mutation score. With `ignoreStatic`, a static
@@ -337,9 +339,9 @@ These cases cost time but give the same results:
   cannot match that test on the next run, so the mutant runs again every time. Table titles such as
   `lzTestEach(rows)('says %d is adult: %s', ...)` are stable when the rows hold literal values. A row that calls the
   code under test, such as `[30, isAdult(30)]`, puts that code's result in the title. Such code runs while the test
-  file registers its tests, so its mutants run every test of that file. The test still runs and still kills the
-  mutant, but under a name the stored results lack. Stryker's Vitest runner names tests by their titles too and does
-  the same.
+  file registers its tests, outside every test, so its mutants run every test of that file. The test still runs and
+  still kills the mutant, but under a name the stored results lack. Stryker's Vitest runner names tests by their
+  titles too and does the same.
 - A test file that the configuration also mutates. After any change to it, the mutants that its tests cover run again,
   as [What the runner does](#what-the-runner-does) describes.
 
