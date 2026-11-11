@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { lzTestFor } from '@layzee/node-test-extensions';
 import { lzMergeAsStatic, lzMergeCoverage, lzOutsideTests, lzOverlapCoverage } from '../../src/coverage.ts';
+import type { RecordedTest } from '../../src/record.ts';
 
 describe('lzMergeCoverage', () => {
   it('adds up the hits of every process and skips processes without coverage', () => {
@@ -114,7 +115,7 @@ describe('lzOverlapCoverage', () => {
   });
 
   it("credits the test file's own hits outside its tests to each test, counting them once so the hit limit holds", () => {
-    const tests = ['a', 'b', 'c'].map((id) => ({ id, status: 'passed' as const, timeSpentMs: 1 }));
+    const tests = ['a', 'b', 'c'].map((id): RecordedTest => ({ id, status: 'passed', timeSpentMs: 1 }));
 
     assert.deepEqual(
       lzOverlapCoverage({ main: true, tests, mutantCoverage: { static: { 9: 3 }, perTest: { a: hits } } }, testSpans),
@@ -131,7 +132,7 @@ describe('lzOverlapCoverage', () => {
 });
 
 describe('lzOutsideTests', () => {
-  const tests = [{ id: 'a', status: 'passed' as const, timeSpentMs: 1 }];
+  const tests: readonly RecordedTest[] = [{ id: 'a', status: 'passed', timeSpentMs: 1 }];
 
   it("names the mutants that the test file's own process reached outside its tests, not a started process's", () => {
     assert.deepEqual(
