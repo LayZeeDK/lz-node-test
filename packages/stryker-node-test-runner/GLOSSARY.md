@@ -52,8 +52,8 @@ The time during which a started process ran.
 _Avoid_: duration
 
 **Hits outside tests**:
-Mutant hits made while none of a file's tests ran: loading the file and its imports, top-level hooks, exit listeners,
-or a started process between tests.
+Mutant hits that a test file's main process makes while none of its tests runs: loading the file and its imports,
+top-level hooks and exit listeners.
 _Avoid_: static hits, outside
 
 **Static mutant**:

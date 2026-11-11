@@ -8,8 +8,8 @@ The packages that add mutators to StrykerJS: this shared install layer and the t
 ### Mutators
 
 **Mutator**:
-A rule that turns one kind of code into mutants, as Stryker's own mutators do; a mutator package defines it with a
-name and a sample.
+A named way of changing one kind of code into mutants, as Stryker's own mutators are; a mutator package defines each
+one with a sample.
 _Avoid_: operator, mutation operator, rule
 
 **Mutator name**:
@@ -28,8 +28,8 @@ A package that defines mutators for one kind of code: Node.js API and `node:asse
 _Avoid_: operator package, mutator plugin
 
 **Bindings**:
-The helpers of `stryker-node-mutators` that recognise Node.js built-in modules and `node:assert` calls, shared with
-the other mutator packages; they install nothing.
+The helpers of `stryker-node-mutators` that recognise Node.js built-in modules and `node:assert` calls, which
+`stryker-node-test-mutators` uses; they install nothing.
 _Avoid_: detector, scope bindings
 
 ### Tiers
@@ -47,7 +47,7 @@ The mutators that run when a configuration names them, or all at once with `exte
 
 **Experimental mutators**:
 The mutators that run when a configuration names them under `experimental`, or all at once with `experimental: true`;
-one may change tier in any release.
+one may change or go in a minor release.
 _Avoid_: beta, unstable
 
 **Extended**:

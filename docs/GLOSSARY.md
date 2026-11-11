@@ -1,7 +1,7 @@
 # Workspace
 
-How this workspace tests itself: its packages load each other as TypeScript source, and every project's tests must
-kill every mutant that Stryker makes in it.
+How this workspace tests itself: its packages load each other as TypeScript source, and every project must reach a
+mutation score of 100.
 
 ## Language
 
@@ -20,7 +20,8 @@ _Avoid_: dist, build
 ### Mutation runs
 
 **Production configuration**:
-A project's Stryker configuration that mutates its source with Stryker's mutators plus the Node.js mutators.
+A project's Stryker configuration that mutates its source with Stryker's mutators plus the Node.js mutators, and the
+JavaScript mutators where it turns them on.
 _Avoid_: src config
 
 **Test-code configuration**:
@@ -28,8 +29,8 @@ A project's Stryker configuration that mutates its test files with the node:test
 _Avoid_: test config
 
 **Mutation gate**:
-The rule that a mutation run fails unless its mutation score is 100 and every `RuntimeError` mutant is listed with a
-reason.
+The rule that a mutation run fails unless it scored mutants, its mutation score is 100, and every `RuntimeError`
+mutant is listed with a reason.
 _Avoid_: coverage gate
 
 **RuntimeError check**:
