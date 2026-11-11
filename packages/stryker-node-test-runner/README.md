@@ -205,7 +205,10 @@ once per run as under `node --test`.
   constant, and the file's top-level hooks and exit listeners. A mutant that only such code reaches runs the tests of
   the files that reach it. A mutant that such code reaches is active from the start of each process, also when tests
   reach it. Those tests then see the mutated code, such as a changed module-level constant. Stryker's tap runner
-  counts a test file's load the same way.
+  counts a test file's load the same way. A process that a test starts with an environment of its own, such as
+  `env: { PATH: process.env.PATH }`, reports no coverage, so a test that reaches the code only there does not count
+  toward it. If such a test is the only one that kills a mutant, the mutant runs without it and survives. Pass the test
+  file's environment on to the process, or load the code in the test file that holds the test.
 - **Static mutants.** Stryker calls a mutant static when code outside every test reaches it. With this runner, such
   code runs in a test file that registers no tests, or in a child process or worker thread that lived, at least in
   part, while no test ran or whose lifetime the runner could not record. A static mutant runs every test file, each

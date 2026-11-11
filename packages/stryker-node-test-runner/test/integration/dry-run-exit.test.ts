@@ -7,6 +7,11 @@ import { describe, it, type TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { lzTestFor } from '@layzee/node-test-extensions';
+import { lzOwnDryRun } from '../../src/dry-run-store.ts';
+
+// Run here, outside any test, as the runner module does when it loads: the processes these tests start leave out the
+// runner's variables and report no coverage, so the runner credits the exit listener's mutants to this file's tests.
+lzOwnDryRun();
 
 const src = (file: string) => JSON.stringify(pathToFileURL(join(import.meta.dirname, '../../src', file)).href);
 

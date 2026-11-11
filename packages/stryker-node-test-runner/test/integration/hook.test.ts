@@ -34,9 +34,14 @@ async function loadRunnerStartedHook(
 ): Promise<Record<'exit' | 'beforeExit', ((code: number) => void)[]> & { signals: Record<string, number> }> {
   const global: HookDependencies['global'] = globalThis;
   const previousMark = global[installed];
-  const previousEnv = Object.values(envNames)
-    .filter((key) => key !== envNames.current)
-    .map((key): readonly [string, string | undefined] => [key, process.env[key]]);
+  // Without a current test, the hook leaves this process's hits outside its tests in place, where the runner credits
+  // them to every test of this file, instead of moving them under the current test as it does a started process's.
+  const ns = global.__stryker__;
+  const currentTestId = ns?.currentTestId;
+  const previousEnv = Object.values(envNames).map((key): readonly [string, string | undefined] => [
+    key,
+    process.env[key],
+  ]);
   const listeners = { exit: process.listeners('exit'), beforeExit: process.listeners('beforeExit') };
   const signalListeners = lzEndingSignals.map((signal) => ({ signal, before: process.listeners(signal) }));
 
@@ -63,6 +68,10 @@ async function loadRunnerStartedHook(
       global[installed] = previousMark;
     } else {
       Reflect.deleteProperty(global, installed);
+    }
+
+    if (ns && currentTestId !== undefined) {
+      ns.currentTestId = currentTestId;
     }
   }
 

@@ -26,6 +26,9 @@ activation.
   module-level code.
 - Static mutants remain for code in a test file that registers no tests, and for a started process that lived while no
   test ran or whose lifetime the runner could not record.
+- A test that reaches a mutant only in a process it starts with an environment of its own reports no coverage. While
+  the mutant was static, every test ran and that test killed it; now only the tests of the files that load the code
+  run, and the mutant survives unless one of them kills it. The README tells users how to keep such a test counted.
 
 Evidence: 05f52f8, c8be1ad, e3cedf7, 104b27d, 810efde, the "What the runner does" section of the README, and
 `packages/core/src/mutants/mutant-test-planner.ts` of stryker-js v10.1.1 (static and `ignoreStatic` planning, and the
