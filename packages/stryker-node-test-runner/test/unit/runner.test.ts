@@ -209,13 +209,12 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
   class RecordingRunner extends LzNodeTestTestRunner {
     readonly #record: ProcessRecord;
 
-    constructor(record: ProcessRecord, log: Logger, nodeArgs: readonly string[] = [], testFiles?: readonly string[]) {
-      super(
-        strykerOptions({
-          lzNodeTest: { maxMemoryMB: 512, nodeArgs, ...(testFiles === undefined ? {} : { testFiles }) },
-        }),
-        log,
-      );
+    constructor(
+      record: ProcessRecord,
+      log: Logger,
+      lzNodeTest: { readonly nodeArgs?: readonly string[]; readonly testFiles?: readonly string[] } = {},
+    ) {
+      super(strykerOptions({ lzNodeTest: { maxMemoryMB: 512, nodeArgs: [], ...lzNodeTest } }), log);
       this.#record = record;
     }
 
@@ -280,7 +279,7 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
       mutantCoverage: { static: {}, perTest: { [test]: { 1: 1 } } },
     };
 
-    const runner = new RecordingRunner(record, logger({ warnings }), nodeArgs);
+    const runner = new RecordingRunner(record, logger({ warnings }), { nodeArgs });
 
     await runner.dryRun({ ...dryRun, testFiles: [file] });
     await runner.mutantRun(mutantRunOptions({ testFilter: [test] }));
@@ -294,7 +293,7 @@ describe('LzNodeTestTestRunner dry run coverage', () => {
   it('warns once when no dry run left a list of the mutants it reached outside every test', async () => {
     const warnings: string[] = [];
     const record: ProcessRecord = { main: true, tests: [{ id: test, status: 'passed', timeSpentMs: 1 }] };
-    const runner = new RecordingRunner(record, logger({ warnings }), [], ['never-dry-run/*.test.mjs']);
+    const runner = new RecordingRunner(record, logger({ warnings }), { testFiles: ['never-dry-run/*.test.mjs'] });
 
     await runner.mutantRun(mutantRunOptions({ testFilter: [test] }));
     await runner.mutantRun(mutantRunOptions({ testFilter: [test] }));
