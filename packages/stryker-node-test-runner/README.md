@@ -177,7 +177,8 @@ once per run as under `node --test`.
   after the first, has passed. What is left still holds the tests' own time and each file's start-up once, with
   Stryker's `timeoutFactor` and `timeoutMS`. A run that ends this way is a `Timeout` that names the deadline, and
   Stryker keeps the worker running. A mutant that runs one test of each file gets Stryker's timeout unchanged.
-  The runner measures each file's start-up in the dry run. A file without a measured start-up, such as one that
+  The runner measures each file's start-up in the dry run: the time its run took outside its tests, from starting
+  `node` until the runner has read the file's process records and removed its temporary folder. A file without a measured start-up, such as one that
   Stryker's `--testFiles` left out of the dry run, keeps Stryker's timeout, and the runner warns about it once.
   Both the deadline and Stryker's timeout come from the tests' times in the dry run. Tests that slow down when the
   machine is busy, such as tests that start processes, can take longer in a mutant run, where they compete with
@@ -236,7 +237,7 @@ wait ends.
 | What happened in the test file's run                                                                               | Dry run                       | Mutant run     |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------- | -------------- |
 | A process held more memory than its limit                                                                          | error if `maxMemoryMB` is set | `Timeout`      |
-| A results file of a process could not be read                                                                      | error                         | `RuntimeError` |
+| A process record could not be read                                                                                 | error                         | `RuntimeError` |
 | A test was still pending `timeoutMS` after the event loop emptied, with no test result since                       | does not apply                | `Timeout`      |
 | The mutant's code ran more often than Stryker's hit limit allows                                                   | does not apply                | `Timeout`      |
 | `node` exited with a code other than 0, and no test failed                                                         | error                         | `RuntimeError` |
