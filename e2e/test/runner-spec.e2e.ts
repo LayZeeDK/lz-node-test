@@ -21,10 +21,13 @@ it("ends a mutant whose test waits on a timer as a timeout of Stryker's timer, w
   );
 });
 
-it('kills a static mutant in module-level code', () => {
+it('kills a mutant in module-level code with the tests of the file that loads it, without making it static', () => {
   const mutant = lzMutant(run, { at: 'src/greeting.js:1:25', replacement: '""' });
 
-  assert.deepEqual({ status: mutant.status, static: mutant.static }, { status: 'Killed', static: true });
+  assert.deepEqual(
+    { status: mutant.status, static: mutant.static, coveredBy: mutant.coveredBy.length },
+    { status: 'Killed', static: false, coveredBy: 1 },
+  );
 });
 
 it('runs only the test that reaches a mutant, which kills it', () => {
