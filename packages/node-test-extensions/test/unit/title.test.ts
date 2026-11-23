@@ -9,6 +9,9 @@ type Case = [template: string, items: readonly unknown[], expected: string];
 const circular: { self?: unknown } = {};
 circular.self = circular;
 const digits = (length: number) => Array.from({ length }, (_, i) => i % 10).join('');
+// V8 may drop a NaN's sign bit where it stores numbers unboxed, as in an array that holds only numbers, so the NaN is
+// built from its bits and its case holds a string beside it.
+const negativeNaN = new DataView(new BigUint64Array([0xfff8000000000000n]).buffer).getFloat64(0, true);
 
 /**
  * Titles come from node:util rather than from lzTestEach, which formats them with formatTitle: a mutant of formatTitle
@@ -63,7 +66,7 @@ describe('formatTitle', () => {
     ['%f', [0], '0'],
     ['%f', [-0], '-0'],
     ['%f', [Number.NaN], 'NaN'],
-    ['%f', [-Number.NaN], '-NaN'],
+    ['%f', [negativeNaN, ''], '-NaN'],
     ['%f', [10n], '10'],
     ['%f', [Symbol('x')], 'NaN'],
     ['%d %f', [1, -0], '1 -0'],
